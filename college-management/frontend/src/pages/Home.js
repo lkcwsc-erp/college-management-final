@@ -33,7 +33,7 @@ const Home = () => {
             </div>
             <div className="trust-divider"></div>
             <div className="trust-item">
-              <strong>26+</strong>
+              <strong>30+</strong>
               <span>Faculty</span>
             </div>
             <div className="trust-divider"></div>
@@ -89,7 +89,7 @@ const Home = () => {
           </div>
           <div style={{flex: '1', minWidth: '180px'}}>
             <p style={{fontSize: '16px', color: '#555', margin: '0 0 10px 0', fontWeight: '500'}}>Courses Offered</p>
-            <h2 style={{fontSize: '48px', color: '#1565C0', margin: 0, fontWeight: 'bold'}}>2+</h2>
+            <h2 style={{fontSize: '48px', color: '#1565C0', margin: 0, fontWeight: 'bold'}}>20+</h2>
           </div>
           <div style={{flex: '1', minWidth: '180px'}}>
             <p style={{fontSize: '16px', color: '#555', margin: '0 0 10px 0', fontWeight: '500'}}>Years of Excellence</p>
