@@ -8,7 +8,19 @@ const userSchema = new mongoose.Schema({
   lastName: { type: String, trim: true, default: '' },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true, minlength: 6 },
-  role: { type: String, enum: ['student', 'staff', 'admin'], default: 'student' },
+  role: {
+    type: String,
+    enum: [
+      'student',
+      'staff',
+      'staff_student',
+      'staff_accounts',
+      'staff_exam',
+      'staff_scholarship',
+      'admin'
+    ],
+    default: 'student'
+  },
   phone: { type: String },
   dateOfBirth: { type: Date },
   address: { type: String },
