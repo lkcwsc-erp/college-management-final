@@ -92,11 +92,7 @@ useEffect(() => {
   </div>
 </div>
 
-
-
-
-    
-        <nav className="sidebar-nav">
+    <nav className="sidebar-nav">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -157,26 +153,7 @@ useEffect(() => {
                 </div>
               </div>
 
-              {!admissionLoading && !myAdmission && (
-                <div style={{
-                  background: '#e3f2fd',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  textAlign: 'center',
-                  marginBottom: '20px'
-                }}>
-                  <p style={{ fontSize: '2rem', marginBottom: '12px' }}>📝</p>
-                  <h3 style={{ color: '#1565C0', marginBottom: '8px' }}>
-                    No Application Found
-                  </h3>
-                  <p style={{ color: '#555', marginBottom: '16px' }}>
-                    You have not applied for admission yet.
-                  </p>
-                  <a href="/admissions" className="btn btn-primary">
-                    Apply for Admission
-                  </a>
-                </div>
-              )}
+            
 
               {myAdmission && (
                 <div className="recent-section" style={{ marginBottom: '20px' }}>
