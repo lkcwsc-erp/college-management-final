@@ -13,6 +13,10 @@ import Login from './pages/auth/Login';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
 import StaffDashboard from './pages/dashboard/StaffDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
+import StudentSectionDashboard from './pages/dashboard/StudentSectionDashboard';
+import AccountsSectionDashboard from './pages/dashboard/AccountsSectionDashboard';
+import ExamSectionDashboard from './pages/dashboard/ExamSectionDashboard';
+import ScholarshipSectionDashboard from './pages/dashboard/ScholarshipSectionDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Resources from './pages/Resources';
 import Examination from './pages/Examination';
@@ -32,23 +36,51 @@ function App() {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/admissions" element={<Admissions />} />
           <Route path="/login" element={<Login />} />
-           <Route path="/resources" element={<Resources />} />
-<Route path="/examination" element={<Examination />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/examination" element={<Examination />} />
+
           <Route path="/student/dashboard" element={
             <ProtectedRoute roles={['student']}>
               <StudentDashboard />
             </ProtectedRoute>
           } />
+
           <Route path="/staff/dashboard" element={
             <ProtectedRoute roles={['staff']}>
               <StaffDashboard />
             </ProtectedRoute>
           } />
+
+          <Route path="/staff/student-section" element={
+            <ProtectedRoute roles={['staff_student', 'admin']}>
+              <StudentSectionDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/staff/accounts-section" element={
+            <ProtectedRoute roles={['staff_accounts', 'admin']}>
+              <AccountsSectionDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/staff/exam-section" element={
+            <ProtectedRoute roles={['staff_exam', 'admin']}>
+              <ExamSectionDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/staff/scholarship-section" element={
+            <ProtectedRoute roles={['staff_scholarship', 'admin']}>
+              <ScholarshipSectionDashboard />
+            </ProtectedRoute>
+          } />
+
           <Route path="/admin/dashboard" element={
             <ProtectedRoute roles={['admin']}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
+
           <Route path="*" element={
             <div style={{
               textAlign: 'center',
