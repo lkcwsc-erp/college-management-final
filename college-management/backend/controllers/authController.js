@@ -169,8 +169,9 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Account is deactivated' });
     }
 
-    // 🔐 If user is STAFF or ADMIN → send OTP, don't login yet
-    if (user.role === 'staff' || user.role === 'admin') {
+    // 🔐 If user is STAFF (any type) or ADMIN → send OTP, don't login yet
+    const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
+    if (staffRoles.includes(user.role) || user.role === 'admin') {
       await OTP.deleteMany({ email: email.toLowerCase() });
 
       const otp = generateOTP();
