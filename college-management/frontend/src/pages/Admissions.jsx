@@ -765,15 +765,15 @@ console.log("USER:", user);
                     {/* Husband Full Name - only if married */}
                     {formData.isMarried && (
                       <div className="form-group">
-                        <label>Husband Name</label>
+                        <label>Husband Full Name</label>
                         <input
                           type="text"
-                          placeholder="Enter Husband Name"
-                          value={formData.husbandName || ''}
+                          placeholder="Enter Husband Full Name"
+                          value={formData.husbandfullName || ''}
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              husbandName: e.target.value
+                              husbandFullName: e.target.value
                             })
                           }
                         />
