@@ -200,23 +200,143 @@ useEffect(() => {
                 </div>
               )}
 
+              {/* Admission Form Progress Section */}
               <div className="recent-section">
-                <h3>Recent Notices</h3>
-                {notices.slice(0, 5).map(notice => (
-                  <div className="notice-row" key={notice._id}>
-                    <span className="notice-dot"></span>
-                    <div>
-                      <p className="notice-title">{notice.title}</p>
-                      <p className="notice-date">
-                        {new Date(notice.createdAt).toLocaleDateString()}
-                      </p>
+                <h3>📋 Admission Form Status</h3>
+
+                {admissionLoading ? (
+                  <p style={{ color: '#888', fontSize: '14px', padding: '10px 0' }}>
+                    ⏳ Loading admission status...
+                  </p>
+                ) : (() => {
+                  // Calculate form completion percentage
+                  const fields = [
+                    myAdmission?.applicantName,
+                    myAdmission?.email,
+                    myAdmission?.phone,
+                    myAdmission?.address,
+                    myAdmission?.dateOfBirth,
+                    myAdmission?.gender,
+                    myAdmission?.category,
+                    myAdmission?.aadharNumber,
+                    myAdmission?.aadharName,
+                    myAdmission?.studentPhoto,
+                    myAdmission?.aadharPhoto,
+                    myAdmission?.sscSchoolName,
+                    myAdmission?.sscBoard,
+                    myAdmission?.sscYOP,
+                    myAdmission?.sscPercentage,
+                    myAdmission?.sscMarksheet,
+                    myAdmission?.hscCollegeName,
+                    myAdmission?.hscBoard,
+                    myAdmission?.hscYOP,
+                    myAdmission?.hscPercentage,
+                    myAdmission?.hscMarksheet,
+                    myAdmission?.course,
+                    myAdmission?.fatherName,
+                    myAdmission?.motherName,
+                  ];
+                  const filled = fields.filter(f => f && f !== '').length;
+                  const total = fields.length;
+                  const percentage = myAdmission ? Math.round((filled / total) * 100) : 0;
+
+                  const progressColor =
+                    percentage === 100 ? '#2E7D32' :
+                    percentage >= 60  ? '#E65100' :
+                                        '#C62828';
+
+                  const progressBg =
+                    percentage === 100 ? '#e8f5e9' :
+                    percentage >= 60  ? '#fff3e0' :
+                                        '#ffebee';
+
+                  return (
+                    <div style={{ padding: '8px 0' }}>
+                      {/* Status label */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '10px'
+                      }}>
+                        <span style={{ fontSize: '14px', color: '#555' }}>
+                          {myAdmission
+                            ? `${filled} / ${total} fields completed`
+                            : 'Form not started yet'}
+                        </span>
+                        <span style={{
+                          fontSize: '18px',
+                          fontWeight: '700',
+                          color: progressColor
+                        }}>
+                          {percentage}%
+                        </span>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div style={{
+                        width: '100%',
+                        height: '14px',
+                        background: '#e0e0e0',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        marginBottom: '14px'
+                      }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${percentage}%`,
+                          background: progressColor,
+                          borderRadius: '10px',
+                          transition: 'width 0.5s ease'
+                        }} />
+                      </div>
+
+                      {/* Status message */}
+                      <div style={{
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        background: progressBg,
+                        marginBottom: '16px',
+                        fontSize: '13px',
+                        color: progressColor,
+                        fontWeight: '500'
+                      }}>
+                        {percentage === 100
+                          ? '🎉 Your admission form is fully complete!'
+                          : percentage >= 60
+                          ? '⚠️ Form partially filled. Please complete remaining details.'
+                          : myAdmission
+                          ? '❗ Form is mostly incomplete. Please fill all required details.'
+                          : '📝 You have not started the admission form yet.'}
+                      </div>
+
+                      {/* Complete Your Form Button */}
+                      {percentage < 100 && (
+                        <button
+                          onClick={() => navigate('/admissions')}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'linear-gradient(135deg, #1565C0, #1976D2)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '10px',
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            letterSpacing: '0.3px',
+                            boxShadow: '0 3px 10px rgba(21,101,192,0.3)',
+                            transition: 'opacity 0.2s'
+                          }}
+                          onMouseOver={e => e.currentTarget.style.opacity = '0.88'}
+                          onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                        >
+                          📝 Complete Your Form
+                        </button>
+                      )}
                     </div>
-                    <span className="notice-tag">{notice.category}</span>
-                  </div>
-                ))}
-                {notices.length === 0 && (
-                  <p className="empty-msg">No notices available</p>
-                )}
+                  );
+                })()}
               </div>
             </div>
           )}
