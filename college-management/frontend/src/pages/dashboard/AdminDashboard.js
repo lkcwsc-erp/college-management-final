@@ -20,6 +20,14 @@ const AdminDashboard = () => {
   const [showApproveForm, setShowApproveForm] = useState(false);
   const [feesAmount, setFeesAmount] = useState('');
   const [message, setMessage] = useState('');
+  const [staff, setStaff] = useState([]);
+
+const [staffForm, setStaffForm] = useState({
+  employeeId: '',
+  department: '',
+  designation: '',
+  role: 'student-section'
+});
 
   const [courseForm, setCourseForm] = useState({ name: '', code: '', type: 'BA', duration: '3 Years', fees: '', eligibility: '', description: '' });
   const [facultyForm, setFacultyForm] = useState({ name: '', designation: '', department: '', qualification: '', experience: '', email: '', phone: '' });
@@ -38,6 +46,9 @@ const AdminDashboard = () => {
     API.get('/admissions').then(res => setAdmissions(res.data.admissions || [])).catch(() => {});
     API.get('/students').then(res => setStudents(res.data.students || [])).catch(() => {});
     API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
+    API.get('/staff')
+  .then(res => setStaff(res.data.staff || []))
+  .catch(() => {});
   }, []);
 
   const handleLogout = () => { logout(); navigate('/'); };
@@ -83,7 +94,31 @@ const AdminDashboard = () => {
       API.get('/events').then(res => setEvents(res.data.events || []));
     } catch (err) { showMessage('Failed to add event.'); }
   };
+const handleStaffSubmit = async (e) => {
+  e.preventDefault();
 
+  try {
+    await API.post('/staff', staffForm);
+
+    showMessage('Staff created successfully!');
+
+    setStaffForm({
+      employeeId: '',
+      department: '',
+      designation: '',
+      role: 'student-section'
+    });
+
+    API.get('/staff')
+      .then(res => setStaff(res.data.staff || []));
+
+  } catch (err) {
+    showMessage(
+      'Failed: ' +
+      (err.response?.data?.message || 'Error')
+    );
+  }
+};
   // ====== GALLERY FUNCTIONS ======
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -177,6 +212,7 @@ const AdminDashboard = () => {
     { id: 'students', label: '👩‍🎓 Students' },
     { id: 'courses', label: '📚 Courses' },
     { id: 'faculty', label: '👩‍🏫 Faculty' },
+    { id: 'staff', label: '👨‍💼 Staff' },
     { id: 'gallery', label: '🖼️ Gallery' },
     { id: 'notices', label: '📢 Notices' },
     { id: 'events', label: '🗓️ Events' },
@@ -570,8 +606,161 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
-          {/* ============ END GALLERY TAB ============ */}
 
+          {/* ============ END GALLERY TAB ============ */}
+          {activeTab === 'staff' && (
+  <div>
+
+    <div className="form-card">
+      <h3>Create Staff</h3>
+
+      <form onSubmit={handleStaffSubmit}>
+
+        <div className="form-row-dash">
+
+          <div className="form-group">
+            <label>Employee ID</label>
+
+            <input
+              type="text"
+              placeholder="EMP101"
+              value={staffForm.employeeId}
+              onChange={(e) =>
+                setStaffForm({
+                  ...staffForm,
+                  employeeId: e.target.value
+                })
+              }
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Department</label>
+
+            <input
+              type="text"
+              placeholder="Administration"
+              value={staffForm.department}
+              onChange={(e) =>
+                setStaffForm({
+                  ...staffForm,
+                  department: e.target.value
+                })
+              }
+              required
+            />
+          </div>
+
+        </div>
+
+        <div className="form-row-dash">
+
+          <div className="form-group">
+            <label>Designation</label>
+
+            <input
+              type="text"
+              placeholder="Officer"
+              value={staffForm.designation}
+              onChange={(e) =>
+                setStaffForm({
+                  ...staffForm,
+                  designation: e.target.value
+                })
+              }
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Role</label>
+
+            <select
+              value={staffForm.role}
+              onChange={(e) =>
+                setStaffForm({
+                  ...staffForm,
+                  role: e.target.value
+                })
+              }
+            >
+              <option value="student-section">
+                Student Section
+              </option>
+
+              <option value="accounts">
+                Accounts
+              </option>
+
+              <option value="exam">
+                Examination
+              </option>
+
+              <option value="scholarship">
+                Scholarship
+              </option>
+
+              <option value="principal">
+                Principal
+              </option>
+            </select>
+          </div>
+
+        </div>
+
+        <button
+          type="submit"
+          className="btn btn-primary"
+        >
+          Create Staff
+        </button>
+
+      </form>
+    </div>
+
+    <h3 style={{ margin: '30px 0 16px' }}>
+      Staff Members ({staff.length})
+    </h3>
+
+    {staff.length === 0 ? (
+      <div className="empty-state">
+        <div className="empty-icon">👨‍💼</div>
+        <h3>No Staff Yet</h3>
+        <p>Create staff members to manage ERP sections.</p>
+      </div>
+    ) : (
+
+      <div className="table-container">
+
+        <table className="data-table">
+
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {staff.map((s) => (
+              <tr key={s._id}>
+                <td>{s.employeeId}</td>
+                <td>{s.department}</td>
+                <td>{s.designation}</td>
+                <td>{s.role}</td>
+              </tr>
+            ))}
+          </tbody>
+
+        </table>
+      </div>
+    )}
+
+  </div>
+)}
           {activeTab === 'notices' && (
             <div>
               <div className="form-card">
