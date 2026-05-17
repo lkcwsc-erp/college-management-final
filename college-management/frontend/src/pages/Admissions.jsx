@@ -1647,89 +1647,45 @@ console.log("USER:", user);
                         accept="image/*,.pdf" required={true} />
 <div className="form-section">
   <h3 className="form-section-title">
-    {/* ===== Upload Documents ===== */}
+    {/* ===== DOCUMENT UPLOAD ===== */}
 <div className="form-section">
   <h3 className="form-section-title">
     📄 Upload Documents
   </h3>
 
-  <div className="form-row">
+  <div className="upload-grid-two">
 
-    {/* Aadhaar Card */}
-    <div className="form-group">
-      <label>📌 Aadhaar Card *</label>
-      <div className="upload-box">
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.pdf"
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              aadhaarDocument: e.target.files[0]
-            })
-          }
-        />
-        <p>Drop file or <span>browse</span></p>
-        <small>JPG, PNG, PDF · Max 1 MB</small>
-      </div>
-    </div>
+    <FileUploadBox
+      fieldName="aadhaarCard"
+      label="🪪 Aadhaar Card"
+      accept="image/*,.pdf"
+      required={true}
+      hint="JPG, PNG, PDF · Max 1 MB"
+    />
 
-    {/* SSC Marksheet */}
-    <div className="form-group">
-      <label>📌 SSC Marksheet *</label>
-      <div className="upload-box">
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.pdf"
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              sscMarksheet: e.target.files[0]
-            })
-          }
-        />
-        <p>Drop file or <span>browse</span></p>
-        <small>JPG, PNG, PDF · Max 1 MB</small>
-      </div>
-    </div>
+    <FileUploadBox
+      fieldName="sscMarksheet"
+      label="📘 SSC Marksheet"
+      accept="image/*,.pdf"
+      required={true}
+      hint="JPG, PNG, PDF · Max 1 MB"
+    />
 
-    {/* HSC Marksheet */}
-    <div className="form-group">
-      <label>📌 HSC Marksheet *</label>
-      <div className="upload-box">
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.pdf"
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              hscMarksheet: e.target.files[0]
-            })
-          }
-        />
-        <p>Drop file or <span>browse</span></p>
-        <small>JPG, PNG, PDF · Max 1 MB</small>
-      </div>
-    </div>
+    <FileUploadBox
+      fieldName="hscMarksheet"
+      label="📗 HSC Marksheet"
+      accept="image/*,.pdf"
+      required={true}
+      hint="JPG, PNG, PDF · Max 1 MB"
+    />
 
-    {/* Bank Passbook */}
-    <div className="form-group">
-      <label>📌 Bank Passbook *</label>
-      <div className="upload-box">
-        <input
-          type="file"
-          accept=".jpg,.jpeg,.png,.pdf"
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              bankPassbook: e.target.files[0]
-            })
-          }
-        />
-        <p>Drop file or <span>browse</span></p>
-        <small>JPG, PNG, PDF · Max 1 MB</small>
-      </div>
-    </div>
+    <FileUploadBox
+      fieldName="bankPassbook"
+      label="🏦 Bank Passbook"
+      accept="image/*,.pdf"
+      required={true}
+      hint="JPG, PNG, PDF · Max 1 MB"
+    />
 
   </div>
 </div>
