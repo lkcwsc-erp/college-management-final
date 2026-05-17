@@ -772,31 +772,31 @@ console.log("USER:", user);
       placeholder="Enter Husband Full Name"
       value={formData.husbandFullName || ""}
       onChange={(e) =>
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           husbandFullName: e.target.value
-        })
+        }))
       }
     />
   </div>
 )}
-                    {/* Guardian Name */}
-                    <div className="form-group">
-                      <label>Guardian Name</label>
-                      <input
-                        type="text"
-                        placeholder="Enter Guardian Name"
-                        value={formData.guardianName || ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            guardianName: e.target.value
-                          })
-                        }
-                      />
-                    </div>
 
-                  </div>
+{/* Guardian Full Name */}
+<div className="form-group">
+  <label>Guardian Full Name</label>
+  <input
+    type="text"
+    name="guardianName"
+    placeholder="Enter Guardian Full Name"
+    value={formData.guardianName || ""}
+    onChange={(e) =>
+      setFormData((prev) => ({
+        ...prev,
+        guardianName: e.target.value
+      }))
+    }
+  />
+</div>
                  {/* ===== GUARDIAN ===== */}
 <div className="form-section">
   <h3 className="form-section-title">
