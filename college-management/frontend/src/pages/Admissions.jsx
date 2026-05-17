@@ -1147,6 +1147,14 @@ console.log("USER:", user);
                           value={formData.aadharName} onChange={handleChange} required />
                       </div>
                     </div>
+                    <FileUploadBox fieldName="aadharPhoto" label="📷 Aadhar Card Photo"
+                      accept="image/*,.pdf" required={true} />
+                    <div className="info-note">
+                      <span>ℹ️</span>
+                      <p>Your Aadhar details are kept confidential as per government guidelines.</p>
+                    </div>
+                  </div>
+
                   {/* ===== SSC ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📗 SSC — 10th Standard Details</h3>
@@ -1215,6 +1223,10 @@ console.log("USER:", user);
                         ✅ <strong>{formData.sscPercentage}%</strong> — <strong>{formData.sscGrade}</strong>
                       </div>
                     )}
+                    <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet"
+                      accept="image/*,.pdf" required={true} />
+                  </div>
+
                   {/* ===== HSC ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📘 HSC — 12th Standard Details</h3>
@@ -1310,6 +1322,10 @@ console.log("USER:", user);
                         ✅ <strong>{formData.hscPercentage}%</strong> — <strong>{formData.hscGrade}</strong>
                       </div>
                     )}
+                    <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet"
+                      accept="image/*,.pdf" required={true} />
+                  </div>
+
                   {/* ===== GAP YEAR ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📅 Gap Year Information</h3>
