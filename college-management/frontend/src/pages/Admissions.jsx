@@ -17,7 +17,7 @@ const FILE_LIMITS = {
   sscMarksheet: 1024 * 1024,
   hscMarksheet: 1024 * 1024,
   prevYearMarksheet: 1024 * 1024,
-  gapYearCertificatet: 1024 * 1024,
+  gapYearDocument: 1024 * 1024,
   casteCertificate: 1024 * 1024,
   casteValidityCertificate: 1024 * 1024,
   marriageCertificate: 1024 * 1024,
@@ -135,7 +135,7 @@ const Admissions = () => {
   const [uploadedFiles, setUploadedFiles] = useState({
     studentPhoto: null, signaturePhoto: null, aadharPhoto: null,
     sscMarksheet: null, hscMarksheet: null, prevYearMarksheet: null,
-    gapyearCertificate: null, casteCertificate: null, casteValidityCertificate: null,
+    gapYearDocument: null, casteCertificate: null, casteValidityCertificate: null,
     marriageCertificate: null, bankPassbook: null,
     domicileCertificate: null, incomeCertificate: null, transferCertificate: null,
   });
@@ -143,7 +143,7 @@ const Admissions = () => {
   const [uploadPreviews, setUploadPreviews] = useState({
     studentPhoto: '', signaturePhoto: '', aadharPhoto: '',
     sscMarksheet: '', hscMarksheet: '', prevYearMarksheet: '',
-    gapCertificate: '', casteCertificate: '', casteValidityCertificate: '',
+    gapYearDocument: '', casteCertificate: '', casteValidityCertificate: '',
     marriageCertificate: '', bankPassbook: '',
     domicileCertificate: '', incomeCertificate: '', transferCertificate: '',
   });
@@ -393,7 +393,7 @@ console.log("USER:", user);
       }
     }
 
-    if (formData.hasGap && !uploadedFiles.gapCertificate) {
+    if (formData.hasGap && !uploadedFiles.gapYearDocument) {
       setError('Please upload Gap Certificate.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -684,7 +684,7 @@ console.log("USER:", user);
                 { icon: '📜', title: 'Leaving Certificate / TC', desc: 'School/college leaving certificate' },
                 { icon: '📋', title: 'Caste Certificate', desc: 'Required for reserved category' },
                 { icon: '💍', title: 'Marriage Certificate', desc: 'Required for married students' },
-                { icon: '📅', title: 'Gap Year Certificate', desc: 'Only for gap year students' },
+                { icon: '📅', title: 'Gap Year Document',desc: 'Only for gap year students'},
               ].map((doc, i) => (
                 <div className="document-card" key={i}>
                   <span className="doc-icon">{doc.icon}</span>
@@ -1679,7 +1679,7 @@ console.log("USER:", user);
 
   {formData.hasGap && (
     <FileUploadBox
-      fieldName="gapYearCertificate"
+      fieldName="gapYearDocument"
       label="📅 Gap Year Document Upload"
       accept="image/*,.pdf"
       required={true}
