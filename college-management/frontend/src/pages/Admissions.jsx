@@ -763,27 +763,27 @@ console.log("USER:", user);
                     </div>
 
                    {/* Husband Full Name - only if married */}
-{formData.isMarried && (
-  <div className="form-group">
-    <label>Husband Full Name</label>
-    <input
-      type="text"
-      name="husbandFullName"
-      placeholder="Enter Husband Full Name"
-      value={formData.husbandFullName || ""}
-      onChange={(e) =>
-        setFormData((prev) => ({
-          ...prev,
-          husbandFullName: e.target.value
-        }))
-      }
-    />
-  </div>
-)}
+<div className="form-group">
+  <label>Husband Full Name</label>
+
+  <input
+    type="text"
+    name="husbandFullName"
+    placeholder="Enter Husband Full Name"
+    value={formData.husbandFullName || ""}
+    onChange={(e) =>
+      setFormData((prev) => ({
+        ...prev,
+        husbandFullName: e.target.value,
+      }))
+    }
+  />
+</div>
 
 {/* Guardian Full Name */}
 <div className="form-group">
   <label>Guardian Full Name</label>
+
   <input
     type="text"
     name="guardianName"
@@ -792,7 +792,7 @@ console.log("USER:", user);
     onChange={(e) =>
       setFormData((prev) => ({
         ...prev,
-        guardianName: e.target.value
+        guardianName: e.target.value,
       }))
     }
   />
