@@ -7,6 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import MAHARASHTRA_CITIES from '../data/maharashtraCities';
 import './Admissions.css';
 
+/* ============================================================
+   FILE SIZE LIMITS (bytes) — Maharashtra college standard
+   ============================================================ */
 const FILE_LIMITS = {
   studentPhoto: 250 * 1024,
   signaturePhoto: 100 * 1024,
@@ -29,6 +32,9 @@ const formatLimit = (bytes) => {
   return (bytes / 1024).toFixed(0) + ' KB';
 };
 
+/* ============================================================
+   SUBJECTS by Course
+   ============================================================ */
 const SUBJECTS_BY_COURSE = {
   BA: [
     'History', 'Marathi', 'English', 'Hindi',
@@ -54,37 +60,74 @@ const Admissions = () => {
   const [hscError, setHscError] = useState('');
   const [fileErrors, setFileErrors] = useState({});
 
+  // Enquiry form state
+  const [enquiryData, setEnquiryData] = useState({
+    studentFullName: '',
+    gender: '',
+    email: '',
+    phone: '',
+    message: '',
+  });
+  const [enquiryLoading, setEnquiryLoading] = useState(false);
+  const [enquirySuccess, setEnquirySuccess] = useState('');
+  const [enquiryError, setEnquiryError] = useState('');
+
+  // City autocomplete states
   const [citySuggestions, setCitySuggestions] = useState([]);
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
   const cityWrapRef = useRef(null);
 
   const [formData, setFormData] = useState({
+    // Personal
     applicantName: '', email: '', phone: '',
     addressLine: '', city: '', district: '', state: '', pincode: '',
     permanentAddress: '', sameAsAddress: false,
     dateOfBirth: '', gender: '', category: '',
     bloodGroup: '', religion: '', nationality: 'Indian',
     isMarried: false,
+
     husbandName: '',
     guardianName: '',
+    // Aadhar
     aadharNumber: '', aadharName: '',
+
+    // SSC
     sscSchoolName: '', sscBoard: '', sscYOP: '',
     sscRollNumber: '', sscObtainedMarks: '', sscTotalMarks: '',
     sscPercentage: '', sscGrade: '',
+
+    // HSC
     hscCollegeName: '', hscBoard: '', hscStream: '', hscYOP: '',
     hscRollNumber: '', hscMedium: '', hscObtainedMarks: '',
     hscTotalMarks: '', hscPercentage: '', hscGrade: '',
+
+    // Gap
     hasGap: false, gapFromYear: '', gapToYear: '', gapTotalYears: '', gapReason: '',
-    courseType: '', admissionYear: '', course: '',
-    primarySubject: '', optionalSubjects: '',
+
+    // Course & Year
+    courseType: '',      // 'BA' or 'BSc'
+    admissionYear: '',   // '1st Year' / '2nd Year' / '3rd Year'
+    course: '',          // backend course _id
+    primarySubject: '',
+    optionalSubjects: '',
+
+    // Previous college (2nd / 3rd year)
     prevCollegeName: '', prevCollegeYear: '', tcNumber: '',
     prevYearObtainedMarks: '', prevYearTotalMarks: '', prevYearPercentage: '',
+
+    // Bank
     bankAccountHolder: '', bankAccountNumber: '', bankIFSC: '',
     bankName: '', bankBranch: '',
+
+    // Guardian
     fatherName: '', motherName: '', guardianPhone: '',
     familyIncome: '',
+
+    // Caste
     casteCertificateNo: '', casteCertificateAuthority: '',
     hasCasteValidity: false, casteValidity: '', casteValidityDate: '',
+
+    // Extra
     referralSource: '', message: '',
     declaration: false,
   });
@@ -105,6 +148,9 @@ const Admissions = () => {
     domicileCertificate: '', incomeCertificate: '', transferCertificate: '',
   });
 
+  /* ============================================================
+     Load courses + prefill user
+     ============================================================ */
   useEffect(() => {
     API.get('/courses').then(res => {
       const list = res.data.courses || [];
@@ -130,6 +176,7 @@ const Admissions = () => {
     }
   }, [user]);
 
+  /* Auto-calc gap years */
   useEffect(() => {
     if (formData.hasGap && formData.gapFromYear && formData.gapToYear) {
       const from = parseInt(formData.gapFromYear);
@@ -143,6 +190,7 @@ const Admissions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.hasGap, formData.gapFromYear, formData.gapToYear]);
 
+  /* Auto-calc previous year percentage */
   useEffect(() => {
     const obt = parseFloat(formData.prevYearObtainedMarks);
     const tot = parseFloat(formData.prevYearTotalMarks);
@@ -154,6 +202,7 @@ const Admissions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.prevYearObtainedMarks, formData.prevYearTotalMarks]);
 
+  /* When courseType changes → map to backend _id + reset subject */
   useEffect(() => {
     if (formData.courseType && courses.length > 0) {
       const matched = courses.find(c => c.type === formData.courseType);
@@ -166,6 +215,7 @@ const Admissions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.courseType, courses]);
 
+  /* Close city dropdown on outside click */
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (cityWrapRef.current && !cityWrapRef.current.contains(e.target)) {
@@ -176,6 +226,9 @@ const Admissions = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  /* ============================================================
+     HELPERS
+     ============================================================ */
   const calculateGrade = (percentage) => {
     const pct = parseFloat(percentage);
     if (isNaN(pct)) return '';
@@ -196,6 +249,7 @@ const Admissions = () => {
     }
   };
 
+  /* City autocomplete handler */
   const handleCityInput = (value) => {
     setFormData(prev => ({ ...prev, city: value, district: '', state: '' }));
     if (value.length >= 1) {
@@ -221,6 +275,7 @@ const Admissions = () => {
     setCitySuggestions([]);
   };
 
+  /* Same as address handler */
   const handleSameAsAddress = (checked) => {
     const full = formData.addressLine && formData.city
       ? `${formData.addressLine}, ${formData.city}, ${formData.district}, ${formData.state} - ${formData.pincode}`
@@ -246,6 +301,7 @@ const Admissions = () => {
     }
     setFormData(updated);
   };
+
   const handleHscMarksChange = (field, value) => {
     const updated = { ...formData, [field]: value };
     if (updated.hscObtainedMarks && updated.hscTotalMarks) {
@@ -282,7 +338,9 @@ const Admissions = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+console.log("FORM DATA:", formData);
+console.log("UPLOADED FILES:", uploadedFiles);
+console.log("USER:", user);
     if (!user) {
       setError('Please login before submitting the application.');
       setActiveTab('process');
@@ -386,6 +444,60 @@ const Admissions = () => {
   const yearOptions = Array.from({ length: 15 }, (_, i) => 2026 - i);
   const isDirectAdmission = formData.admissionYear === '2nd Year' || formData.admissionYear === '3rd Year';
 
+  // Enquiry form submit handler
+  const handleEnquirySubmit = async (e) => {
+    e.preventDefault();
+    setEnquiryError('');
+    setEnquirySuccess('');
+
+    if (!enquiryData.studentFullName.trim()) {
+      setEnquiryError('Please enter your full name.');
+      return;
+    }
+    if (!enquiryData.gender) {
+      setEnquiryError('Please select your gender.');
+      return;
+    }
+    if (!enquiryData.email.trim()) {
+      setEnquiryError('Please enter your email address.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(enquiryData.email)) {
+      setEnquiryError('Please enter a valid email address.');
+      return;
+    }
+    if (!enquiryData.phone.trim() || enquiryData.phone.length !== 10) {
+      setEnquiryError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setEnquiryLoading(true);
+    try {
+      const payload = {
+        studentFullName: enquiryData.studentFullName.trim(),
+        gender: enquiryData.gender,
+        email: enquiryData.email.trim(),
+        phone: enquiryData.phone.trim(),
+        dateOfBirth: '2000-01-01', // default placeholder (backend requires it)
+        notes: enquiryData.message.trim(),
+      };
+      const res = await API.post('/enquiries', payload);
+      if (res.data.success) {
+        setEnquirySuccess('✅ Enquiry submitted successfully! Our staff will contact you soon.');
+        setEnquiryData({ studentFullName: '', gender: '', email: '', phone: '', message: '' });
+      } else {
+        setEnquiryError(res.data.message || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      setEnquiryError(err.response?.data?.message || 'Failed to submit enquiry. Please try again.');
+    } finally {
+      setEnquiryLoading(false);
+    }
+  };
+
+  /* ============================================================
+     UPLOAD BOX COMPONENT
+     ============================================================ */
   const FileUploadBox = ({ fieldName, label, accept, required, hint }) => {
     const inputRef = useRef(null);
     const [dragging, setDragging] = useState(false);
@@ -464,7 +576,11 @@ const Admissions = () => {
       </div>
     );
   };
-   return (
+
+  /* ============================================================
+     RENDER
+     ============================================================ */
+  return (
     <div>
       <Navbar />
 
@@ -484,8 +600,11 @@ const Admissions = () => {
             onClick={() => setActiveTab('documents')}>📄 Documents Required</button>
           <button className={activeTab === 'apply' ? 'tab-btn active' : 'tab-btn'}
             onClick={() => setActiveTab('apply')}>✍️ Apply Online</button>
+          <button className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
+            onClick={() => setActiveTab('enquiry')}>💬 Enquiry Form</button>
         </div>
 
+        {/* ============= PROCESS TAB ============= */}
         {activeTab === 'process' && (
           <div className="tab-content">
             <h2>Admission Process</h2>
@@ -525,6 +644,7 @@ const Admissions = () => {
           </div>
         )}
 
+        {/* ============= DATES TAB ============= */}
         {activeTab === 'dates' && (
           <div className="tab-content">
             <h2>Important Dates 2025-26</h2>
@@ -547,6 +667,7 @@ const Admissions = () => {
           </div>
         )}
 
+        {/* ============= DOCUMENTS TAB ============= */}
         {activeTab === 'documents' && (
           <div className="tab-content">
             <h2>Documents Required</h2>
@@ -577,6 +698,7 @@ const Admissions = () => {
           </div>
         )}
 
+        {/* ============= APPLY TAB ============= */}
         {activeTab === 'apply' && (
           <div className="tab-content">
             <h2>Online Application Form</h2>
@@ -620,7 +742,7 @@ const Admissions = () => {
                         <label>Gender *</label>
                         <select name="gender" value={formData.gender} onChange={handleChange} required>
                           <option value="">Select Gender</option>
-                          <option value="male">Male</option>
+                           <option value="Male">Male</option>
                           <option value="female">Female</option>
                           <option value="other">Other</option>
                         </select>
@@ -687,282 +809,219 @@ const Admissions = () => {
                           value={formData.email} onChange={handleChange} required />
                       </div>
                     </div>
-                  {/* Marital Status */}
-<div className="checkbox-row">
-  <label className="checkbox-label">
-    <input
-      type="checkbox"
-      checked={formData.isMarried}
-      onChange={e =>
-        setFormData({
-          ...formData,
-          isMarried: e.target.checked
-        })
-      }
-    />
-    <span>💍 I am married</span>
-  </label>
-</div>
 
-{/* Husband Full Name - only if married */}
-{formData.isMarried && (
-  <div className="form-group">
-    <label>Husband Full Name</label>
-    <input
-      type="text"
-      placeholder="Enter Husband Full Name"
-      value={formData.husbandName || ''}
-      onChange={(e) =>
-        setFormData({
-          ...formData,
-          husbandName: e.target.value
-        })
-      }
-    />
-  </div>
-)}
-
-{/* Guardian Full Name */}
-<div className="form-group">
-  <label>Guardian Full Name</label>
-  <input
-    type="text"
-    placeholder="Enter Guardian Full Name"
-    value={formData.guardianName || ''}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        guardianName: e.target.value
-      })
-    }
-  />
-</div>
-
-</div>
-                  
-                  {/* ===== GUARDIAN / PARENT ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">👨‍👩‍👧 Guardian / Parent Details</h3>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Father's Name *</label>
-                        <input type="text" name="fatherName" placeholder="Father's full name"
-                          value={formData.fatherName} onChange={handleChange} required />
-                      </div>
-                      <div className="form-group">
-                        <label>Mother's Name *</label>
-                        <input type="text" name="motherName" placeholder="Mother's full name"
-                          value={formData.motherName} onChange={handleChange} required />
-                      </div>
+                {/* Marital Status */}
+                    <div className="checkbox-row">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={formData.isMarried}
+                          onChange={e =>
+                            setFormData({
+                              ...formData,
+                              isMarried: e.target.checked
+                            })
+                          }
+                        />
+                        <span>💍 I am married</span>
+                      </label>
                     </div>
-                    <div className="form-row">
+
+                    {/* Husband Full Name - only if married */}
+                    {formData.isMarried && (
                       <div className="form-group">
-                        <label>Guardian's Mobile *</label>
-                        <input type="tel" placeholder="10 digit mobile number"
-                          value={formData.guardianPhone}
-                          onChange={e => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            if (val.length <= 10) setFormData({ ...formData, guardianPhone: val });
-                          }} required />
-                        {formData.guardianPhone && formData.guardianPhone.length < 10 && (
-                          <small className="inline-error">Enter 10 digit number</small>
-                        )}
+                        <label>Husband Name</label>
+                        <input
+                          type="text"
+                          placeholder="Enter Husband Name"
+                          value={formData.husbandName || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              husbandName: e.target.value
+                            })
+                          }
+                        />
                       </div>
-                      <div className="form-group">
-                        <label>Annual Family Income</label>
-                        <select name="familyIncome" value={formData.familyIncome} onChange={handleChange}>
-                          <option value="">Select Range</option>
-                          <option value="below1lakh">Below ₹1 Lakh</option>
-                          <option value="1to2.5lakh">₹1 - 2.5 Lakh</option>
-                          <option value="2.5to5lakh">₹2.5 - 5 Lakh</option>
-                          <option value="above5lakh">Above ₹5 Lakh</option>
-                        </select>
-                      </div>
+                    )}
+
+                    {/* Guardian Name */}
+                    <div className="form-group">
+                      <label>Guardian Name</label>
+                      <input
+                        type="text"
+                        placeholder="Enter Guardian Name"
+                        value={formData.guardianName || ''}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            guardianName: e.target.value
+                          })
+                        }
+                      />
                     </div>
+
                   </div>
-
-                 {/* ===== ADDRESS ===== */}
+                 {/* ===== GUARDIAN ===== */}
 <div className="form-section">
-  <h3 className="form-section-title">🏠 Address Details</h3>
+  <h3 className="form-section-title">
+    👨‍👩‍👧 Guardian / Parent Details
+  </h3>
 
-  {/* ===== First Row ===== */}
   <div className="form-row">
     <div className="form-group">
-      <label>House Number *</label>
+      <label>Father's Name *</label>
       <input
         type="text"
-        name="houseNumber"
-        placeholder="Enter house number"
-        value={formData.houseNumber || ""}
+        name="fatherName"
+        placeholder="Father's full name"
+        value={formData.fatherName}
         onChange={handleChange}
         required
       />
     </div>
 
     <div className="form-group">
-      <label>Street / Area *</label>
+      <label>Mother's Name *</label>
       <input
         type="text"
-        name="streetArea"
-        placeholder="Enter street / area"
-        value={formData.streetArea || ""}
+        name="motherName"
+        placeholder="Mother's full name"
+        value={formData.motherName}
         onChange={handleChange}
         required
       />
     </div>
   </div>
 
-  {/* ===== Second Row ===== */}
   <div className="form-row">
-    {/* City */}
-    <div
-      className="form-group city-autocomplete-wrap"
-      ref={cityWrapRef}
-    >
-      <label>City / Town *</label>
-
-      <input
-        type="text"
-        placeholder="Type city name"
-        value={formData.city}
-        onChange={(e) => handleCityInput(e.target.value)}
-        onFocus={() =>
-          formData.city &&
-          handleCityInput(formData.city)
-        }
-        autoComplete="off"
-        required
-      />
-
-      {showCitySuggestions &&
-        citySuggestions.length > 0 && (
-          <ul className="city-suggestions-dropdown">
-            {citySuggestions.map((c, i) => (
-              <li
-                key={i}
-                onClick={() =>
-                  handleCitySelect(c)
-                }
-              >
-                <span className="city-name">
-                  {c.city}
-                </span>
-                <span className="city-meta">
-                  {c.district}, {c.state}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-    </div>
-
-    {/* District */}
     <div className="form-group">
-      <label>District *</label>
+      <label>Guardian's Mobile *</label>
       <input
-        type="text"
-        value={formData.district}
-        readOnly
-        placeholder="Select city first"
-        className={
-          formData.district
-            ? "auto-filled"
-            : ""
-        }
-      />
-    </div>
-
-    {/* Subdistrict */}
-    <div className="form-group">
-      <label>Subdistrict *</label>
-      <input
-        type="text"
-        name="subDistrict"
-        placeholder="Enter subdistrict"
-        value={formData.subDistrict || ""}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  </div>
-
-  {/* ===== Third Row ===== */}
-  <div className="form-row">
-    {/* Taluka / Tehsil */}
-    <div className="form-group">
-      <label>Taluka / Tehsil *</label>
-      <input
-        type="text"
-        name="taluka"
-        placeholder="Enter taluka / tehsil"
-        value={formData.taluka || ""}
-        onChange={handleChange}
-        required
-      />
-    </div>
-
-    {/* State */}
-    <div className="form-group">
-      <label>State (Auto)</label>
-      <input
-        type="text"
-        value={formData.state}
-        readOnly
-        placeholder="Select city first"
-        className={
-          formData.state
-            ? "auto-filled"
-            : ""
-        }
-      />
-    </div>
-
-    {/* Pincode */}
-    <div className="form-group">
-      <label>Pincode *</label>
-      <input
-        type="text"
-        placeholder="6 digit pincode"
-        value={formData.pincode}
-        onChange={(e) => {
-          const val =
-            e.target.value.replace(/\D/g, "");
-
-          if (val.length <= 6) {
+        type="tel"
+        placeholder="10 digit mobile number"
+        value={formData.guardianPhone}
+        onChange={e => {
+          const val = e.target.value.replace(/\D/g, '');
+          if (val.length <= 10) {
             setFormData({
               ...formData,
-              pincode: val
+              guardianPhone: val
             });
           }
         }}
         required
       />
-
-      {formData.pincode &&
-        formData.pincode.length < 6 && (
+      {formData.guardianPhone &&
+        formData.guardianPhone.length < 10 && (
           <small className="inline-error">
-            Enter 6 digit pincode
+            Enter 10 digit number
           </small>
-        )}
+      )}
+    </div>
+
+    <div className="form-group">
+      <label>Annual Family Income</label>
+      <select
+        name="familyIncome"
+        value={formData.familyIncome}
+        onChange={handleChange}
+      >
+        <option value="">Select Range</option>
+        <option value="below1lakh">
+          Below ₹1 Lakh
+        </option>
+        <option value="1to2.5lakh">
+          ₹1 - 2.5 Lakh
+        </option>
+        <option value="2.5to5lakh">
+          ₹2.5 - 5 Lakh
+        </option>
+        <option value="above5lakh">
+          Above ₹5 Lakh
+        </option>
+      </select>
     </div>
   </div>
+</div> 
+                {/* ===== ADDRESS WITH CITY AUTOCOMPLETE ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">🏠 Address Details</h3>
 
-  {/* ===== Permanent Address Checkbox ===== */}
-  <div className="checkbox-row">
-    <label className="checkbox-label">
-      <input
-        type="checkbox"
-        checked={formData.sameAsAddress}
-        onChange={(e) =>
-          handleSameAsAddress(
-            e.target.checked
-          )
-        }
-      />
-      <span>📌 Permanent Address</span>
-    </label>
-  </div>
-</div>
+                    <div className="form-group">
+                      <label>House No, Street, Area *</label>
+                      <input type="text" name="addressLine"
+                        placeholder="e.g. Plot 12, Shivaji Nagar, Near Bus Stand"
+                        value={formData.addressLine} onChange={handleChange} required />
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group city-autocomplete-wrap" ref={cityWrapRef}>
+                        <label>City / Town *</label>
+                        <input type="text" placeholder="Type city name (e.g. Gangakhed)"
+                          value={formData.city}
+                          onChange={e => handleCityInput(e.target.value)}
+                          onFocus={() => formData.city && handleCityInput(formData.city)}
+                          autoComplete="off" required />
+                        {showCitySuggestions && citySuggestions.length > 0 && (
+                          <ul className="city-suggestions-dropdown">
+                            {citySuggestions.map((c, i) => (
+                              <li key={i} onClick={() => handleCitySelect(c)}>
+                                <span className="city-name">{c.city}</span>
+                                <span className="city-meta">{c.district}, {c.state}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <small className="field-hint">💡 Type to search Maharashtra cities</small>
+                      </div>
+                      <div className="form-group">
+                        <label>District (Auto)</label>
+                        <input type="text" value={formData.district} readOnly
+                          placeholder="Select city first"
+                          className={formData.district ? 'auto-filled' : ''} />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>State (Auto)</label>
+                        <input type="text" value={formData.state} readOnly
+                          placeholder="Select city first"
+                          className={formData.state ? 'auto-filled' : ''} />
+                      </div>
+                      <div className="form-group">
+                        <label>Pincode *</label>
+                        <input type="text" placeholder="6 digit pincode"
+                          value={formData.pincode}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (val.length <= 6) setFormData({ ...formData, pincode: val });
+                          }} required />
+                        {formData.pincode && formData.pincode.length < 6 && (
+                          <small className="inline-error">Enter 6 digit pincode</small>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Permanent Address */}
+                    <div className="checkbox-row">
+                      <label className="checkbox-label">
+                        <input type="checkbox" checked={formData.sameAsAddress}
+                          onChange={e => handleSameAsAddress(e.target.checked)} />
+                        <span>📌 Permanent address same as above</span>
+                      </label>
+                    </div>
+
+                    {!formData.sameAsAddress && (
+                      <div className="form-group">
+                        <label>Permanent Address</label>
+                        <textarea name="permanentAddress" rows="3"
+                          placeholder="House No, Street, Area, City, State, Pincode"
+                          value={formData.permanentAddress} onChange={handleChange} />
+                      </div>
+                    )}
+                  </div>
 
                   {/* ===== PHOTO & SIGNATURE ===== */}
                   <div className="form-section">
@@ -1244,7 +1303,7 @@ const Admissions = () => {
                     )}
                   </div>
 
-                  {/* ===== COURSE & YEAR ===== */}
+                  {/* ===== COURSE & YEAR SELECTION ===== */}
                   <div className="form-section highlight-section">
                     <h3 className="form-section-title">📚 Course &amp; Year Selection</h3>
                     <div className="form-row">
@@ -1293,11 +1352,15 @@ const Admissions = () => {
                       </div>
                     )}
 
+                    {/* Direct Admission - Previous College */}
                     {isDirectAdmission && (
                       <div className="conditional-block">
                         <div className="info-note warning-note">
                           <span>📌</span>
-                          <p>You selected <strong>{formData.admissionYear}</strong> (direct admission). Please provide your previous college details.</p>
+                          <p>
+                            You selected <strong>{formData.admissionYear}</strong> (direct admission).
+                            Please provide your previous college details.
+                          </p>
                         </div>
                         <div className="form-row">
                           <div className="form-group">
@@ -1522,12 +1585,118 @@ const Admissions = () => {
                     </div>
                   </div>
 
-                  <button type="submit" className="btn btn-primary submit-btn" disabled={loading}>
+                  <button type="submit" className="btn btn-primary submit-btn">
                     {loading ? '⏳ Submitting Application...' : '🚀 Submit Application'}
                   </button>
                 </form>
               </>
             )}
+          </div>
+        )}
+
+        {/* ============= ENQUIRY TAB ============= */}
+        {activeTab === 'enquiry' && (
+          <div className="tab-content">
+            <h2>💬 Admission Enquiry Form</h2>
+            <p style={{ color: '#555', marginBottom: '24px', fontSize: '15px' }}>
+              Have questions about admissions? Fill this form and our Student Section staff will contact you shortly.
+            </p>
+
+            {enquirySuccess && (
+              <div className="form-success" style={{ marginBottom: '20px' }}>
+                {enquirySuccess}
+              </div>
+            )}
+            {enquiryError && (
+              <div className="form-error" style={{ marginBottom: '20px' }}>
+                {enquiryError}
+              </div>
+            )}
+
+            <div className="apply-form-card" style={{ maxWidth: '620px' }}>
+              <div className="form-section">
+                <h3 className="form-section-title">📋 Your Details</h3>
+
+                {/* Full Name */}
+                <div className="form-group">
+                  <label>Full Name (As Per 12th Marksheet) *</label>
+                  <input
+                    type="text"
+                    placeholder="Enter your full name exactly as on 12th marksheet"
+                    value={enquiryData.studentFullName}
+                    onChange={e => setEnquiryData({ ...enquiryData, studentFullName: e.target.value })}
+                  />
+                </div>
+
+                {/* Gender */}
+                <div className="form-group">
+                  <label>Gender *</label>
+                  <select
+                    value={enquiryData.gender}
+                    onChange={e => setEnquiryData({ ...enquiryData, gender: e.target.value })}
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Email */}
+                <div className="form-group">
+                  <label>Email ID *</label>
+                  <input
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={enquiryData.email}
+                    onChange={e => setEnquiryData({ ...enquiryData, email: e.target.value })}
+                  />
+                </div>
+
+                {/* Mobile */}
+                <div className="form-group">
+                  <label>Mobile No. *</label>
+                  <input
+                    type="tel"
+                    placeholder="Enter 10-digit mobile number"
+                    value={enquiryData.phone}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val.length <= 10) setEnquiryData({ ...enquiryData, phone: val });
+                    }}
+                  />
+                  {enquiryData.phone && enquiryData.phone.length < 10 && (
+                    <small className="inline-error">Enter 10 digit number</small>
+                  )}
+                </div>
+
+                {/* Message */}
+                <div className="form-group">
+                  <label>Message / Your Query</label>
+                  <textarea
+                    rows="4"
+                    placeholder="Write your question or message here (e.g. which course to choose, fee structure, documents needed, etc.)"
+                    value={enquiryData.message}
+                    onChange={e => setEnquiryData({ ...enquiryData, message: e.target.value })}
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+
+                <button
+                  onClick={handleEnquirySubmit}
+                  disabled={enquiryLoading}
+                  className="btn btn-primary submit-btn"
+                  style={{ width: '100%', marginTop: '8px' }}
+                >
+                  {enquiryLoading ? '⏳ Submitting...' : '📨 Submit Enquiry'}
+                </button>
+
+                <div className="info-note" style={{ marginTop: '16px' }}>
+                  <span>ℹ️</span>
+                  <p>Our Student Section staff will review your enquiry and contact you within 1-2 working days.</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
