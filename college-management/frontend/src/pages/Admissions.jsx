@@ -760,35 +760,35 @@ const Admissions = () => {
                       </label>
                     </div>
 
-                    {/* Husband Name - only if married */}
+                    {/* Husband Full Name - only if married */}
                     {formData.isMarried && (
                       <div className="form-group">
-                        <label>Husband Name</label>
+                        <label>Husband Full Name</label>
                         <input
                           type="text"
-                          placeholder="Enter Husband Name"
-                          value={formData.husbandName || ''}
+                          placeholder="Enter Husband Full Name"
+                          value={formData.husbandFullName || ''}
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              husbandName: e.target.value
+                              husbandFullName: e.target.value
                             })
                           }
                         />
                       </div>
                     )}
 
-                    {/* Guardian Name */}
+                    {/* Guardian Full Name */}
                     <div className="form-group">
-                      <label>Guardian Name</label>
+                      <label>Guardian Full Name</label>
                       <input
                         type="text"
-                        placeholder="Enter Guardian Name"
-                        value={formData.guardianName || ''}
+                        placeholder="Enter Guardian Full Name"
+                        value={formData.guardianFullName || ''}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            guardianName: e.target.value
+                            guardianFullName: e.target.value
                           })
                         }
                       />
