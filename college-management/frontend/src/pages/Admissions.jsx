@@ -781,83 +781,188 @@ const Admissions = () => {
                     </div>
                   </div>
 
-                  {/* ===== ADDRESS ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">🏠 Address Details</h3>
+                 {/* ===== ADDRESS ===== */}
+<div className="form-section">
+  <h3 className="form-section-title">🏠 Address Details</h3>
 
-                    <div className="form-group">
-                      <label>House No, Street, Area *</label>
-                      <input type="text" name="addressLine"
-                        placeholder="e.g. Plot 12, Shivaji Nagar, Near Bus Stand"
-                        value={formData.addressLine} onChange={handleChange} required />
-                    </div>
+  {/* ===== First Row ===== */}
+  <div className="form-row">
+    <div className="form-group">
+      <label>House Number *</label>
+      <input
+        type="text"
+        name="houseNumber"
+        placeholder="Enter house number"
+        value={formData.houseNumber || ""}
+        onChange={handleChange}
+        required
+      />
+    </div>
 
-                    <div className="form-row">
-                      <div className="form-group city-autocomplete-wrap" ref={cityWrapRef}>
-                        <label>City / Town *</label>
-                        <input type="text" placeholder="Type city name (e.g. Gangakhed)"
-                          value={formData.city}
-                          onChange={e => handleCityInput(e.target.value)}
-                          onFocus={() => formData.city && handleCityInput(formData.city)}
-                          autoComplete="off" required />
-                        {showCitySuggestions && citySuggestions.length > 0 && (
-                          <ul className="city-suggestions-dropdown">
-                            {citySuggestions.map((c, i) => (
-                              <li key={i} onClick={() => handleCitySelect(c)}>
-                                <span className="city-name">{c.city}</span>
-                                <span className="city-meta">{c.district}, {c.state}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        <small className="field-hint">💡 Type to search Maharashtra cities</small>
-                      </div>
-                      <div className="form-group">
-                        <label>District (Auto)</label>
-                        <input type="text" value={formData.district} readOnly
-                          placeholder="Select city first"
-                          className={formData.district ? 'auto-filled' : ''} />
-                      </div>
-                    </div>
+    <div className="form-group">
+      <label>Street / Area *</label>
+      <input
+        type="text"
+        name="streetArea"
+        placeholder="Enter street / area"
+        value={formData.streetArea || ""}
+        onChange={handleChange}
+        required
+      />
+    </div>
+  </div>
 
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>State (Auto)</label>
-                        <input type="text" value={formData.state} readOnly
-                          placeholder="Select city first"
-                          className={formData.state ? 'auto-filled' : ''} />
-                      </div>
-                      <div className="form-group">
-                        <label>Pincode *</label>
-                        <input type="text" placeholder="6 digit pincode"
-                          value={formData.pincode}
-                          onChange={e => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            if (val.length <= 6) setFormData({ ...formData, pincode: val });
-                          }} required />
-                        {formData.pincode && formData.pincode.length < 6 && (
-                          <small className="inline-error">Enter 6 digit pincode</small>
-                        )}
-                      </div>
-                    </div>
+  {/* ===== Second Row ===== */}
+  <div className="form-row">
+    {/* City */}
+    <div
+      className="form-group city-autocomplete-wrap"
+      ref={cityWrapRef}
+    >
+      <label>City / Town *</label>
 
-                    <div className="checkbox-row">
-                      <label className="checkbox-label">
-                        <input type="checkbox" checked={formData.sameAsAddress}
-                          onChange={e => handleSameAsAddress(e.target.checked)} />
-                        <span>📌 Permanent address same as above</span>
-                      </label>
-                    </div>
+      <input
+        type="text"
+        placeholder="Type city name"
+        value={formData.city}
+        onChange={(e) => handleCityInput(e.target.value)}
+        onFocus={() =>
+          formData.city &&
+          handleCityInput(formData.city)
+        }
+        autoComplete="off"
+        required
+      />
 
-                    {!formData.sameAsAddress && (
-                      <div className="form-group">
-                        <label>Permanent Address</label>
-                        <textarea name="permanentAddress" rows="3"
-                          placeholder="House No, Street, Area, City, State, Pincode"
-                          value={formData.permanentAddress} onChange={handleChange} />
-                      </div>
-                    )}
-                  </div>
+      {showCitySuggestions &&
+        citySuggestions.length > 0 && (
+          <ul className="city-suggestions-dropdown">
+            {citySuggestions.map((c, i) => (
+              <li
+                key={i}
+                onClick={() =>
+                  handleCitySelect(c)
+                }
+              >
+                <span className="city-name">
+                  {c.city}
+                </span>
+                <span className="city-meta">
+                  {c.district}, {c.state}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+    </div>
+
+    {/* District */}
+    <div className="form-group">
+      <label>District *</label>
+      <input
+        type="text"
+        value={formData.district}
+        readOnly
+        placeholder="Select city first"
+        className={
+          formData.district
+            ? "auto-filled"
+            : ""
+        }
+      />
+    </div>
+
+    {/* Subdistrict */}
+    <div className="form-group">
+      <label>Subdistrict *</label>
+      <input
+        type="text"
+        name="subDistrict"
+        placeholder="Enter subdistrict"
+        value={formData.subDistrict || ""}
+        onChange={handleChange}
+        required
+      />
+    </div>
+  </div>
+
+  {/* ===== Third Row ===== */}
+  <div className="form-row">
+    {/* Taluka / Tehsil */}
+    <div className="form-group">
+      <label>Taluka / Tehsil *</label>
+      <input
+        type="text"
+        name="taluka"
+        placeholder="Enter taluka / tehsil"
+        value={formData.taluka || ""}
+        onChange={handleChange}
+        required
+      />
+    </div>
+
+    {/* State */}
+    <div className="form-group">
+      <label>State (Auto)</label>
+      <input
+        type="text"
+        value={formData.state}
+        readOnly
+        placeholder="Select city first"
+        className={
+          formData.state
+            ? "auto-filled"
+            : ""
+        }
+      />
+    </div>
+
+    {/* Pincode */}
+    <div className="form-group">
+      <label>Pincode *</label>
+      <input
+        type="text"
+        placeholder="6 digit pincode"
+        value={formData.pincode}
+        onChange={(e) => {
+          const val =
+            e.target.value.replace(/\D/g, "");
+
+          if (val.length <= 6) {
+            setFormData({
+              ...formData,
+              pincode: val
+            });
+          }
+        }}
+        required
+      />
+
+      {formData.pincode &&
+        formData.pincode.length < 6 && (
+          <small className="inline-error">
+            Enter 6 digit pincode
+          </small>
+        )}
+    </div>
+  </div>
+
+  {/* ===== Permanent Address Checkbox ===== */}
+  <div className="checkbox-row">
+    <label className="checkbox-label">
+      <input
+        type="checkbox"
+        checked={formData.sameAsAddress}
+        onChange={(e) =>
+          handleSameAsAddress(
+            e.target.checked
+          )
+        }
+      />
+      <span>📌 Permanent Address</span>
+    </label>
+  </div>
+</div>
 
                   {/* ===== PHOTO & SIGNATURE ===== */}
                   <div className="form-section">
