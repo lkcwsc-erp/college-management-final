@@ -7,9 +7,6 @@ import { useAuth } from '../context/AuthContext';
 import MAHARASHTRA_CITIES from '../data/maharashtraCities';
 import './Admissions.css';
 
-/* ============================================================
-   FILE SIZE LIMITS (bytes) — Maharashtra college standard
-   ============================================================ */
 const FILE_LIMITS = {
   studentPhoto: 250 * 1024,
   signaturePhoto: 100 * 1024,
@@ -32,9 +29,6 @@ const formatLimit = (bytes) => {
   return (bytes / 1024).toFixed(0) + ' KB';
 };
 
-/* ============================================================
-   SUBJECTS by Course
-   ============================================================ */
 const SUBJECTS_BY_COURSE = {
   BA: [
     'History', 'Marathi', 'English', 'Hindi',
@@ -60,62 +54,37 @@ const Admissions = () => {
   const [hscError, setHscError] = useState('');
   const [fileErrors, setFileErrors] = useState({});
 
-  // City autocomplete states
   const [citySuggestions, setCitySuggestions] = useState([]);
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
   const cityWrapRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    // Personal
     applicantName: '', email: '', phone: '',
     addressLine: '', city: '', district: '', state: '', pincode: '',
     permanentAddress: '', sameAsAddress: false,
     dateOfBirth: '', gender: '', category: '',
     bloodGroup: '', religion: '', nationality: 'Indian',
     isMarried: false,
-
     husbandName: '',
     guardianName: '',
-    // Aadhar
     aadharNumber: '', aadharName: '',
-
-    // SSC
     sscSchoolName: '', sscBoard: '', sscYOP: '',
     sscRollNumber: '', sscObtainedMarks: '', sscTotalMarks: '',
     sscPercentage: '', sscGrade: '',
-
-    // HSC
     hscCollegeName: '', hscBoard: '', hscStream: '', hscYOP: '',
     hscRollNumber: '', hscMedium: '', hscObtainedMarks: '',
     hscTotalMarks: '', hscPercentage: '', hscGrade: '',
-
-    // Gap
     hasGap: false, gapFromYear: '', gapToYear: '', gapTotalYears: '', gapReason: '',
-
-    // Course & Year
-    courseType: '',      // 'BA' or 'BSc'
-    admissionYear: '',   // '1st Year' / '2nd Year' / '3rd Year'
-    course: '',          // backend course _id
-    primarySubject: '',
-    optionalSubjects: '',
-
-    // Previous college (2nd / 3rd year)
+    courseType: '', admissionYear: '', course: '',
+    primarySubject: '', optionalSubjects: '',
     prevCollegeName: '', prevCollegeYear: '', tcNumber: '',
     prevYearObtainedMarks: '', prevYearTotalMarks: '', prevYearPercentage: '',
-
-    // Bank
     bankAccountHolder: '', bankAccountNumber: '', bankIFSC: '',
     bankName: '', bankBranch: '',
-
-    // Guardian
     fatherName: '', motherName: '', guardianPhone: '',
     familyIncome: '',
-
-    // Caste
     casteCertificateNo: '', casteCertificateAuthority: '',
     hasCasteValidity: false, casteValidity: '', casteValidityDate: '',
-
-    // Extra
     referralSource: '', message: '',
     declaration: false,
   });
@@ -136,9 +105,6 @@ const Admissions = () => {
     domicileCertificate: '', incomeCertificate: '', transferCertificate: '',
   });
 
-  /* ============================================================
-     Load courses + prefill user
-     ============================================================ */
   useEffect(() => {
     API.get('/courses').then(res => {
       const list = res.data.courses || [];
@@ -164,7 +130,6 @@ const Admissions = () => {
     }
   }, [user]);
 
-  /* Auto-calc gap years */
   useEffect(() => {
     if (formData.hasGap && formData.gapFromYear && formData.gapToYear) {
       const from = parseInt(formData.gapFromYear);
@@ -178,7 +143,6 @@ const Admissions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.hasGap, formData.gapFromYear, formData.gapToYear]);
 
-  /* Auto-calc previous year percentage */
   useEffect(() => {
     const obt = parseFloat(formData.prevYearObtainedMarks);
     const tot = parseFloat(formData.prevYearTotalMarks);
@@ -190,7 +154,6 @@ const Admissions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.prevYearObtainedMarks, formData.prevYearTotalMarks]);
 
-  /* When courseType changes → map to backend _id + reset subject */
   useEffect(() => {
     if (formData.courseType && courses.length > 0) {
       const matched = courses.find(c => c.type === formData.courseType);
@@ -203,7 +166,6 @@ const Admissions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.courseType, courses]);
 
-  /* Close city dropdown on outside click */
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (cityWrapRef.current && !cityWrapRef.current.contains(e.target)) {
@@ -214,9 +176,6 @@ const Admissions = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  /* ============================================================
-     HELPERS
-     ============================================================ */
   const calculateGrade = (percentage) => {
     const pct = parseFloat(percentage);
     if (isNaN(pct)) return '';
@@ -237,7 +196,6 @@ const Admissions = () => {
     }
   };
 
-  /* City autocomplete handler */
   const handleCityInput = (value) => {
     setFormData(prev => ({ ...prev, city: value, district: '', state: '' }));
     if (value.length >= 1) {
@@ -263,7 +221,6 @@ const Admissions = () => {
     setCitySuggestions([]);
   };
 
-  /* Same as address handler */
   const handleSameAsAddress = (checked) => {
     const full = formData.addressLine && formData.city
       ? `${formData.addressLine}, ${formData.city}, ${formData.district}, ${formData.state} - ${formData.pincode}`
@@ -430,9 +387,6 @@ const Admissions = () => {
   const yearOptions = Array.from({ length: 15 }, (_, i) => 2026 - i);
   const isDirectAdmission = formData.admissionYear === '2nd Year' || formData.admissionYear === '3rd Year';
 
-  /* ============================================================
-     UPLOAD BOX COMPONENT
-     ============================================================ */
   const FileUploadBox = ({ fieldName, label, accept, required, hint }) => {
     const inputRef = useRef(null);
     const [dragging, setDragging] = useState(false);
@@ -511,11 +465,7 @@ const Admissions = () => {
       </div>
     );
   };
-
-  /* ============================================================
-     RENDER
-     ============================================================ */
-  return (
+   return (
     <div>
       <Navbar />
 
@@ -537,7 +487,6 @@ const Admissions = () => {
             onClick={() => setActiveTab('apply')}>✍️ Apply Online</button>
         </div>
 
-        {/* ============= PROCESS TAB ============= */}
         {activeTab === 'process' && (
           <div className="tab-content">
             <h2>Admission Process</h2>
@@ -577,7 +526,6 @@ const Admissions = () => {
           </div>
         )}
 
-        {/* ============= DATES TAB ============= */}
         {activeTab === 'dates' && (
           <div className="tab-content">
             <h2>Important Dates 2025-26</h2>
@@ -600,7 +548,6 @@ const Admissions = () => {
           </div>
         )}
 
-        {/* ============= DOCUMENTS TAB ============= */}
         {activeTab === 'documents' && (
           <div className="tab-content">
             <h2>Documents Required</h2>
@@ -631,7 +578,6 @@ const Admissions = () => {
           </div>
         )}
 
-        {/* ============= APPLY TAB ============= */}
         {activeTab === 'apply' && (
           <div className="tab-content">
             <h2>Online Application Form</h2>
@@ -675,7 +621,7 @@ const Admissions = () => {
                         <label>Gender *</label>
                         <select name="gender" value={formData.gender} onChange={handleChange} required>
                           <option value="">Select Gender</option>
-                           <option value="male">male</option>
+                          <option value="male">Male</option>
                           <option value="female">Female</option>
                           <option value="other">Other</option>
                         </select>
@@ -743,139 +689,74 @@ const Admissions = () => {
                       </div>
                     </div>
 
-                {/* Marital Status */}
+                    {/* Marital Status */}
                     <div className="checkbox-row">
                       <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={formData.isMarried}
-                          onChange={e =>
-                            setFormData({
-                              ...formData,
-                              isMarried: e.target.checked
-                            })
-                          }
-                        />
+                        <input type="checkbox" checked={formData.isMarried}
+                          onChange={e => setFormData({ ...formData, isMarried: e.target.checked })} />
                         <span>💍 I am married</span>
                       </label>
                     </div>
 
-                   {/* husband full name - only if married */}
-{formData.isMarried && (
-  <div className="form-group">
-    <label>husband full name</label>
-    <input
-      type="text"
-      placeholder="enter husband full name"
-      value={formData.husbandFullName || ''}
-      onChange={(e) =>
-        setFormData({
-          ...formData,
-          husbandFullName: e.target.value
-        })
-      }
-    />
-  </div>
-)}
+                    {formData.isMarried && (
+                      <div className="form-group">
+                        <label>Husband Full Name</label>
+                        <input type="text" placeholder="Enter husband full name"
+                          value={formData.husbandName}
+                          onChange={e => setFormData({ ...formData, husbandName: e.target.value })} />
+                      </div>
+                    )}
 
-{/* guardian full name */}
-<div className="form-group">
-  <label>guardian full name</label>
-  <input
-    type="text"
-    placeholder="enter guardian full name"
-    value={formData.guardianFullName || ''}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        guardianFullName: e.target.value
-      })
-    }
-  />
-</div>
-                 {/* ===== GUARDIAN ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">
-    👨‍👩‍👧 Guardian / Parent Details
-  </h3>
+                    <div className="form-group">
+                      <label>Guardian Full Name</label>
+                      <input type="text" placeholder="Enter guardian full name"
+                        value={formData.guardianName}
+                        onChange={e => setFormData({ ...formData, guardianName: e.target.value })} />
+                    </div>
+                  </div>
 
-  <div className="form-row">
-    <div className="form-group">
-      <label>Father's Name *</label>
-      <input
-        type="text"
-        name="fatherName"
-        placeholder="Father's full name"
-        value={formData.fatherName}
-        onChange={handleChange}
-        required
-      />
-    </div>
+                  {/* ===== GUARDIAN / PARENT ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">👨‍👩‍👧 Guardian / Parent Details</h3>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Father's Name *</label>
+                        <input type="text" name="fatherName" placeholder="Father's full name"
+                          value={formData.fatherName} onChange={handleChange} required />
+                      </div>
+                      <div className="form-group">
+                        <label>Mother's Name *</label>
+                        <input type="text" name="motherName" placeholder="Mother's full name"
+                          value={formData.motherName} onChange={handleChange} required />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Guardian's Mobile *</label>
+                        <input type="tel" placeholder="10 digit mobile number"
+                          value={formData.guardianPhone}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (val.length <= 10) setFormData({ ...formData, guardianPhone: val });
+                          }} required />
+                        {formData.guardianPhone && formData.guardianPhone.length < 10 && (
+                          <small className="inline-error">Enter 10 digit number</small>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>Annual Family Income</label>
+                        <select name="familyIncome" value={formData.familyIncome} onChange={handleChange}>
+                          <option value="">Select Range</option>
+                          <option value="below1lakh">Below ₹1 Lakh</option>
+                          <option value="1to2.5lakh">₹1 - 2.5 Lakh</option>
+                          <option value="2.5to5lakh">₹2.5 - 5 Lakh</option>
+                          <option value="above5lakh">Above ₹5 Lakh</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
 
-    <div className="form-group">
-      <label>Mother's Name *</label>
-      <input
-        type="text"
-        name="motherName"
-        placeholder="Mother's full name"
-        value={formData.motherName}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  </div>
-
-  <div className="form-row">
-    <div className="form-group">
-      <label>Guardian's Mobile *</label>
-      <input
-        type="tel"
-        placeholder="10 digit mobile number"
-        value={formData.guardianPhone}
-        onChange={e => {
-          const val = e.target.value.replace(/\D/g, '');
-          if (val.length <= 10) {
-            setFormData({
-              ...formData,
-              guardianPhone: val
-            });
-          }
-        }}
-        required
-      />
-      {formData.guardianPhone &&
-        formData.guardianPhone.length < 10 && (
-          <small className="inline-error">
-            Enter 10 digit number
-          </small>
-      )}
-    </div>
-
-    <div className="form-group">
-      <label>Annual Family Income</label>
-      <select
-        name="familyIncome"
-        value={formData.familyIncome}
-        onChange={handleChange}
-      >
-        <option value="">Select Range</option>
-        <option value="below1lakh">
-          Below ₹1 Lakh
-        </option>
-        <option value="1to2.5lakh">
-          ₹1 - 2.5 Lakh
-        </option>
-        <option value="2.5to5lakh">
-          ₹2.5 - 5 Lakh
-        </option>
-        <option value="above5lakh">
-          Above ₹5 Lakh
-        </option>
-      </select>
-    </div>
-  </div>
-</div> 
-                {/* ===== ADDRESS WITH CITY AUTOCOMPLETE ===== */}
+                  {/* ===== ADDRESS ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">🏠 Address Details</h3>
 
@@ -935,7 +816,6 @@ const Admissions = () => {
                       </div>
                     </div>
 
-                    {/* Permanent Address */}
                     <div className="checkbox-row">
                       <label className="checkbox-label">
                         <input type="checkbox" checked={formData.sameAsAddress}
@@ -1234,7 +1114,7 @@ const Admissions = () => {
                     )}
                   </div>
 
-                  {/* ===== COURSE & YEAR SELECTION ===== */}
+                  {/* ===== COURSE & YEAR ===== */}
                   <div className="form-section highlight-section">
                     <h3 className="form-section-title">📚 Course &amp; Year Selection</h3>
                     <div className="form-row">
@@ -1283,15 +1163,11 @@ const Admissions = () => {
                       </div>
                     )}
 
-                    {/* Direct Admission - Previous College */}
                     {isDirectAdmission && (
                       <div className="conditional-block">
                         <div className="info-note warning-note">
                           <span>📌</span>
-                          <p>
-                            You selected <strong>{formData.admissionYear}</strong> (direct admission).
-                            Please provide your previous college details.
-                          </p>
+                          <p>You selected <strong>{formData.admissionYear}</strong> (direct admission). Please provide your previous college details.</p>
                         </div>
                         <div className="form-row">
                           <div className="form-group">
@@ -1516,7 +1392,7 @@ const Admissions = () => {
                     </div>
                   </div>
 
-                  <button type="submit" className="btn btn-primary submit-btn">
+                  <button type="submit" className="btn btn-primary submit-btn" disabled={loading}>
                     {loading ? '⏳ Submitting Application...' : '🚀 Submit Application'}
                   </button>
                 </form>
