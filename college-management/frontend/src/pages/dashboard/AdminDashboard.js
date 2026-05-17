@@ -1094,6 +1094,13 @@ const AdminDashboard = () => {
                             onClick={() => updateAdmissionStatus(selectedAdmission._id, 'rejected')}
                           >❌ Reject</button>
                           <button
+  className="btn btn-primary"
+  style={{ background: selectedAdmission?.feesPaid ? '#dc3545' : '#28a745' }}
+  onClick={() => toggleFeesPaid(selectedAdmission)}
+>
+  {selectedAdmission?.feesPaid ? '💸 Mark Unpaid' : '💰 Mark Fees Paid'}
+</button>
+                          <button
                             className="btn-delete"
                             onClick={() => deleteAdmission(selectedAdmission._id)}
                           >🗑️ Delete</button>
