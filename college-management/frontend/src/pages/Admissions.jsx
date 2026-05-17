@@ -762,7 +762,7 @@ console.log("USER:", user);
                       </label>
                     </div>
 
-                    {/* Husband Name - only if married */}
+                    {/* Husband Full Name - only if married */}
                     {formData.isMarried && (
                       <div className="form-group">
                         <label>Husband Name</label>
