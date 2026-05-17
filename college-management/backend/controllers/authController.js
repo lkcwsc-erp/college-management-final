@@ -439,3 +439,95 @@ exports.deleteStaff = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// ===== ADMIN: Create Staff Login =====
+exports.createStaff = async (req, res) => {
+  try {
+    const { name, email, password, phone, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, password and role are required'
+      });
+    }
+
+    // Valid staff roles
+    const validRoles = ['staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be one of: ' + validRoles.join(', ')
+      });
+    }
+
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists'
+      });
+    }
+
+    // Create staff user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      phone: phone || '',
+      role
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Staff created successfully!',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ===== ADMIN: Get All Staff =====
+exports.getAllStaff = async (req, res) => {
+  try {
+    const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
+    const staff = await User.find({ role: { $in: staffRoles } })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: staff.length,
+      staff
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ===== ADMIN: Delete Staff =====
+exports.deleteStaff = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Staff not found' });
+    }
+
+    const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
+    if (!staffRoles.includes(user.role)) {
+      return res.status(400).json({ success: false, message: 'Not a staff user' });
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true, message: 'Staff deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
