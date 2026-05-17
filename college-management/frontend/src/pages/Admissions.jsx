@@ -1647,69 +1647,88 @@ console.log("USER:", user);
                         accept="image/*,.pdf" required={true} />
 <div className="form-section">
   <h3 className="form-section-title">
+    {/* ===== Upload Documents ===== */}
+<div className="form-section">
+  <h3 className="form-section-title">
     📄 Upload Documents
   </h3>
 
   <div className="form-row">
 
-    {/* Aadhaar Card Upload */}
+    {/* Aadhaar Card */}
     <div className="form-group">
       <label>📌 Aadhaar Card *</label>
-      <input
-        type="file"
-        accept=".jpg,.jpeg,.png,.pdf"
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            aadhaarDocument: e.target.files[0]
-          })
-        }
-      />
+      <div className="upload-box">
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              aadhaarDocument: e.target.files[0]
+            })
+          }
+        />
+        <p>Drop file or <span>browse</span></p>
+        <small>JPG, PNG, PDF · Max 1 MB</small>
+      </div>
     </div>
 
-    {/* SSC Marksheet Upload */}
+    {/* SSC Marksheet */}
     <div className="form-group">
       <label>📌 SSC Marksheet *</label>
-      <input
-        type="file"
-        accept=".jpg,.jpeg,.png,.pdf"
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            sscMarksheet: e.target.files[0]
-          })
-        }
-      />
+      <div className="upload-box">
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              sscMarksheet: e.target.files[0]
+            })
+          }
+        />
+        <p>Drop file or <span>browse</span></p>
+        <small>JPG, PNG, PDF · Max 1 MB</small>
+      </div>
     </div>
 
-    {/* HSC Marksheet Upload */}
+    {/* HSC Marksheet */}
     <div className="form-group">
       <label>📌 HSC Marksheet *</label>
-      <input
-        type="file"
-        accept=".jpg,.jpeg,.png,.pdf"
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            hscMarksheet: e.target.files[0]
-          })
-        }
-      />
+      <div className="upload-box">
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              hscMarksheet: e.target.files[0]
+            })
+          }
+        />
+        <p>Drop file or <span>browse</span></p>
+        <small>JPG, PNG, PDF · Max 1 MB</small>
+      </div>
     </div>
 
-    {/* Bank Passbook Upload */}
+    {/* Bank Passbook */}
     <div className="form-group">
       <label>📌 Bank Passbook *</label>
-      <input
-        type="file"
-        accept=".jpg,.jpeg,.png,.pdf"
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            bankPassbook: e.target.files[0]
-          })
-        }
-      />
+      <div className="upload-box">
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              bankPassbook: e.target.files[0]
+            })
+          }
+        />
+        <p>Drop file or <span>browse</span></p>
+        <small>JPG, PNG, PDF · Max 1 MB</small>
+      </div>
     </div>
 
   </div>
