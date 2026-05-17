@@ -6,6 +6,7 @@ import API from '../../api/axios';
 import './Dashboard.css';
 
 const StudentDashboard = () => {
+const navigate = useNavigate();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
