@@ -1126,21 +1126,6 @@ console.log("USER:", user);
     </label>
   </div>
 </div>
-                  {/* ===== PHOTO & SIGNATURE ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">📸 Photo &amp; Signature</h3>
-                    <div className="upload-grid-two">
-                      <FileUploadBox fieldName="studentPhoto" label="📸 Student Passport Photo"
-                        accept="image/*" required={true} hint="Passport size, JPG/PNG" />
-                      <FileUploadBox fieldName="signaturePhoto" label="✍️ Student Signature"
-                        accept="image/*" required={true} hint="Sign on white paper, JPG/PNG" />
-                    </div>
-                    {formData.isMarried && (
-                      <FileUploadBox fieldName="marriageCertificate" label="💍 Marriage Certificate"
-                        accept="image/*,.pdf" required={true} />
-                    )}
-                  </div>
-
                   {/* ===== AADHAR ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">🪪 Aadhar Verification</h3>
@@ -1648,7 +1633,20 @@ console.log("USER:", user);
                         label="💰 Income Certificate" accept="image/*,.pdf" />
                     </div>
                   </div>
-
+ {/* ===== PHOTO & SIGNATURE ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">📸 Photo &amp; Signature</h3>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="studentPhoto" label="📸 Student Passport Photo"
+                        accept="image/*" required={true} hint="Passport size, JPG/PNG" />
+                      <FileUploadBox fieldName="signaturePhoto" label="✍️ Student Signature"
+                        accept="image/*" required={true} hint="Sign on white paper, JPG/PNG" />
+                    </div>
+                    {formData.isMarried && (
+                      <FileUploadBox fieldName="marriageCertificate" label="💍 Marriage Certificate"
+                        accept="image/*,.pdf" required={true} />
+                    )}
+                  </div>
                   {/* ===== ADDITIONAL INFO ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📝 Additional Information</h3>
