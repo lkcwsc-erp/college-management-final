@@ -880,6 +880,7 @@ console.log("USER:", user);
   </div>
 </div> 
                    {/* ===== ADDRESS WITH CITY AUTOCOMPLETE ===== */}
+{/* ===== ADDRESS SECTION ===== */}
 <div className="form-section">
   <h3 className="form-section-title">🏠 Address Details</h3>
 
@@ -889,14 +890,13 @@ console.log("USER:", user);
     <input
       type="text"
       name="addressLine"
-      placeholder="e.g. Plot 12, Shivaji Nagar, Near Bus Stand"
       value={formData.addressLine}
       onChange={handleChange}
       required
     />
   </div>
 
-  {/* City + District + Sub District */}
+  {/* City / District / Sub District */}
   <div className="form-row">
     <div className="form-group">
       <label>City *</label>
@@ -920,7 +920,7 @@ console.log("USER:", user);
     </div>
 
     <div className="form-group">
-      <label>Sub District / Tehsil *</label>
+      <label>Sub District *</label>
       <input
         type="text"
         name="subDistrict"
@@ -947,12 +947,14 @@ console.log("USER:", user);
       <label>Pincode *</label>
       <input
         type="text"
-        name="pincode"
         value={formData.pincode}
         onChange={(e) => {
           const val = e.target.value.replace(/\D/g, '');
           if (val.length <= 6) {
-            setFormData({ ...formData, pincode: val });
+            setFormData(prev => ({
+              ...prev,
+              pincode: val
+            }));
           }
         }}
         required
@@ -960,25 +962,25 @@ console.log("USER:", user);
     </div>
   </div>
 
-  {/* ===== PERMANENT ADDRESS ===== */}
+  {/* ===== PERMANENT ADDRESS CHECKBOX ===== */}
   <div className="checkbox-row">
-    <label className="checkbox-label">
+    <label>
       <input
         type="checkbox"
-        name="sameAsAddress"
         checked={formData.sameAsAddress}
         onChange={(e) => handleSameAsAddress(e.target.checked)}
       />
-      <span>📌 Permanent address same as above</span>
+      📌 Permanent address same as above
     </label>
   </div>
 
+  {/* ===== PERMANENT ADDRESS ===== */}
   {!formData.sameAsAddress && (
     <div className="form-section">
       <h3 className="form-section-title">🏠 Permanent Address</h3>
 
       <div className="form-group">
-        <label>House No, Street, Area *</label>
+        <label>Street / Area *</label>
         <input
           type="text"
           name="permStreet"
