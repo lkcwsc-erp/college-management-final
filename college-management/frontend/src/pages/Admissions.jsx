@@ -326,7 +326,9 @@ const Admissions = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+console.log("FORM DATA:", formData);
+console.log("UPLOADED FILES:", uploadedFiles);
+console.log("USER:", user);
     if (!user) {
       setError('Please login before submitting the application.');
       setActiveTab('process');
