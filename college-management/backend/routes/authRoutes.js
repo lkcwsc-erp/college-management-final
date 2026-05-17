@@ -10,7 +10,10 @@ const {
   updateProfile,
   changePassword,
   getAllStudentUsers,
-  deleteStudentUser
+  deleteStudentUser,
+  createStaff,
+  getAllStaff,
+  deleteStaff
 } = require('../controllers/authController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
@@ -22,10 +25,15 @@ router.post('/resend-otp', resendOTP);
 // Admin-only
 router.post('/register', protect, authorizeRoles('admin'), register);
 
+// Admin: Staff Management
+router.post('/create-staff', protect, authorizeRoles('admin'), createStaff);
+router.get('/staff', protect, authorizeRoles('admin'), getAllStaff);
+router.delete('/staff/:id', protect, authorizeRoles('admin'), deleteStaff);
+
 // Staff/Admin
-router.post('/register-student', protect, authorizeRoles('staff', 'admin'), registerStudent);
-router.get('/students', protect, authorizeRoles('staff', 'admin'), getAllStudentUsers);
-router.delete('/students/:id', protect, authorizeRoles('staff', 'admin'), deleteStudentUser);
+router.post('/register-student', protect, authorizeRoles('staff', 'staff_student', 'admin'), registerStudent);
+router.get('/students', protect, authorizeRoles('staff', 'staff_student', 'admin'), getAllStudentUsers);
+router.delete('/students/:id', protect, authorizeRoles('staff', 'staff_student', 'admin'), deleteStudentUser);
 
 // Authenticated user
 router.get('/me', protect, getMe);
