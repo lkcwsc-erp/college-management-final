@@ -1645,9 +1645,6 @@ console.log("USER:", user);
                     {formData.isMarried && (
                       <FileUploadBox fieldName="marriageCertificate" label="💍 Marriage Certificate"
                         accept="image/*,.pdf" required={true} />
-                    )}
-                  </div>
-                   {/* ===== DOCUMENT UPLOAD SECTION ===== */}
 <div className="form-section">
   <h3 className="form-section-title">
     📄 Upload Documents
