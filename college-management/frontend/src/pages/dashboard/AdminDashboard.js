@@ -22,12 +22,14 @@ const AdminDashboard = () => {
   const [message, setMessage] = useState('');
   const [staff, setStaff] = useState([]);
 
-const [staffForm, setStaffForm] = useState({
-  employeeId: '',
-  department: '',
-  designation: '',
-  role: 'student-section'
-});
+  const [staffForm, setStaffForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    role: 'staff_student'
+  });
+  const [showCredentials, setShowCredentials] = useState(null);
 
   const [courseForm, setCourseForm] = useState({ name: '', code: '', type: 'BA', duration: '3 Years', fees: '', eligibility: '', description: '' });
   const [facultyForm, setFacultyForm] = useState({ name: '', designation: '', department: '', qualification: '', experience: '', email: '', phone: '' });
@@ -46,9 +48,7 @@ const [staffForm, setStaffForm] = useState({
     API.get('/admissions').then(res => setAdmissions(res.data.admissions || [])).catch(() => {});
     API.get('/students').then(res => setStudents(res.data.students || [])).catch(() => {});
     API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
-    API.get('/staff')
-  .then(res => setStaff(res.data.staff || []))
-  .catch(() => {});
+    API.get('/auth/staff').then(res => setStaff(res.data.staff || [])).catch(() => {});
   }, []);
 
   const handleLogout = () => { logout(); navigate('/'); };
@@ -94,31 +94,50 @@ const [staffForm, setStaffForm] = useState({
       API.get('/events').then(res => setEvents(res.data.events || []));
     } catch (err) { showMessage('Failed to add event.'); }
   };
-const handleStaffSubmit = async (e) => {
-  e.preventDefault();
 
-  try {
-    await API.post('/staff', staffForm);
+  // ====== STAFF FUNCTIONS ======
+  const handleStaffSubmit = async (e) => {
+    e.preventDefault();
 
-    showMessage('Staff created successfully!');
+    if (staffForm.password.length < 6) {
+      showMessage('Password must be at least 6 characters');
+      return;
+    }
 
-    setStaffForm({
-      employeeId: '',
-      department: '',
-      designation: '',
-      role: 'student-section'
-    });
+    try {
+      await API.post('/auth/create-staff', staffForm);
+      showMessage('✅ Staff created successfully!');
+      setShowCredentials({
+        email: staffForm.email,
+        password: staffForm.password,
+        role: staffForm.role,
+        name: staffForm.name
+      });
+      setStaffForm({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        role: 'staff_student'
+      });
+      API.get('/auth/staff').then(res => setStaff(res.data.staff || []));
+    } catch (err) {
+      showMessage('Failed: ' + (err.response?.data?.message || 'Error'));
+    }
+  };
 
-    API.get('/staff')
-      .then(res => setStaff(res.data.staff || []));
+  const deleteStaff = async (id) => {
+    if (window.confirm('Delete this staff? They will not be able to login anymore.')) {
+      try {
+        await API.delete(`/auth/staff/${id}`);
+        showMessage('Staff deleted successfully!');
+        API.get('/auth/staff').then(res => setStaff(res.data.staff || []));
+      } catch (err) {
+        showMessage('Failed to delete staff');
+      }
+    }
+  };
 
-  } catch (err) {
-    showMessage(
-      'Failed: ' +
-      (err.response?.data?.message || 'Error')
-    );
-  }
-};
   // ====== GALLERY FUNCTIONS ======
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -183,7 +202,6 @@ const handleStaffSubmit = async (e) => {
       API.get('/gallery').then(res => setGallery(res.data.gallery || []));
     }
   };
-  // ====== END GALLERY FUNCTIONS ======
 
   const deleteCourse = async (id) => {
     if (window.confirm('Delete this course?')) {
@@ -212,14 +230,13 @@ const handleStaffSubmit = async (e) => {
     { id: 'students', label: '👩‍🎓 Students' },
     { id: 'courses', label: '📚 Courses' },
     { id: 'faculty', label: '👩‍🏫 Faculty' },
-    { id: 'staff', label: '👨‍💼 Staff' },
+    { id: 'staff', label: '👨‍💼 Staff Login' },
     { id: 'gallery', label: '🖼️ Gallery' },
     { id: 'notices', label: '📢 Notices' },
     { id: 'events', label: '🗓️ Events' },
     { id: 'contacts', label: '📬 Messages' },
   ];
 
-  // ===== ADMISSION HANDLERS =====
   const updateAdmissionStatus = async (id, newStatus, extraData = {}) => {
     try {
       await API.put(`/admissions/${id}`, { status: newStatus, ...extraData });
@@ -234,7 +251,6 @@ const handleStaffSubmit = async (e) => {
   };
 
   const handleApproveClick = () => {
-    // Pre-fill with course fees if available
     if (selectedAdmission?.course?.fees) {
       setFeesAmount(selectedAdmission.course.fees);
     } else if (selectedAdmission?.fees) {
@@ -273,7 +289,6 @@ const handleStaffSubmit = async (e) => {
       showMessage(admission.feesPaid ? 'Marked as Unpaid' : 'Marked as Paid!');
       API.get('/admissions').then(res => {
         setAdmissions(res.data.admissions || []);
-        // refresh selected admission
         const updated = (res.data.admissions || []).find(a => a._id === admission._id);
         if (updated) setSelectedAdmission(updated);
       });
@@ -281,7 +296,6 @@ const handleStaffSubmit = async (e) => {
       showMessage('Failed to update fees status');
     }
   };
-
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
@@ -509,7 +523,191 @@ const handleStaffSubmit = async (e) => {
             </div>
           )}
 
-          {/* ============ GALLERY TAB ============ */}
+          {/* ============ STAFF LOGIN TAB ============ */}
+          {activeTab === 'staff' && (
+            <div>
+              {showCredentials && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(0,0,0,0.7)', display: 'flex',
+                  justifyContent: 'center', alignItems: 'center', zIndex: 9999,
+                  padding: '20px'
+                }} onClick={() => setShowCredentials(null)}>
+                  <div style={{
+                    background: 'white', borderRadius: '12px', padding: '30px',
+                    maxWidth: '500px', width: '100%'
+                  }} onClick={e => e.stopPropagation()}>
+                    <div style={{textAlign: 'center', marginBottom: '20px'}}>
+                      <div style={{fontSize: '48px'}}>✅</div>
+                      <h2 style={{color: '#28a745', margin: '10px 0'}}>Staff Created!</h2>
+                      <p style={{color: '#666'}}>Share these credentials with the staff member</p>
+                    </div>
+                    <div style={{background: '#f0f9ff', padding: '20px', borderRadius: '8px', border: '2px solid #bae6fd', marginBottom: '20px'}}>
+                      <p style={{margin: '8px 0'}}><strong>👤 Name:</strong> {showCredentials.name}</p>
+                      <p style={{margin: '8px 0'}}><strong>📧 Email:</strong> {showCredentials.email}</p>
+                      <p style={{margin: '8px 0'}}><strong>🔑 Password:</strong> <code style={{background: 'white', padding: '4px 10px', borderRadius: '4px', fontFamily: 'monospace'}}>{showCredentials.password}</code></p>
+                      <p style={{margin: '8px 0'}}><strong>👔 Role:</strong> {
+                        showCredentials.role === 'staff_student' ? 'Student Section' :
+                        showCredentials.role === 'staff_accounts' ? 'Accounts Section' :
+                        showCredentials.role === 'staff_exam' ? 'Examination Section' :
+                        showCredentials.role === 'staff_scholarship' ? 'Scholarship Section' : showCredentials.role
+                      }</p>
+                    </div>
+                    <div style={{background: '#fff3cd', padding: '12px', borderRadius: '8px', fontSize: '13px', color: '#856404', marginBottom: '16px'}}>
+                      ⚠️ Save these credentials safely! Password cannot be viewed again.
+                    </div>
+                    <button className="btn btn-primary" onClick={() => setShowCredentials(null)} style={{width: '100%'}}>
+                      Got It! Close
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="form-card">
+                <h3>👥 Create Staff Login</h3>
+                <p style={{color: '#666', fontSize: '14px', marginBottom: '20px'}}>
+                  Create login credentials for staff members. Choose their section role.
+                </p>
+
+                <form onSubmit={handleStaffSubmit}>
+                  <div className="form-row-dash">
+                    <div className="form-group">
+                      <label>Full Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Rahul Sharma"
+                        value={staffForm.name}
+                        onChange={e => setStaffForm({...staffForm, name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Email Address *</label>
+                      <input
+                        type="email"
+                        placeholder="staff@lkcwsc.edu.in"
+                        value={staffForm.email}
+                        onChange={e => setStaffForm({...staffForm, email: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row-dash">
+                    <div className="form-group">
+                      <label>Password * (min 6 characters)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Staff@1234"
+                        value={staffForm.password}
+                        onChange={e => setStaffForm({...staffForm, password: e.target.value})}
+                        minLength="6"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Phone Number</label>
+                      <input
+                        type="text"
+                        placeholder="9876543210"
+                        value={staffForm.phone}
+                        maxLength="10"
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (/^\d{0,10}$/.test(val)) {
+                            setStaffForm({...staffForm, phone: val});
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Staff Section Role *</label>
+                    <select
+                      value={staffForm.role}
+                      onChange={e => setStaffForm({...staffForm, role: e.target.value})}
+                      required
+                    >
+                      <option value="staff_student">👩‍🎓 Student Section</option>
+                      <option value="staff_accounts">💰 Accounts Section</option>
+                      <option value="staff_exam">📝 Examination Section</option>
+                      <option value="staff_scholarship">🎓 Scholarship Section</option>
+                    </select>
+                    <small style={{color: '#666', marginTop: '6px', display: 'block'}}>
+                      💡 Staff will be redirected to their section dashboard after login
+                    </small>
+                  </div>
+
+                  <button type="submit" className="btn btn-primary" style={{padding: '12px 32px'}}>
+                    ➕ Create Staff Login
+                  </button>
+                </form>
+              </div>
+
+              <h3 style={{margin: '30px 0 16px'}}>
+                👥 All Staff Members ({staff.length})
+              </h3>
+
+              {staff.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">👨‍💼</div>
+                  <h3>No Staff Yet</h3>
+                  <p>Create staff members to manage ERP sections.</p>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {staff.map(s => (
+                        <tr key={s._id}>
+                          <td>{s.name}</td>
+                          <td>{s.email}</td>
+                          <td>{s.phone || '-'}</td>
+                          <td>
+                            <span className="notice-tag" style={{
+                              background: s.role === 'staff_student' ? '#dbeafe' :
+                                         s.role === 'staff_accounts' ? '#dcfce7' :
+                                         s.role === 'staff_exam' ? '#fef3c7' :
+                                         s.role === 'staff_scholarship' ? '#f3e8ff' : '#e5e7eb',
+                              color: s.role === 'staff_student' ? '#1e40af' :
+                                    s.role === 'staff_accounts' ? '#15803d' :
+                                    s.role === 'staff_exam' ? '#92400e' :
+                                    s.role === 'staff_scholarship' ? '#7e22ce' : '#374151'
+                            }}>
+                              {s.role === 'staff_student' ? '👩‍🎓 Student Section' :
+                               s.role === 'staff_accounts' ? '💰 Accounts' :
+                               s.role === 'staff_exam' ? '📝 Examination' :
+                               s.role === 'staff_scholarship' ? '🎓 Scholarship' :
+                               s.role === 'staff' ? '👨‍💼 Staff (old)' : s.role}
+                            </span>
+                          </td>
+                          <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+                          <td>
+                            <button className="btn-delete" onClick={() => deleteStaff(s._id)}>
+                              🗑️ Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+          {/* ============ END STAFF LOGIN TAB ============ */}
+
           {activeTab === 'gallery' && (
             <div>
               <div className="form-card">
@@ -607,160 +805,6 @@ const handleStaffSubmit = async (e) => {
             </div>
           )}
 
-          {/* ============ END GALLERY TAB ============ */}
-          {activeTab === 'staff' && (
-  <div>
-
-    <div className="form-card">
-      <h3>Create Staff</h3>
-
-      <form onSubmit={handleStaffSubmit}>
-
-        <div className="form-row-dash">
-
-          <div className="form-group">
-            <label>Employee ID</label>
-
-            <input
-              type="text"
-              placeholder="EMP101"
-              value={staffForm.employeeId}
-              onChange={(e) =>
-                setStaffForm({
-                  ...staffForm,
-                  employeeId: e.target.value
-                })
-              }
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Department</label>
-
-            <input
-              type="text"
-              placeholder="Administration"
-              value={staffForm.department}
-              onChange={(e) =>
-                setStaffForm({
-                  ...staffForm,
-                  department: e.target.value
-                })
-              }
-              required
-            />
-          </div>
-
-        </div>
-
-        <div className="form-row-dash">
-
-          <div className="form-group">
-            <label>Designation</label>
-
-            <input
-              type="text"
-              placeholder="Officer"
-              value={staffForm.designation}
-              onChange={(e) =>
-                setStaffForm({
-                  ...staffForm,
-                  designation: e.target.value
-                })
-              }
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Role</label>
-
-            <select
-              value={staffForm.role}
-              onChange={(e) =>
-                setStaffForm({
-                  ...staffForm,
-                  role: e.target.value
-                })
-              }
-            >
-              <option value="student-section">
-                Student Section
-              </option>
-
-              <option value="accounts">
-                Accounts
-              </option>
-
-              <option value="exam">
-                Examination
-              </option>
-
-              <option value="scholarship">
-                Scholarship
-              </option>
-
-              <option value="principal">
-                Principal
-              </option>
-            </select>
-          </div>
-
-        </div>
-
-        <button
-          type="submit"
-          className="btn btn-primary"
-        >
-          Create Staff
-        </button>
-
-      </form>
-    </div>
-
-    <h3 style={{ margin: '30px 0 16px' }}>
-      Staff Members ({staff.length})
-    </h3>
-
-    {staff.length === 0 ? (
-      <div className="empty-state">
-        <div className="empty-icon">👨‍💼</div>
-        <h3>No Staff Yet</h3>
-        <p>Create staff members to manage ERP sections.</p>
-      </div>
-    ) : (
-
-      <div className="table-container">
-
-        <table className="data-table">
-
-          <thead>
-            <tr>
-              <th>Employee ID</th>
-              <th>Department</th>
-              <th>Designation</th>
-              <th>Role</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {staff.map((s) => (
-              <tr key={s._id}>
-                <td>{s.employeeId}</td>
-                <td>{s.department}</td>
-                <td>{s.designation}</td>
-                <td>{s.role}</td>
-              </tr>
-            ))}
-          </tbody>
-
-        </table>
-      </div>
-    )}
-
-  </div>
-)}
           {activeTab === 'notices' && (
             <div>
               <div className="form-card">
@@ -898,7 +942,6 @@ const handleStaffSubmit = async (e) => {
             </div>
           )}
 
-          {/* ============ ADMISSIONS TAB ============ */}
           {activeTab === 'admissions' && (
             <div>
               <div className="dash-cards">
@@ -974,7 +1017,6 @@ const handleStaffSubmit = async (e) => {
                 </div>
               )}
 
-              {/* MODAL — Application Details */}
               {selectedAdmission && (
                 <div style={{
                   position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -996,130 +1038,31 @@ const handleStaffSubmit = async (e) => {
                       }}>✕</button>
                     </div>
 
-                    {selectedAdmission.studentPhoto && (
-                      <div style={{textAlign:'center', marginBottom:'20px'}}>
-                        <img
-                          src={`http://localhost:5000/uploads/${selectedAdmission.studentPhoto}`}
-                          alt="Student"
-                          style={{width:'120px', height:'120px', borderRadius:'50%', objectFit:'cover', border:'4px solid #8B1A1A'}}
-                        />
-                      </div>
-                    )}
-
-                    <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>👤 Personal Information</h3>
+                    <h3 style={{color:'#1565C0', marginBottom:'12px'}}>👤 Personal Information</h3>
                     <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'20px'}}>
                       <p><strong>Name:</strong> {selectedAdmission.applicantName}</p>
                       <p><strong>Email:</strong> {selectedAdmission.email}</p>
                       <p><strong>Phone:</strong> {selectedAdmission.phone}</p>
                       <p><strong>DOB:</strong> {selectedAdmission.dateOfBirth ? new Date(selectedAdmission.dateOfBirth).toLocaleDateString() : '-'}</p>
-                      <p><strong>Gender:</strong> {selectedAdmission.gender || '-'}</p>
-                      <p><strong>Category:</strong> {selectedAdmission.category || '-'}</p>
-                    </div>
-                    <p style={{marginBottom:'20px'}}><strong>Address:</strong> {selectedAdmission.address || '-'}</p>
-
-                    <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>🪪 Aadhar</h3>
-                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'20px'}}>
-                      <p><strong>Aadhar No:</strong> {selectedAdmission.aadharNumber || '-'}</p>
-                      <p><strong>Name on Aadhar:</strong> {selectedAdmission.aadharName || '-'}</p>
                     </div>
 
-                    <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>📚 SSC Details</h3>
-                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'20px'}}>
-                      <p><strong>School:</strong> {selectedAdmission.sscSchoolName || '-'}</p>
-                      <p><strong>Board:</strong> {selectedAdmission.sscBoard || '-'}</p>
-                      <p><strong>Year:</strong> {selectedAdmission.sscYOP || '-'}</p>
-                      <p><strong>Percentage:</strong> {selectedAdmission.sscPercentage || '-'}%</p>
-                    </div>
-
-                    <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>📚 HSC Details</h3>
-                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'20px'}}>
-                      <p><strong>College:</strong> {selectedAdmission.hscCollegeName || '-'}</p>
-                      <p><strong>Board:</strong> {selectedAdmission.hscBoard || '-'}</p>
-                      <p><strong>Stream:</strong> {selectedAdmission.hscStream || '-'}</p>
-                      <p><strong>Year:</strong> {selectedAdmission.hscYOP || '-'}</p>
-                      <p><strong>Percentage:</strong> {selectedAdmission.hscPercentage || '-'}%</p>
-                    </div>
-
-                    <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>🎓 Course Selection</h3>
-                    <p style={{marginBottom:'20px'}}><strong>Course:</strong> {selectedAdmission.course?.name || '-'} ({selectedAdmission.course?.type || ''})</p>
-
-                    <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>👨‍👩‍👧 Family</h3>
-                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'20px'}}>
-                      <p><strong>Father:</strong> {selectedAdmission.fatherName || '-'}</p>
-                      <p><strong>Mother:</strong> {selectedAdmission.motherName || '-'}</p>
-                      <p><strong>Guardian Phone:</strong> {selectedAdmission.guardianPhone || '-'}</p>
-                      <p><strong>Family Income:</strong> {selectedAdmission.familyIncome || '-'}</p>
-                    </div>
-
-                    <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>📎 Documents</h3>
-                    <div style={{display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'24px'}}>
-                      {selectedAdmission.aadharPhoto && <a href={`http://localhost:5000/uploads/${selectedAdmission.aadharPhoto}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:'13px', padding:'8px 14px'}}>🪪 Aadhar</a>}
-                      {selectedAdmission.sscMarksheet && <a href={`http://localhost:5000/uploads/${selectedAdmission.sscMarksheet}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:'13px', padding:'8px 14px'}}>📄 SSC Marksheet</a>}
-                      {selectedAdmission.hscMarksheet && <a href={`http://localhost:5000/uploads/${selectedAdmission.hscMarksheet}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:'13px', padding:'8px 14px'}}>📄 HSC Marksheet</a>}
-                      {selectedAdmission.casteCertificate && <a href={`http://localhost:5000/uploads/${selectedAdmission.casteCertificate}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:'13px', padding:'8px 14px'}}>📄 Caste Certificate</a>}
-                      {selectedAdmission.gapCertificate && <a href={`http://localhost:5000/uploads/${selectedAdmission.gapCertificate}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:'13px', padding:'8px 14px'}}>📄 Gap Certificate</a>}
-                    </div>
-
-                    {/* ===== FEES SECTION (shown only for approved students) ===== */}
-                    {selectedAdmission.status === 'approved' && (
-                      <>
-                        <h3 style={{color:'#1565C0', marginBottom:'12px', borderBottom:'2px solid #e0e7ff', paddingBottom:'8px'}}>💰 Fees Details</h3>
-                        <div style={{
-                          background: '#f0f9ff', padding: '20px', borderRadius: '10px',
-                          marginBottom: '20px', border: '2px solid #bae6fd'
-                        }}>
-                          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'16px'}}>
-                            <p><strong>💵 Total Fees:</strong> ₹{selectedAdmission.fees || 0}</p>
-                            <p><strong>📌 Payment Status:</strong>
-                              <span style={{
-                                marginLeft:'8px', padding:'4px 12px', borderRadius:'20px', fontSize:'13px',
-                                background: selectedAdmission.feesPaid ? '#d4edda' : '#fff3cd',
-                                color: selectedAdmission.feesPaid ? '#155724' : '#856404'
-                              }}>
-                                {selectedAdmission.feesPaid ? '✅ Paid' : '⏳ Unpaid'}
-                              </span>
-                            </p>
-                          </div>
-                          <button
-                            className="btn btn-primary"
-                            style={{
-                              background: selectedAdmission.feesPaid ? '#dc3545' : '#28a745',
-                              fontSize: '14px'
-                            }}
-                            onClick={() => toggleFeesPaid(selectedAdmission)}
-                          >
-                            {selectedAdmission.feesPaid ? '↩️ Mark as Unpaid' : '✅ Mark as Paid'}
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {/* ===== APPROVE WITH FEES FORM ===== */}
                     {showApproveForm && (
                       <div style={{
                         background: '#fef3c7', padding: '20px', borderRadius: '10px',
                         marginBottom: '20px', border: '2px solid #fbbf24'
                       }}>
-                        <h3 style={{color:'#92400e', marginBottom:'14px'}}>💰 Set Fees Amount to Approve</h3>
+                        <h3 style={{color:'#92400e', marginBottom:'14px'}}>💰 Set Fees Amount</h3>
                         <form onSubmit={submitApproval}>
                           <div className="form-group">
-                            <label style={{fontWeight:'600'}}>Course Fees (₹) *</label>
+                            <label>Course Fees (₹) *</label>
                             <input
                               type="number"
-                              placeholder="Enter total fees amount (e.g. 15000)"
+                              placeholder="Enter fees"
                               value={feesAmount}
                               onChange={e => setFeesAmount(e.target.value)}
                               min="1"
                               required
-                              autoFocus
-                              style={{
-                                width:'100%', padding:'12px', fontSize:'16px',
-                                borderRadius:'8px', border:'1.5px solid #d97706'
-                              }}
                             />
-                            <small style={{color:'#92400e', marginTop:'6px', display:'block'}}>
-                              💡 The student will see this fee on their dashboard after approval
-                            </small>
                           </div>
                           <div style={{display:'flex', gap:'10px', marginTop:'14px'}}>
                             <button type="submit" className="btn btn-primary" style={{background:'#28a745'}}>
@@ -1151,11 +1094,6 @@ const handleStaffSubmit = async (e) => {
                             onClick={() => updateAdmissionStatus(selectedAdmission._id, 'rejected')}
                           >❌ Reject</button>
                           <button
-                            className="btn btn-primary"
-                            style={{background:'#ffc107', color:'#333'}}
-                            onClick={() => updateAdmissionStatus(selectedAdmission._id, 'pending')}
-                          >⏳ Mark Pending</button>
-                          <button
                             className="btn-delete"
                             onClick={() => deleteAdmission(selectedAdmission._id)}
                           >🗑️ Delete</button>
@@ -1167,7 +1105,6 @@ const handleStaffSubmit = async (e) => {
               )}
             </div>
           )}
-          {/* ============ END ADMISSIONS TAB ============ */}
 
         </div>
       </main>
