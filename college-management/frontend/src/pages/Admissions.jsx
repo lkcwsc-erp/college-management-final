@@ -760,41 +760,39 @@ const Admissions = () => {
                       </label>
                     </div>
 
-                    {/* Husband Full Name - only if married */}
-                    {formData.isMarried && (
-                      <div className="form-group">
-                        <label>Husband Full Name</label>
-                        <input
-                          type="text"
-                          placeholder="Enter Husband Full Name"
-                          value={formData.husbandFullName || ''}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              husbandFullName: e.target.value
-                            })
-                          }
-                        />
-                      </div>
-                    )}
+                   {/* husband full name - only if married */}
+{formData.isMarried && (
+  <div className="form-group">
+    <label>husband full name</label>
+    <input
+      type="text"
+      placeholder="enter husband full name"
+      value={formData.husbandFullName || ''}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          husbandFullName: e.target.value
+        })
+      }
+    />
+  </div>
+)}
 
-                    {/* Guardian Full Name */}
-                    <div className="form-group">
-                      <label>Guardian Full Name</label>
-                      <input
-                        type="text"
-                        placeholder="Enter Guardian Full Name"
-                        value={formData.guardianFullName || ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            guardianFullName: e.target.value
-                          })
-                        }
-                      />
-                    </div>
-
-                  </div>
+{/* guardian full name */}
+<div className="form-group">
+  <label>guardian full name</label>
+  <input
+    type="text"
+    placeholder="enter guardian full name"
+    value={formData.guardianFullName || ''}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        guardianFullName: e.target.value
+      })
+    }
+  />
+</div>
                  {/* ===== GUARDIAN ===== */}
 <div className="form-section">
   <h3 className="form-section-title">
