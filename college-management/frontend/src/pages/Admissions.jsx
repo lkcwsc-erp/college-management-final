@@ -1641,7 +1641,7 @@ console.log("USER:", user);
                         accept="image/*,.pdf" required={true} />
 <div className="form-section">
   <h3 className="form-section-title">
-    {/* ===== DOCUMENT UPLOAD ===== */}
+   {/* ===== DOCUMENT UPLOAD ===== */}
 <div className="form-section">
   <h3 className="form-section-title">
     📄 Upload Documents
@@ -1650,35 +1650,35 @@ console.log("USER:", user);
   <div className="upload-grid-two">
 
     <FileUploadBox
-      fieldName="aadhaarCard"
-      label="🪪 Aadhaar Card"
+      fieldName="aadharPhoto"
+      label="🪪 Upload Aadhaar Card"
       accept="image/*,.pdf"
       required={true}
-      hint="JPG, PNG, PDF · Max 1 MB"
+      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
     />
 
     <FileUploadBox
       fieldName="sscMarksheet"
-      label="📘 SSC Marksheet"
+      label="📗 Upload SSC Marksheet"
       accept="image/*,.pdf"
       required={true}
-      hint="JPG, PNG, PDF · Max 1 MB"
+      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
     />
 
     <FileUploadBox
       fieldName="hscMarksheet"
-      label="📗 HSC Marksheet"
+      label="📘 Upload HSC Marksheet"
       accept="image/*,.pdf"
       required={true}
-      hint="JPG, PNG, PDF · Max 1 MB"
+      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
     />
 
     <FileUploadBox
       fieldName="bankPassbook"
-      label="🏦 Bank Passbook"
+      label="🏦 Upload Bank Passbook"
       accept="image/*,.pdf"
       required={true}
-      hint="JPG, PNG, PDF · Max 1 MB"
+      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
     />
 
   </div>
