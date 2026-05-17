@@ -17,7 +17,7 @@ const FILE_LIMITS = {
   sscMarksheet: 1024 * 1024,
   hscMarksheet: 1024 * 1024,
   prevYearMarksheet: 1024 * 1024,
-  gapYearDocument: 1024 * 1024,
+  gapCertificate: 1024 * 1024,
   casteCertificate: 1024 * 1024,
   casteValidityCertificate: 1024 * 1024,
   marriageCertificate: 1024 * 1024,
@@ -129,13 +129,13 @@ const Admissions = () => {
 
     // Extra
     referralSource: '', message: '',
-    declaration: false, 
+    declaration: false,
   });
 
   const [uploadedFiles, setUploadedFiles] = useState({
     studentPhoto: null, signaturePhoto: null, aadharPhoto: null,
     sscMarksheet: null, hscMarksheet: null, prevYearMarksheet: null,
-    gapYearDocument: null, casteCertificate: null, casteValidityCertificate: null,
+    gapCertificate: null, casteCertificate: null, casteValidityCertificate: null,
     marriageCertificate: null, bankPassbook: null,
     domicileCertificate: null, incomeCertificate: null, transferCertificate: null,
   });
@@ -143,7 +143,7 @@ const Admissions = () => {
   const [uploadPreviews, setUploadPreviews] = useState({
     studentPhoto: '', signaturePhoto: '', aadharPhoto: '',
     sscMarksheet: '', hscMarksheet: '', prevYearMarksheet: '',
-    gapYearDocument: '', casteCertificate: '', casteValidityCertificate: '',
+    gapCertificate: '', casteCertificate: '', casteValidityCertificate: '',
     marriageCertificate: '', bankPassbook: '',
     domicileCertificate: '', incomeCertificate: '', transferCertificate: '',
   });
@@ -393,8 +393,8 @@ console.log("USER:", user);
       }
     }
 
-    if (formData.hasGap && !uploadedFiles.gapYearDocument) {
-      setError('Please upload gapYearDocument.');
+    if (formData.hasGap && !uploadedFiles.gapCertificate) {
+      setError('Please upload Gap Certificate.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -684,7 +684,7 @@ console.log("USER:", user);
                 { icon: '📜', title: 'Leaving Certificate / TC', desc: 'School/college leaving certificate' },
                 { icon: '📋', title: 'Caste Certificate', desc: 'Required for reserved category' },
                 { icon: '💍', title: 'Marriage Certificate', desc: 'Required for married students' },
-                { icon: '📅', title: 'Gap Year Document',desc: 'Only for gap year students'},
+                { icon: '📅', title: 'Gap Certificate', desc: 'Only for gap year students' },
               ].map((doc, i) => (
                 <div className="document-card" key={i}>
                   <span className="doc-icon">{doc.icon}</span>
@@ -1147,6 +1147,8 @@ console.log("USER:", user);
                           value={formData.aadharName} onChange={handleChange} required />
                       </div>
                     </div>
+                    <FileUploadBox fieldName="aadharPhoto" label="📷 Aadhar Card Photo"
+                      accept="image/*,.pdf" required={true} />
                     <div className="info-note">
                       <span>ℹ️</span>
                       <p>Your Aadhar details are kept confidential as per government guidelines.</p>
@@ -1221,6 +1223,8 @@ console.log("USER:", user);
                         ✅ <strong>{formData.sscPercentage}%</strong> — <strong>{formData.sscGrade}</strong>
                       </div>
                     )}
+                    <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet"
+                      accept="image/*,.pdf" required={true} />
                   </div>
 
                   {/* ===== HSC ===== */}
@@ -1318,6 +1322,8 @@ console.log("USER:", user);
                         ✅ <strong>{formData.hscPercentage}%</strong> — <strong>{formData.hscGrade}</strong>
                       </div>
                     )}
+                    <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet"
+                      accept="image/*,.pdf" required={true} />
                   </div>
 
                   {/* ===== GAP YEAR ===== */}
@@ -1375,6 +1381,8 @@ console.log("USER:", user);
                             <option value="other">Other</option>
                           </select>
                         </div>
+                        <FileUploadBox fieldName="gapCertificate" label="📅 Gap Certificate"
+                          accept="image/*,.pdf" required={true} />
                         <div className="info-note warning-note">
                           <span>⚠️</span>
                           <p>Gap certificate is mandatory for students with gap year.</p>
@@ -1610,6 +1618,10 @@ console.log("USER:", user);
                         placeholder="e.g. Gangakhed Main Branch"
                         value={formData.bankBranch} onChange={handleChange} />
                     </div>
+                    <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Front Page"
+                      accept="image/*,.pdf" />
+                  </div>
+
                   {/* ===== ADDITIONAL DOCS ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📂 Additional Supporting Documents</h3>
@@ -1635,58 +1647,6 @@ console.log("USER:", user);
                         accept="image/*,.pdf" required={true} />
                     )}
                   </div>
-                     {/* ===== UPLOAD DOCUMENTS ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">
-    📄 Upload Documents
-  </h3>
-
-  <div className="upload-grid-two">
-
-    <FileUploadBox
-      fieldName="aadharPhoto"
-      label="🪪 Aadhaar Card Upload"
-      accept="image/*,.pdf"
-      required={true}
-      hint="JPG / PNG / PDF"
-    />
-
-    <FileUploadBox
-      fieldName="sscMarksheet"
-      label="📄 SSC Marksheet Upload"
-      accept="image/*,.pdf"
-      required={true}
-      hint="JPG / PNG / PDF"
-    />
-
-    <FileUploadBox
-      fieldName="hscMarksheet"
-      label="📘 HSC Marksheet Upload"
-      accept="image/*,.pdf"
-      required={true}
-      hint="JPG / PNG / PDF"
-    />
-
-    <FileUploadBox
-      fieldName="bankPassbook"
-      label="🏦 Bank Passbook Upload"
-      accept="image/*,.pdf"
-      required={false}
-      hint="JPG / PNG / PDF"
-    />
-
-  </div>
-
-  {formData.hasGap && (
-    <FileUploadBox
-      fieldName="gapYearDocument"
-      label="📅 Gap Year Document Upload"
-      accept="image/*,.pdf"
-      required={true}
-      hint="JPG / PNG / PDF"
-    />
-  )}
-</div>
                    {/* ===== ADDITIONAL INFO ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📝 Additional Information</h3>
