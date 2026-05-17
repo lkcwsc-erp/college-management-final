@@ -762,24 +762,24 @@ console.log("USER:", user);
                       </label>
                     </div>
 
-                    {/* Husband Full Name - only if married */}
-                    {formData.isMarried && (
-                      <div className="form-group">
-                        <label>Husband Full Name</label>
-                        <input
-                          type="text"
-                          placeholder="Enter Husband Full Name"
-                          value={formData.husbandfullName || ''}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              husbandFullName: e.target.value
-                            })
-                          }
-                        />
-                      </div>
-                    )}
-
+                   {/* Husband Full Name - only if married */}
+{formData.isMarried && (
+  <div className="form-group">
+    <label>Husband Full Name</label>
+    <input
+      type="text"
+      name="husbandFullName"
+      placeholder="Enter Husband Full Name"
+      value={formData.husbandFullName || ""}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          husbandFullName: e.target.value
+        })
+      }
+    />
+  </div>
+)}
                     {/* Guardian Name */}
                     <div className="form-group">
                       <label>Guardian Name</label>
