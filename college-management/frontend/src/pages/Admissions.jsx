@@ -763,59 +763,38 @@ console.log("USER:", user);
                     </div>
 
                    {/* Husband Full Name - only if married */}
-<div className="form-group">
-  <label>Husband Full Name</label>
-
-  <input
-    type="text"
-    name="husbandFullName"
-    placeholder="Enter Husband Full Name"
-    value={formData.husbandFullName || ""}
-    onChange={(e) =>
-      setFormData((prev) => ({
-        ...prev,
-        husbandFullName: e.target.value,
-      }))
-    }
-  />
-</div>
+{formData.isMarried && (
+  <div className="form-group">
+    <label>Husband Full Name</label>
+    <input
+      type="text"
+      placeholder="Enter Husband Full Name"
+      value={formData.husbandName || ''}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          husbandName: e.target.value
+        })
+      }
+    />
+  </div>
+)}
 
 {/* Guardian Full Name */}
 <div className="form-group">
   <label>Guardian Full Name</label>
-
   <input
     type="text"
-    name="guardianName"
     placeholder="Enter Guardian Full Name"
-    value={formData.guardianName || ""}
+    value={formData.guardianName || ''}
     onChange={(e) =>
-      setFormData((prev) => ({
-        ...prev,
-        guardianName: e.target.value,
-      }))
+      setFormData({
+        ...formData,
+        guardianName: e.target.value
+      })
     }
   />
 </div>
-                 {/* ===== GUARDIAN ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">
-    👨‍👩‍👧 Guardian / Parent Details
-  </h3>
-
-  <div className="form-row">
-    <div className="form-group">
-      <label>Father's Name *</label>
-      <input
-        type="text"
-        name="fatherName"
-        placeholder="Father's full name"
-        value={formData.fatherName}
-        onChange={handleChange}
-        required
-      />
-    </div>
-
     <div className="form-group">
       <label>Mother's Name *</label>
       <input
