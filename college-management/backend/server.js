@@ -31,6 +31,7 @@ app.use('/api/notices', require('./routes/noticeRoutes'));
 app.use('/api/gallery', require('./routes/galleryRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
+app.use('/api/enquiries', require('./routes/enquiryRoutes'));
 app.use('/api/admissions', require('./routes/admissionRoutes'));
 app.use('/api/staff', require('./routes/staffRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
