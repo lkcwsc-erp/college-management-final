@@ -690,31 +690,55 @@ const Admissions = () => {
                     </div>
 
                     {/* Marital Status */}
-                    <div className="checkbox-row">
-                      <label className="checkbox-label">
-                        <input type="checkbox" checked={formData.isMarried}
-                          onChange={e => setFormData({ ...formData, isMarried: e.target.checked })} />
-                        <span>💍 I am married</span>
-                      </label>
-                    </div>
+                   <div className="checkbox-row">
+  <label className="checkbox-label">
+    <input
+      type="checkbox"
+      checked={formData.isMarried}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          isMarried: e.target.checked
+        })
+      }
+    />
+    <span>💍 I am married</span>
+  </label>
+</div>
 
-                    {formData.isMarried && (
-                      <div className="form-group">
-                        <label>Husband Full Name</label>
-                        <input type="text" placeholder="Enter husband full name"
-                          value={formData.husbandName}
-                          onChange={e => setFormData({ ...formData, husbandName: e.target.value })} />
-                      </div>
-                    )}
+{/* Husband Full Name - only if married */}
+{formData.isMarried && (
+  <div className="form-group">
+    <label>Husband Full Name</label>
+    <input
+      type="text"
+      placeholder="Enter husband full name"
+      value={formData.husbandFullName || ""}
+      onChange={(e) =>
+        setFormData({
+          ...formData,
+          husbandFullName: e.target.value
+        })
+      }
+    />
+  </div>
+)}
 
-                    <div className="form-group">
-                      <label>Guardian Full Name</label>
-                      <input type="text" placeholder="Enter guardian full name"
-                        value={formData.guardianName}
-                        onChange={e => setFormData({ ...formData, guardianName: e.target.value })} />
-                    </div>
-                  </div>
-
+{/* Guardian Full Name */}
+<div className="form-group">
+  <label>Guardian Full Name</label>
+  <input
+    type="text"
+    placeholder="Enter guardian full name"
+    value={formData.guardianFullName || ""}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        guardianFullName: e.target.value
+      })
+    }
+  />
+</div>
                   {/* ===== GUARDIAN / PARENT ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">👨‍👩‍👧 Guardian / Parent Details</h3>
