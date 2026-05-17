@@ -17,7 +17,7 @@ const FILE_LIMITS = {
   sscMarksheet: 1024 * 1024,
   hscMarksheet: 1024 * 1024,
   prevYearMarksheet: 1024 * 1024,
-  gapCertificate: 1024 * 1024,
+  gapYearDocument: 1024 * 1024,
   casteCertificate: 1024 * 1024,
   casteValidityCertificate: 1024 * 1024,
   marriageCertificate: 1024 * 1024,
