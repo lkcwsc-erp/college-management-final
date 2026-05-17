@@ -271,8 +271,9 @@ const Home = () => {
                   }}
                 >
                   <option value="">Select Gender</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                  <option value="Male">Female</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
