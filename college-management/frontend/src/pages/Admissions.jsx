@@ -1147,6 +1147,8 @@ console.log("USER:", user);
                           value={formData.aadharName} onChange={handleChange} required />
                       </div>
                     </div>
+                    <FileUploadBox fieldName="aadharPhoto" label="📷 Aadhar Card Photo"
+                      accept="image/*,.pdf" required={true} />
                     <div className="info-note">
                       <span>ℹ️</span>
                       <p>Your Aadhar details are kept confidential as per government guidelines.</p>
@@ -1221,6 +1223,8 @@ console.log("USER:", user);
                         ✅ <strong>{formData.sscPercentage}%</strong> — <strong>{formData.sscGrade}</strong>
                       </div>
                     )}
+                    <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet"
+                      accept="image/*,.pdf" required={true} />
                   </div>
 
                   {/* ===== HSC ===== */}
@@ -1318,6 +1322,8 @@ console.log("USER:", user);
                         ✅ <strong>{formData.hscPercentage}%</strong> — <strong>{formData.hscGrade}</strong>
                       </div>
                     )}
+                    <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet"
+                      accept="image/*,.pdf" required={true} />
                   </div>
 
                   {/* ===== GAP YEAR ===== */}
@@ -1639,50 +1645,8 @@ console.log("USER:", user);
                     {formData.isMarried && (
                       <FileUploadBox fieldName="marriageCertificate" label="💍 Marriage Certificate"
                         accept="image/*,.pdf" required={true} />
-<div className="form-section">
-  <h3 className="form-section-title">
-   {/* ===== DOCUMENT UPLOAD ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">
-    📄 Upload Documents
-  </h3>
-
-  <div className="upload-grid-two">
-
-    <FileUploadBox
-      fieldName="aadharPhoto"
-      label="🪪 Upload Aadhaar Card"
-      accept="image/*,.pdf"
-      required={true}
-      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
-    />
-
-    <FileUploadBox
-      fieldName="sscMarksheet"
-      label="📗 Upload SSC Marksheet"
-      accept="image/*,.pdf"
-      required={true}
-      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
-    />
-
-    <FileUploadBox
-      fieldName="hscMarksheet"
-      label="📘 Upload HSC Marksheet"
-      accept="image/*,.pdf"
-      required={true}
-      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
-    />
-
-    <FileUploadBox
-      fieldName="bankPassbook"
-      label="🏦 Upload Bank Passbook"
-      accept="image/*,.pdf"
-      required={true}
-      hint="Drop file or browse • JPG, PNG, PDF · Max 1 MB"
-    />
-
-  </div>
-</div>
+                    )}
+                  </div>
                    {/* ===== ADDITIONAL INFO ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📝 Additional Information</h3>
