@@ -1146,7 +1146,15 @@ console.log("USER:", user);
                         <input type="text" name="aadharName" placeholder="Exactly as on Aadhar card"
                           value={formData.aadharName} onChange={handleChange} required />
                       </div>
-                   
+                    </div>
+                    <FileUploadBox fieldName="aadharPhoto" label="📷 Aadhar Card Photo"
+                      accept="image/*,.pdf" required={true} />
+                    <div className="info-note">
+                      <span>ℹ️</span>
+                      <p>Your Aadhar details are kept confidential as per government guidelines.</p>
+                    </div>
+                  </div>
+
                   {/* ===== SSC ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📗 SSC — 10th Standard Details</h3>
