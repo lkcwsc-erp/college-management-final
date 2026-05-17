@@ -1,41 +1,41 @@
 const mongoose = require('mongoose');
 
 const staffSchema = new mongoose.Schema({
-  user: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
+
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
 
-  employeeId: { 
-    type: String, 
-    required: true, 
-    unique: true 
+  employeeId: {
+    type: String,
+    required: true,
+    unique: true
   },
 
-  department: { 
-    type: String, 
-    required: true 
+  department: {
+    type: String,
+    required: true
   },
 
-  designation: { 
-    type: String 
+  designation: {
+    type: String
   },
 
-  qualification: { 
-    type: String 
+  qualification: {
+    type: String
   },
 
-  experience: { 
-    type: Number 
+  experience: {
+    type: Number
   },
 
-  joiningDate: { 
-    type: Date 
+  joiningDate: {
+    type: Date
   },
 
-  subjects: [{ 
-    type: String 
+  subjects: [{
+    type: String
   }],
 
   role: {
@@ -50,9 +50,9 @@ const staffSchema = new mongoose.Schema({
     ]
   },
 
-  isActive: { 
-    type: Boolean, 
-    default: true 
+  isActive: {
+    type: Boolean,
+    default: true
   },
 
 }, { timestamps: true });
