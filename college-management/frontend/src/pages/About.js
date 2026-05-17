@@ -159,8 +159,8 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
       </section>
      <section className="parent-org">
             <h2> About Our Parent Organisation </h2>
-            <p>
-   Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational and social welfare organization established in Maharashtra, India. The organization is dedicated to promoting education, student development, social welfare, women empowerment, and rural development.
+         <p>
+  Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational and social welfare organization established in Maharashtra, India. The organization is dedicated to promoting education, student development, social welfare, women empowerment, and rural development.
 
   VNSS works with the vision of providing quality education and creating opportunities for students from different backgrounds. The organization also supports various community welfare activities including skill development, youth empowerment, vocational training, and awareness programs.
 
