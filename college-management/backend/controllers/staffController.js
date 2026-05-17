@@ -72,3 +72,37 @@ exports.deleteStaff = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+exports.staffLogin = async (req, res) => {
+
+  try {
+
+    const { employeeId, role } = req.body;
+
+    const staff = await Staff.findOne({
+      employeeId,
+      role,
+      isActive: true
+    });
+
+    if (!staff) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      staff
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+};
