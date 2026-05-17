@@ -394,7 +394,7 @@ console.log("USER:", user);
     }
 
     if (formData.hasGap && !uploadedFiles.gapYearDocument) {
-      setError('Please upload Gap Certificate.');
+      setError('Please upload gapyearDocument.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
