@@ -1,10 +1,90 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import API from '../api/axios';
 import './Home.css';
 
 const Home = () => {
+  // Enquiry Form State
+  const [showEnquiryForm, setShowEnquiryForm] = useState(false);
+  const [enquiryData, setEnquiryData] = useState({
+    studentFullName: '',
+    gender: '',
+    dateOfBirth: '',
+    email: '',
+    phone: ''
+  });
+  const [enquirySuccess, setEnquirySuccess] = useState('');
+  const [enquiryError, setEnquiryError] = useState('');
+  const [enquiryLoading, setEnquiryLoading] = useState(false);
+
+  // Name validation - alphabets only
+  const handleEnquiryNameChange = (e) => {
+    const value = e.target.value;
+    if (/^[A-Za-z\s]*$/.test(value)) {
+      setEnquiryData({ ...enquiryData, studentFullName: value });
+    }
+  };
+
+  // Phone validation - numbers only, max 10
+  const handleEnquiryPhoneChange = (e) => {
+    const value = e.target.value;
+    if (/^\d{0,10}$/.test(value)) {
+      setEnquiryData({ ...enquiryData, phone: value });
+    }
+  };
+
+  const handleEnquiryChange = (e) => {
+    setEnquiryData({ ...enquiryData, [e.target.name]: e.target.value });
+  };
+
+  const handleEnquirySubmit = async (e) => {
+    e.preventDefault();
+    setEnquiryError('');
+    setEnquirySuccess('');
+
+    // Validation
+    if (enquiryData.studentFullName.trim().length < 3) {
+      setEnquiryError('Name must be at least 3 characters');
+      return;
+    }
+    if (enquiryData.phone.length !== 10) {
+      setEnquiryError('Phone must be 10 digits');
+      return;
+    }
+    if (!/^[6-9]/.test(enquiryData.phone)) {
+      setEnquiryError('Phone must start with 6, 7, 8, or 9');
+      return;
+    }
+
+    setEnquiryLoading(true);
+    try {
+      await API.post('/enquiries', enquiryData);
+      setEnquirySuccess('✅ Your enquiry has been submitted! We will contact you soon.');
+      setEnquiryData({
+        studentFullName: '',
+        gender: '',
+        dateOfBirth: '',
+        email: '',
+        phone: ''
+      });
+      setTimeout(() => {
+        setShowEnquiryForm(false);
+        setEnquirySuccess('');
+      }, 3000);
+    } catch (err) {
+      setEnquiryError(err.response?.data?.message || 'Failed to submit enquiry. Please try again.');
+    }
+    setEnquiryLoading(false);
+  };
+
+  const closeEnquiryModal = () => {
+    setShowEnquiryForm(false);
+    setEnquirySuccess('');
+    setEnquiryError('');
+  };
+
   return (
     <div className="home-page">
       <Navbar />
@@ -23,6 +103,13 @@ const Home = () => {
           <h2>Empowering Women Through Excellence in Education</h2>
           <p>Senior Science & Arts College, Gangakhed, Parbhani</p>
           <div className="hero-buttons">
+            <button
+              onClick={() => setShowEnquiryForm(true)}
+              className="btn btn-hero-primary"
+              style={{ cursor: 'pointer', border: 'none' }}
+            >
+              📝 Enquiry Form
+            </button>
             <Link to="/admissions" className="btn btn-hero-primary">Apply for Admission →</Link>
             <Link to="/about" className="btn btn-hero-primary">Discover More</Link>
           </div>
@@ -44,6 +131,252 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* ============ ENQUIRY FORM MODAL ============ */}
+      {showEnquiryForm && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+          onClick={closeEnquiryModal}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #8B1A1A 0%, #1565C0 100%)',
+              color: 'white',
+              padding: '24px',
+              borderRadius: '12px 12px 0 0',
+              position: 'relative'
+            }}>
+              <button
+                onClick={closeEnquiryModal}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ✕
+              </button>
+              <h2 style={{ margin: '0 0 6px 0', fontSize: '22px' }}>📝 Admission Enquiry</h2>
+              <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>
+                Fill the form and we will contact you with admission details
+              </p>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleEnquirySubmit} style={{ padding: '24px' }}>
+              {enquirySuccess && (
+                <div style={{
+                  background: '#d4edda',
+                  color: '#155724',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  borderLeft: '4px solid #28a745'
+                }}>
+                  {enquirySuccess}
+                </div>
+              )}
+
+              {enquiryError && (
+                <div style={{
+                  background: '#f8d7da',
+                  color: '#721c24',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  borderLeft: '4px solid #dc3545'
+                }}>
+                  ❌ {enquiryError}
+                </div>
+              )}
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px', color: '#333' }}>
+                  Student Full Name <span style={{ color: 'red' }}>*</span>
+                  <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '6px' }}>
+                    (As per marksheet)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={enquiryData.studentFullName}
+                  onChange={handleEnquiryNameChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1.5px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#1565C0'}
+                  onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px', color: '#333' }}>
+                  Gender <span style={{ color: 'red' }}>*</span>
+                </label>
+                <select
+                  name="gender"
+                  value={enquiryData.gender}
+                  onChange={handleEnquiryChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1.5px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    background: 'white'
+                  }}
+                >
+                  <option value="">Select Gender</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px', color: '#333' }}>
+                  Date of Birth <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={enquiryData.dateOfBirth}
+                  onChange={handleEnquiryChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1.5px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px', color: '#333' }}>
+                  Student Email <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="example@gmail.com"
+                  value={enquiryData.email}
+                  onChange={handleEnquiryChange}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1.5px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px', color: '#333' }}>
+                  Student Phone No <span style={{ color: 'red' }}>*</span>
+                  <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '6px' }}>
+                    (10 digits)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="9876543210"
+                  value={enquiryData.phone}
+                  onChange={handleEnquiryPhoneChange}
+                  maxLength="10"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1.5px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={enquiryLoading}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: enquiryLoading ? '#999' : 'linear-gradient(135deg, #8B1A1A 0%, #1565C0 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: enquiryLoading ? 'not-allowed' : 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+              >
+                {enquiryLoading ? '⏳ Submitting...' : '📨 Submit Enquiry'}
+              </button>
+
+              <p style={{
+                fontSize: '12px',
+                color: '#666',
+                textAlign: 'center',
+                marginTop: '16px',
+                marginBottom: 0
+              }}>
+                💡 Our Student Section will contact you within 24 hours
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ============ END ENQUIRY FORM MODAL ============ */}
 
       {/* Inspiration Quote Section */}
       <section className="inspiration">
@@ -67,7 +400,6 @@ const Home = () => {
       </section>
 
       {/* Stats */}
-     {/* Stats */}
       <section className="stats" style={{padding: '60px 20px', background: '#f9f9f9'}}>
         <div style={{
           maxWidth: '1200px',
@@ -97,6 +429,7 @@ const Home = () => {
           </div>
         </div>
       </section>
+
       {/* About Preview */}
       <section className="about-preview">
         <div className="container">
@@ -218,7 +551,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Principal's Message - No Photo */}
+      {/* Principal's Message */}
       <section className="principal-message">
         <div className="container">
           <div className="principal-quote-card">
