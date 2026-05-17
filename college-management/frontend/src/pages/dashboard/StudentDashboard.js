@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,6 @@ import API from '../../api/axios';
 import './Dashboard.css';
 
 const StudentDashboard = () => {
-const navigate = useNavigate();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
@@ -201,22 +200,24 @@ useEffect(() => {
                 </div>
               )}
 
-          <div className="recent-section">
-  <h3>Application Form Status</h3>
-
-  <div className="application-status-card">
-    <p className="status-text">
-      Your profile is incomplete. Please complete your application form.
-    </p>
-
-    <button
-      className="complete-profile-btn"
-      onClick={() => navigate("/student/application")}
-    >
-      Complete Your Profile
-    </button>
-  </div>
-</div>
+              <div className="recent-section">
+                <h3>Recent Notices</h3>
+                {notices.slice(0, 5).map(notice => (
+                  <div className="notice-row" key={notice._id}>
+                    <span className="notice-dot"></span>
+                    <div>
+                      <p className="notice-title">{notice.title}</p>
+                      <p className="notice-date">
+                        {new Date(notice.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="notice-tag">{notice.category}</span>
+                  </div>
+                ))}
+                {notices.length === 0 && (
+                  <p className="empty-msg">No notices available</p>
+                )}
+              </div>
             </div>
           )}
 
