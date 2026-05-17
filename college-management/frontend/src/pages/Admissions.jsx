@@ -794,7 +794,88 @@ const Admissions = () => {
                     </div>
 
                   </div>
-                  
+                 {/* ===== GUARDIAN ===== */}
+<div className="form-section">
+  <h3 className="form-section-title">
+    👨‍👩‍👧 Guardian / Parent Details
+  </h3>
+
+  <div className="form-row">
+    <div className="form-group">
+      <label>Father's Name *</label>
+      <input
+        type="text"
+        name="fatherName"
+        placeholder="Father's full name"
+        value={formData.fatherName}
+        onChange={handleChange}
+        required
+      />
+    </div>
+
+    <div className="form-group">
+      <label>Mother's Name *</label>
+      <input
+        type="text"
+        name="motherName"
+        placeholder="Mother's full name"
+        value={formData.motherName}
+        onChange={handleChange}
+        required
+      />
+    </div>
+  </div>
+
+  <div className="form-row">
+    <div className="form-group">
+      <label>Guardian's Mobile *</label>
+      <input
+        type="tel"
+        placeholder="10 digit mobile number"
+        value={formData.guardianPhone}
+        onChange={e => {
+          const val = e.target.value.replace(/\D/g, '');
+          if (val.length <= 10) {
+            setFormData({
+              ...formData,
+              guardianPhone: val
+            });
+          }
+        }}
+        required
+      />
+      {formData.guardianPhone &&
+        formData.guardianPhone.length < 10 && (
+          <small className="inline-error">
+            Enter 10 digit number
+          </small>
+      )}
+    </div>
+
+    <div className="form-group">
+      <label>Annual Family Income</label>
+      <select
+        name="familyIncome"
+        value={formData.familyIncome}
+        onChange={handleChange}
+      >
+        <option value="">Select Range</option>
+        <option value="below1lakh">
+          Below ₹1 Lakh
+        </option>
+        <option value="1to2.5lakh">
+          ₹1 - 2.5 Lakh
+        </option>
+        <option value="2.5to5lakh">
+          ₹2.5 - 5 Lakh
+        </option>
+        <option value="above5lakh">
+          Above ₹5 Lakh
+        </option>
+      </select>
+    </div>
+  </div>
+</div> 
                 {/* ===== ADDRESS WITH CITY AUTOCOMPLETE ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">🏠 Address Details</h3>
@@ -1383,47 +1464,6 @@ const Admissions = () => {
                     </div>
                     <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Front Page"
                       accept="image/*,.pdf" />
-                  </div>
-
-                  {/* ===== GUARDIAN ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">👨‍👩‍👧 Guardian / Parent Details</h3>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Father's Name *</label>
-                        <input type="text" name="fatherName" placeholder="Father's full name"
-                          value={formData.fatherName} onChange={handleChange} required />
-                      </div>
-                      <div className="form-group">
-                        <label>Mother's Name *</label>
-                        <input type="text" name="motherName" placeholder="Mother's full name"
-                          value={formData.motherName} onChange={handleChange} required />
-                      </div>
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Guardian's Mobile *</label>
-                        <input type="tel" placeholder="10 digit mobile number"
-                          value={formData.guardianPhone}
-                          onChange={e => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            if (val.length <= 10) setFormData({ ...formData, guardianPhone: val });
-                          }} required />
-                        {formData.guardianPhone && formData.guardianPhone.length < 10 && (
-                          <small className="inline-error">Enter 10 digit number</small>
-                        )}
-                      </div>
-                      <div className="form-group">
-                        <label>Annual Family Income</label>
-                        <select name="familyIncome" value={formData.familyIncome} onChange={handleChange}>
-                          <option value="">Select Range</option>
-                          <option value="below1lakh">Below ₹1 Lakh</option>
-                          <option value="1to2.5lakh">₹1 - 2.5 Lakh</option>
-                          <option value="2.5to5lakh">₹2.5 - 5 Lakh</option>
-                          <option value="above5lakh">Above ₹5 Lakh</option>
-                        </select>
-                      </div>
-                    </div>
                   </div>
 
                   {/* ===== ADDITIONAL DOCS ===== */}
