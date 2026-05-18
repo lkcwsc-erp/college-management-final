@@ -1692,48 +1692,60 @@ const Admissions = () => {
                       />
                     )}
                   </div> 
-                    {/* ===== ADDITIONAL INFO ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">📝 Additional Information</h3>
-                    <div className="form-group">
-                      <label>How did you hear about us?</label>
-                      <select name="referralSource" value={formData.referralSource} onChange={handleChange}>
-                        <option value="">Select option</option>
-                        <option value="friend">Friend / Relative</option>
-                        <option value="school">School Teacher</option>
-                        <option value="social_media">Social Media</option>
-                        <option value="newspaper">Newspaper</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Additional Message</label>
-                      <textarea name="message" rows="3"
-                        placeholder="Any special requirements..."
-                        value={formData.message} onChange={handleChange} />
-                    </div>
-                  </div>
-{/* ===== REFERENCE TAB ===== */}
+                   {/* ===== ADDITIONAL INFO ===== */}
 <div className="form-section">
-  <h3 className="form-section-title">🔖 Reference</h3>
+  <h3 className="form-section-title">📝 Additional Information</h3>
 
-  <textarea
-    name="reference"
-    placeholder="Type reference details here..."
-    value={formData.reference}
-    onChange={handleChange}
-    rows={8}
-    style={{
-      width: "100%",
-      padding: "14px",
-      borderRadius: "10px",
-      border: "1px solid #ccc",
-      fontSize: "15px",
-      outline: "none",
-      resize: "vertical"
-    }}
-  />
-</div>      
+  {/* Referral Source (Dropdown stays same) */}
+  <div className="form-group">
+    <label>How did you hear about us?</label>
+    <select
+      name="referralSource"
+      value={formData.referralSource}
+      onChange={handleChange}
+    >
+      <option value="">Select option</option>
+      <option value="friend">Friend / Relative</option>
+      <option value="school">School Teacher</option>
+      <option value="social_media">Social Media</option>
+      <option value="newspaper">Newspaper</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+
+  {/* Reference (NOW TEXT INPUT) */}
+  <div className="form-group">
+    <label>Reference</label>
+    <textarea
+      name="reference"
+      placeholder="Enter reference details here..."
+      value={formData.reference}
+      onChange={handleChange}
+      rows={4}
+      style={{
+        width: "100%",
+        padding: "12px",
+        borderRadius: "10px",
+        border: "1px solid #ccc",
+        fontSize: "15px",
+        outline: "none",
+        resize: "vertical"
+      }}
+    />
+  </div>
+
+  {/* Additional Message */}
+  <div className="form-group">
+    <label>Additional Message</label>
+    <textarea
+      name="message"
+      rows="3"
+      placeholder="Any special requirements..."
+      value={formData.message}
+      onChange={handleChange}
+    />
+  </div>
+</div>
                    {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
                     <h3 className="form-section-title">✅ Declaration</h3>
