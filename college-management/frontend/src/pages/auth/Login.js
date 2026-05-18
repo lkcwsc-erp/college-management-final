@@ -216,6 +216,15 @@ if (role === 'admin') {
               <p className="auth-link" style={{ fontSize: '13px', color: '#666', marginTop: '20px' }}>
                 🎓 New students must contact college staff for registration
               </p>
+              <p style={{ fontSize: '13px', color: '#666', marginTop: '12px', textAlign: 'center' }}>
+                Are you a staff member?{' '}
+                <a href="/staff-login" style={{ color: '#1565C0', textDecoration: 'underline', fontWeight: '500' }}>
+                  Staff Login →
+                </a>
+              </p>
+
+            </>
+          )}
             </>
           )}
 
