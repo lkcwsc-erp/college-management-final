@@ -1627,8 +1627,8 @@ console.log("USER:", user);
                         label="💰 Income Certificate" accept="image/*,.pdf" />
                     </div>
                   </div>
- {/* ===== PHOTO & SIGNATURE ===== */}
-                  <div className="form-section">
+                   {/* ===== PHOTO & SIGNATURE ===== */}
+               <div className="form-section">
                     <h3 className="form-section-title">📸 Photo &amp; Signature</h3>
                     <div className="upload-grid-two">
                       <FileUploadBox fieldName="studentPhoto" label="📸 Student Passport Photo"
@@ -1703,7 +1703,8 @@ console.log("USER:", user);
       resize: "vertical"
     }}
   />
-</div>        {/* ===== DECLARATION ===== */}
+</div>      
+                   {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
                     <h3 className="form-section-title">✅ Declaration</h3>
                     <div className="declaration-box">
