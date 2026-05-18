@@ -1158,18 +1158,18 @@ console.log("USER:", user);
                   </div>
 import React, { useState } from "react";
 
-const ApaarTab = () => {
+const ApaarIdTab = () => {
   const [formData, setFormData] = useState({
     apaarId: ""
   });
 
   const [formErrors, setFormErrors] = useState({});
 
-  // ===== HANDLE CHANGE =====
+  // ===== INPUT CHANGE (AUTO CLEAN) =====
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // allow only alphanumeric
+    // Only alphanumeric allowed + auto remove others
     const cleanedValue = value.replace(/[^A-Za-z0-9]/g, "");
 
     setFormData({
@@ -1187,7 +1187,7 @@ const ApaarTab = () => {
     if (!formData.apaarId) {
       errors.apaarId = "APAAR ID is required";
     } else if (!apaarRegex.test(formData.apaarId)) {
-      errors.apaarId = "APAAR ID must be exactly 12 alphanumeric characters";
+      errors.apaarId = "Must be exactly 12 alphanumeric characters";
     }
 
     setFormErrors(errors);
@@ -1200,14 +1200,15 @@ const ApaarTab = () => {
     e.preventDefault();
 
     if (validate()) {
-      alert("APAAR ID is valid and submitted!");
-      console.log(formData);
+      alert("APAAR ID is valid ✅");
+      console.log("Submitted Data:", formData);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      {/* ===== APAAR ID TAB ===== */}
+      
+      {/* ===== APAAR ID FIELD ===== */}
       <div className="form-section">
         <h3 className="form-section-title">🪪 APAAR ID</h3>
 
@@ -1228,12 +1229,15 @@ const ApaarTab = () => {
           }}
         />
 
+        {/* ERROR MESSAGE */}
         {formErrors.apaarId && (
-          <small style={{ color: "red" }}>{formErrors.apaarId}</small>
+          <p style={{ color: "red", marginTop: "5px" }}>
+            {formErrors.apaarId}
+          </p>
         )}
       </div>
 
-      {/* Submit */}
+      {/* SUBMIT BUTTON */}
       <button
         type="submit"
         style={{
@@ -1241,8 +1245,9 @@ const ApaarTab = () => {
           padding: "10px 20px",
           border: "none",
           borderRadius: "8px",
-          background: "#4CAF50",
+          backgroundColor: "#28a745",
           color: "white",
+          fontWeight: "bold",
           cursor: "pointer"
         }}
       >
@@ -1252,7 +1257,7 @@ const ApaarTab = () => {
   );
 };
 
-export default ApaarTab;
+export default ApaarIdTab;
                   {/* ===== SSC ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📗 SSC — 10th Standard Details</h3>
