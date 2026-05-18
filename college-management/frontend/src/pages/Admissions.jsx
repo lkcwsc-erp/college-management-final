@@ -141,8 +141,7 @@ const Admissions = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
- const [activeTab, setActiveTab] = useState('process');
- const [activeTab, setActiveTab] = useState('process');
+const [activeTab, setActiveTab] = useState('process');
 
   // Allow ?tab=apply via URL (from Student Dashboard)
   useEffect(() => {
@@ -599,8 +598,12 @@ const Admissions = () => {
             onClick={() => setActiveTab('dates')}>📅 Important Dates</button>
           <button className={activeTab === 'documents' ? 'tab-btn active' : 'tab-btn'}
             onClick={() => setActiveTab('documents')}>📄 Documents Required</button>
-         <button className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
-            onClick={() => setActiveTab('enquiry')}>💬 Enquiry Form</button>
+         {user && (
+  <button className={activeTab === 'apply' ? 'tab-btn active' : 'tab-btn'}
+    onClick={() => setActiveTab('apply')}>🔥 Apply Online</button>
+)}
+<button className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
+  onClick={() => setActiveTab('enquiry')}>💬 Enquiry Form</button>
         </div>
 
         {/* ============= PROCESS TAB ============= */}
