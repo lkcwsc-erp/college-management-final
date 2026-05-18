@@ -239,11 +239,29 @@ useEffect(() => {
                   const filled = fields.filter(f => f && f !== '').length;
                   const total = fields.length;
                   const percentage = myAdmission ? Math.round((filled / total) * 100) : 0;
+                  
+                  const pendingFields = [];
 
-                  const progressColor =
-                    percentage === 100 ? '#2E7D32' :
-                    percentage >= 60  ? '#E65100' :
-                                        '#C62828';
+if (!myAdmission?.applicantName) pendingFields.push('Applicant Name');
+if (!myAdmission?.email) pendingFields.push('Email');
+if (!myAdmission?.phone) pendingFields.push('Phone Number');
+if (!myAdmission?.address) pendingFields.push('Address');
+if (!myAdmission?.dateOfBirth) pendingFields.push('Date of Birth');
+if (!myAdmission?.gender) pendingFields.push('Gender');
+if (!myAdmission?.category) pendingFields.push('Category');
+if (!myAdmission?.aadharNumber) pendingFields.push('Aadhar Number');
+if (!myAdmission?.aadharName) pendingFields.push('Aadhar Name');
+if (!myAdmission?.studentPhoto) pendingFields.push('Student Photo');
+if (!myAdmission?.aadharPhoto) pendingFields.push('Aadhar Card');
+if (!myAdmission?.sscMarksheet) pendingFields.push('SSC Marksheet');
+if (!myAdmission?.hscMarksheet) pendingFields.push('HSC Marksheet');
+if (!myAdmission?.fatherName) pendingFields.push('Father Name');
+if (!myAdmission?.motherName) pendingFields.push('Mother Name');
+
+const progressColor =
+  percentage === 100 ? '#2E7D32' :
+  percentage >= 60  ? '#E65100' :
+                      '#C62828';
 
                   const progressBg =
                     percentage === 100 ? '#e8f5e9' :
@@ -309,11 +327,47 @@ useEffect(() => {
                           ? '❗ Form is mostly incomplete. Please fill all required details.'
                           : '📝 You have not started the admission form yet.'}
                       </div>
+                      {pendingFields.length > 0 && (
+  <div
+    style={{
+      background: '#fff3e0',
+      padding: '14px',
+      borderRadius: '10px',
+      marginBottom: '16px',
+      border: '1px solid #ffcc80'
+    }}
+  >
+    <h4
+      style={{
+        marginBottom: '10px',
+        color: '#E65100',
+        fontSize: '15px'
+      }}
+    >
+      ⚠️ Pending Details
+    </h4>
+
+    <ul style={{ paddingLeft: '18px', margin: 0 }}>
+      {pendingFields.map((field, index) => (
+        <li
+          key={index}
+          style={{
+            marginBottom: '6px',
+            fontSize: '13px',
+            color: '#555'
+          }}
+        >
+          {field}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
                       {/* Complete Your Form Button */}
                       {percentage < 100 && (
                         <button
-                          onClick={() => navigate('/admissions')}
+                          onClick={() => navigate('/student/application-form')}
                           style={{
                             width: '100%',
                             padding: '12px',
