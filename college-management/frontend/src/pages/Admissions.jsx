@@ -1094,42 +1094,28 @@ const Admissions = () => {
                     </div>
                   </div>
 
-                  {/* ===== APAAR ID ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">🪪 APAAR ID Details</h3>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>APAAR ID Number *</label>
-                        <input
-                          type="text"
-                          name="APAARIdNumber"
-                          placeholder="Enter your APAAR ID number"
-                          value={formData.APAARIdNumber}
-                          onChange={handleChange}
-                          required
-                        />
-                        <small className="field-hint">APAAR ID is issued by the government for academic records.</small>
-                      </div>
-                      <div className="form-group" />
-                    </div>
-                    <div className="upload-grid-two">
-                      <FileUploadBox
-                        fieldName="apaarIdDocument"
-                        label="📋 APAAR ID Document"
-                        accept="image/*,.pdf"
-                        required={true}
-                        hint="JPG, PNG or PDF · Max 1 MB"
-                        uploadedFiles={uploadedFiles}
-                        uploadPreviews={uploadPreviews}
-                        fileErrors={fileErrors}
-                        onFileChange={handleFileChange}
-                      />
-                    </div>
-                    <div className="info-note">
-                      <span>ℹ️</span>
-                      <p>Upload a clear copy of your APAAR ID document (front page). Accepted formats: JPG, PNG, PDF.</p>
-                    </div>
-                  </div>
+                 {/* ===== APAAR ID ===== */}
+<div className="form-section">
+  <h3 className="form-section-title">🪪 APAAR ID Details</h3>
+
+  <div className="form-row">
+    <div className="form-group">
+      <label>APAAR ID Number *</label>
+      <input
+        type="text"
+        name="APAARIdNumber"
+        placeholder="Enter your APAAR ID number"
+        value={formData.APAARIdNumber}
+        onChange={handleChange}
+        required
+      />
+
+      <small className="field-hint">
+        APAAR ID is issued by the government for academic records.
+      </small>
+    </div>
+  </div>
+</div>
 
                   {/* ===== SSC ===== */}
                   <div className="form-section">
