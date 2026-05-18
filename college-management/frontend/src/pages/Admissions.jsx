@@ -140,9 +140,17 @@ const Admissions = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
-  const [activeTab, setActiveTab] = useState(
-  user ? 'apply' : 'process'
-);
+ const [activeTab, setActiveTab] = useState('process');
+
+  // Allow ?tab=apply via URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'apply' && user) {
+      setActiveTab('apply');
+    }
+  }, [user]);
+   
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
