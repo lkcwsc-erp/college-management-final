@@ -1703,7 +1703,8 @@ console.log("USER:", user);
       resize: "vertical"
     }}
   />
-</div>                 {/* ===== DECLARATION ===== */}
+</div>       
+                   {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
                     <h3 className="form-section-title">✅ Declaration</h3>
                     <div className="declaration-box">
