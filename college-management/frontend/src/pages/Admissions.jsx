@@ -1156,58 +1156,7 @@ console.log("USER:", user);
                       <p>Your Aadhar details are kept confidential as per government guidelines.</p>
                     </div>
                   </div>
-import React, { useState } from "react";
 
-const ApaarIdTab = () => {
-  const [formData, setFormData] = useState({
-    apaarId: ""
-  });
-
-  const [formErrors, setFormErrors] = useState({});
-
-  // ===== INPUT CHANGE (AUTO CLEAN) =====
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    // Only alphanumeric allowed + auto remove others
-    const cleanedValue = value.replace(/[^A-Za-z0-9]/g, "");
-
-    setFormData({
-      ...formData,
-      [name]: cleanedValue
-    });
-  };
-
-  // ===== VALIDATION =====
-  const validate = () => {
-    let errors = {};
-
-    const apaarRegex = /^[A-Za-z0-9]{12}$/;
-
-    if (!formData.apaarId) {
-      errors.apaarId = "APAAR ID is required";
-    } else if (!apaarRegex.test(formData.apaarId)) {
-      errors.apaarId = "Must be exactly 12 alphanumeric characters";
-    }
-
-    setFormErrors(errors);
-
-    return Object.keys(errors).length === 0;
-  };
-
-  // ===== SUBMIT =====
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (validate()) {
-      alert("APAAR ID is valid ✅");
-      console.log("Submitted Data:", formData);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      
       {/* ===== APAAR ID FIELD ===== */}
       <div className="form-section">
         <h3 className="form-section-title">🪪 APAAR ID</h3>
