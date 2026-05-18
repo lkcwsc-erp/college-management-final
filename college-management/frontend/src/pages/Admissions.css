@@ -910,7 +910,6 @@ body { background: var(--adm-bg); }
   font-size: 13.5px;
   line-height: 1.7;
 }
-
 /* ===========================================================
    SUBMIT BUTTON
    =========================================================== */
@@ -922,24 +921,48 @@ body { background: var(--adm-bg); }
   border-radius: var(--adm-radius) !important;
   font-weight: 700;
   letter-spacing: 0.4px;
-  background: linear-gradient(135deg, var(--adm-primary), var(--adm-primary-light));
+
+  /* BUTTON COLOR */
+  background: linear-gradient(135deg, #1565c0, #42a5f5);
+
   border: none;
-  color: white;
+
+  /* TEXT VISIBLE */
+  color: #ffffff !important;
+
   cursor: pointer;
+
+  /* CENTER TEXT */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  /* SHADOW */
   box-shadow: 0 8px 20px rgba(21, 101, 192, 0.28);
+
+  /* REMOVE ANY HIDDEN EFFECT */
+  opacity: 1 !important;
 }
 
+/* HOVER EFFECT */
 .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 12px 26px rgba(21, 101, 192, 0.38);
-  background: linear-gradient(135deg, var(--adm-primary-dark), var(--adm-primary));
+  background: linear-gradient(135deg, #0d47a1, #1565c0);
+  color: #ffffff !important;
 }
 
-.submit-btn:active:not(:disabled) { transform: translateY(0); }
+/* ACTIVE EFFECT */
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
 
+/* DISABLED BUTTON */
 .submit-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.8;
   cursor: not-allowed;
+  color: #ffffff !important;
 }
 
 /* ===========================================================
