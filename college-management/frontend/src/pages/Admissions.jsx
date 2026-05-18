@@ -591,54 +591,51 @@ const [activeTab, setActiveTab] = useState('process');
 
      <section className="admissions-tabs container">
 
-   {!(user && activeTab === 'apply') ? (
+  {!(user && activeTab === 'apply') ? (
 
-  <div className="tab-buttons">
+    <div className="tab-buttons">
 
-    <button
-      className={activeTab === 'process' ? 'tab-btn active' : 'tab-btn'}
-      onClick={() => setActiveTab('process')}
-    >
-      📋 Admission Process
-    </button>
-
-    <button
-      className={activeTab === 'dates' ? 'tab-btn active' : 'tab-btn'}
-      onClick={() => setActiveTab('dates')}
-    >
-      📅 Important Dates
-    </button>
-
-    <button
-      className={activeTab === 'documents' ? 'tab-btn active' : 'tab-btn'}
-      onClick={() => setActiveTab('documents')}
-    >
-      📄 Documents Required
-    </button>
-
-    {user && (
       <button
-        className={activeTab === 'apply' ? 'tab-btn active' : 'tab-btn'}
-        onClick={() => setActiveTab('apply')}
+        className={activeTab === 'process' ? 'tab-btn active' : 'tab-btn'}
+        onClick={() => setActiveTab('process')}
       >
-        🔥 Apply Online
+        📋 Admission Process
       </button>
-    )}
 
-    <button
-      className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
-      onClick={() => setActiveTab('enquiry')}
-    >
-      💬 Enquiry Form
-    </button>
+      <button
+        className={activeTab === 'dates' ? 'tab-btn active' : 'tab-btn'}
+        onClick={() => setActiveTab('dates')}
+      >
+        📅 Important Dates
+      </button>
 
-  </div>
+      <button
+        className={activeTab === 'documents' ? 'tab-btn active' : 'tab-btn'}
+        onClick={() => setActiveTab('documents')}
+      >
+        📄 Documents Required
+      </button>
 
-) : null}
+      {user && (
+        <button
+          className={activeTab === 'apply' ? 'tab-btn active' : 'tab-btn'}
+          onClick={() => setActiveTab('apply')}
+        >
+          🔥 Apply Online
+        </button>
+      )}
 
-  )}
+      <button
+        className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
+        onClick={() => setActiveTab('enquiry')}
+      >
+        💬 Enquiry Form
+      </button>
 
-</section>
+    </div>
+
+  ) : null}
+
 
         {/* ============= PROCESS TAB ============= */}
         {activeTab === 'process' && (
