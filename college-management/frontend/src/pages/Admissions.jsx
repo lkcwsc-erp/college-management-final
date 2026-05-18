@@ -977,50 +977,7 @@ console.log("USER:", user);
       />
     </div>
   </div>
-
-  {/* ===== Second Row ===== */}
-  <div className="form-row">
-    {/* City */}
-    <div
-      className="form-group city-autocomplete-wrap"
-      ref={cityWrapRef}
-    >
-      <label>City / Town *</label>
-
-      <input
-        type="text"
-        placeholder="Type city name"
-        value={formData.city}
-        onChange={(e) => handleCityInput(e.target.value)}
-        onFocus={() =>
-          formData.city &&
-          handleCityInput(formData.city)
-        }
-        autoComplete="off"
-        required
-      />
-
-      {showCitySuggestions &&
-        citySuggestions.length > 0 && (
-          <ul className="city-suggestions-dropdown">
-            {citySuggestions.map((c, i) => (
-              <li
-                key={i}
-                onClick={() =>
-                  handleCitySelect(c)
-                }
-              >
-                <span className="city-name">
-                  {c.city}
-                </span>
-                <span className="city-meta">
-                  {c.district}, {c.state}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-    </div>
+</div>
 
     {/* District */}
     <div className="form-group">
