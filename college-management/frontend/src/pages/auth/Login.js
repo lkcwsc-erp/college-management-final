@@ -46,12 +46,10 @@ const Login = () => {
       });
 
       if (data.otpRequired) {
-        // Staff/Admin → show OTP screen
         setStep('otp');
         setSuccess(data.message);
         startResendCooldown();
       } else {
-        // Student → direct login
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setAuthData(data.user, data.token);
@@ -59,7 +57,6 @@ const Login = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
-      // Reset CAPTCHA on error
       if (recaptchaRef.current) recaptchaRef.current.reset();
       setCaptchaToken(null);
     }
@@ -86,33 +83,25 @@ const Login = () => {
       localStorage.setItem('user', JSON.stringify(data.user));
       setAuthData(data.user, data.token);
 
-     
-const role = data.user.role;
+      const role = data.user.role;
 
-if (role === 'admin') {
-  navigate('/admin/dashboard');
-
-} else if (role === 'principal') {
-  navigate('/principal/dashboard');
-
-} else if (role === 'staff_student') {
-  navigate('/staff/student-section');
-
-} else if (role === 'staff_accounts') {
-  navigate('/staff/accounts-section');
-
-} else if (role === 'staff_exam') {
-  navigate('/staff/exam-section');
-
-} else if (role === 'staff_scholarship') {
-  navigate('/staff/scholarship-section');
-
-} else if (role === 'staff') {
-  navigate('/staff/dashboard');
-
-} else {
-  navigate('/student/dashboard');
-}
+      if (role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (role === 'principal') {
+        navigate('/principal/dashboard');
+      } else if (role === 'staff_student') {
+        navigate('/staff/student-section');
+      } else if (role === 'staff_accounts') {
+        navigate('/staff/accounts-section');
+      } else if (role === 'staff_exam') {
+        navigate('/staff/exam-section');
+      } else if (role === 'staff_scholarship') {
+        navigate('/staff/scholarship-section');
+      } else if (role === 'staff') {
+        navigate('/staff/dashboard');
+      } else {
+        navigate('/student/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'OTP verification failed.');
     }
@@ -216,15 +205,13 @@ if (role === 'admin') {
               <p className="auth-link" style={{ fontSize: '13px', color: '#666', marginTop: '20px' }}>
                 🎓 New students must contact college staff for registration
               </p>
+
               <p style={{ fontSize: '13px', color: '#666', marginTop: '12px', textAlign: 'center' }}>
                 Are you a staff member?{' '}
                 <a href="/staff-login" style={{ color: '#1565C0', textDecoration: 'underline', fontWeight: '500' }}>
                   Staff Login →
                 </a>
               </p>
-
-            </>
-          )}
             </>
           )}
 
