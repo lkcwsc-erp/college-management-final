@@ -1094,28 +1094,28 @@ const Admissions = () => {
                     </div>
                   </div>
 
-                  {/* ===== APAR ID ===== */}
+                  {/* ===== APAAR ID ===== */}
                   <div className="form-section">
-                    <h3 className="form-section-title">🪪 APAR ID Details</h3>
+                    <h3 className="form-section-title">🪪 APAAR ID Details</h3>
                     <div className="form-row">
                       <div className="form-group">
-                        <label>APAR ID Number *</label>
+                        <label>APAAR ID Number *</label>
                         <input
                           type="text"
-                          name="aparIdNumber"
-                          placeholder="Enter your APAR ID number"
-                          value={formData.aparIdNumber}
+                          name="APAARIdNumber"
+                          placeholder="Enter your APAAR ID number"
+                          value={formData.APAARIdNumber}
                           onChange={handleChange}
                           required
                         />
-                        <small className="field-hint">APAR ID is issued by the government for academic records.</small>
+                        <small className="field-hint">APAAR ID is issued by the government for academic records.</small>
                       </div>
                       <div className="form-group" />
                     </div>
                     <div className="upload-grid-two">
                       <FileUploadBox
-                        fieldName="aparIdDocument"
-                        label="📋 APAR ID Document"
+                        fieldName="apaarIdDocument"
+                        label="📋 APAAR ID Document"
                         accept="image/*,.pdf"
                         required={true}
                         hint="JPG, PNG or PDF · Max 1 MB"
@@ -1127,7 +1127,7 @@ const Admissions = () => {
                     </div>
                     <div className="info-note">
                       <span>ℹ️</span>
-                      <p>Upload a clear copy of your APAR ID document (front page). Accepted formats: JPG, PNG, PDF.</p>
+                      <p>Upload a clear copy of your APAAR ID document (front page). Accepted formats: JPG, PNG, PDF.</p>
                     </div>
                   </div>
 
