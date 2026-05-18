@@ -1641,7 +1641,28 @@ console.log("USER:", user);
                         accept="image/*,.pdf" required={true} />
                     )}
                   </div>
-                   {/* ===== ADDITIONAL INFO ===== */}
+
+                  {/* ===== UPLOAD DOCUMENTS ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">📄 Upload Documents</h3>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="aadharPhoto" label="🪪 Aadhaar Card Upload"
+                        accept="image/*,.pdf" required={true} />
+                      <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true} />
+                    </div>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true} />
+                      <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
+                        accept="image/*,.pdf" />
+                    </div>
+                    {formData.hasGap && (
+                      <FileUploadBox fieldName="gapyeardocument" label="📅 Gap Year Document Upload"
+                        accept="image/*,.pdf" required={true} />
+                    )}
+                  </div> 
+                    {/* ===== ADDITIONAL INFO ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📝 Additional Information</h3>
                     <div className="form-group">
@@ -1663,26 +1684,6 @@ console.log("USER:", user);
                     </div>
                   </div>
 
-                  {/* ===== UPLOAD DOCUMENTS ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">📄 Upload Documents</h3>
-                    <div className="upload-grid-two">
-                      <FileUploadBox fieldName="aadharPhoto" label="🪪 Aadhaar Card Upload"
-                        accept="image/*,.pdf" required={true} />
-                      <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
-                        accept="image/*,.pdf" required={true} />
-                    </div>
-                    <div className="upload-grid-two">
-                      <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet Upload"
-                        accept="image/*,.pdf" required={true} />
-                      <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
-                        accept="image/*,.pdf" />
-                    </div>
-                    {formData.hasGap && (
-                      <FileUploadBox fieldName="gapyeardocument" label="📅 Gap Year Document Upload"
-                        accept="image/*,.pdf" required={true} />
-                    )}
-                  </div>
 
                   {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
