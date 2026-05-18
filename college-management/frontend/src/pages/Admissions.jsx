@@ -1627,7 +1627,7 @@ console.log("USER:", user);
                         label="💰 Income Certificate" accept="image/*,.pdf" />
                     </div>
                   </div>
- {/* ===== PHOTO & SIGNATURE ===== */}
+                {/* ===== PHOTO & SIGNATURE ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📸 Photo &amp; Signature</h3>
                     <div className="upload-grid-two">
