@@ -155,14 +155,23 @@ exports.login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    // ✅ UPDATED: Find user by email OR username
+    const user = await User.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        { username: email.toLowerCase() } // "email" field can also be username
+      ]
+    });
+
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
     }
+
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
     }
+
     if (!user.isActive) {
       return res.status(401).json({ success: false, message: 'Account is deactivated' });
     }
@@ -170,17 +179,17 @@ exports.login = async (req, res) => {
     // 🔐 If user is STAFF (any type) or ADMIN → send OTP
     const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
     if (staffRoles.includes(user.role) || user.role === 'admin') {
-      await OTP.deleteMany({ email: email.toLowerCase() });
+      await OTP.deleteMany({ email: user.email.toLowerCase() });
 
       const otp = generateOTP();
 
       await OTP.create({
-        email: email.toLowerCase(),
+        email: user.email.toLowerCase(),
         otp,
         purpose: 'login'
       });
 
-      const emailResult = await sendOTPEmail(email, otp, user.name);
+      const emailResult = await sendOTPEmail(user.email, otp, user.name);
       if (!emailResult.success) {
         return res.status(500).json({
           success: false,
@@ -191,8 +200,8 @@ exports.login = async (req, res) => {
       return res.status(200).json({
         success: true,
         otpRequired: true,
-        message: `OTP has been sent to ${email}. Please check your inbox.`,
-        email: email
+        message: `OTP has been sent to ${user.email}. Please check your inbox.`,
+        email: user.email // always return actual email for OTP verify step
       });
     }
 
@@ -349,7 +358,7 @@ exports.changePassword = async (req, res) => {
 // ===== ADMIN: Create Staff Login =====
 exports.createStaff = async (req, res) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, username, email, password, phone, role } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -366,18 +375,32 @@ exports.createStaff = async (req, res) => {
       });
     }
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
+    // ✅ Check email already exists
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
       return res.status(400).json({
         success: false,
         message: 'A user with this email already exists'
       });
     }
 
+    // ✅ Check username already exists (if provided)
+    if (username) {
+      const usernameExists = await User.findOne({ username: username.toLowerCase() });
+      if (usernameExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'This username is already taken'
+        });
+      }
+    }
+
     const user = await User.create({
       name,
+      username: username ? username.toLowerCase() : undefined,
       email,
       password,
+      plainPassword: password, // ✅ store plain for admin view
       phone: phone || '',
       role
     });
@@ -388,9 +411,11 @@ exports.createStaff = async (req, res) => {
       user: {
         _id: user._id,
         name: user.name,
+        username: user.username,
         email: user.email,
         phone: user.phone,
-        role: user.role
+        role: user.role,
+        plainPassword: user.plainPassword, // ✅ return to show in modal
       }
     });
   } catch (error) {
@@ -402,6 +427,7 @@ exports.createStaff = async (req, res) => {
 exports.getAllStaff = async (req, res) => {
   try {
     const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
+    // ✅ include plainPassword in select (remove -password but keep plainPassword)
     const staff = await User.find({ role: { $in: staffRoles } })
       .select('-password')
       .sort({ createdAt: -1 });
@@ -431,6 +457,56 @@ exports.deleteStaff = async (req, res) => {
 
     await User.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Staff deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ===== ADMIN: Update Staff ✅ NEW =====
+exports.updateStaff = async (req, res) => {
+  try {
+    const { name, username, email, phone } = req.body;
+
+    const staff = await User.findById(req.params.id);
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'Staff not found' });
+    }
+
+    // ✅ Check email conflict (exclude self)
+    if (email && email !== staff.email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: req.params.id } });
+      if (emailExists) {
+        return res.status(400).json({ success: false, message: 'Email already in use by another user' });
+      }
+    }
+
+    // ✅ Check username conflict (exclude self)
+    if (username && username !== staff.username) {
+      const usernameExists = await User.findOne({
+        username: username.toLowerCase(),
+        _id: { $ne: req.params.id }
+      });
+      if (usernameExists) {
+        return res.status(400).json({ success: false, message: 'Username already taken' });
+      }
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        name: name || staff.name,
+        username: username ? username.toLowerCase() : staff.username,
+        email: email || staff.email,
+        phone: phone || staff.phone,
+      },
+      { new: true }
+    ).select('-password');
+
+    res.status(200).json({
+      success: true,
+      message: 'Staff updated successfully!',
+      staff: updated
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
