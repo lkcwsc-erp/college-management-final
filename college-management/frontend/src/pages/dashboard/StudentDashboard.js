@@ -721,8 +721,8 @@ const progressColor =
                   <h3>No Fee Information</h3>
                   <p>Please apply for admission first.</p>
                   <br />
-                  <a href="/admissions" className="btn btn-primary">
-                    Apply for Admission
+                  <a href="/admissions?tab=apply" className="btn btn-primary">
+                    ✨ Complete Your Profile →
                   </a>
                 </div>
               )}
