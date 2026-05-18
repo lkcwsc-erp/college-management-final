@@ -626,8 +626,7 @@ const Admissions = () => {
             {user && (
               <div className="auth-prompt-card auth-prompt-success">
                 <p className="auth-prompt-title success">✅ You are logged in as {user.name}! Ready to apply.</p>
-                <button className="btn btn-primary" onClick={() => setActiveTab('apply')}>✍️ Start Application</button>
-              </div>
+               <a href="/student/dashboard" className="btn btn-primary">📋 Go to Student Dashboard</a>              </div>
             )}
           </div>
         )}
