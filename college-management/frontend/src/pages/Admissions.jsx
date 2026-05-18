@@ -947,7 +947,7 @@ console.log("USER:", user);
     </div>
   </div>
 </div> 
-  {/* ===== ADDRESS ===== */}
+ {/* ===== ADDRESS ===== */}
 <div className="form-section">
   <h3 className="form-section-title">🏠 Address Details</h3>
 
@@ -979,7 +979,50 @@ console.log("USER:", user);
   </div>
 
   {/* ===== Second Row ===== */}
- {/* District */}
+  <div className="form-row">
+    {/* City */}
+    <div
+      className="form-group city-autocomplete-wrap"
+      ref={cityWrapRef}
+    >
+      <label>City / Town *</label>
+
+      <input
+        type="text"
+        placeholder="Type city name"
+        value={formData.city}
+        onChange={(e) => handleCityInput(e.target.value)}
+        onFocus={() =>
+          formData.city &&
+          handleCityInput(formData.city)
+        }
+        autoComplete="off"
+        required
+      />
+
+      {showCitySuggestions &&
+        citySuggestions.length > 0 && (
+          <ul className="city-suggestions-dropdown">
+            {citySuggestions.map((c, i) => (
+              <li
+                key={i}
+                onClick={() =>
+                  handleCitySelect(c)
+                }
+              >
+                <span className="city-name">
+                  {c.city}
+                </span>
+                <span className="city-meta">
+                  {c.district}, {c.state}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+    </div>
+
+    {/* District */}
     <div className="form-group">
       <label>District *</label>
       <input
@@ -1069,6 +1112,7 @@ console.log("USER:", user);
         )}
     </div>
   </div>
+
 
   {/* ===== Permanent Address Checkbox ===== */}
   <div className="checkbox-row">
