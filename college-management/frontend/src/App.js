@@ -17,6 +17,7 @@ import StudentSectionDashboard from './pages/dashboard/StudentSectionDashboard';
 import AccountsSectionDashboard from './pages/dashboard/AccountsSectionDashboard';
 import ExamSectionDashboard from './pages/dashboard/ExamSectionDashboard';
 import ScholarshipSectionDashboard from './pages/dashboard/ScholarshipSectionDashboard';
+import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Resources from './pages/Resources';
 import Examination from './pages/Examination';
@@ -80,6 +81,11 @@ function App() {
               <AdminDashboard />
             </ProtectedRoute>
           } />
+           <Route path="/principal/dashboard" element={
+  <ProtectedRoute roles={['principal']}>
+    <PrincipalDashboard />
+  </ProtectedRoute>
+} /> 
 
           <Route path="*" element={
             <div style={{
