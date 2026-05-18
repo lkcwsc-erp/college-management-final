@@ -1683,7 +1683,7 @@ console.log("USER:", user);
                         value={formData.message} onChange={handleChange} />
                     </div>
                   </div>
- {/* ===== REFERENCE TAB ===== */}
+{/* ===== REFERENCE TAB ===== */}
 <div className="form-section">
   <h3 className="form-section-title">🔖 Reference</h3>
 
@@ -1692,19 +1692,18 @@ console.log("USER:", user);
     placeholder="Type reference details here..."
     value={formData.reference}
     onChange={handleChange}
-    rows={6}
+    rows={8}
     style={{
       width: "100%",
-      padding: "12px",
-      borderRadius: "8px",
+      padding: "14px",
+      borderRadius: "10px",
       border: "1px solid #ccc",
-      fontSize: "14px",
+      fontSize: "15px",
       outline: "none",
       resize: "vertical"
     }}
   />
-</div>       
-                   {/* ===== DECLARATION ===== */}
+</div>        {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
                     <h3 className="form-section-title">✅ Declaration</h3>
                     <div className="declaration-box">
