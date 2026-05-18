@@ -947,7 +947,7 @@ console.log("USER:", user);
     </div>
   </div>
 </div> 
- {/* ===== ADDRESS ===== */}
+               {/* ===== ADDRESS ===== */}
 <div className="form-section">
   <h3 className="form-section-title">🏠 Address Details</h3>
 
@@ -1112,7 +1112,6 @@ console.log("USER:", user);
         )}
     </div>
   </div>
-
 
   {/* ===== Permanent Address Checkbox ===== */}
   <div className="checkbox-row">
@@ -1627,8 +1626,8 @@ console.log("USER:", user);
                         label="💰 Income Certificate" accept="image/*,.pdf" />
                     </div>
                   </div>
-                   {/* ===== PHOTO & SIGNATURE ===== */}
-               <div className="form-section">
+ {/* ===== PHOTO & SIGNATURE ===== */}
+                  <div className="form-section">
                     <h3 className="form-section-title">📸 Photo &amp; Signature</h3>
                     <div className="upload-grid-two">
                       <FileUploadBox fieldName="studentPhoto" label="📸 Student Passport Photo"
@@ -1640,6 +1639,27 @@ console.log("USER:", user);
                       <FileUploadBox fieldName="marriageCertificate" label="💍 Marriage Certificate"
                         accept="image/*,.pdf" required={true} />
                     )}
+                  </div>
+                   {/* ===== ADDITIONAL INFO ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">📝 Additional Information</h3>
+                    <div className="form-group">
+                      <label>How did you hear about us?</label>
+                      <select name="referralSource" value={formData.referralSource} onChange={handleChange}>
+                        <option value="">Select option</option>
+                        <option value="friend">Friend / Relative</option>
+                        <option value="school">School Teacher</option>
+                        <option value="social_media">Social Media</option>
+                        <option value="newspaper">Newspaper</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Additional Message</label>
+                      <textarea name="message" rows="3"
+                        placeholder="Any special requirements..."
+                        value={formData.message} onChange={handleChange} />
+                    </div>
                   </div>
 
                   {/* ===== UPLOAD DOCUMENTS ===== */}
@@ -1661,50 +1681,9 @@ console.log("USER:", user);
                       <FileUploadBox fieldName="gapyeardocument" label="📅 Gap Year Document Upload"
                         accept="image/*,.pdf" required={true} />
                     )}
-                  </div> 
-                    {/* ===== ADDITIONAL INFO ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">📝 Additional Information</h3>
-                    <div className="form-group">
-                      <label>How did you hear about us?</label>
-                      <select name="referralSource" value={formData.referralSource} onChange={handleChange}>
-                        <option value="">Select option</option>
-                        <option value="friend">Friend / Relative</option>
-                        <option value="school">School Teacher</option>
-                        <option value="social_media">Social Media</option>
-                        <option value="newspaper">Newspaper</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Additional Message</label>
-                      <textarea name="message" rows="3"
-                        placeholder="Any special requirements..."
-                        value={formData.message} onChange={handleChange} />
-                    </div>
                   </div>
-{/* ===== REFERENCE TAB ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">🔖 Reference</h3>
 
-  <textarea
-    name="reference"
-    placeholder="Type reference details here..."
-    value={formData.reference}
-    onChange={handleChange}
-    rows={8}
-    style={{
-      width: "100%",
-      padding: "14px",
-      borderRadius: "10px",
-      border: "1px solid #ccc",
-      fontSize: "15px",
-      outline: "none",
-      resize: "vertical"
-    }}
-  />
-</div>      
-                   {/* ===== DECLARATION ===== */}
+                  {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
                     <h3 className="form-section-title">✅ Declaration</h3>
                     <div className="declaration-box">
