@@ -593,46 +593,50 @@ const [activeTab, setActiveTab] = useState('process');
 
   {!(user && activeTab === 'apply') && (
 
-    <div className="tab-buttons">
+   {!(user && activeTab === 'apply') ? (
 
+  <div className="tab-buttons">
+
+    <button
+      className={activeTab === 'process' ? 'tab-btn active' : 'tab-btn'}
+      onClick={() => setActiveTab('process')}
+    >
+      📋 Admission Process
+    </button>
+
+    <button
+      className={activeTab === 'dates' ? 'tab-btn active' : 'tab-btn'}
+      onClick={() => setActiveTab('dates')}
+    >
+      📅 Important Dates
+    </button>
+
+    <button
+      className={activeTab === 'documents' ? 'tab-btn active' : 'tab-btn'}
+      onClick={() => setActiveTab('documents')}
+    >
+      📄 Documents Required
+    </button>
+
+    {user && (
       <button
-        className={activeTab === 'process' ? 'tab-btn active' : 'tab-btn'}
-        onClick={() => setActiveTab('process')}
+        className={activeTab === 'apply' ? 'tab-btn active' : 'tab-btn'}
+        onClick={() => setActiveTab('apply')}
       >
-        📋 Admission Process
+        🔥 Apply Online
       </button>
+    )}
 
-      <button
-        className={activeTab === 'dates' ? 'tab-btn active' : 'tab-btn'}
-        onClick={() => setActiveTab('dates')}
-      >
-        📅 Important Dates
-      </button>
+    <button
+      className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
+      onClick={() => setActiveTab('enquiry')}
+    >
+      💬 Enquiry Form
+    </button>
 
-      <button
-        className={activeTab === 'documents' ? 'tab-btn active' : 'tab-btn'}
-        onClick={() => setActiveTab('documents')}
-      >
-        📄 Documents Required
-      </button>
+  </div>
 
-      {user && (
-        <button
-          className={activeTab === 'apply' ? 'tab-btn active' : 'tab-btn'}
-          onClick={() => setActiveTab('apply')}
-        >
-          🔥 Apply Online
-        </button>
-      )}
-
-      <button
-        className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
-        onClick={() => setActiveTab('enquiry')}
-      >
-        💬 Enquiry Form
-      </button>
-
-    </div>
+) : null}
 
   )}
 
