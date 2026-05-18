@@ -157,38 +157,17 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
           ))}
         </div>
       </section>
-     <section className="parent-org-section">
-  <button
-    className="parent-org-btn"
-    onClick={() => setShowParentOrg(!showParentOrg)}
-  >
-    About Our Parent Organisation
-  </button>
+    <section className="parent-org">
+  <h2>About Our Parent Organisation</h2>
 
-  {showParentOrg && (
-    <div className="parent-org-card">
+  <p>
+            Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational and social welfare organization established in Maharashtra, India. The organization is dedicated to promoting education, student development, social welfare, women empowerment, and rural development.
 
-      <h2>Vidyaniketan Sevabhavi Sanstha (VNSS)</h2>
+VNSS works with the vision of providing quality education and creating opportunities for students from different backgrounds. The organization also supports various community welfare activities including skill development, youth empowerment, vocational training, and awareness programs.
 
-      <p>
-        Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational
-        and social welfare organization established in Maharashtra, India.
-        The organization is dedicated to promoting education, student
-        development, women empowerment, and social welfare activities.
-      </p>
-
-      <p>
-        VNSS works to provide quality education, skill development,
-        leadership opportunities, and career guidance for students.
-        Through its educational institutions and community initiatives,
-        the organization aims to build a better and empowered society.
-      </p>
-
-    </div>
-  )}
-
-</section>     
-  <Footer />
+Through its educational institutions and social initiatives, Vidyaniketan Sevabhavi Sanstha aims to build a better future for society by encouraging knowledge, discipline, leadership, and social responsibility among students.
+  </p>
+</section>  <Footer />
     </div>
   );
 };
