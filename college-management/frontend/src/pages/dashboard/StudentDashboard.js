@@ -367,7 +367,7 @@ const progressColor =
                       {/* Complete Your Form Button */}
                       {percentage < 100 && (
                         <button
-                          onClick={() => navigate('/admissions')}
+                          onClick={() => navigate('/admissions?tab=apply')}
                           style={{
                             width: '100%',
                             padding: '12px',
@@ -431,7 +431,7 @@ const progressColor =
                   }}>
                     Welcome to LKCWSC! Please complete your admission profile by filling all required details and uploading documents.
                   </p>
-                  <a href="/admissions?tab=apply" style={{
+                <a href="/admissions?tab=apply" onClick={(e) => { e.preventDefault(); navigate('/admissions?tab=apply'); }} style={{
                     display: 'inline-block',
                     background: 'white',
                     color: '#1565C0',
