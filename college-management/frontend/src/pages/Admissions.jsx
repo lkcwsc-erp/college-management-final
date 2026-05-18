@@ -1156,27 +1156,103 @@ console.log("USER:", user);
                       <p>Your Aadhar details are kept confidential as per government guidelines.</p>
                     </div>
                   </div>
-{/* ===== APAAR ID TAB ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">🪪 APAAR ID</h3>
+import React, { useState } from "react";
 
-  <textarea
-    name="apaarId"
-    placeholder="Enter APAAR ID here..."
-    value={formData.apaarId}
-    onChange={handleChange}
-    rows={4}
-    style={{
-      width: "100%",
-      padding: "14px",
-      borderRadius: "10px",
-      border: "1px solid #ccc",
-      fontSize: "15px",
-      outline: "none",
-      resize: "none"
-    }}
-  />
-</div>
+const ApaarTab = () => {
+  const [formData, setFormData] = useState({
+    apaarId: ""
+  });
+
+  const [formErrors, setFormErrors] = useState({});
+
+  // ===== HANDLE CHANGE =====
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    // allow only alphanumeric
+    const cleanedValue = value.replace(/[^A-Za-z0-9]/g, "");
+
+    setFormData({
+      ...formData,
+      [name]: cleanedValue
+    });
+  };
+
+  // ===== VALIDATION =====
+  const validate = () => {
+    let errors = {};
+
+    const apaarRegex = /^[A-Za-z0-9]{12}$/;
+
+    if (!formData.apaarId) {
+      errors.apaarId = "APAAR ID is required";
+    } else if (!apaarRegex.test(formData.apaarId)) {
+      errors.apaarId = "APAAR ID must be exactly 12 alphanumeric characters";
+    }
+
+    setFormErrors(errors);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  // ===== SUBMIT =====
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (validate()) {
+      alert("APAAR ID is valid and submitted!");
+      console.log(formData);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* ===== APAAR ID TAB ===== */}
+      <div className="form-section">
+        <h3 className="form-section-title">🪪 APAAR ID</h3>
+
+        <input
+          type="text"
+          name="apaarId"
+          placeholder="Enter 12-digit APAAR ID"
+          value={formData.apaarId}
+          onChange={handleChange}
+          maxLength={12}
+          style={{
+            width: "100%",
+            padding: "14px",
+            borderRadius: "10px",
+            border: "1px solid #ccc",
+            fontSize: "15px",
+            outline: "none"
+          }}
+        />
+
+        {formErrors.apaarId && (
+          <small style={{ color: "red" }}>{formErrors.apaarId}</small>
+        )}
+      </div>
+
+      {/* Submit */}
+      <button
+        type="submit"
+        style={{
+          marginTop: "15px",
+          padding: "10px 20px",
+          border: "none",
+          borderRadius: "8px",
+          background: "#4CAF50",
+          color: "white",
+          cursor: "pointer"
+        }}
+      >
+        Submit
+      </button>
+    </form>
+  );
+};
+
+export default ApaarTab;
                   {/* ===== SSC ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📗 SSC — 10th Standard Details</h3>
