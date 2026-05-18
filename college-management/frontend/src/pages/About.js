@@ -158,7 +158,6 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
         </div>
       </section>
      <section className="parent-org-section">
-
   <button
     className="parent-org-btn"
     onClick={() => setShowParentOrg(!showParentOrg)}
