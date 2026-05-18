@@ -1,4 +1,4 @@
-const Enquiry = require('../models/Enquiry');
+const Enquiry = require('../models/Enquery');
 
 // Submit new enquiry (Public)
 exports.submitEnquiry = async (req, res) => {
