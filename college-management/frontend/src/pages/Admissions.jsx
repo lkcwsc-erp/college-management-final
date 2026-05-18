@@ -1683,14 +1683,27 @@ console.log("USER:", user);
                         value={formData.message} onChange={handleChange} />
                     </div>
                   </div>
-<button
-  className={activeTab === "reference" ? "tab active" : "tab"}
-  onClick={() => setActiveTab("reference")}
->
-  Reference
-</button>
+ {/* ===== REFERENCE TAB ===== */}
+<div className="form-section">
+  <h3 className="form-section-title">🔖 Reference</h3>
 
-                  {/* ===== DECLARATION ===== */}
+  <textarea
+    name="reference"
+    placeholder="Type reference details here..."
+    value={formData.reference}
+    onChange={handleChange}
+    rows={6}
+    style={{
+      width: "100%",
+      padding: "12px",
+      borderRadius: "8px",
+      border: "1px solid #ccc",
+      fontSize: "14px",
+      outline: "none",
+      resize: "vertical"
+    }}
+  />
+</div>                 {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
                     <h3 className="form-section-title">✅ Declaration</h3>
                     <div className="declaration-box">
