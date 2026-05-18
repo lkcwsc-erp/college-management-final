@@ -49,65 +49,71 @@ const Navbar = () => {
       {/* NAV LINKS */}
       <div className={`navbar-links ${menuOpen ? 'open' : ''}`}>
 
-        <Link to="/" onClick={() => setMenuOpen(false)}>
-          Home
-        </Link>
-
-        <Link to="/about" onClick={() => setMenuOpen(false)}>
-          About
-        </Link>
-
-        <div className="dropdown">
-
-          <span className="dropdown-title">
-            Academic
-          </span>
-
-          <div className="dropdown-menu">
-
-            <Link to="/courses" onClick={() => setMenuOpen(false)}>
-              Courses
+        {/* PUBLIC NAVBAR - SIRF LOGIN SE PAHLE */}
+        {!user && (
+          <>
+            <Link to="/" onClick={() => setMenuOpen(false)}>
+              Home
             </Link>
 
-            <Link to="/faculty" onClick={() => setMenuOpen(false)}>
-              Faculty
+            <Link to="/about" onClick={() => setMenuOpen(false)}>
+              About
             </Link>
 
-            <Link to="/resources" onClick={() => setMenuOpen(false)}>
-              Resources
+            <div className="dropdown">
+
+              <span className="dropdown-title">
+                Academic
+              </span>
+
+              <div className="dropdown-menu">
+
+                <Link to="/courses" onClick={() => setMenuOpen(false)}>
+                  Courses
+                </Link>
+
+                <Link to="/faculty" onClick={() => setMenuOpen(false)}>
+                  Faculty
+                </Link>
+
+                <Link to="/resources" onClick={() => setMenuOpen(false)}>
+                  Resources
+                </Link>
+
+                <Link to="/examination" onClick={() => setMenuOpen(false)}>
+                  Examination
+                </Link>
+
+              </div>
+            </div>
+
+            <Link to="/gallery" onClick={() => setMenuOpen(false)}>
+              Gallery
             </Link>
 
-            <Link to="/examination" onClick={() => setMenuOpen(false)}>
-              Examination
+            <Link to="/events" onClick={() => setMenuOpen(false)}>
+              Events
             </Link>
 
-          </div>
-        </div>
+            <Link to="/naac" onClick={() => setMenuOpen(false)}>
+              NAAC
+            </Link>
 
-        <Link to="/gallery" onClick={() => setMenuOpen(false)}>
-          Gallery
-        </Link>
+            <Link to="/alumni" onClick={() => setMenuOpen(false)}>
+              Alumni
+            </Link>
 
-        <Link to="/events" onClick={() => setMenuOpen(false)}>
-          Events
-        </Link>
+            <Link to="/admissions" onClick={() => setMenuOpen(false)}>
+              Admissions
+            </Link>
 
-        <Link to="/naac" onClick={() => setMenuOpen(false)}>
-          NAAC
-        </Link>
+            <Link to="/contact" onClick={() => setMenuOpen(false)}>
+              Contact
+            </Link>
+          </>
+        )}
 
-        <Link to="/alumni" onClick={() => setMenuOpen(false)}>
-          Alumni
-        </Link>
-
-        <Link to="/admissions" onClick={() => setMenuOpen(false)}>
-          Admissions
-        </Link>
-
-        <Link to="/contact" onClick={() => setMenuOpen(false)}>
-          Contact
-        </Link>
-
+        {/* LOGIN KE BAD */}
         {user ? (
           <>
             <Link
