@@ -1156,7 +1156,27 @@ console.log("USER:", user);
                       <p>Your Aadhar details are kept confidential as per government guidelines.</p>
                     </div>
                   </div>
+{/* ===== APAAR ID TAB ===== */}
+<div className="form-section">
+  <h3 className="form-section-title">🪪 APAAR ID</h3>
 
+  <textarea
+    name="apaarId"
+    placeholder="Enter APAAR ID here..."
+    value={formData.apaarId}
+    onChange={handleChange}
+    rows={4}
+    style={{
+      width: "100%",
+      padding: "14px",
+      borderRadius: "10px",
+      border: "1px solid #ccc",
+      fontSize: "15px",
+      outline: "none",
+      resize: "none"
+    }}
+  />
+</div>
                   {/* ===== SSC ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📗 SSC — 10th Standard Details</h3>
