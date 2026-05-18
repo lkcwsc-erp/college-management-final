@@ -559,10 +559,12 @@ const [visiblePasswords, setVisiblePasswords] = useState({});
             <p style={{margin:'8px 0'}}><strong>📧 Email:</strong> {showCredentials.email}</p>
             <p style={{margin:'8px 0'}}><strong>🔑 Password:</strong> <code style={{background:'white',padding:'4px 10px',borderRadius:'4px',fontFamily:'monospace'}}>{showCredentials.password}</code></p>
             <p style={{margin:'8px 0'}}><strong>👔 Role:</strong> {
-              showCredentials.role === 'staff_student' ? 'Student Section' :
-              showCredentials.role === 'staff_accounts' ? 'Accounts Section' :
-              showCredentials.role === 'staff_exam' ? 'Examination Section' :
-              showCredentials.role === 'staff_scholarship' ? 'Scholarship Section' : showCredentials.role
+             showCredentials.role === 'staff_student' ? 'Student Section' :
+showCredentials.role === 'staff_accounts' ? 'Accounts Section' :
+showCredentials.role === 'staff_exam' ? 'Examination Section' :
+showCredentials.role === 'staff_scholarship' ? 'Scholarship Section' :
+showCredentials.role === 'principal' ? 'Principal' :
+showCredentials.role
             }</p>
           </div>
           <div style={{background:'#fff3cd',padding:'12px',borderRadius:'8px',fontSize:'13px',color:'#856404',marginBottom:'16px'}}>
