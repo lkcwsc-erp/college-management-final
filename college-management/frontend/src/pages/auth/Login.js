@@ -86,14 +86,33 @@ const Login = () => {
       localStorage.setItem('user', JSON.stringify(data.user));
       setAuthData(data.user, data.token);
 
-     const role = data.user.role;
-if (role === 'admin') navigate('/admin/dashboard');
-else if (role === 'staff_student') navigate('/staff/student-section');
-else if (role === 'staff_accounts') navigate('/staff/accounts-section');
-else if (role === 'staff_exam') navigate('/staff/exam-section');
-else if (role === 'staff_scholarship') navigate('/staff/scholarship-section');
-else if (role === 'staff') navigate('/staff/dashboard');
-else navigate('/student/dashboard');
+     
+const role = data.user.role;
+
+if (role === 'admin') {
+  navigate('/admin/dashboard');
+
+} else if (role === 'principal') {
+  navigate('/principal/dashboard');
+
+} else if (role === 'staff_student') {
+  navigate('/staff/student-section');
+
+} else if (role === 'staff_accounts') {
+  navigate('/staff/accounts-section');
+
+} else if (role === 'staff_exam') {
+  navigate('/staff/exam-section');
+
+} else if (role === 'staff_scholarship') {
+  navigate('/staff/scholarship-section');
+
+} else if (role === 'staff') {
+  navigate('/staff/dashboard');
+
+} else {
+  navigate('/student/dashboard');
+}
     } catch (err) {
       setError(err.response?.data?.message || 'OTP verification failed.');
     }
