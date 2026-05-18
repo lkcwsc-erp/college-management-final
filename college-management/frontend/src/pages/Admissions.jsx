@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import API from '../api/axios';
@@ -27,6 +27,7 @@ const FILE_LIMITS = {
   transferCertificate: 1024 * 1024,
   aparIdDocument: 1024 * 1024,
 };
+
 
 const formatLimit = (bytes) => {
   if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(0) + ' MB';
