@@ -13,7 +13,8 @@ const {
   deleteStudentUser,
   createStaff,
   getAllStaff,
-  deleteStaff
+  deleteStaff,
+  updateStaff, // ✅ ADDED
 } = require('../controllers/authController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
@@ -28,6 +29,7 @@ router.post('/register', protect, authorizeRoles('admin'), register);
 // Admin: Staff Management
 router.post('/create-staff', protect, authorizeRoles('admin'), createStaff);
 router.get('/staff', protect, authorizeRoles('admin'), getAllStaff);
+router.put('/staff/:id', protect, authorizeRoles('admin'), updateStaff); // ✅ ADDED
 router.delete('/staff/:id', protect, authorizeRoles('admin'), deleteStaff);
 
 // Staff/Admin
