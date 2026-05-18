@@ -6,32 +6,37 @@ const upload = require('../utils/upload');
 
 const uploadFields = upload.fields([
   { name: 'studentPhoto', maxCount: 1 },
+  { name: 'signaturePhoto', maxCount: 1 },
   { name: 'aadharPhoto', maxCount: 1 },
   { name: 'sscMarksheet', maxCount: 1 },
   { name: 'hscMarksheet', maxCount: 1 },
+  { name: 'prevYearMarksheet', maxCount: 1 },
   { name: 'gapCertificate', maxCount: 1 },
   { name: 'casteCertificate', maxCount: 1 },
   { name: 'casteValidityCertificate', maxCount: 1 },
+  { name: 'marriageCertificate', maxCount: 1 },
+  { name: 'bankPassbook', maxCount: 1 },
+  { name: 'domicileCertificate', maxCount: 1 },
+  { name: 'incomeCertificate', maxCount: 1 },
+  { name: 'transferCertificate', maxCount: 1 },
 ]);
 
 // Submit admission application
 router.post('/', uploadFields, async (req, res) => {
   try {
     console.log('📋 Admission form received');
-    console.log('Body:', req.body);
-    console.log('Files:', req.files);
+    console.log('Body keys:', Object.keys(req.body));
+    console.log('Files received:', req.files ? Object.keys(req.files) : 'none');
 
     const data = { ...req.body };
 
     // Convert boolean strings to actual booleans
-    if (data.hasGap === 'true') data.hasGap = true;
-    else data.hasGap = false;
-
-    if (data.hasCasteValidity === 'true') data.hasCasteValidity = true;
-    else data.hasCasteValidity = false;
-
-    if (data.declaration === 'true') data.declaration = true;
-    else data.declaration = false;
+    data.hasGap = data.hasGap === 'true';
+    data.hasCasteValidity = data.hasCasteValidity === 'true';
+    data.declaration = data.declaration === 'true';
+    data.isMarried = data.isMarried === 'true';
+    data.sameAsAddress = data.sameAsAddress === 'true';
+    data.feesPaid = data.feesPaid === 'true';
 
     // Convert numbers
     if (data.sscObtainedMarks) data.sscObtainedMarks = Number(data.sscObtainedMarks);
@@ -40,22 +45,37 @@ router.post('/', uploadFields, async (req, res) => {
     if (data.hscObtainedMarks) data.hscObtainedMarks = Number(data.hscObtainedMarks);
     if (data.hscTotalMarks) data.hscTotalMarks = Number(data.hscTotalMarks);
     if (data.hscPercentage) data.hscPercentage = Number(data.hscPercentage);
+    if (data.prevYearObtainedMarks) data.prevYearObtainedMarks = Number(data.prevYearObtainedMarks);
+    if (data.prevYearTotalMarks) data.prevYearTotalMarks = Number(data.prevYearTotalMarks);
+    if (data.prevYearPercentage) data.prevYearPercentage = Number(data.prevYearPercentage);
+    if (data.fees) data.fees = Number(data.fees);
 
-    // Handle uploaded files
+    // Handle all uploaded files
     if (req.files) {
       if (req.files.studentPhoto) data.studentPhoto = req.files.studentPhoto[0].filename;
+      if (req.files.signaturePhoto) data.signaturePhoto = req.files.signaturePhoto[0].filename;
       if (req.files.aadharPhoto) data.aadharPhoto = req.files.aadharPhoto[0].filename;
       if (req.files.sscMarksheet) data.sscMarksheet = req.files.sscMarksheet[0].filename;
       if (req.files.hscMarksheet) data.hscMarksheet = req.files.hscMarksheet[0].filename;
+      if (req.files.prevYearMarksheet) data.prevYearMarksheet = req.files.prevYearMarksheet[0].filename;
       if (req.files.gapCertificate) data.gapCertificate = req.files.gapCertificate[0].filename;
       if (req.files.casteCertificate) data.casteCertificate = req.files.casteCertificate[0].filename;
       if (req.files.casteValidityCertificate) data.casteValidityCertificate = req.files.casteValidityCertificate[0].filename;
+      if (req.files.marriageCertificate) data.marriageCertificate = req.files.marriageCertificate[0].filename;
+      if (req.files.bankPassbook) data.bankPassbook = req.files.bankPassbook[0].filename;
+      if (req.files.domicileCertificate) data.domicileCertificate = req.files.domicileCertificate[0].filename;
+      if (req.files.incomeCertificate) data.incomeCertificate = req.files.incomeCertificate[0].filename;
+      if (req.files.transferCertificate) data.transferCertificate = req.files.transferCertificate[0].filename;
     }
 
-    // Remove course if empty string
-    if (!data.course || data.course === '') {
+    // Remove course if empty string (avoid ObjectId cast error)
+    if (!data.course || data.course === '' || data.course === 'undefined') {
       delete data.course;
     }
+
+    // Remove empty date fields (avoid Cast errors)
+    if (!data.dateOfBirth || data.dateOfBirth === '') delete data.dateOfBirth;
+    if (!data.casteValidityDate || data.casteValidityDate === '') delete data.casteValidityDate;
 
     const admission = await Admission.create(data);
     console.log('✅ Admission created:', admission._id);
@@ -68,6 +88,7 @@ router.post('/', uploadFields, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Admission error:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({ success: false, message: error.message });
   }
 });
