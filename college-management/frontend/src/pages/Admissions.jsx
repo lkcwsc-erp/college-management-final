@@ -18,6 +18,7 @@ const FILE_LIMITS = {
   hscMarksheet: 1024 * 1024,
   prevYearMarksheet: 1024 * 1024,
   gapCertificate: 1024 * 1024,
+  gapyeardocument: 1024 * 1024,
   casteCertificate: 1024 * 1024,
   casteValidityCertificate: 1024 * 1024,
   marriageCertificate: 1024 * 1024,
@@ -138,6 +139,7 @@ const Admissions = () => {
     gapCertificate: null, casteCertificate: null, casteValidityCertificate: null,
     marriageCertificate: null, bankPassbook: null,
     domicileCertificate: null, incomeCertificate: null, transferCertificate: null,
+    gapyeardocument: null,
   });
 
   const [uploadPreviews, setUploadPreviews] = useState({
@@ -146,6 +148,7 @@ const Admissions = () => {
     gapCertificate: '', casteCertificate: '', casteValidityCertificate: '',
     marriageCertificate: '', bankPassbook: '',
     domicileCertificate: '', incomeCertificate: '', transferCertificate: '',
+    gapyeardocument: '',
   });
 
   /* ============================================================
@@ -1147,8 +1150,6 @@ console.log("USER:", user);
                           value={formData.aadharName} onChange={handleChange} required />
                       </div>
                     </div>
-                    <FileUploadBox fieldName="aadharPhoto" label="📷 Aadhar Card Photo"
-                      accept="image/*,.pdf" required={true} />
                     <div className="info-note">
                       <span>ℹ️</span>
                       <p>Your Aadhar details are kept confidential as per government guidelines.</p>
@@ -1223,8 +1224,6 @@ console.log("USER:", user);
                         ✅ <strong>{formData.sscPercentage}%</strong> — <strong>{formData.sscGrade}</strong>
                       </div>
                     )}
-                    <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet"
-                      accept="image/*,.pdf" required={true} />
                   </div>
 
                   {/* ===== HSC ===== */}
@@ -1322,8 +1321,6 @@ console.log("USER:", user);
                         ✅ <strong>{formData.hscPercentage}%</strong> — <strong>{formData.hscGrade}</strong>
                       </div>
                     )}
-                    <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet"
-                      accept="image/*,.pdf" required={true} />
                   </div>
 
                   {/* ===== GAP YEAR ===== */}
@@ -1381,8 +1378,6 @@ console.log("USER:", user);
                             <option value="other">Other</option>
                           </select>
                         </div>
-                        <FileUploadBox fieldName="gapCertificate" label="📅 Gap Certificate"
-                          accept="image/*,.pdf" required={true} />
                         <div className="info-note warning-note">
                           <span>⚠️</span>
                           <p>Gap certificate is mandatory for students with gap year.</p>
@@ -1618,8 +1613,6 @@ console.log("USER:", user);
                         placeholder="e.g. Gangakhed Main Branch"
                         value={formData.bankBranch} onChange={handleChange} />
                     </div>
-                    <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Front Page"
-                      accept="image/*,.pdf" />
                   </div>
 
                   {/* ===== ADDITIONAL DOCS ===== */}
@@ -1667,6 +1660,27 @@ console.log("USER:", user);
                         placeholder="Any special requirements..."
                         value={formData.message} onChange={handleChange} />
                     </div>
+                  </div>
+
+                  {/* ===== UPLOAD DOCUMENTS ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">📄 Upload Documents</h3>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="aadharPhoto" label="🪪 Aadhaar Card Upload"
+                        accept="image/*,.pdf" required={true} />
+                      <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true} />
+                    </div>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true} />
+                      <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
+                        accept="image/*,.pdf" />
+                    </div>
+                    {formData.hasGap && (
+                      <FileUploadBox fieldName="gapyeardocument" label="📅 Gap Year Document Upload"
+                        accept="image/*,.pdf" required={true} />
+                    )}
                   </div>
 
                   {/* ===== DECLARATION ===== */}
