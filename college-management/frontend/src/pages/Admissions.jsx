@@ -1683,7 +1683,12 @@ console.log("USER:", user);
                         value={formData.message} onChange={handleChange} />
                     </div>
                   </div>
-
+<button
+  className={activeTab === "reference" ? "tab active" : "tab"}
+  onClick={() => setActiveTab("reference")}
+>
+  Reference
+</button>
 
                   {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
