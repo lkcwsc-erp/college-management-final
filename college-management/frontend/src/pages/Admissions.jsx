@@ -1157,37 +1157,6 @@ console.log("USER:", user);
                     </div>
                   </div>
 
-     {/* ===== APAAR ID TAB ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">🪪 Enter APAAR ID</h3>
-
-  <input
-    type="text"
-    name="apaarId"
-    placeholder="Enter 12-digit APAAR ID"
-    value={formData.apaarId}
-    onChange={(e) => {
-      const value = e.target.value.replace(/[^0-9]/g, ""); // only numbers allowed
-      setFormData({ ...formData, apaarId: value });
-    }}
-    maxLength={12}
-    style={{
-      width: "100%",
-      padding: "14px",
-      borderRadius: "10px",
-      border: "1px solid #ccc",
-      fontSize: "15px",
-      outline: "none"
-    }}
-  />
-
-  {/* Simple validation message */}
-  {formData.apaarId && formData.apaarId.length !== 12 && (
-    <p style={{ color: "red", marginTop: "5px" }}>
-      APAAR ID must be exactly 12 digits
-    </p>
-  )}
-</div>
                   {/* ===== SSC ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📗 SSC — 10th Standard Details</h3>
