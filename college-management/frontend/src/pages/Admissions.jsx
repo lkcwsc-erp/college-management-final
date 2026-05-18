@@ -591,8 +591,6 @@ const [activeTab, setActiveTab] = useState('process');
 
      <section className="admissions-tabs container">
 
-  {!(user && activeTab === 'apply') && (
-
    {!(user && activeTab === 'apply') ? (
 
   <div className="tab-buttons">
