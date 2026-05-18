@@ -21,6 +21,8 @@ import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Resources from './pages/Resources';
 import Examination from './pages/Examination';
+import StaffLogin from './pages/Auth/StaffLogin';
+
 import './App.css';
 
 function App() {
@@ -39,6 +41,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/examination" element={<Examination />} />
+          <Route path="/staff-login" element={<StaffLogin />} />
 
           <Route path="/student/dashboard" element={
             <ProtectedRoute roles={['student']}>
