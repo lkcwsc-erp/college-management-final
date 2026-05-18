@@ -367,7 +367,7 @@ const progressColor =
                       {/* Complete Your Form Button */}
                       {percentage < 100 && (
                         <button
-                          onClick={() => navigate('/student/application-form')}
+                          onClick={() => navigate('/admissions')}
                           style={{
                             width: '100%',
                             padding: '12px',
