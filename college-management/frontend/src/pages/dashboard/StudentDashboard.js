@@ -408,15 +408,50 @@ const progressColor =
                 </div>
               )}
 
-              {!admissionLoading && !myAdmission && (
-                <div className="empty-state">
-                  <div className="empty-icon">📋</div>
-                  <h3>No Application Found</h3>
-                  <p>You have not applied for admission yet.</p>
-                  <br />
-                  <a href="/admissions" className="btn btn-primary">
-                    Apply Now
+            {!admissionLoading && !myAdmission && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #1565C0 0%, #1976D2 100%)',
+                  borderRadius: '16px',
+                  padding: '40px 30px',
+                  textAlign: 'center',
+                  color: 'white',
+                  boxShadow: '0 8px 24px rgba(21, 101, 192, 0.3)',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ fontSize: '4rem', marginBottom: '12px' }}>📝</div>
+                  <h2 style={{ color: 'white', marginBottom: '12px', fontSize: '1.8rem' }}>
+                    Complete Your Profile
+                  </h2>
+                  <p style={{ 
+                    color: 'rgba(255,255,255,0.9)', 
+                    fontSize: '15px', 
+                    marginBottom: '24px',
+                    maxWidth: '500px',
+                    margin: '0 auto 24px'
+                  }}>
+                    Welcome to LKCWSC! Please complete your admission profile by filling all required details and uploading documents.
+                  </p>
+                  <a href="/admissions?tab=apply" style={{
+                    display: 'inline-block',
+                    background: 'white',
+                    color: '#1565C0',
+                    padding: '14px 36px',
+                    borderRadius: '30px',
+                    textDecoration: 'none',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    transition: 'transform 0.2s'
+                  }}>
+                    ✨ Complete Your Profile →
                   </a>
+                  <p style={{ 
+                    color: 'rgba(255,255,255,0.85)', 
+                    fontSize: '13px', 
+                    marginTop: '20px' 
+                  }}>
+                    📋 Fill the full admission form  •  📎 Upload documents  •  ⏳ Wait for approval
+                  </p>
                 </div>
               )}
 
