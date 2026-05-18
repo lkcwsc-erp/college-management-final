@@ -141,6 +141,16 @@ const Admissions = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
  const [activeTab, setActiveTab] = useState('process');
+ const [activeTab, setActiveTab] = useState('process');
+
+  // Allow ?tab=apply via URL (from Student Dashboard)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'apply' && user) {
+      setActiveTab('apply');
+    }
+  }, [user]);
 
   // Allow ?tab=apply via URL
   useEffect(() => {
