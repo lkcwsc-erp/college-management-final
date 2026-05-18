@@ -4,7 +4,6 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import MAHARASHTRA_CITIES from '../data/maharashtraCities';
 import './Admissions.css';
 
 /* ============================================================
@@ -26,6 +25,7 @@ const FILE_LIMITS = {
   domicileCertificate: 1024 * 1024,
   incomeCertificate: 1024 * 1024,
   transferCertificate: 1024 * 1024,
+  aparIdDocument: 1024 * 1024,
 };
 
 const formatLimit = (bytes) => {
@@ -47,6 +47,93 @@ const SUBJECTS_BY_COURSE = {
     'Botany', 'Zoology', 'Computer Science',
     'Microbiology', 'Biotechnology', 'Electronics', 'Statistics'
   ],
+};
+
+/* ============================================================
+   FILE UPLOAD BOX — module-level component
+   Must NOT be defined inside Admissions — doing so creates a new
+   component type on every render, unmounting it and breaking refs.
+   ============================================================ */
+const FileUploadBox = ({
+  fieldName, label, accept, required, hint,
+  uploadedFiles, uploadPreviews, fileErrors, onFileChange,
+}) => {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) onFileChange(fieldName, file);
+  };
+
+  const hasError = fileErrors[fieldName];
+  const file = uploadedFiles[fieldName];
+  const preview = uploadPreviews[fieldName];
+  const sizeLimit = FILE_LIMITS[fieldName];
+  const limitHint = sizeLimit ? `Max ${formatLimit(sizeLimit)}` : '';
+
+  return (
+    <div className="upload-form-group">
+      <label className="upload-label">
+        {label}
+        {required && <span className="required-star">*</span>}
+      </label>
+      <div
+        className={
+          'upload-box-modern' +
+          (dragging ? ' dragging' : '') +
+          (hasError ? ' has-error' : '') +
+          (preview ? ' has-file' : '')
+        }
+        onDrop={handleDrop}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onClick={() => inputRef.current && inputRef.current.click()}
+      >
+        {preview ? (
+          <div className="upload-preview-wrapper">
+            {file?.type?.startsWith('image/') ? (
+              <img src={preview} alt={label} className="upload-preview-img" />
+            ) : (
+              <div className="upload-pdf-block">
+                <span className="upload-pdf-icon">📄</span>
+                <span className="upload-pdf-name">
+                  {file?.name?.length > 22 ? file.name.slice(0, 22) + '…' : file?.name}
+                </span>
+              </div>
+            )}
+            <div className="upload-file-info-row">
+              <span className="file-success-pill">✓ Uploaded</span>
+              <span className="file-size-pill">{file && (file.size / 1024).toFixed(1) + ' KB'}</span>
+            </div>
+            <p className="upload-change-text">Click to change</p>
+          </div>
+        ) : (
+          <div className="upload-empty">
+            <div className="upload-icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <p className="upload-main-text">Drop file or <span>browse</span></p>
+            <p className="upload-sub-text">{hint || 'JPG, PNG, PDF'}{limitHint && ' · ' + limitHint}</p>
+          </div>
+        )}
+      </div>
+      {hasError && <div className="file-error-message">{hasError}</div>}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept || 'image/*,.pdf'}
+        onChange={(e) => onFileChange(fieldName, e.target.files[0])}
+        style={{ display: 'none' }}
+      />
+    </div>
+  );
 };
 
 const Admissions = () => {
@@ -73,16 +160,17 @@ const Admissions = () => {
   const [enquirySuccess, setEnquirySuccess] = useState('');
   const [enquiryError, setEnquiryError] = useState('');
 
-  // City autocomplete states
-  const [citySuggestions, setCitySuggestions] = useState([]);
-  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
-  const cityWrapRef = useRef(null);
-
   const [formData, setFormData] = useState({
     // Personal
     applicantName: '', email: '', phone: '',
-    addressLine: '', city: '', district: '', state: '', pincode: '',
-    permanentAddress: '', sameAsAddress: false,
+
+    // Address (new clean fields)
+    houseNumber: '', streetArea: '',
+    subdistrict: '', cityTownVillage: '',
+    district: '', state: '', pincode: '',
+
+    // APAR ID
+    aparIdNumber: '',
     dateOfBirth: '', gender: '', category: '',
     bloodGroup: '', religion: '', nationality: 'Indian',
     isMarried: false,
@@ -129,7 +217,7 @@ const Admissions = () => {
     hasCasteValidity: false, casteValidity: '', casteValidityDate: '',
 
     // Extra
-    referralSource: '', message: '',
+    referralSource: '', message: '', reference: '',
     declaration: false,
   });
 
@@ -140,6 +228,7 @@ const Admissions = () => {
     marriageCertificate: null, bankPassbook: null,
     domicileCertificate: null, incomeCertificate: null, transferCertificate: null,
     gapyeardocument: null,
+    aparIdDocument: null,
   });
 
   const [uploadPreviews, setUploadPreviews] = useState({
@@ -149,6 +238,7 @@ const Admissions = () => {
     marriageCertificate: '', bankPassbook: '',
     domicileCertificate: '', incomeCertificate: '', transferCertificate: '',
     gapyeardocument: '',
+    aparIdDocument: '',
   });
 
   /* ============================================================
@@ -218,17 +308,6 @@ const Admissions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.courseType, courses]);
 
-  /* Close city dropdown on outside click */
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (cityWrapRef.current && !cityWrapRef.current.contains(e.target)) {
-        setShowCitySuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   /* ============================================================
      HELPERS
      ============================================================ */
@@ -250,44 +329,6 @@ const Admissions = () => {
     } else {
       setFormData({ ...formData, [name]: value });
     }
-  };
-
-  /* City autocomplete handler */
-  const handleCityInput = (value) => {
-    setFormData(prev => ({ ...prev, city: value, district: '', state: '' }));
-    if (value.length >= 1) {
-      const filtered = MAHARASHTRA_CITIES.filter(c =>
-        c.city.toLowerCase().startsWith(value.toLowerCase())
-      ).slice(0, 8);
-      setCitySuggestions(filtered);
-      setShowCitySuggestions(filtered.length > 0);
-    } else {
-      setCitySuggestions([]);
-      setShowCitySuggestions(false);
-    }
-  };
-
-  const handleCitySelect = (cityObj) => {
-    setFormData(prev => ({
-      ...prev,
-      city: cityObj.city,
-      district: cityObj.district,
-      state: cityObj.state,
-    }));
-    setShowCitySuggestions(false);
-    setCitySuggestions([]);
-  };
-
-  /* Same as address handler */
-  const handleSameAsAddress = (checked) => {
-    const full = formData.addressLine && formData.city
-      ? `${formData.addressLine}, ${formData.city}, ${formData.district}, ${formData.state} - ${formData.pincode}`
-      : '';
-    setFormData(prev => ({
-      ...prev,
-      sameAsAddress: checked,
-      permanentAddress: checked ? full : '',
-    }));
   };
 
   const handleSscMarksChange = (field, value) => {
@@ -341,104 +382,122 @@ const Admissions = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-console.log("FORM DATA:", formData);
-console.log("UPLOADED FILES:", uploadedFiles);
-console.log("USER:", user);
+    console.log('🚀 handleSubmit triggered');
+    setError('');
+    setSuccess('');
+
+    const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
     if (!user) {
+      console.warn('❌ No user logged in');
       setError('Please login before submitting the application.');
       setActiveTab('process');
       return;
     }
-    if (!formData.declaration) { setError('Please accept the declaration to submit.'); return; }
-    if (sscError || hscError) { setError('Please fix marks validation errors.'); return; }
-    if (formData.phone.length !== 10) { setError('Please enter a valid 10 digit mobile number.'); return; }
-    if (formData.guardianPhone.length !== 10) { setError('Please enter a valid 10 digit guardian mobile.'); return; }
-    if (formData.aadharNumber.length !== 12) { setError('Please enter a valid 12 digit Aadhar number.'); return; }
-    if (!formData.city || !formData.state) { setError('Please select a valid city from suggestions.'); return; }
-    if (formData.pincode.length !== 6) { setError('Please enter a valid 6 digit pincode.'); return; }
-    if (!formData.courseType || !formData.admissionYear) { setError('Please select Course and Admission Year.'); return; }
+    if (!formData.declaration) { setError('Please accept the declaration to submit.'); scrollTop(); return; }
+    if (sscError || hscError) { setError('Please fix marks validation errors before submitting.'); scrollTop(); return; }
+    if (!formData.phone || formData.phone.length !== 10) { setError('Please enter a valid 10 digit mobile number.'); scrollTop(); return; }
+    if (formData.guardianPhone && formData.guardianPhone.length !== 10) { setError('Please enter a valid 10 digit guardian mobile number.'); scrollTop(); return; }
+    if (!formData.aadharNumber || formData.aadharNumber.length !== 12) { setError('Please enter a valid 12 digit Aadhar number.'); scrollTop(); return; }
+
+    // New address field validations
+    if (!formData.houseNumber.trim()) { setError('Please enter House Number.'); scrollTop(); return; }
+    if (!formData.streetArea.trim()) { setError('Please enter Street / Area.'); scrollTop(); return; }
+    if (!formData.subdistrict.trim()) { setError('Please enter Subdistrict / Tehsil.'); scrollTop(); return; }
+    if (!formData.cityTownVillage.trim()) { setError('Please enter City / Town / Village.'); scrollTop(); return; }
+    if (!formData.district.trim()) { setError('Please enter District.'); scrollTop(); return; }
+    if (!formData.state.trim()) { setError('Please select State.'); scrollTop(); return; }
+    if (!formData.pincode || formData.pincode.length !== 6) { setError('Please enter a valid 6 digit pincode.'); scrollTop(); return; }
+
+    // APAR ID validation
+    if (!formData.aparIdNumber.trim()) { setError('Please enter APAR ID Number.'); scrollTop(); return; }
+    if (!uploadedFiles.aparIdDocument) { setError('Please upload APAR ID Document.'); scrollTop(); return; }
+
+    if (!formData.courseType || !formData.admissionYear) { setError('Please select Course and Admission Year.'); scrollTop(); return; }
     if (formData.bankIFSC && !validateIFSC(formData.bankIFSC)) {
       setError('Please enter a valid IFSC code (format: SBIN0001234).');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      scrollTop(); return;
     }
     if (Object.keys(fileErrors).length > 0) {
       setError('Please fix file upload errors before submitting.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      scrollTop(); return;
     }
 
     const requiredDocs = {
       studentPhoto: 'Student Passport Photo',
       signaturePhoto: 'Student Signature',
-      aadharPhoto: 'Aadhar Card Photo',
+      aadharPhoto: 'Aadhaar Card',
       sscMarksheet: 'SSC (10th) Marksheet',
       hscMarksheet: 'HSC (12th) Marksheet',
     };
     for (const [key, label] of Object.entries(requiredDocs)) {
       if (!uploadedFiles[key]) {
         setError(`Please upload ${label} before submitting.`);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+        scrollTop(); return;
       }
     }
+    console.log('✅ All required documents uploaded');
 
     if (formData.admissionYear === '2nd Year' || formData.admissionYear === '3rd Year') {
       if (!uploadedFiles.prevYearMarksheet) {
         setError(`Please upload Previous Year Marksheet (required for ${formData.admissionYear}).`);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+        scrollTop(); return;
       }
       if (!uploadedFiles.transferCertificate) {
         setError('Please upload Transfer Certificate / TC (required for direct admission).');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+        scrollTop(); return;
       }
     }
 
-    if (formData.hasGap && !uploadedFiles.gapCertificate) {
-      setError('Please upload Gap Certificate.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+    if (formData.hasGap && !uploadedFiles.gapyeardocument) {
+      setError('Please upload Gap Year Document.');
+      scrollTop(); return;
     }
     if (formData.category && formData.category !== 'general' && !uploadedFiles.casteCertificate) {
       setError('Please upload Caste Certificate.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      scrollTop(); return;
     }
     if (formData.isMarried && !uploadedFiles.marriageCertificate) {
       setError('Please upload Marriage Certificate.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      scrollTop(); return;
     }
 
+    console.log('✅ All validations passed — building FormData');
     setLoading(true);
-    setError('');
-    setSuccess('');
 
     try {
       const submitData = new FormData();
       Object.keys(formData).forEach((key) => {
-        if (formData[key] !== null && formData[key] !== undefined) {
-          submitData.append(key, formData[key]);
+        const val = formData[key];
+        if (val !== null && val !== undefined && val !== '') {
+          submitData.append(key, typeof val === 'boolean' ? String(val) : val);
         }
       });
       Object.keys(uploadedFiles).forEach((key) => {
-        if (uploadedFiles[key]) submitData.append(key, uploadedFiles[key]);
+        if (uploadedFiles[key]) {
+          submitData.append(key, uploadedFiles[key]);
+          console.log(`📎 File appended: ${key} → ${uploadedFiles[key].name}`);
+        }
       });
 
-      const response = await API.post('/admissions', submitData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      // Do NOT set Content-Type manually — axios sets multipart/form-data + boundary automatically
+      console.log('📤 POSTing to /admissions...');
+      const response = await API.post('/admissions', submitData);
+      console.log('📥 Response:', response.data);
 
       if (response.data.success) {
-        setSuccess('Application submitted successfully! Redirecting to dashboard...');
-        setTimeout(() => navigate('/student/dashboard'), 2000);
+        setSuccess('✅ Application submitted successfully! Redirecting to dashboard...');
+        scrollTop();
+        setTimeout(() => navigate('/student/dashboard'), 2500);
       } else {
-        setError(response.data.message || 'Failed to submit. Please try again.');
+        setError(response.data.message || 'Submission failed. Please try again.');
+        scrollTop();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit. Please try again.');
+      console.error('❌ Submission error:', err);
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to submit. Please check your connection and try again.';
+      setError(msg);
+      scrollTop();
     } finally {
       setLoading(false);
     }
@@ -496,88 +555,6 @@ console.log("USER:", user);
     } finally {
       setEnquiryLoading(false);
     }
-  };
-
-  /* ============================================================
-     UPLOAD BOX COMPONENT
-     ============================================================ */
-  const FileUploadBox = ({ fieldName, label, accept, required, hint }) => {
-    const inputRef = useRef(null);
-    const [dragging, setDragging] = useState(false);
-
-    const handleDrop = (e) => {
-      e.preventDefault();
-      setDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFileChange(fieldName, file);
-    };
-
-    const hasError = fileErrors[fieldName];
-    const file = uploadedFiles[fieldName];
-    const preview = uploadPreviews[fieldName];
-    const sizeLimit = FILE_LIMITS[fieldName];
-    const limitHint = sizeLimit ? `Max ${formatLimit(sizeLimit)}` : '';
-
-    return (
-      <div className="upload-form-group">
-        <label className="upload-label">
-          {label}
-          {required && <span className="required-star">*</span>}
-        </label>
-        <div
-          className={
-            'upload-box-modern' +
-            (dragging ? ' dragging' : '') +
-            (hasError ? ' has-error' : '') +
-            (preview ? ' has-file' : '')
-          }
-          onDrop={handleDrop}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onClick={() => inputRef.current.click()}
-        >
-          {preview ? (
-            <div className="upload-preview-wrapper">
-              {file?.type?.startsWith('image/') ? (
-                <img src={preview} alt={label} className="upload-preview-img" />
-              ) : (
-                <div className="upload-pdf-block">
-                  <span className="upload-pdf-icon">📄</span>
-                  <span className="upload-pdf-name">
-                    {file?.name?.length > 22 ? file.name.slice(0, 22) + '…' : file?.name}
-                  </span>
-                </div>
-              )}
-              <div className="upload-file-info-row">
-                <span className="file-success-pill">✓ Uploaded</span>
-                <span className="file-size-pill">{file && (file.size / 1024).toFixed(1) + ' KB'}</span>
-              </div>
-              <p className="upload-change-text">Click to change</p>
-            </div>
-          ) : (
-            <div className="upload-empty">
-              <div className="upload-icon-wrap">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-              </div>
-              <p className="upload-main-text">Drop file or <span>browse</span></p>
-              <p className="upload-sub-text">{hint || 'JPG, PNG, PDF'}{limitHint && ' · ' + limitHint}</p>
-            </div>
-          )}
-        </div>
-        {hasError && <div className="file-error-message">{hasError}</div>}
-        <input
-          ref={inputRef}
-          type="file"
-          accept={accept || 'image/*,.pdf'}
-          onChange={(e) => handleFileChange(fieldName, e.target.files[0])}
-          style={{ display: 'none' }}
-        />
-      </div>
-    );
   };
 
   /* ============================================================
@@ -745,7 +722,7 @@ console.log("USER:", user);
                         <label>Gender *</label>
                         <select name="gender" value={formData.gender} onChange={handleChange} required>
                           <option value="">Select Gender</option>
-                           <option value="Male">Male</option>
+                           <option value="male">Male</option>
                           <option value="female">Female</option>
                           <option value="other">Other</option>
                         </select>
@@ -947,188 +924,149 @@ console.log("USER:", user);
     </div>
   </div>
 </div> 
-               {/* ===== ADDRESS ===== */}
-<div className="form-section">
-  <h3 className="form-section-title">🏠 Address Details</h3>
+                  {/* ===== ADDRESS ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">🏠 Address Details</h3>
 
-  {/* ===== First Row ===== */}
-  <div className="form-row">
-    <div className="form-group">
-      <label>House Number *</label>
-      <input
-        type="text"
-        name="houseNumber"
-        placeholder="Enter house number"
-        value={formData.houseNumber || ""}
-        onChange={handleChange}
-        required
-      />
-    </div>
+                    {/* Row 1: House Number + Street/Area */}
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>House Number *</label>
+                        <input
+                          type="text"
+                          name="houseNumber"
+                          placeholder="e.g. 12, Flat No. 3"
+                          value={formData.houseNumber}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Street / Area *</label>
+                        <input
+                          type="text"
+                          name="streetArea"
+                          placeholder="e.g. Gandhi Nagar, Main Road"
+                          value={formData.streetArea}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                    </div>
 
-    <div className="form-group">
-      <label>Street / Area *</label>
-      <input
-        type="text"
-        name="streetArea"
-        placeholder="Enter street / area"
-        value={formData.streetArea || ""}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  </div>
+                    {/* Row 2: Subdistrict + City/Town/Village */}
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Subdistrict / Tehsil *</label>
+                        <input
+                          type="text"
+                          name="subdistrict"
+                          placeholder="e.g. Gangakhed"
+                          value={formData.subdistrict}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>City / Town / Village *</label>
+                        <input
+                          type="text"
+                          name="cityTownVillage"
+                          placeholder="e.g. Gangakhed"
+                          value={formData.cityTownVillage}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                    </div>
 
-  {/* ===== Second Row ===== */}
-  <div className="form-row">
-    {/* City */}
-    <div
-      className="form-group city-autocomplete-wrap"
-      ref={cityWrapRef}
-    >
-      <label>City / Town *</label>
+                    {/* Row 3: District + State */}
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>District *</label>
+                        <input
+                          type="text"
+                          name="district"
+                          placeholder="e.g. Parbhani"
+                          value={formData.district}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>State *</label>
+                        <select
+                          name="state"
+                          value={formData.state}
+                          onChange={handleChange}
+                          required
+                        >
+                          <option value="">Select State</option>
+                          <option value="Andhra Pradesh">Andhra Pradesh</option>
+                          <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                          <option value="Assam">Assam</option>
+                          <option value="Bihar">Bihar</option>
+                          <option value="Chhattisgarh">Chhattisgarh</option>
+                          <option value="Goa">Goa</option>
+                          <option value="Gujarat">Gujarat</option>
+                          <option value="Haryana">Haryana</option>
+                          <option value="Himachal Pradesh">Himachal Pradesh</option>
+                          <option value="Jharkhand">Jharkhand</option>
+                          <option value="Karnataka">Karnataka</option>
+                          <option value="Kerala">Kerala</option>
+                          <option value="Madhya Pradesh">Madhya Pradesh</option>
+                          <option value="Maharashtra">Maharashtra</option>
+                          <option value="Manipur">Manipur</option>
+                          <option value="Meghalaya">Meghalaya</option>
+                          <option value="Mizoram">Mizoram</option>
+                          <option value="Nagaland">Nagaland</option>
+                          <option value="Odisha">Odisha</option>
+                          <option value="Punjab">Punjab</option>
+                          <option value="Rajasthan">Rajasthan</option>
+                          <option value="Sikkim">Sikkim</option>
+                          <option value="Tamil Nadu">Tamil Nadu</option>
+                          <option value="Telangana">Telangana</option>
+                          <option value="Tripura">Tripura</option>
+                          <option value="Uttar Pradesh">Uttar Pradesh</option>
+                          <option value="Uttarakhand">Uttarakhand</option>
+                          <option value="West Bengal">West Bengal</option>
+                          <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                          <option value="Chandigarh">Chandigarh</option>
+                          <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+                          <option value="Delhi">Delhi</option>
+                          <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                          <option value="Ladakh">Ladakh</option>
+                          <option value="Lakshadweep">Lakshadweep</option>
+                          <option value="Puducherry">Puducherry</option>
+                        </select>
+                      </div>
+                    </div>
 
-      <input
-        type="text"
-        placeholder="Type city name"
-        value={formData.city}
-        onChange={(e) => handleCityInput(e.target.value)}
-        onFocus={() =>
-          formData.city &&
-          handleCityInput(formData.city)
-        }
-        autoComplete="off"
-        required
-      />
-
-      {showCitySuggestions &&
-        citySuggestions.length > 0 && (
-          <ul className="city-suggestions-dropdown">
-            {citySuggestions.map((c, i) => (
-              <li
-                key={i}
-                onClick={() =>
-                  handleCitySelect(c)
-                }
-              >
-                <span className="city-name">
-                  {c.city}
-                </span>
-                <span className="city-meta">
-                  {c.district}, {c.state}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-    </div>
-
-    {/* District */}
-    <div className="form-group">
-      <label>District *</label>
-      <input
-        type="text"
-        value={formData.district}
-        readOnly
-        placeholder="Select city first"
-        className={
-          formData.district
-            ? "auto-filled"
-            : ""
-        }
-      />
-    </div>
-
-    {/* Subdistrict */}
-    <div className="form-group">
-      <label>Subdistrict *</label>
-      <input
-        type="text"
-        name="subDistrict"
-        placeholder="Enter subdistrict"
-        value={formData.subDistrict || ""}
-        onChange={handleChange}
-        required
-      />
-    </div>
-  </div>
-
-  {/* ===== Third Row ===== */}
-  <div className="form-row">
-    {/* Taluka / Tehsil */}
-    <div className="form-group">
-      <label>Taluka / Tehsil *</label>
-      <input
-        type="text"
-        name="taluka"
-        placeholder="Enter taluka / tehsil"
-        value={formData.taluka || ""}
-        onChange={handleChange}
-        required
-      />
-    </div>
-
-    {/* State */}
-    <div className="form-group">
-      <label>State (Auto)</label>
-      <input
-        type="text"
-        value={formData.state}
-        readOnly
-        placeholder="Select city first"
-        className={
-          formData.state
-            ? "auto-filled"
-            : ""
-        }
-      />
-    </div>
-
-    {/* Pincode */}
-    <div className="form-group">
-      <label>Pincode *</label>
-      <input
-        type="text"
-        placeholder="6 digit pincode"
-        value={formData.pincode}
-        onChange={(e) => {
-          const val =
-            e.target.value.replace(/\D/g, "");
-
-          if (val.length <= 6) {
-            setFormData({
-              ...formData,
-              pincode: val
-            });
-          }
-        }}
-        required
-      />
-
-      {formData.pincode &&
-        formData.pincode.length < 6 && (
-          <small className="inline-error">
-            Enter 6 digit pincode
-          </small>
-        )}
-    </div>
-  </div>
-
-  {/* ===== Permanent Address Checkbox ===== */}
-  <div className="checkbox-row">
-    <label className="checkbox-label">
-      <input
-        type="checkbox"
-        checked={formData.sameAsAddress}
-        onChange={(e) =>
-          handleSameAsAddress(
-            e.target.checked
-          )
-        }
-      />
-      <span>📌 Permanent Address</span>
-    </label>
-  </div>
-</div>
+                    {/* Row 4: Pincode (single field, half-width) */}
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Pincode *</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          name="pincode"
+                          placeholder="6 digit pincode"
+                          value={formData.pincode}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (val.length <= 6) setFormData({ ...formData, pincode: val });
+                          }}
+                          maxLength={6}
+                          required
+                        />
+                        {formData.pincode && formData.pincode.length < 6 && (
+                          <small className="inline-error">Enter 6 digit pincode</small>
+                        )}
+                      </div>
+                      <div className="form-group" />
+                    </div>
+                  </div>
                   {/* ===== AADHAR ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">🪪 Aadhar Verification</h3>
@@ -1153,6 +1091,43 @@ console.log("USER:", user);
                     <div className="info-note">
                       <span>ℹ️</span>
                       <p>Your Aadhar details are kept confidential as per government guidelines.</p>
+                    </div>
+                  </div>
+
+                  {/* ===== APAR ID ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">🪪 APAR ID Details</h3>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>APAR ID Number *</label>
+                        <input
+                          type="text"
+                          name="aparIdNumber"
+                          placeholder="Enter your APAR ID number"
+                          value={formData.aparIdNumber}
+                          onChange={handleChange}
+                          required
+                        />
+                        <small className="field-hint">APAR ID is issued by the government for academic records.</small>
+                      </div>
+                      <div className="form-group" />
+                    </div>
+                    <div className="upload-grid-two">
+                      <FileUploadBox
+                        fieldName="aparIdDocument"
+                        label="📋 APAR ID Document"
+                        accept="image/*,.pdf"
+                        required={true}
+                        hint="JPG, PNG or PDF · Max 1 MB"
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                    </div>
+                    <div className="info-note">
+                      <span>ℹ️</span>
+                      <p>Upload a clear copy of your APAR ID document (front page). Accepted formats: JPG, PNG, PDF.</p>
                     </div>
                   </div>
 
@@ -1495,10 +1470,20 @@ console.log("USER:", user);
                         <div className="upload-grid-two">
                           <FileUploadBox fieldName="prevYearMarksheet"
                             label="📄 Previous Year Marksheet"
-                            accept="image/*,.pdf" required={true} />
+                            accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                           <FileUploadBox fieldName="transferCertificate"
                             label="📜 Transfer Certificate (TC)"
-                            accept="image/*,.pdf" required={true} />
+                            accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                         </div>
                       </div>
                     )}
@@ -1527,7 +1512,12 @@ console.log("USER:", user);
                         </div>
                       </div>
                       <FileUploadBox fieldName="casteCertificate" label="📋 Caste Certificate"
-                        accept="image/*,.pdf" required={true} />
+                        accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
 
                       <div className="checkbox-row">
                         <label className="checkbox-label">
@@ -1553,7 +1543,12 @@ console.log("USER:", user);
                             </div>
                           </div>
                           <FileUploadBox fieldName="casteValidityCertificate"
-                            label="✅ Caste Validity Certificate" accept="image/*,.pdf" />
+                            label="✅ Caste Validity Certificate" accept="image/*,.pdf" 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                         </div>
                       )}
                     </div>
@@ -1621,26 +1616,97 @@ console.log("USER:", user);
                     <p className="section-subtitle">Recommended for scholarship and verification</p>
                     <div className="upload-grid-two">
                       <FileUploadBox fieldName="domicileCertificate"
-                        label="🏠 Domicile Certificate" accept="image/*,.pdf" />
+                        label="🏠 Domicile Certificate" accept="image/*,.pdf" 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                       <FileUploadBox fieldName="incomeCertificate"
-                        label="💰 Income Certificate" accept="image/*,.pdf" />
+                        label="💰 Income Certificate" accept="image/*,.pdf" 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                     </div>
                   </div>
- {/* ===== PHOTO & SIGNATURE ===== */}
-                  <div className="form-section">
+                   {/* ===== PHOTO & SIGNATURE ===== */}
+               <div className="form-section">
                     <h3 className="form-section-title">📸 Photo &amp; Signature</h3>
                     <div className="upload-grid-two">
                       <FileUploadBox fieldName="studentPhoto" label="📸 Student Passport Photo"
-                        accept="image/*" required={true} hint="Passport size, JPG/PNG" />
+                        accept="image/*" required={true} hint="Passport size, JPG/PNG" 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                       <FileUploadBox fieldName="signaturePhoto" label="✍️ Student Signature"
-                        accept="image/*" required={true} hint="Sign on white paper, JPG/PNG" />
+                        accept="image/*" required={true} hint="Sign on white paper, JPG/PNG" 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                     </div>
                     {formData.isMarried && (
                       <FileUploadBox fieldName="marriageCertificate" label="💍 Marriage Certificate"
-                        accept="image/*,.pdf" required={true} />
+                        accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                     )}
                   </div>
-                   {/* ===== ADDITIONAL INFO ===== */}
+
+                  {/* ===== UPLOAD DOCUMENTS ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">📄 Upload Documents</h3>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="aadharPhoto" label="🪪 Aadhaar Card Upload"
+                        accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                      <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                    </div>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                      <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
+                        accept="image/*,.pdf" 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                    </div>
+                    {formData.hasGap && (
+                      <FileUploadBox fieldName="gapyeardocument" label="📅 Gap Year Document Upload"
+                        accept="image/*,.pdf" required={true} 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                    )}
+                  </div> 
+                    {/* ===== ADDITIONAL INFO ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📝 Additional Information</h3>
                     <div className="form-group">
@@ -1661,28 +1727,7 @@ console.log("USER:", user);
                         value={formData.message} onChange={handleChange} />
                     </div>
                   </div>
-
-                  {/* ===== UPLOAD DOCUMENTS ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">📄 Upload Documents</h3>
-                    <div className="upload-grid-two">
-                      <FileUploadBox fieldName="aadharPhoto" label="🪪 Aadhaar Card Upload"
-                        accept="image/*,.pdf" required={true} />
-                      <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
-                        accept="image/*,.pdf" required={true} />
-                    </div>
-                    <div className="upload-grid-two">
-                      <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet Upload"
-                        accept="image/*,.pdf" required={true} />
-                      <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
-                        accept="image/*,.pdf" />
-                    </div>
-                    {formData.hasGap && (
-                      <FileUploadBox fieldName="gapyeardocument" label="📅 Gap Year Document Upload"
-                        accept="image/*,.pdf" required={true} />
-                    )}
-                  </div>
-/* ===== REFERENCE TAB ===== */}
+{/* ===== REFERENCE TAB ===== */}
 <div className="form-section">
   <h3 className="form-section-title">🔖 Reference</h3>
 
@@ -1720,33 +1765,7 @@ console.log("USER:", user);
                     </div>
                   </div>
 
-                  <button type="submit" className="btn btn-primary submit-btn">
-                    {loading ? '⏳ Submitting Application...' : '🚀 Submit Application'}
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-        )}
-
-                  {/* ===== DECLARATION ===== */}
-                  <div className="form-section declaration-section">
-                    <h3 className="form-section-title">✅ Declaration</h3>
-                    <div className="declaration-box">
-                      <label className="checkbox-label">
-                        <input type="checkbox" checked={formData.declaration}
-                          onChange={e => setFormData({ ...formData, declaration: e.target.checked })} />
-                        <span>
-                          I hereby declare that all information provided is true and correct.
-                          I understand that false information may result in cancellation of admission.
-                          I agree to abide by all rules and regulations of Late Kalpana Chawla
-                          Mahila Senior Science &amp; Arts College, Gangakhed.
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <button type="submit" className="btn btn-primary submit-btn">
+                  <button type="submit" className="btn btn-primary submit-btn" disabled={loading}>
                     {loading ? '⏳ Submitting Application...' : '🚀 Submit Application'}
                   </button>
                 </form>
