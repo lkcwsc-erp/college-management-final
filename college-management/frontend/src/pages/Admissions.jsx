@@ -1682,6 +1682,52 @@ console.log("USER:", user);
                         accept="image/*,.pdf" required={true} />
                     )}
                   </div>
+/* ===== REFERENCE TAB ===== */}
+<div className="form-section">
+  <h3 className="form-section-title">🔖 Reference</h3>
+
+  <textarea
+    name="reference"
+    placeholder="Type reference details here..."
+    value={formData.reference}
+    onChange={handleChange}
+    rows={8}
+    style={{
+      width: "100%",
+      padding: "14px",
+      borderRadius: "10px",
+      border: "1px solid #ccc",
+      fontSize: "15px",
+      outline: "none",
+      resize: "vertical"
+    }}
+  />
+</div>      
+                   {/* ===== DECLARATION ===== */}
+                  <div className="form-section declaration-section">
+                    <h3 className="form-section-title">✅ Declaration</h3>
+                    <div className="declaration-box">
+                      <label className="checkbox-label">
+                        <input type="checkbox" checked={formData.declaration}
+                          onChange={e => setFormData({ ...formData, declaration: e.target.checked })} />
+                        <span>
+                          I hereby declare that all information provided is true and correct.
+                          I understand that false information may result in cancellation of admission.
+                          I agree to abide by all rules and regulations of Late Kalpana Chawla
+                          Mahila Senior Science &amp; Arts College, Gangakhed.
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="btn btn-primary submit-btn">
+                    {loading ? '⏳ Submitting Application...' : '🚀 Submit Application'}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        )}
 
                   {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
