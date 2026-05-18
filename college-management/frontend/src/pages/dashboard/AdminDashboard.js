@@ -21,6 +21,8 @@ const AdminDashboard = () => {
   const [feesAmount, setFeesAmount] = useState('');
   const [message, setMessage] = useState('');
   const [staff, setStaff] = useState([]);
+  const [editStaff, setEditStaff] = useState(null);
+const [visiblePasswords, setVisiblePasswords] = useState({});
 
   const [staffForm, setStaffForm] = useState({
     name: '',
@@ -137,6 +139,22 @@ const AdminDashboard = () => {
       }
     }
   };
+  const handleEditStaffSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await API.put(`/auth/staff/${editStaff._id}`, {
+      name: editStaff.name,
+      username: editStaff.username,
+      email: editStaff.email,
+      phone: editStaff.phone,
+    });
+    showMessage('✅ Staff updated!');
+    setEditStaff(null);
+    API.get('/auth/staff').then(res => setStaff(res.data.staff || []));
+  } catch (err) {
+    showMessage('Failed: ' + (err.response?.data?.message || 'Error'));
+  }
+};
 
   // ====== GALLERY FUNCTIONS ======
   const handleImageChange = (e) => {
