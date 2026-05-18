@@ -21,7 +21,7 @@ import PrincipalDashboard from './pages/dashboard/PrincipalDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Resources from './pages/Resources';
 import Examination from './pages/Examination';
-import StaffLogin from './pages/Auth/StaffLogin';
+import StaffLogin from './pages/auth/StaffLogin';
 
 import './App.css';
 
