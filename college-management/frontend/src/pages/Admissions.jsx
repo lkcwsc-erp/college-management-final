@@ -1640,6 +1640,28 @@ console.log("USER:", user);
                         accept="image/*,.pdf" required={true} />
                     )}
                   </div>
+                   {/* ===== ADDITIONAL INFO ===== */}
+                  <div className="form-section">
+                    <h3 className="form-section-title">📝 Additional Information</h3>
+                    <div className="form-group">
+                      <label>How did you hear about us?</label>
+                      <select name="referralSource" value={formData.referralSource} onChange={handleChange}>
+                        <option value="">Select option</option>
+                        <option value="friend">Friend / Relative</option>
+                        <option value="school">School Teacher</option>
+                        <option value="social_media">Social Media</option>
+                        <option value="newspaper">Newspaper</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Additional Message</label>
+                      <textarea name="message" rows="3"
+                        placeholder="Any special requirements..."
+                        value={formData.message} onChange={handleChange} />
+                    </div>
+                  </div>
+
                   {/* ===== UPLOAD DOCUMENTS ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📄 Upload Documents</h3>
@@ -1661,28 +1683,7 @@ console.log("USER:", user);
                     )}
                   </div>
 
-                  {/* ===== ADDITIONAL INFO ===== */}
-                  <div className="form-section">
-                    <h3 className="form-section-title">📝 Additional Information</h3>
-                    <div className="form-group">
-                      <label>How did you hear about us?</label>
-                      <select name="referralSource" value={formData.referralSource} onChange={handleChange}>
-                        <option value="">Select option</option>
-                        <option value="friend">Friend / Relative</option>
-                        <option value="school">School Teacher</option>
-                        <option value="social_media">Social Media</option>
-                        <option value="newspaper">Newspaper</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Additional Message</label>
-                      <textarea name="message" rows="3"
-                        placeholder="Any special requirements..."
-                        value={formData.message} onChange={handleChange} />
-                    </div>
-                  </div>
-                   {/* ===== DECLARATION ===== */}
+                  {/* ===== DECLARATION ===== */}
                   <div className="form-section declaration-section">
                     <h3 className="form-section-title">✅ Declaration</h3>
                     <div className="declaration-box">
