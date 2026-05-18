@@ -1,40 +1,43 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const express = require('express');
+const router = express.Router();
+const {
+  register,
+  registerStudent,
+  login,
+  verifyOTP,
+  resendOTP,
+  getMe,
+  updateProfile,
+  changePassword,
+  getAllStudentUsers,
+  deleteStudentUser,
+  createStaff,
+  getAllStaff,
+  deleteStaff
+} = require('../controllers/authController');
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  firstName: { type: String, trim: true },
-  middleName: { type: String, trim: true, default: '' },
-  lastName: { type: String, trim: true, default: '' },
-  email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true, minlength: 6 },
-  role: {
-    type: String,
-    enum: [
-      'student',
-      'staff',
-      'staff_student',
-      'staff_accounts',
-      'staff_exam',
-      'staff_scholarship',
-      'admin'
-    ],
-    default: 'student'
-  },
-  phone: { type: String },
-  dateOfBirth: { type: Date },
-  address: { type: String },
-  photo: { type: String, default: '' },
-  isActive: { type: Boolean, default: true },
-}, { timestamps: true });
+// Public routes
+router.post('/login', login);
+router.post('/verify-otp', verifyOTP);
+router.post('/resend-otp', resendOTP);
 
-userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
-  this.password = await bcrypt.hash(this.password, 12);
-});
+// Admin-only
+router.post('/register', protect, authorizeRoles('admin'), register);
 
-userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
+// Admin: Staff Management
+router.post('/create-staff', protect, authorizeRoles('admin'), createStaff);
+router.get('/staff', protect, authorizeRoles('admin'), getAllStaff);
+router.delete('/staff/:id', protect, authorizeRoles('admin'), deleteStaff);
 
-module.exports = mongoose.model('User', userSchema);
+// Staff/Admin
+router.post('/register-student', protect, authorizeRoles('staff', 'staff_student', 'admin'), registerStudent);
+router.get('/students', protect, authorizeRoles('staff', 'staff_student', 'admin'), getAllStudentUsers);
+router.delete('/students/:id', protect, authorizeRoles('staff', 'staff_student', 'admin'), deleteStudentUser);
+
+// Authenticated user
+router.get('/me', protect, getMe);
+router.put('/update-profile', protect, updateProfile);
+router.put('/change-password', protect, changePassword);
+
+module.exports = router;
