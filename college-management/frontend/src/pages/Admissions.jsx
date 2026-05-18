@@ -947,7 +947,7 @@ console.log("USER:", user);
     </div>
   </div>
 </div> 
- {/* ===== ADDRESS ===== */}
+  {/* ===== ADDRESS ===== */}
 <div className="form-section">
   <h3 className="form-section-title">🏠 Address Details</h3>
 
@@ -979,8 +979,7 @@ console.log("USER:", user);
   </div>
 
   {/* ===== Second Row ===== */}
-  <div className="form-row">
-    {/* District */}
+ {/* District */}
     <div className="form-group">
       <label>District *</label>
       <input
@@ -988,7 +987,11 @@ console.log("USER:", user);
         value={formData.district}
         readOnly
         placeholder="Select city first"
-        className={formData.district ? "auto-filled" : ""}
+        className={
+          formData.district
+            ? "auto-filled"
+            : ""
+        }
       />
     </div>
 
@@ -1023,13 +1026,17 @@ console.log("USER:", user);
 
     {/* State */}
     <div className="form-group">
-      <label>State *</label>
+      <label>State (Auto)</label>
       <input
         type="text"
         value={formData.state}
         readOnly
         placeholder="Select city first"
-        className={formData.state ? "auto-filled" : ""}
+        className={
+          formData.state
+            ? "auto-filled"
+            : ""
+        }
       />
     </div>
 
@@ -1041,7 +1048,9 @@ console.log("USER:", user);
         placeholder="6 digit pincode"
         value={formData.pincode}
         onChange={(e) => {
-          const val = e.target.value.replace(/\D/g, "");
+          const val =
+            e.target.value.replace(/\D/g, "");
+
           if (val.length <= 6) {
             setFormData({
               ...formData,
@@ -1052,14 +1061,15 @@ console.log("USER:", user);
         required
       />
 
-      {formData.pincode && formData.pincode.length < 6 && (
-        <small className="inline-error">
-          Enter 6 digit pincode
-        </small>
-      )}
+      {formData.pincode &&
+        formData.pincode.length < 6 && (
+          <small className="inline-error">
+            Enter 6 digit pincode
+          </small>
+        )}
     </div>
   </div>
-</div>
+
   {/* ===== Permanent Address Checkbox ===== */}
   <div className="checkbox-row">
     <label className="checkbox-label">
