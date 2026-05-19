@@ -14,33 +14,40 @@ const Navbar = () => {
     setMenuOpen(false);
   };
 
-  const getDashboardLink = () => {
-    
-  if (user?.role === 'admin')
+ const getDashboardLink = () => {
+
+  if (user?.role === 'admin') {
     return '/admin/dashboard';
+  }
 
-  if (user?.role === 'staff_principal')
+  if (user?.role === 'staff_principal') {
     return '/principal/dashboard';
+  }
 
-  if (user?.role === 'staff_student')
+  if (user?.role === 'staff_student') {
     return '/staff/student-section';
+  }
 
-  if (user?.role === 'staff_accounts')
+  if (user?.role === 'staff_accounts') {
     return '/staff/accounts-section';
+  }
 
-  if (user?.role === 'staff_exam')
+  if (user?.role === 'staff_exam') {
     return '/staff/exam-section';
+  }
 
-  if (user?.role === 'staff_scholarship')
+  if (user?.role === 'staff_scholarship') {
     return '/staff/scholarship-section';
+  }
 
-  if (user?.role === 'staff')
+  if (user?.role === 'staff') {
     return '/staff/dashboard';
+  }
 
   return '/student/dashboard';
 
 };
-
+  
       {/* NAV LINKS */}
       <div className={`navbar-links ${menuOpen ? 'open' : ''}`}>
 
