@@ -41,58 +41,5 @@ router.delete('/students/:id', protect, authorizeRoles('staff', 'staff_student',
 router.get('/me', protect, getMe);
 router.put('/update-profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
-router.post('/staff-login', async (req, res) => {
 
-  try {
-
-    const {
-      username,
-      email,
-      password
-    } = req.body;
-
-    const User = require('../models/User');
-
-    const user = await User.findOne({
-      username,
-      email
-    });
-
-    if (!user) {
-
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-
-    }
-
-    const isMatch = await user.matchPassword(password);
-
-    if (!isMatch) {
-
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid password'
-      });
-
-    }
-
-   res.json({
-  success: true,
-  otpRequired: false,
-  token: user._id,
-  user
-});
-
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
-  }
-
-});
 module.exports = router;
