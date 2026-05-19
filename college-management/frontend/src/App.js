@@ -87,7 +87,7 @@ function App() {
             </ProtectedRoute>
           } />
            <Route path="/principal/dashboard" element={
-  <ProtectedRoute roles={['principal']}>
+  <ProtectedRoute roles={['staff_principal']}>
     <PrincipalDashboard />
   </ProtectedRoute>
 } /> 
