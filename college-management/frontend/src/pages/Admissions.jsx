@@ -1509,6 +1509,8 @@ const [activeTab, setActiveTab] = useState('process');
                           </div>
                         </div>
                         <div className="upload-grid-two">
+
+         
                           <FileUploadBox fieldName="prevYearMarksheet"
                             label="📄 Previous Year Marksheet"
                             accept="image/*,.pdf" required={true} 
@@ -1713,6 +1715,17 @@ const [activeTab, setActiveTab] = useState('process');
                         fileErrors={fileErrors}
                         onFileChange={handleFileChange}
                       />
+                       <FileUploadBox
+    fieldName="aparIdDocument"
+    label="🪪 APAAR ID Document Upload"
+    accept="image/*,.pdf"
+    required={true}
+    uploadedFiles={uploadedFiles}
+    uploadPreviews={uploadPreviews}
+    fileErrors={fileErrors}
+    onFileChange={handleFileChange}
+  />
+
                       <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
                         accept="image/*,.pdf" required={true} 
                         uploadedFiles={uploadedFiles}
