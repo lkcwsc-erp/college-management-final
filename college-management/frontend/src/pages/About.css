@@ -186,7 +186,7 @@
 .parent-org-btn{
   background:#003366;
   color:white;
-  padding:12px 25px;
+  padding:12px 24px;
   border:none;
   border-radius:8px;
   font-size:18px;
@@ -194,6 +194,25 @@
   margin-top:20px;
 }
 
+.parent-org-btn:hover{
+  background:#0055aa;
+}
+
 .parent-org-page{
   padding:50px;
+}
+
+.parent-org-page h1{
+  color:#003366;
+  margin-bottom:20px;
+}
+
+.parent-org-page h2{
+  margin-bottom:20px;
+}
+
+.parent-org-page p{
+  font-size:18px;
+  line-height:1.8;
+  margin-bottom:20px;
 }
