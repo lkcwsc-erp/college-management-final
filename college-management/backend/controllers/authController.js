@@ -8,6 +8,10 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
+// ===== STAFF ROLES CONSTANT =====
+const STAFF_ROLES = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship', 'staff_principal'];
+const VALID_STAFF_ROLES = ['staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship', 'staff_principal'];
+
 // ===== AUTO PASSWORD GENERATOR =====
 const generateStudentPassword = (firstName, dob) => {
   const namePart = firstName.toLowerCase().slice(0, 4);
@@ -117,7 +121,7 @@ exports.deleteStudentUser = async (req, res) => {
   }
 };
 
-// ===== STEP 1: LOGIN — Verify CAPTCHA + password, then send OTP =====
+// ===== STEP 1: LOGIN =====
 exports.login = async (req, res) => {
   try {
     const { email, password, captchaToken } = req.body;
@@ -155,11 +159,10 @@ exports.login = async (req, res) => {
       });
     }
 
-    // ✅ UPDATED: Find user by email OR username
     const user = await User.findOne({
       $or: [
         { email: email.toLowerCase() },
-        { username: email.toLowerCase() } // "email" field can also be username
+        { username: email.toLowerCase() }
       ]
     });
 
@@ -176,9 +179,8 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Account is deactivated' });
     }
 
-    // 🔐 If user is STAFF (any type) or ADMIN → send OTP
-    const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
-    if (staffRoles.includes(user.role) || user.role === 'admin') {
+    // 🔐 If user is STAFF (any type including Principal) or ADMIN → send OTP
+    if (STAFF_ROLES.includes(user.role) || user.role === 'admin') {
       await OTP.deleteMany({ email: user.email.toLowerCase() });
 
       const otp = generateOTP();
@@ -201,7 +203,7 @@ exports.login = async (req, res) => {
         success: true,
         otpRequired: true,
         message: `OTP has been sent to ${user.email}. Please check your inbox.`,
-        email: user.email // always return actual email for OTP verify step
+        email: user.email
       });
     }
 
@@ -355,7 +357,7 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-// ===== ADMIN: Create Staff Login =====
+// ===== ADMIN: Create Staff Login (includes Principal) =====
 exports.createStaff = async (req, res) => {
   try {
     const { name, username, email, password, phone, role } = req.body;
@@ -367,15 +369,13 @@ exports.createStaff = async (req, res) => {
       });
     }
 
-    const validRoles = ['staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
-    if (!validRoles.includes(role)) {
+    if (!VALID_STAFF_ROLES.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid role. Must be one of: ' + validRoles.join(', ')
+        message: 'Invalid role. Must be one of: ' + VALID_STAFF_ROLES.join(', ')
       });
     }
 
-    // ✅ Check email already exists
     const emailExists = await User.findOne({ email });
     if (emailExists) {
       return res.status(400).json({
@@ -384,7 +384,6 @@ exports.createStaff = async (req, res) => {
       });
     }
 
-    // ✅ Check username already exists (if provided)
     if (username) {
       const usernameExists = await User.findOne({ username: username.toLowerCase() });
       if (usernameExists) {
@@ -400,7 +399,7 @@ exports.createStaff = async (req, res) => {
       username: username ? username.toLowerCase() : undefined,
       email,
       password,
-      plainPassword: password, // ✅ store plain for admin view
+      plainPassword: password,
       phone: phone || '',
       role
     });
@@ -415,7 +414,7 @@ exports.createStaff = async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
-        plainPassword: user.plainPassword, // ✅ return to show in modal
+        plainPassword: user.plainPassword,
       }
     });
   } catch (error) {
@@ -423,12 +422,10 @@ exports.createStaff = async (req, res) => {
   }
 };
 
-// ===== ADMIN: Get All Staff =====
+// ===== ADMIN: Get All Staff (includes Principal) =====
 exports.getAllStaff = async (req, res) => {
   try {
-    const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
-    // ✅ include plainPassword in select (remove -password but keep plainPassword)
-    const staff = await User.find({ role: { $in: staffRoles } })
+    const staff = await User.find({ role: { $in: STAFF_ROLES } })
       .select('-password')
       .sort({ createdAt: -1 });
 
@@ -450,8 +447,7 @@ exports.deleteStaff = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Staff not found' });
     }
 
-    const staffRoles = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship'];
-    if (!staffRoles.includes(user.role)) {
+    if (!STAFF_ROLES.includes(user.role)) {
       return res.status(400).json({ success: false, message: 'Not a staff user' });
     }
 
@@ -462,7 +458,7 @@ exports.deleteStaff = async (req, res) => {
   }
 };
 
-// ===== ADMIN: Update Staff ✅ NEW =====
+// ===== ADMIN: Update Staff =====
 exports.updateStaff = async (req, res) => {
   try {
     const { name, username, email, phone } = req.body;
@@ -472,7 +468,6 @@ exports.updateStaff = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Staff not found' });
     }
 
-    // ✅ Check email conflict (exclude self)
     if (email && email !== staff.email) {
       const emailExists = await User.findOne({ email, _id: { $ne: req.params.id } });
       if (emailExists) {
@@ -480,7 +475,6 @@ exports.updateStaff = async (req, res) => {
       }
     }
 
-    // ✅ Check username conflict (exclude self)
     if (username && username !== staff.username) {
       const usernameExists = await User.findOne({
         username: username.toLowerCase(),
