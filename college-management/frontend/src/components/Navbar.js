@@ -15,36 +15,31 @@ const Navbar = () => {
   };
 
   const getDashboardLink = () => {
-    if (user?.role === 'admin') return '/admin/dashboard';
-    if (user?.role === 'staff') return '/staff/dashboard';
-    return '/student/dashboard';
-  };
+    
+  if (user?.role === 'admin')
+    return '/admin/dashboard';
 
-  return (
-    <nav className="navbar">
+  if (user?.role === 'staff_principal')
+    return '/principal/dashboard';
 
-      {/* TOP BRAND SECTION */}
-      <div className="navbar-brand">
-        <Link to="/" onClick={() => setMenuOpen(false)}>
+  if (user?.role === 'staff_student')
+    return '/staff/student-section';
 
-          <img
-            src="/college-logo.png"
-            alt="LKCWSC Logo"
-            className="brand-logo-img"
-          />
+  if (user?.role === 'staff_accounts')
+    return '/staff/accounts-section';
 
-          <div className="brand-text">
-            <span className="brand-name">
-              Late Kalpana Chawla Women's Senior College
-            </span>
+  if (user?.role === 'staff_exam')
+    return '/staff/exam-section';
 
-            <span className="brand-sub">
-              Senior Science & Arts College, Gangakhed
-            </span>
-          </div>
+  if (user?.role === 'staff_scholarship')
+    return '/staff/scholarship-section';
 
-        </Link>
-      </div>
+  if (user?.role === 'staff')
+    return '/staff/dashboard';
+
+  return '/student/dashboard';
+
+};
 
       {/* NAV LINKS */}
       <div className={`navbar-links ${menuOpen ? 'open' : ''}`}>
