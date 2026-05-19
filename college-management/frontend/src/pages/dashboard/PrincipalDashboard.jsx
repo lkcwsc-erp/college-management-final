@@ -1,11 +1,46 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import API from '../../api/axios';
 
 const PrincipalDashboard = () => {
 
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [admissions, setAdmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // FETCH VERIFIED ADMISSIONS
+  const fetchAdmissions = async () => {
+
+    setLoading(true);
+
+    try {
+
+      const res = await API.get('/admissions/principal/pending');
+
+      if (res.data.success) {
+        setAdmissions(res.data.admissions || []);
+      }
+
+    } catch (err) {
+
+      console.error(err);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+  useEffect(() => {
+
+    fetchAdmissions();
+
+  }, []);
 
   return (
     <div
@@ -90,7 +125,7 @@ const PrincipalDashboard = () => {
         </div>
 
         <div style={cardStyle}>
-          <h2 style={numberStyle}>35</h2>
+          <h2 style={numberStyle}>{admissions.length}</h2>
           <p style={textStyle}>Pending Admissions</p>
         </div>
 
@@ -98,6 +133,104 @@ const PrincipalDashboard = () => {
           <h2 style={numberStyle}>₹4,50,000</h2>
           <p style={textStyle}>Fees Collected</p>
         </div>
+
+      </div>
+
+      {/* PENDING APPROVALS */}
+
+      <div style={{ marginBottom: '40px' }}>
+
+        <h2
+          style={{
+            marginBottom: '20px',
+            color: '#1e293b'
+          }}
+        >
+          ⏳ Pending Admission Approvals
+        </h2>
+
+        {loading ? (
+
+          <p>Loading admissions...</p>
+
+        ) : admissions.length === 0 ? (
+
+          <div style={{
+            background: '#fff',
+            padding: '20px',
+            borderRadius: '12px'
+          }}>
+            No pending admissions
+          </div>
+
+        ) : (
+
+          <div
+            style={{
+              display: 'grid',
+              gap: '15px'
+            }}
+          >
+
+            {admissions.map((adm) => (
+
+              <div
+                key={adm._id}
+                style={{
+                  background: '#fff',
+                  padding: '20px',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.08)'
+                }}
+              >
+
+                <h3>{adm.applicantName}</h3>
+
+                <p>📧 {adm.email}</p>
+
+                <p>📱 {adm.phone}</p>
+
+                <button
+                  onClick={async () => {
+
+                    try {
+
+                      await API.put(
+                        `/admissions/principal/approve/${adm._id}`
+                      );
+
+                      fetchAdmissions();
+
+                      alert('Admission Approved');
+
+                    } catch (err) {
+
+                      alert('Approval Failed');
+
+                    }
+
+                  }}
+                  style={{
+                    marginTop: '12px',
+                    background: '#16a34a',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  ✅ Approve Admission
+                </button>
+
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
 
       </div>
 
