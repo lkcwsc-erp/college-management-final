@@ -19,6 +19,7 @@ const uploadFields = upload.fields([
   { name: 'domicileCertificate', maxCount: 1 },
   { name: 'incomeCertificate', maxCount: 1 },
   { name: 'transferCertificate', maxCount: 1 },
+  { name: 'aparIdDocument', maxCount: 1 },
 ]);
 
 // Submit admission application
