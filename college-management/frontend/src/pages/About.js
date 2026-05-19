@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from "react-router-dom";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import API from '../api/axios';
 import './About.css';
 
 const About = () => {
-  const [showParentOrg, setShowParentOrg] = useState(false);
   const [aboutData, setAboutData] = useState({
     history: '',
     historyPhoto: '',
@@ -70,10 +70,20 @@ const cards = [
     <div>
       <Navbar />
 
-      <div className="page-header">
+    <section className="page-header">
         <h1>About Us</h1>
         <p>Learn about our history, vision, and mission</p>
-      </div>
+    <div className="top-parent-btn">
+
+  <button
+    className="parent-org-btn"
+    onClick={() => setShowParentOrg(true)}
+  >
+    About Our Parent Organisation
+  </button>
+
+</div>
+      </section>
 
       <section className="about-section container">
         <div className="about-grid">
@@ -158,35 +168,12 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
           ))}
         </div>
       </section>
-   <section className="parent-org-section">
-
-  <button
-    className="parent-org-btn"
-    onClick={() => setShowParentOrg(!showParentOrg)}
-  >
+ <Link to="/parent-organisation">
+  <button className="parent-org-btn">
     About Our Parent Organisation
   </button>
-
-  {showParentOrg && (
-    <div className="parent-org-card">
-
-      <h2>Vidyaniketan Sevabhavi Sanstha (VNSS)</h2>
-
-      <p>
-        Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational
-        and social welfare organization established in Maharashtra, India.
-      </p>
-
-      <p>
-        The organization works for education, women empowerment,
-        student development and social welfare activities.
-      </p>
-
-    </div>
-  )}
-
-</section>
-            <Footer />
+</Link>)}
+<Footer />
     </div>
   );
 };
