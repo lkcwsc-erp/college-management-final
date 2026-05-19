@@ -73,7 +73,7 @@ const cards = [
     <section className="page-header">
         <h1>About Us</h1>
         <p>Learn about our history, vision, and mission</p>
-    <Link to="/parent-organisation">
+    <Link to="/parent-org">
   <button className="parent-org-btn">
     About Our Parent Organisation
   </button>
