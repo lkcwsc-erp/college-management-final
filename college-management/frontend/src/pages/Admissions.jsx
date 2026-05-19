@@ -629,7 +629,7 @@ const [activeTab, setActiveTab] = useState('process');
         className={activeTab === 'enquiry' ? 'tab-btn active' : 'tab-btn'}
         onClick={() => setActiveTab('enquiry')}
       >
-        💬 Enquiry Form
+        💬 Admission Enquiry Form
       </button>
 
     </div>
