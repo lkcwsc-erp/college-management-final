@@ -5,6 +5,7 @@ import API from '../api/axios';
 import './About.css';
 
 const About = () => {
+  const [showParentOrg, setShowParentOrg] = useState(false);
   const [aboutData, setAboutData] = useState({
     history: '',
     historyPhoto: '',
@@ -157,17 +158,35 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
           ))}
         </div>
       </section>
-    <section className="parent-org">
-  <h2>About Our Parent Organisation</h2>
+   <section className="parent-org-section">
 
-  <p>
-            Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational and social welfare organization established in Maharashtra, India. The organization is dedicated to promoting education, student development, social welfare, women empowerment, and rural development.
+  <button
+    className="parent-org-btn"
+    onClick={() => setShowParentOrg(!showParentOrg)}
+  >
+    About Our Parent Organisation
+  </button>
 
-VNSS works with the vision of providing quality education and creating opportunities for students from different backgrounds. The organization also supports various community welfare activities including skill development, youth empowerment, vocational training, and awareness programs.
+  {showParentOrg && (
+    <div className="parent-org-card">
 
-Through its educational institutions and social initiatives, Vidyaniketan Sevabhavi Sanstha aims to build a better future for society by encouraging knowledge, discipline, leadership, and social responsibility among students.
-  </p>
-</section>  <Footer />
+      <h2>Vidyaniketan Sevabhavi Sanstha (VNSS)</h2>
+
+      <p>
+        Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational
+        and social welfare organization established in Maharashtra, India.
+      </p>
+
+      <p>
+        The organization works for education, women empowerment,
+        student development and social welfare activities.
+      </p>
+
+    </div>
+  )}
+
+</section>
+            <Footer />
     </div>
   );
 };
