@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from "react-router-dom";
 import Navbar from '../components/Navbar';
+import { Link } from "react-router-dom";
 import Footer from '../components/Footer';
 import API from '../api/axios';
 import './About.css';
@@ -73,17 +73,11 @@ const cards = [
     <section className="page-header">
         <h1>About Us</h1>
         <p>Learn about our history, vision, and mission</p>
-    <div className="top-parent-btn">
-
-  <button
-    className="parent-org-btn"
-    onClick={() => setShowParentOrg(true)}
-  >
+    <Link to="/parent-organisation">
+  <button className="parent-org-btn">
     About Our Parent Organisation
   </button>
-
-</div>
-      </section>
+</Link>)}
 
       <section className="about-section container">
         <div className="about-grid">
@@ -168,11 +162,7 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
           ))}
         </div>
       </section>
- <Link to="/parent-organisation">
-  <button className="parent-org-btn">
-    About Our Parent Organisation
-  </button>
-</Link>)}
+
 <Footer />
     </div>
   );
