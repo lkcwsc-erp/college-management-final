@@ -1,73 +1,44 @@
 import React from "react";
+import "./About.css";
 
-const ParentOrg = () => {
+function ParentOrg() {
   return (
-    <div
-      style={{
-        padding: "40px",
-        maxWidth: "1000px",
-        margin: "auto",
-        lineHeight: "1.8",
-        fontFamily: "Arial",
-      }}
-    >
-      <h1
-        style={{
-          textAlign: "center",
-          color: "#1e3a8a",
-          marginBottom: "20px",
-        }}
-      >
-        About Our Parent Organization
-      </h1>
+    <div>
+      <h1>About Our Parent Organization</h1>
 
       <p>
         Our parent organization is dedicated to providing quality education,
-        innovation, research opportunities, and overall student development.
-        The organization continuously works toward academic excellence and
-        modern learning practices.
+        innovation, and student development. The organization supports various
+        colleges and institutions with modern infrastructure, experienced
+        faculty, and academic excellence.
       </p>
 
+      <h2>Vision</h2>
       <p>
-        The institution focuses on creating skilled professionals with strong
-        technical knowledge, leadership qualities, and ethical values. Various
-        programs, workshops, seminars, and activities are conducted regularly
-        for students.
+        To create a strong educational environment that empowers students with
+        knowledge, skills, and values for a successful future.
       </p>
 
-      <h2 style={{ color: "#2563eb", marginTop: "30px" }}>
-        Vision
-      </h2>
-
+      <h2>Mission</h2>
       <p>
-        To become a center of excellence in education, research, and innovation
-        by empowering students with knowledge and skills for global success.
+        To deliver high-quality education, encourage research and innovation,
+        and help students achieve personal and professional growth.
       </p>
 
-      <h2 style={{ color: "#2563eb", marginTop: "30px" }}>
-        Mission
-      </h2>
-
+      <h2>Objectives</h2>
       <ul>
-        <li>Provide high-quality education and training.</li>
-        <li>Encourage innovation and research activities.</li>
-        <li>Develop leadership and professional ethics.</li>
-        <li>Create industry-ready graduates.</li>
+        <li>Provide quality education</li>
+        <li>Support student development</li>
+        <li>Promote innovation and research</li>
+        <li>Develop leadership and communication skills</li>
       </ul>
 
-      <h2 style={{ color: "#2563eb", marginTop: "30px" }}>
-        Key Features
-      </h2>
-
-      <ul>
-        <li>Experienced faculty members</li>
-        <li>Modern infrastructure and laboratories</li>
-        <li>Industry-oriented curriculum</li>
-        <li>Placement and internship support</li>
-        <li>Student development programs</li>
-      </ul>
+      <h2>Contact Information</h2>
+      <p>Email: info@organization.com</p>
+      <p>Phone: +91 9876543210</p>
+      <p>Address: Pune, Maharashtra, India</p>
     </div>
   );
-};
+}
 
 export default ParentOrg;
