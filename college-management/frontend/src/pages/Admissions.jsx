@@ -1146,22 +1146,22 @@ const [activeTab, setActiveTab] = useState('process');
                     </div>
                   </div>
 
-                 {/* ===== APAAR ID ===== */}
+                {/* ===== APAAR ID ===== */}
 <div className="form-section">
   <h3 className="form-section-title">🪪 APAAR ID Details</h3>
 
   <div className="form-row">
     <div className="form-group">
       <label>APAAR ID Number *</label>
+
       <input
-        <input
-  type="text"
-  name="aparIdNumber"
-  placeholder="Enter your APAAR ID number"
-  value={formData.aparIdNumber}
-  onChange={handleChange}
-  required
-/>
+        type="text"
+        name="aparIdNumber"
+        placeholder="Enter your APAAR ID number"
+        value={formData.aparIdNumber}
+        onChange={handleChange}
+        required
+      />
 
       <small className="field-hint">
         APAAR ID is issued by the government for academic records.
@@ -1169,6 +1169,8 @@ const [activeTab, setActiveTab] = useState('process');
     </div>
   </div>
 </div>
+
+      
 
                   {/* ===== SSC ===== */}
                   <div className="form-section">
