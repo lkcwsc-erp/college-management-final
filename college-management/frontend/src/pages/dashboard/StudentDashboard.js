@@ -12,7 +12,7 @@ const StudentDashboard = () => {
   const [notices, setNotices] = useState([]);
   const [myAdmission, setMyAdmission] = useState(null);
   const [admissionLoading, setAdmissionLoading] = useState(true);
-  const [admissionLoading, setAdmissionLoading] = useState(true);
+  
   
   // Document Request States
   const [myDocRequests, setMyDocRequests] = useState([]);
