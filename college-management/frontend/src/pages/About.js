@@ -78,6 +78,8 @@ const cards = [
     About Our Parent Organisation
   </button>
 </Link>)}
+    </div>
+    </section>
 
       <section className="about-section container">
         <div className="about-grid">
