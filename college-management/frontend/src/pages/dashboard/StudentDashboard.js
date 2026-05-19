@@ -54,11 +54,7 @@ useEffect(() => {
     navigate('/');
   };
 
-  const handleLogout = () => {
-  logout();
-  navigate('/');
-};
-
+  
 // Document Request Submit
 const handleDocSubmit = async (e) => {
   e.preventDefault();
