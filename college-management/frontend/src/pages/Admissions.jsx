@@ -1154,13 +1154,14 @@ const [activeTab, setActiveTab] = useState('process');
     <div className="form-group">
       <label>APAAR ID Number *</label>
       <input
-        type="text"
-        name="APAARIdNumber"
-        placeholder="Enter your APAAR ID number"
-        value={formData.APAARIdNumber}
-        onChange={handleChange}
-        required
-      />
+        <input
+  type="text"
+  name="aparIdNumber"
+  placeholder="Enter your APAAR ID number"
+  value={formData.aparIdNumber}
+  onChange={handleChange}
+  required
+/>
 
       <small className="field-hint">
         APAAR ID is issued by the government for academic records.
