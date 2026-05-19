@@ -983,7 +983,7 @@ const [activeTab, setActiveTab] = useState('process');
                     {/* Row 1: House Number + Street/Area */}
                     <div className="form-row">
                       <div className="form-group">
-                        <label>House Number *</label>
+                        <label>House Number </label>
                         <input
                           type="text"
                           name="houseNumber"
@@ -994,7 +994,7 @@ const [activeTab, setActiveTab] = useState('process');
                         />
                       </div>
                       <div className="form-group">
-                        <label>Street / Area *</label>
+                        <label>Street / Area </label>
                         <input
                           type="text"
                           name="streetArea"
