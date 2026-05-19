@@ -57,7 +57,7 @@ const StaffLogin = () => {
 
     setLoading(true);
     try {
-      const { data } = await API.post('/auth/staff-login', {
+      const { data } = await API.post('/auth/login', {
         username:     formData.username,
         email:        formData.email,
         password:     formData.password,
