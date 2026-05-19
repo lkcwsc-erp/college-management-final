@@ -54,6 +54,58 @@ useEffect(() => {
     navigate('/');
   };
 
+  const handleLogout = () => {
+  logout();
+  navigate('/');
+};
+
+// Document Request Submit
+const handleDocSubmit = async (e) => {
+  e.preventDefault();
+  if (!docFormData.documentType) {
+    setDocMessage('❌ Please select a document type');
+    return;
+  }
+  setDocLoading(true);
+  try {
+    const res = await API.post('/document-requests', docFormData);
+    if (res.data.success) {
+      setDocMessage('✅ Request submitted! Waiting for Accounts Section approval.');
+      setDocFormData({ documentType: '', reason: '', urgency: 'normal' });
+      // Refresh requests
+      API.get('/document-requests/my')
+        .then(r => setMyDocRequests(r.data.requests || []));
+      setTimeout(() => setDocMessage(''), 4000);
+    }
+  } catch (err) {
+    setDocMessage('❌ ' + (err.response?.data?.message || 'Failed to submit'));
+  } finally {
+    setDocLoading(false);
+  }
+};
+
+// Get document status display
+const getDocStatusStyle = (status) => {
+  switch (status) {
+    case 'pending_accounts':
+      return { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending - Accounts' };
+    case 'rejected_by_accounts':
+      return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' };
+    case 'approved_by_accounts':
+    case 'pending_principal':
+      return { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending - Principal' };
+    case 'rejected_by_principal':
+      return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' };
+    case 'approved_by_principal':
+    case 'pending_generation':
+      return { bg: '#e3f2fd', color: '#1565C0', label: '🎯 Pending - Generation' };
+    case 'completed':
+      return { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Completed' };
+    default:
+      return { bg: '#f5f5f5', color: '#666', label: status };
+  }
+};
+
  const tabs = [
   { id: 'home', label: '🏠 Dashboard' },
   { id: 'application', label: '📋 My Application' },
