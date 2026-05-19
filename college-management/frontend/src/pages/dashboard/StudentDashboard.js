@@ -39,6 +39,11 @@ useEffect(() => {
       .catch(() => {
         setAdmissionLoading(false);
       });
+
+    // Fetch Document Requests
+    API.get('/document-requests/my')
+      .then(res => setMyDocRequests(res.data.requests || []))
+      .catch(() => {});
   } else {
     setAdmissionLoading(false);
   }
