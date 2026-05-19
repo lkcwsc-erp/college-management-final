@@ -668,7 +668,7 @@ showCredentials.role
               <option value="staff_accounts">💰 Accounts Section</option>
               <option value="staff_exam">📝 Examination Section</option>
               <option value="staff_scholarship">🎓 Scholarship Section</option>
-              <option value="principal">🎓 Principal</option>
+              <option value="staff_principal">👨‍🏫 Principal</option>
 
             </select>
             <small style={{color:'#666',marginTop:'6px',display:'block'}}>💡 Staff will be redirected to their section dashboard after login</small>
