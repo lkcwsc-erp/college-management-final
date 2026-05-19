@@ -23,6 +23,9 @@ const admissionSchema = new mongoose.Schema({
   aadharNumber: { type: String },
   aadharName: { type: String },
 
+  aparIdNumber: { type: String },
+  aparIdDocument: { type: String, default: '' },
+  
   studentPhoto: { type: String, default: '' },
   aadharPhoto: { type: String, default: '' },
 
