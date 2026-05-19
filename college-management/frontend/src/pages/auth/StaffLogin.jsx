@@ -11,15 +11,14 @@ const RECAPTCHA_SITE_KEY = '6Lf_9ecsAAAAAIZ_AqaWxD8E-ORneMixV0DW6C_X';
 
 // Staff role → dashboard route mapping
 const STAFF_ROUTES = {
-  admin:              '/admin/dashboard',
-  principal:          '/principal/dashboard',
-  staff_student:      '/staff/student-section',
-  staff_accounts:     '/staff/accounts-section',
-  staff_exam:         '/staff/exam-section',
-  staff_scholarship:  '/staff/scholarship-section',
-  staff:              '/staff/dashboard',
+  admin: '/admin/dashboard',
+  staff_principal: '/principal/dashboard',
+  staff_student: '/staff/student-section',
+  staff_accounts: '/staff/accounts-section',
+  staff_exam: '/staff/exam-section',
+  staff_scholarship: '/staff/scholarship-section',
+  staff: '/staff/dashboard',
 };
-
 const StaffLogin = () => {
   const [step, setStep] = useState('credentials'); // 'credentials' | 'otp'
 
