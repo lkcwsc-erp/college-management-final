@@ -798,6 +798,263 @@ const progressColor =
             </div>
           )}
 
+{/* ============ REQUEST DOCUMENTS TAB ============ */}
+{activeTab === 'documents' && (
+  <div>
+    <h3 style={{ marginBottom: '20px', color: '#1565C0' }}>
+      📄 Request Documents
+    </h3>
+
+    {/* Student must have approved admission */}
+    {!myAdmission && !admissionLoading && (
+      <div style={{
+        background: '#fff3e0',
+        padding: '20px',
+        borderRadius: '12px',
+        textAlign: 'center',
+        border: '1px solid #ffb74d'
+      }}>
+        <p style={{ fontSize: '2.5rem' }}>⚠️</p>
+        <h3 style={{ color: '#E65100' }}>Application Required</h3>
+        <p style={{ color: '#555' }}>
+          You need to submit your admission application first before requesting documents.
+        </p>
+      </div>
+    )}
+
+    {myAdmission && (
+      <>
+        {/* Message */}
+        {docMessage && (
+          <div style={{
+            padding: '14px 18px',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            background: docMessage.includes('✅') ? '#e8f5e9' : '#ffebee',
+            color: docMessage.includes('✅') ? '#2E7D32' : '#C62828',
+            fontWeight: '500'
+          }}>
+            {docMessage}
+          </div>
+        )}
+
+        {/* Request Form */}
+        <div className="form-card" style={{ marginBottom: '24px' }}>
+          <h3 style={{ marginBottom: '8px' }}>📝 New Document Request</h3>
+          <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
+            Select the document you need. Your student details will be auto-attached.
+          </p>
+
+          {/* Student Info Card */}
+          <div style={{
+            background: '#f0f9ff',
+            padding: '14px 18px',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            border: '1px solid #bae6fd',
+            fontSize: '13px'
+          }}>
+            <p style={{ fontWeight: '600', color: '#0c4a6e', marginBottom: '8px' }}>
+              ℹ️ Auto-Attached Student Details:
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <span><strong>Name:</strong> {myAdmission.applicantName}</span>
+              <span><strong>Email:</strong> {myAdmission.email}</span>
+              <span><strong>Course:</strong> {myAdmission.courseType || 'N/A'}</span>
+              <span><strong>Year:</strong> {myAdmission.admissionYear || 'N/A'}</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleDocSubmit}>
+            <div className="form-group">
+              <label>Select Document Type *</label>
+              <select
+                value={docFormData.documentType}
+                onChange={e => setDocFormData({ ...docFormData, documentType: e.target.value })}
+                required
+              >
+                <option value="">-- Select Document --</option>
+                <option value="ID_CARD">🪪 Apply for ID Card</option>
+                <option value="BONAFIDE">📋 Apply for Bonafide Certificate</option>
+                <option value="MARKSHEET">📄 Apply for Marksheet</option>
+                <option value="MIGRATION">📜 Apply for Migration Certificate</option>
+                <option value="TC">🎓 Apply for TC (Transfer Certificate)</option>
+              </select>
+              {docFormData.documentType === 'TC' && (
+                <small style={{ color: '#E65100', marginTop: '8px', display: 'block', fontSize: '13px' }}>
+                  ⚠️ TC requires extra approval: Accounts → Principal → Student Section
+                </small>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label>Reason / Purpose</label>
+              <textarea
+                rows="3"
+                placeholder="e.g. Required for next college admission, government job application, etc."
+                value={docFormData.reason}
+                onChange={e => setDocFormData({ ...docFormData, reason: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Urgency</label>
+              <select
+                value={docFormData.urgency}
+                onChange={e => setDocFormData({ ...docFormData, urgency: e.target.value })}
+              >
+                <option value="normal">📅 Normal (7-10 days)</option>
+                <option value="urgent">⚡ Urgent (1-3 days)</option>
+              </select>
+            </div>
+
+            <button type="submit" className="btn btn-primary" disabled={docLoading} style={{ padding: '12px 32px' }}>
+              {docLoading ? '⏳ Submitting...' : '🚀 Submit Request'}
+            </button>
+          </form>
+        </div>
+
+        {/* My Document Requests List */}
+        <h3 style={{ margin: '30px 0 16px', color: '#1565C0' }}>
+          📋 My Document Requests ({myDocRequests.length})
+        </h3>
+
+        {myDocRequests.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📄</div>
+            <h3>No Requests Yet</h3>
+            <p>Your document requests will appear here.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {myDocRequests.map(req => {
+              const statusStyle = getDocStatusStyle(req.status);
+              return (
+                <div
+                  key={req._id}
+                  style={{
+                    background: 'white',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: `2px solid ${statusStyle.color}`,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <h4 style={{ color: '#1565C0', marginBottom: '6px' }}>
+                        {req.documentTypeLabel || req.documentType}
+                      </h4>
+                      <p style={{ fontSize: '13px', color: '#666' }}>
+                        Requested: {new Date(req.createdAt).toLocaleDateString()}
+                        {req.urgency === 'urgent' && (
+                          <span style={{ marginLeft: '10px', color: '#E65100', fontWeight: '600' }}>
+                            ⚡ Urgent
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <span style={{
+                      padding: '6px 16px',
+                      borderRadius: '20px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      background: statusStyle.bg,
+                      color: statusStyle.color
+                    }}>
+                      {statusStyle.label}
+                    </span>
+                  </div>
+
+                  {req.reason && (
+                    <p style={{ fontSize: '14px', color: '#555', marginBottom: '10px' }}>
+                      <strong>Reason:</strong> {req.reason}
+                    </p>
+                  )}
+
+                  {/* Workflow Progress */}
+                  <div style={{
+                    background: '#f8faff',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    marginTop: '10px',
+                    fontSize: '13px'
+                  }}>
+                    <p style={{ fontWeight: '600', color: '#1565C0', marginBottom: '8px' }}>
+                      📊 Workflow Progress:
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span>📝 Submitted</span>
+                      <span>→</span>
+                      <span style={{
+                        color: req.accountsApprovedDate ? '#2E7D32' : '#999',
+                        fontWeight: req.accountsApprovedDate ? '600' : '400'
+                      }}>
+                        {req.accountsApprovedDate ? '✅' : '⏳'} Accounts
+                      </span>
+                      {req.documentType === 'TC' && (
+                        <>
+                          <span>→</span>
+                          <span style={{
+                            color: req.principalApprovedDate ? '#2E7D32' : '#999',
+                            fontWeight: req.principalApprovedDate ? '600' : '400'
+                          }}>
+                            {req.principalApprovedDate ? '✅' : '⏳'} Principal
+                          </span>
+                        </>
+                      )}
+                      <span>→</span>
+                      <span style={{
+                        color: req.status === 'completed' ? '#2E7D32' : '#999',
+                        fontWeight: req.status === 'completed' ? '600' : '400'
+                      }}>
+                        {req.status === 'completed' ? '✅' : '⏳'} Student Section
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Rejection reason if rejected */}
+                  {req.rejectionReason && (
+                    <div style={{
+                      background: '#ffebee',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      marginTop: '10px',
+                      fontSize: '13px',
+                      color: '#C62828'
+                    }}>
+                      <strong>❌ Rejected by {req.rejectedAt}:</strong> {req.rejectionReason}
+                    </div>
+                  )}
+
+                  {/* Generation notes if completed */}
+                  {req.status === 'completed' && req.generationNotes && (
+                    <div style={{
+                      background: '#e8f5e9',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      marginTop: '10px',
+                      fontSize: '13px',
+                      color: '#2E7D32'
+                    }}>
+                      <strong>✅ Generated by Student Section:</strong> {req.generationNotes}
+                      <br />
+                      <span style={{ fontSize: '12px' }}>
+                        Date: {new Date(req.generatedDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </>
+    )}
+  </div>
+)}
+{/* ============ END REQUEST DOCUMENTS TAB ============ */}
+
           {activeTab === 'attendance' && (
             <div className="empty-state">
               <div className="empty-icon">📊</div>
