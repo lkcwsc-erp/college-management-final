@@ -4,56 +4,90 @@ import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
+
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
+
     logout();
     navigate('/');
     setMenuOpen(false);
+
   };
 
- const getDashboardLink = () => {
+  const getDashboardLink = () => {
 
-  if (user?.role === 'admin') {
-    return '/admin/dashboard';
-  }
+    if (user?.role === 'admin') {
+      return '/admin/dashboard';
+    }
 
-  if (user?.role === 'staff_principal') {
-    return '/principal/dashboard';
-  }
+    if (user?.role === 'staff_principal') {
+      return '/principal/dashboard';
+    }
 
-  if (user?.role === 'staff_student') {
-    return '/staff/student-section';
-  }
+    if (user?.role === 'staff_student') {
+      return '/staff/student-section';
+    }
 
-  if (user?.role === 'staff_accounts') {
-    return '/staff/accounts-section';
-  }
+    if (user?.role === 'staff_accounts') {
+      return '/staff/accounts-section';
+    }
 
-  if (user?.role === 'staff_exam') {
-    return '/staff/exam-section';
-  }
+    if (user?.role === 'staff_exam') {
+      return '/staff/exam-section';
+    }
 
-  if (user?.role === 'staff_scholarship') {
-    return '/staff/scholarship-section';
-  }
+    if (user?.role === 'staff_scholarship') {
+      return '/staff/scholarship-section';
+    }
 
-  if (user?.role === 'staff') {
-    return '/staff/dashboard';
-  }
+    if (user?.role === 'staff') {
+      return '/staff/dashboard';
+    }
 
-  return '/student/dashboard';
+    return '/student/dashboard';
 
-};
-  
+  };
+
+  return (
+
+    <nav className="navbar">
+
+      {/* BRAND */}
+      <div className="navbar-brand">
+
+        <Link to="/" onClick={() => setMenuOpen(false)}>
+
+          <img
+            src="/college-logo.png"
+            alt="College Logo"
+            className="brand-logo-img"
+          />
+
+          <div className="brand-text">
+
+            <span className="brand-name">
+              Late Kalpana Chawla Women's Senior College
+            </span>
+
+            <span className="brand-sub">
+              Senior Science & Arts College, Gangakhed
+            </span>
+
+          </div>
+
+        </Link>
+
+      </div>
+
       {/* NAV LINKS */}
       <div className={`navbar-links ${menuOpen ? 'open' : ''}`}>
 
-        {/* PUBLIC NAVBAR - SIRF LOGIN SE PAHLE */}
         {!user && (
           <>
+
             <Link to="/" onClick={() => setMenuOpen(false)}>
               Home
             </Link>
@@ -62,32 +96,13 @@ const Navbar = () => {
               About
             </Link>
 
-            <div className="dropdown">
+            <Link to="/courses" onClick={() => setMenuOpen(false)}>
+              Courses
+            </Link>
 
-              <span className="dropdown-title">
-                Academic
-              </span>
-
-              <div className="dropdown-menu">
-
-                <Link to="/courses" onClick={() => setMenuOpen(false)}>
-                  Courses
-                </Link>
-
-                <Link to="/faculty" onClick={() => setMenuOpen(false)}>
-                  Faculty
-                </Link>
-
-                <Link to="/resources" onClick={() => setMenuOpen(false)}>
-                  Resources
-                </Link>
-
-                <Link to="/examination" onClick={() => setMenuOpen(false)}>
-                  Examination
-                </Link>
-
-              </div>
-            </div>
+            <Link to="/faculty" onClick={() => setMenuOpen(false)}>
+              Faculty
+            </Link>
 
             <Link to="/gallery" onClick={() => setMenuOpen(false)}>
               Gallery
@@ -97,14 +112,6 @@ const Navbar = () => {
               Events
             </Link>
 
-            <Link to="/naac" onClick={() => setMenuOpen(false)}>
-              NAAC
-            </Link>
-
-            <Link to="/alumni" onClick={() => setMenuOpen(false)}>
-              Alumni
-            </Link>
-
             <Link to="/admissions" onClick={() => setMenuOpen(false)}>
               Admissions
             </Link>
@@ -112,12 +119,13 @@ const Navbar = () => {
             <Link to="/contact" onClick={() => setMenuOpen(false)}>
               Contact
             </Link>
+
           </>
         )}
 
-        {/* LOGIN KE BAD */}
         {user ? (
           <>
+
             <Link
               to={getDashboardLink()}
               onClick={() => setMenuOpen(false)}
@@ -126,11 +134,16 @@ const Navbar = () => {
               Dashboard
             </Link>
 
-            <button className="btn" onClick={handleLogout}>
+            <button
+              className="btn"
+              onClick={handleLogout}
+            >
               Logout
             </button>
+
           </>
         ) : (
+
           <Link
             to="/login"
             onClick={() => setMenuOpen(false)}
@@ -138,6 +151,7 @@ const Navbar = () => {
           >
             Login
           </Link>
+
         )}
 
       </div>
@@ -147,13 +161,17 @@ const Navbar = () => {
         className="hamburger"
         onClick={() => setMenuOpen(!menuOpen)}
       >
+
         <span></span>
         <span></span>
         <span></span>
+
       </div>
 
     </nav>
+
   );
+
 };
 
 export default Navbar;
