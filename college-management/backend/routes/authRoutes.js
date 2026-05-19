@@ -78,12 +78,12 @@ router.post('/staff-login', async (req, res) => {
 
     }
 
-    res.json({
-      success: true,
-      otpRequired: false,
-      token: 'login-success',
-      user
-    });
+   res.json({
+  success: true,
+  otpRequired: false,
+  token: user._id,
+  user
+});
 
   } catch (error) {
 
