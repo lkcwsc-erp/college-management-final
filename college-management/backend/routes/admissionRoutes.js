@@ -156,5 +156,114 @@ router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+// Student Section Pending Admissions
+router.get('/student-section/pending', async (req, res) => {
 
+  try {
+
+    const admissions = await Admission.find({
+      studentSectionStatus: 'pending'
+    });
+
+    res.json({
+      success: true,
+      admissions
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+
+});
+
+
+// Student Section Verify Admission
+router.put('/student-section/verify/:id', async (req, res) => {
+
+  try {
+
+    await Admission.findByIdAndUpdate(
+      req.params.id,
+      {
+        studentSectionStatus: 'verified'
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Admission verified successfully'
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+
+});
+
+
+// Principal Pending Admissions
+router.get('/principal/pending', async (req, res) => {
+
+  try {
+
+    const admissions = await Admission.find({
+      studentSectionStatus: 'verified',
+      principalStatus: 'pending'
+    });
+
+    res.json({
+      success: true,
+      admissions
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+
+});
+
+
+// Principal Approve Admission
+router.put('/principal/approve/:id', async (req, res) => {
+
+  try {
+
+    await Admission.findByIdAndUpdate(
+      req.params.id,
+      {
+        principalStatus: 'approved',
+        status: 'approved'
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Admission approved by principal'
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+
+});
 module.exports = router;
