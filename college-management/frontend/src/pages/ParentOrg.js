@@ -2,11 +2,16 @@ import React from "react";
 
 const ParentOrg = () => {
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>About Our Parent Organization</h1>
+    <div style={{ padding: "40px" }}>
+      <h1>About Our Parent Organisation</h1>
+
+      <h2>Vidyaniketan Sevabhavi Sanstha (VNSS)</h2>
+
       <p>
-        This page contains complete information about the parent organization.
+        Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational
+        and social welfare organization established in Maharashtra, India.
       </p>
+
     </div>
   );
 };
