@@ -38,6 +38,7 @@ app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/enquiries', require('./routes/enqueryRoutes'));
 
 app.use('/api/admissions', require('./routes/admissionRoutes'));
+app.use('/api/document-requests', require('./routes/documentRequestRoutes'));
 app.use('/api/staff', require('./routes/staffRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/results', require('./routes/resultRoutes'));
