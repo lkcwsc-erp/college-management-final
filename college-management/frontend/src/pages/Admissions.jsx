@@ -990,7 +990,7 @@ const [activeTab, setActiveTab] = useState('process');
                           placeholder="e.g. 12, Flat No. 3"
                           value={formData.houseNumber}
                           onChange={handleChange}
-                          required
+                          
                         />
                       </div>
                       <div className="form-group">
@@ -1001,7 +1001,7 @@ const [activeTab, setActiveTab] = useState('process');
                           placeholder="e.g. Gandhi Nagar, Main Road"
                           value={formData.streetArea}
                           onChange={handleChange}
-                          required
+                         
                         />
                       </div>
                     </div>
