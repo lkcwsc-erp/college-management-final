@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
 import About from './pages/About';
+import ParentOrg from "./pages/ParentOrg";
 import Contact from './pages/Contact';
 import Courses from './pages/Courses';
 import Faculty from './pages/Faculty';
@@ -32,6 +33,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
+          <Route path="/parent-organisation" element={<ParentOrg />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/faculty" element={<Faculty />} />
