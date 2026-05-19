@@ -1,44 +1,39 @@
 import React from "react";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import "./About.css";
 
-function ParentOrg() {
+const ParentOrg = () => {
   return (
-    <div>
-      <h1>About Our Parent Organization</h1>
+    <>
+      <Navbar />
 
-      <p>
-        Our parent organization is dedicated to providing quality education,
-        innovation, and student development. The organization supports various
-        colleges and institutions with modern infrastructure, experienced
-        faculty, and academic excellence.
-      </p>
+      <div className="parent-org-page">
 
-      <h2>Vision</h2>
-      <p>
-        To create a strong educational environment that empowers students with
-        knowledge, skills, and values for a successful future.
-      </p>
+        <h1>About Our Parent Organisation</h1>
 
-      <h2>Mission</h2>
-      <p>
-        To deliver high-quality education, encourage research and innovation,
-        and help students achieve personal and professional growth.
-      </p>
+        <h2>Vidyaniketan Sevabhavi Sanstha (VNSS)</h2>
 
-      <h2>Objectives</h2>
-      <ul>
-        <li>Provide quality education</li>
-        <li>Support student development</li>
-        <li>Promote innovation and research</li>
-        <li>Develop leadership and communication skills</li>
-      </ul>
+        <p>
+          Vidyaniketan Sevabhavi Sanstha (VNSS) is a non-profit educational
+          and social welfare organization established in Maharashtra, India.
+        </p>
 
-      <h2>Contact Information</h2>
-      <p>Email: info@organization.com</p>
-      <p>Phone: +91 9876543210</p>
-      <p>Address: Pune, Maharashtra, India</p>
-    </div>
+        <p>
+          The organization works for education, student development,
+          women empowerment and social welfare activities.
+        </p>
+
+        <p>
+          VNSS aims to provide quality education and opportunities
+          for students through various academic and social initiatives.
+        </p>
+
+      </div>
+
+      <Footer />
+    </>
   );
-}
+};
 
 export default ParentOrg;
