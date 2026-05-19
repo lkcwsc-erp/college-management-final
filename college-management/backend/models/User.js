@@ -12,15 +12,16 @@ const userSchema = new mongoose.Schema({
   plainPassword: { type: String, default: '' },
   role: {
     type: String,
-    enum: [
-      'student',
-      'staff',
-      'staff_student',
-      'staff_accounts',
-      'staff_exam',
-      'staff_scholarship',
-      'admin'
-    ],
+   enum: [
+  'student',
+  'staff',
+  'staff_student',
+  'staff_accounts',
+  'staff_exam',
+  'staff_scholarship',
+  'staff_principal',
+  'admin'
+],
     default: 'student'
   },
   phone: { type: String },
