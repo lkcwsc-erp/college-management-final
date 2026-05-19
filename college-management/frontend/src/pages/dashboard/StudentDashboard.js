@@ -38,15 +38,16 @@ useEffect(() => {
     navigate('/');
   };
 
-  const tabs = [
-    { id: 'home', label: '🏠 Dashboard' },
-    { id: 'application', label: '📋 My Application' },
-    { id: 'profile', label: '👤 My Profile' },
-    { id: 'fees', label: '💰 My Fees' },
-    { id: 'attendance', label: '📊 Attendance' },
-    { id: 'results', label: '🎓 Results' },
-    { id: 'notices', label: '📢 Notices' },
-  ];
+ const tabs = [
+  { id: 'home', label: '🏠 Dashboard' },
+  { id: 'application', label: '📋 My Application' },
+  { id: 'profile', label: '👤 My Profile' },
+  { id: 'fees', label: '💰 My Fees' },
+  { id: 'documents', label: '📄 Request Documents' },
+  { id: 'attendance', label: '📊 Attendance' },
+  { id: 'results', label: '🎓 Results' },
+  { id: 'notices', label: '📢 Notices' },
+];
 
   const getStatusStyle = (status) => {
     if (status === 'approved') return { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Approved' };
