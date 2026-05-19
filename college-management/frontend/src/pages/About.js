@@ -77,8 +77,7 @@ const cards = [
   <button className="parent-org-btn">
     About Our Parent Organisation
   </button>
-</Link>)}
-    </div>
+</Link>
     </section>
 
       <section className="about-section container">
