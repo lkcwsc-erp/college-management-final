@@ -11,6 +11,8 @@ const StudentSectionDashboard = () => {
 
   // Enquiry states
   const [enquiries, setEnquiries] = useState([]);
+  const [admissions, setAdmissions] = useState([]);
+const [admissionsLoading, setAdmissionsLoading] = useState(false);
   const [enquiriesLoading, setEnquiriesLoading] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [statusUpdate, setStatusUpdate] = useState({ status: '', notes: '' });
@@ -36,12 +38,43 @@ const StudentSectionDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    if (activeTab === 'enquiries' || activeTab === 'home') {
-      fetchEnquiries();
-    }
-  }, [activeTab]);
+const fetchAdmissions = async () => {
 
+  setAdmissionsLoading(true);
+
+  try {
+
+    const res = await API.get('/admissions/student-section/pending');
+
+    if (res.data.success) {
+      setAdmissions(res.data.admissions || []);
+    }
+
+  } catch (err) {
+
+    console.error('Failed to fetch admissions:', err);
+
+  } finally {
+
+    setAdmissionsLoading(false);
+
+  }
+
+};
+useEffect(() => {
+
+  if (
+    activeTab === 'enquiries' ||
+    activeTab === 'home' ||
+    activeTab === 'admissions'
+  ) {
+
+    fetchEnquiries();
+    fetchAdmissions();
+
+  }
+
+}, [activeTab]);
   // Update enquiry status
   const handleStatusUpdate = async (id) => {
     if (!statusUpdate.status) {
@@ -119,6 +152,7 @@ const StudentSectionDashboard = () => {
     { id: 'idcard',     label: '🪪 Generate ID Card' },
     { id: 'prn',        label: '🔢 Update PRN/ABC ID' },
     { id: 'students',   label: '👩‍🎓 All Students' },
+    { id: 'admissions', label: '🎓 Pending Admissions' },
   ];
 
   return (
@@ -496,9 +530,97 @@ const StudentSectionDashboard = () => {
               )}
             </div>
           )}
+          {activeTab === 'admissions' && (
 
+  <div>
+
+    <h3 style={{ marginBottom: '20px' }}>
+      🎓 Pending Admission Forms
+    </h3>
+
+    {admissionsLoading ? (
+
+      <p>Loading admissions...</p>
+
+    ) : admissions.length === 0 ? (
+
+      <div className="empty-state">
+        <div className="empty-icon">📭</div>
+        <h3>No Pending Admissions</h3>
+      </div>
+
+    ) : (
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+
+        {admissions.map(adm => (
+
+          <div
+            key={adm._id}
+            style={{
+              background: '#fff',
+              padding: '18px',
+              borderRadius: '12px',
+              border: '1px solid #e0e0e0'
+            }}
+          >
+
+            <h4>{adm.applicantName}</h4>
+
+            <p>📧 {adm.email}</p>
+
+            <p>📱 {adm.phone}</p>
+
+            <button
+              onClick={async () => {
+
+                try {
+
+                  await API.put(
+                    `/admissions/student-section/verify/${adm._id}`
+                  );
+
+                  fetchAdmissions();
+
+                  alert('Admission verified successfully');
+
+                } catch (err) {
+
+                  alert('Verification failed');
+
+                }
+
+              }}
+              style={{
+                marginTop: '10px',
+                background: '#2E7D32',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              ✅ Verify Admission
+            </button>
+
+          </div>
+
+        ))}
+
+      </div>
+
+    )}
+
+  </div>
+
+)}
           {/* ============= OTHER TABS (Coming Soon) ============= */}
-          {!['home', 'enquiries'].includes(activeTab) && (
+          {!['home', 'enquiries', 'admissions'].includes(activeTab) && (
             <div className="empty-state">
               <div className="empty-icon">🚧</div>
               <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
