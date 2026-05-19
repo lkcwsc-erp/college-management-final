@@ -22,10 +22,11 @@ const AdminDashboard = () => {
   const [message, setMessage] = useState('');
   const [staff, setStaff] = useState([]);
   const [editStaff, setEditStaff] = useState(null);
-const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   const [staffForm, setStaffForm] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     phone: '',
@@ -110,13 +111,15 @@ const [visiblePasswords, setVisiblePasswords] = useState({});
       await API.post('/auth/create-staff', staffForm);
       showMessage('✅ Staff created successfully!');
       setShowCredentials({
+        name: staffForm.name,
+        username: staffForm.username,
         email: staffForm.email,
         password: staffForm.password,
-        role: staffForm.role,
-        name: staffForm.name
+        role: staffForm.role
       });
       setStaffForm({
         name: '',
+        username: '',
         email: '',
         password: '',
         phone: '',
@@ -139,22 +142,23 @@ const [visiblePasswords, setVisiblePasswords] = useState({});
       }
     }
   };
+
   const handleEditStaffSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    await API.put(`/auth/staff/${editStaff._id}`, {
-      name: editStaff.name,
-      username: editStaff.username,
-      email: editStaff.email,
-      phone: editStaff.phone,
-    });
-    showMessage('✅ Staff updated!');
-    setEditStaff(null);
-    API.get('/auth/staff').then(res => setStaff(res.data.staff || []));
-  } catch (err) {
-    showMessage('Failed: ' + (err.response?.data?.message || 'Error'));
-  }
-};
+    e.preventDefault();
+    try {
+      await API.put(`/auth/staff/${editStaff._id}`, {
+        name: editStaff.name,
+        username: editStaff.username,
+        email: editStaff.email,
+        phone: editStaff.phone,
+      });
+      showMessage('✅ Staff updated!');
+      setEditStaff(null);
+      API.get('/auth/staff').then(res => setStaff(res.data.staff || []));
+    } catch (err) {
+      showMessage('Failed: ' + (err.response?.data?.message || 'Error'));
+    }
+  };
 
   // ====== GALLERY FUNCTIONS ======
   const handleImageChange = (e) => {
@@ -543,231 +547,231 @@ const [visiblePasswords, setVisiblePasswords] = useState({});
 
           {/* ============ STAFF LOGIN TAB ============ */}
           {activeTab === 'staff' && (
-  <div>
-    {/* SUCCESS MODAL */}
-    {showCredentials && (
-      <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',display:'flex',justifyContent:'center',alignItems:'center',zIndex:9999,padding:'20px'}} onClick={() => setShowCredentials(null)}>
-        <div style={{background:'white',borderRadius:'12px',padding:'30px',maxWidth:'500px',width:'100%'}} onClick={e => e.stopPropagation()}>
-          <div style={{textAlign:'center',marginBottom:'20px'}}>
-            <div style={{fontSize:'48px'}}>✅</div>
-            <h2 style={{color:'#28a745',margin:'10px 0'}}>Staff Created!</h2>
-            <p style={{color:'#666'}}>Share these credentials with staff member</p>
-          </div>
-          <div style={{background:'#f0f9ff',padding:'20px',borderRadius:'8px',border:'2px solid #bae6fd',marginBottom:'20px'}}>
-            <p style={{margin:'8px 0'}}><strong>👤 Name:</strong> {showCredentials.name}</p>
-            <p style={{margin:'8px 0'}}><strong>🪪 Username:</strong> {showCredentials.username}</p>
-            <p style={{margin:'8px 0'}}><strong>📧 Email:</strong> {showCredentials.email}</p>
-            <p style={{margin:'8px 0'}}><strong>🔑 Password:</strong> <code style={{background:'white',padding:'4px 10px',borderRadius:'4px',fontFamily:'monospace'}}>{showCredentials.password}</code></p>
-            <p style={{margin:'8px 0'}}><strong>👔 Role:</strong> {
-             showCredentials.role === 'staff_student' ? 'Student Section' :
-showCredentials.role === 'staff_accounts' ? 'Accounts Section' :
-showCredentials.role === 'staff_exam' ? 'Examination Section' :
-showCredentials.role === 'staff_scholarship' ? 'Scholarship Section' :
-showCredentials.role === 'principal' ? 'Principal' :
-showCredentials.role
-            }</p>
-          </div>
-          <div style={{background:'#fff3cd',padding:'12px',borderRadius:'8px',fontSize:'13px',color:'#856404',marginBottom:'16px'}}>
-            ⚠️ Save these credentials! Password cannot be viewed again.
-          </div>
-          <button className="btn btn-primary" onClick={() => setShowCredentials(null)} style={{width:'100%'}}>Got It! Close</button>
-        </div>
-      </div>
-    )}
-
-    {/* EDIT STAFF MODAL */}
-    {editStaff && (
-      <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',display:'flex',justifyContent:'center',alignItems:'center',zIndex:9999,padding:'20px'}} onClick={() => setEditStaff(null)}>
-        <div style={{background:'white',borderRadius:'12px',padding:'30px',maxWidth:'480px',width:'100%'}} onClick={e => e.stopPropagation()}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}>
-            <h2 style={{color:'#1565C0'}}>✏️ Edit Staff</h2>
-            <button onClick={() => setEditStaff(null)} style={{background:'#eee',border:'none',borderRadius:'50%',width:'36px',height:'36px',cursor:'pointer',fontSize:'18px'}}>✕</button>
-          </div>
-          <form onSubmit={handleEditStaffSubmit}>
-            <div className="form-group">
-              <label>Full Name *</label>
-              <input type="text" value={editStaff.name}
-                onChange={e => setEditStaff({...editStaff, name: e.target.value})} required />
-            </div>
-            <div className="form-group">
-              <label>Username</label>
-              <input type="text" value={editStaff.username || ''}
-                onChange={e => setEditStaff({...editStaff, username: e.target.value})} />
-            </div>
-            <div className="form-group">
-              <label>Email *</label>
-              <input type="email" value={editStaff.email}
-                onChange={e => setEditStaff({...editStaff, email: e.target.value})} required />
-            </div>
-            <div className="form-group">
-              <label>Phone</label>
-              <input type="text" value={editStaff.phone || ''} maxLength="10"
-                onChange={e => {
-                  const val = e.target.value;
-                  if (/^\d{0,10}$/.test(val)) setEditStaff({...editStaff, phone: val});
-                }} />
-            </div>
-            <div style={{display:'flex',gap:'10px',marginTop:'20px'}}>
-              <button type="submit" className="btn btn-primary">💾 Save Changes</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setEditStaff(null)}>Cancel</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )}
-
-    {/* CREATE FORM */}
-    <div className="form-card">
-      <h3>👥 Create Staff Login</h3>
-      <p style={{color:'#666',fontSize:'14px',marginBottom:'20px'}}>Create login credentials for staff members. Choose their section role.</p>
-      <form onSubmit={handleStaffSubmit}>
-        <div className="form-row-dash">
-          <div className="form-group">
-            <label>Full Name *</label>
-            <input type="text" placeholder="e.g. Rahul Sharma"
-              value={staffForm.name}
-              onChange={e => setStaffForm({...staffForm, name: e.target.value})} required />
-          </div>
-          <div className="form-group">
-            <label>Username *</label>
-            <input type="text" placeholder="e.g. rahul_sharma"
-              value={staffForm.username}
-              onChange={e => setStaffForm({...staffForm, username: e.target.value})} required />
-          </div>
-        </div>
-        <div className="form-row-dash">
-          <div className="form-group">
-            <label>Email Address *</label>
-            <input type="email" placeholder="staff@lkcwsc.edu.in"
-              value={staffForm.email}
-              onChange={e => setStaffForm({...staffForm, email: e.target.value})} required />
-          </div>
-          <div className="form-group">
-            <label>Password * (min 6 characters)</label>
-            <input type="text" placeholder="e.g. Staff@1234"
-              value={staffForm.password}
-              onChange={e => setStaffForm({...staffForm, password: e.target.value})}
-              minLength="6" required />
-          </div>
-        </div>
-        <div className="form-row-dash">
-          <div className="form-group">
-            <label>Phone Number</label>
-            <input type="text" placeholder="9876543210"
-              value={staffForm.phone} maxLength="10"
-              onChange={e => {
-                const val = e.target.value;
-                if (/^\d{0,10}$/.test(val)) setStaffForm({...staffForm, phone: val});
-              }} />
-          </div>
-          <div className="form-group">
-            <label>Staff Section Role *</label>
-            <select value={staffForm.role}
-              onChange={e => setStaffForm({...staffForm, role: e.target.value})} required>
-              <option value="staff_student">👩‍🎓 Student Section</option>
-              <option value="staff_accounts">💰 Accounts Section</option>
-              <option value="staff_exam">📝 Examination Section</option>
-              <option value="staff_scholarship">🎓 Scholarship Section</option>
-              <option value="staff_principal">👨‍🏫 Principal</option>
-
-            </select>
-            <small style={{color:'#666',marginTop:'6px',display:'block'}}>💡 Staff will be redirected to their section dashboard after login</small>
-          </div>
-        </div>
-        <button type="submit" className="btn btn-primary" style={{padding:'12px 32px'}}>➕ Create Staff Login</button>
-      </form>
-    </div>
-
-    {/* STAFF TABLE */}
-    <h3 style={{margin:'30px 0 16px'}}>👥 All Staff Members ({staff.length})</h3>
-
-    {staff.length === 0 ? (
-      <div className="empty-state">
-        <div className="empty-icon">👨‍💼</div>
-        <h3>No Staff Yet</h3>
-        <p>Create staff members to manage ERP sections.</p>
-      </div>
-    ) : (
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Username</th>
-              <th>Email & Password</th>
-              <th>Phone</th>
-              <th>Role</th>
-              <th>Created</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staff.map(s => (
-              <tr key={s._id}>
-                <td>{s.name}</td>
-                <td>
-                  <code style={{background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px',fontSize:'13px'}}>
-                    {s.username || '-'}
-                  </code>
-                </td>
-                <td>
-                  {/* Email */}
-                  <div style={{fontSize:'13px',color:'#333',marginBottom:'4px'}}>📧 {s.email}</div>
-                  {/* Password with eye */}
-                  <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                    <code style={{background:'#f1f5f9',padding:'2px 10px',borderRadius:'4px',fontFamily:'monospace',fontSize:'13px',minWidth:'100px',letterSpacing: visiblePasswords[s._id] ? 'normal' : '3px'}}>
-                      {visiblePasswords[s._id]
-                        ? (s.plainPassword || s.password || '(not stored)')
-                        : '••••••••'}
-                    </code>
-                    <button
-                      onClick={() => setVisiblePasswords(prev => ({...prev, [s._id]: !prev[s._id]}))}
-                      title={visiblePasswords[s._id] ? 'Hide' : 'Show password'}
-                      style={{background:'none',border:'1px solid #ddd',borderRadius:'6px',cursor:'pointer',padding:'3px 7px',fontSize:'15px',lineHeight:1}}>
-                      {visiblePasswords[s._id] ? '🙈' : '👁️'}
-                    </button>
+            <div>
+              {/* SUCCESS MODAL */}
+              {showCredentials && (
+                <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',display:'flex',justifyContent:'center',alignItems:'center',zIndex:9999,padding:'20px'}} onClick={() => setShowCredentials(null)}>
+                  <div style={{background:'white',borderRadius:'12px',padding:'30px',maxWidth:'500px',width:'100%'}} onClick={e => e.stopPropagation()}>
+                    <div style={{textAlign:'center',marginBottom:'20px'}}>
+                      <div style={{fontSize:'48px'}}>✅</div>
+                      <h2 style={{color:'#28a745',margin:'10px 0'}}>Staff Created!</h2>
+                      <p style={{color:'#666'}}>Share these credentials with staff member</p>
+                    </div>
+                    <div style={{background:'#f0f9ff',padding:'20px',borderRadius:'8px',border:'2px solid #bae6fd',marginBottom:'20px'}}>
+                      <p style={{margin:'8px 0'}}><strong>👤 Name:</strong> {showCredentials.name}</p>
+                      <p style={{margin:'8px 0'}}><strong>🪪 Username:</strong> {showCredentials.username}</p>
+                      <p style={{margin:'8px 0'}}><strong>📧 Email:</strong> {showCredentials.email}</p>
+                      <p style={{margin:'8px 0'}}><strong>🔑 Password:</strong> <code style={{background:'white',padding:'4px 10px',borderRadius:'4px',fontFamily:'monospace'}}>{showCredentials.password}</code></p>
+                      <p style={{margin:'8px 0'}}><strong>👔 Role:</strong> {
+                        showCredentials.role === 'staff_principal' ? '👨‍🏫 Principal' :
+                        showCredentials.role === 'staff_student' ? '👩‍🎓 Student Section' :
+                        showCredentials.role === 'staff_accounts' ? '💰 Accounts Section' :
+                        showCredentials.role === 'staff_exam' ? '📝 Examination Section' :
+                        showCredentials.role === 'staff_scholarship' ? '🎓 Scholarship Section' :
+                        showCredentials.role
+                      }</p>
+                    </div>
+                    <div style={{background:'#fff3cd',padding:'12px',borderRadius:'8px',fontSize:'13px',color:'#856404',marginBottom:'16px'}}>
+                      ⚠️ Save these credentials! Password cannot be viewed again.
+                    </div>
+                    <button className="btn btn-primary" onClick={() => setShowCredentials(null)} style={{width:'100%'}}>Got It! Close</button>
                   </div>
-                </td>
-                <td>{s.phone || '-'}</td>
-                <td>
-                  <span className="notice-tag" style={{
-                    background: s.role === 'staff_student' ? '#dbeafe' :
-                               s.role === 'staff_accounts' ? '#dcfce7' :
-                               s.role === 'staff_exam' ? '#fef3c7' :
-                               s.role === 'staff_scholarship' ? '#f3e8ff' : '#e5e7eb',
-                    color: s.role === 'staff_student' ? '#1e40af' :
-                          s.role === 'staff_accounts' ? '#15803d' :
-                          s.role === 'staff_exam' ? '#92400e' :
-                          s.role === 'staff_scholarship' ? '#7e22ce' : '#374151'
-                  }}>
-                    {s.role === 'staff_student' ? '👩‍🎓 Student Section' :
-                     s.role === 'staff_accounts' ? '💰 Accounts' :
-                     s.role === 'staff_exam' ? '📝 Examination' :
-                     s.role === 'staff_scholarship' ? '🎓 Scholarship' : s.role}
-                  </span>
-                </td>
-                <td>{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
-                <td>
-                  <div style={{display:'flex',gap:'6px'}}>
-                    <button
-                      className="btn btn-primary"
-                      style={{padding:'5px 12px',fontSize:'13px',background:'#1565C0'}}
-                      onClick={() => setEditStaff({...s})}>
-                      ✏️ Edit
-                    </button>
-                    <button className="btn-delete" onClick={() => deleteStaff(s._id)}>
-                      🗑️ Delete
-                    </button>
+                </div>
+              )}
+
+              {/* EDIT STAFF MODAL */}
+              {editStaff && (
+                <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',display:'flex',justifyContent:'center',alignItems:'center',zIndex:9999,padding:'20px'}} onClick={() => setEditStaff(null)}>
+                  <div style={{background:'white',borderRadius:'12px',padding:'30px',maxWidth:'480px',width:'100%'}} onClick={e => e.stopPropagation()}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}>
+                      <h2 style={{color:'#1565C0'}}>✏️ Edit Staff</h2>
+                      <button onClick={() => setEditStaff(null)} style={{background:'#eee',border:'none',borderRadius:'50%',width:'36px',height:'36px',cursor:'pointer',fontSize:'18px'}}>✕</button>
+                    </div>
+                    <form onSubmit={handleEditStaffSubmit}>
+                      <div className="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" value={editStaff.name}
+                          onChange={e => setEditStaff({...editStaff, name: e.target.value})} required />
+                      </div>
+                      <div className="form-group">
+                        <label>Username</label>
+                        <input type="text" value={editStaff.username || ''}
+                          onChange={e => setEditStaff({...editStaff, username: e.target.value})} />
+                      </div>
+                      <div className="form-group">
+                        <label>Email *</label>
+                        <input type="email" value={editStaff.email}
+                          onChange={e => setEditStaff({...editStaff, email: e.target.value})} required />
+                      </div>
+                      <div className="form-group">
+                        <label>Phone</label>
+                        <input type="text" value={editStaff.phone || ''} maxLength="10"
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (/^\d{0,10}$/.test(val)) setEditStaff({...editStaff, phone: val});
+                          }} />
+                      </div>
+                      <div style={{display:'flex',gap:'10px',marginTop:'20px'}}>
+                        <button type="submit" className="btn btn-primary">💾 Save Changes</button>
+                        <button type="button" className="btn btn-secondary" onClick={() => setEditStaff(null)}>Cancel</button>
+                      </div>
+                    </form>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-)}
+                </div>
+              )}
+
+              {/* CREATE FORM */}
+              <div className="form-card">
+                <h3>👥 Create Staff Login</h3>
+                <p style={{color:'#666',fontSize:'14px',marginBottom:'20px'}}>Create login credentials for staff members. Choose their section role.</p>
+                <form onSubmit={handleStaffSubmit}>
+                  <div className="form-row-dash">
+                    <div className="form-group">
+                      <label>Full Name *</label>
+                      <input type="text" placeholder="e.g. Rahul Sharma"
+                        value={staffForm.name}
+                        onChange={e => setStaffForm({...staffForm, name: e.target.value})} required />
+                    </div>
+                    <div className="form-group">
+                      <label>Username *</label>
+                      <input type="text" placeholder="e.g. rahul_sharma"
+                        value={staffForm.username}
+                        onChange={e => setStaffForm({...staffForm, username: e.target.value})} required />
+                    </div>
+                  </div>
+                  <div className="form-row-dash">
+                    <div className="form-group">
+                      <label>Email Address *</label>
+                      <input type="email" placeholder="staff@lkcwsc.edu.in"
+                        value={staffForm.email}
+                        onChange={e => setStaffForm({...staffForm, email: e.target.value})} required />
+                    </div>
+                    <div className="form-group">
+                      <label>Password * (min 6 characters)</label>
+                      <input type="text" placeholder="e.g. Staff@1234"
+                        value={staffForm.password}
+                        onChange={e => setStaffForm({...staffForm, password: e.target.value})}
+                        minLength="6" required />
+                    </div>
+                  </div>
+                  <div className="form-row-dash">
+                    <div className="form-group">
+                      <label>Phone Number</label>
+                      <input type="text" placeholder="9876543210"
+                        value={staffForm.phone} maxLength="10"
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (/^\d{0,10}$/.test(val)) setStaffForm({...staffForm, phone: val});
+                        }} />
+                    </div>
+                    <div className="form-group">
+                      <label>Staff Section Role *</label>
+                      <select value={staffForm.role}
+                        onChange={e => setStaffForm({...staffForm, role: e.target.value})} required>
+                        <option value="staff_principal">👨‍🏫 Principal</option>
+                        <option value="staff_student">👩‍🎓 Student Section</option>
+                        <option value="staff_accounts">💰 Accounts Section</option>
+                        <option value="staff_exam">📝 Examination Section</option>
+                        <option value="staff_scholarship">🎓 Scholarship Section</option>
+                      </select>
+                      <small style={{color:'#666',marginTop:'6px',display:'block'}}>💡 Staff will be redirected to their section dashboard after login</small>
+                    </div>
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{padding:'12px 32px'}}>➕ Create Staff Login</button>
+                </form>
+              </div>
+
+              {/* STAFF TABLE */}
+              <h3 style={{margin:'30px 0 16px'}}>👥 All Staff Members ({staff.length})</h3>
+
+              {staff.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">👨‍💼</div>
+                  <h3>No Staff Yet</h3>
+                  <p>Create staff members to manage ERP sections.</p>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Email & Password</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {staff.map(s => (
+                        <tr key={s._id}>
+                          <td>{s.name}</td>
+                          <td>
+                            <code style={{background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px',fontSize:'13px'}}>
+                              {s.username || '-'}
+                            </code>
+                          </td>
+                          <td>
+                            <div style={{fontSize:'13px',color:'#333',marginBottom:'4px'}}>📧 {s.email}</div>
+                            <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                              <code style={{background:'#f1f5f9',padding:'2px 10px',borderRadius:'4px',fontFamily:'monospace',fontSize:'13px',minWidth:'100px',letterSpacing: visiblePasswords[s._id] ? 'normal' : '3px'}}>
+                                {visiblePasswords[s._id]
+                                  ? (s.plainPassword || s.password || '(not stored)')
+                                  : '••••••••'}
+                              </code>
+                              <button
+                                onClick={() => setVisiblePasswords(prev => ({...prev, [s._id]: !prev[s._id]}))}
+                                title={visiblePasswords[s._id] ? 'Hide' : 'Show password'}
+                                style={{background:'none',border:'1px solid #ddd',borderRadius:'6px',cursor:'pointer',padding:'3px 7px',fontSize:'15px',lineHeight:1}}>
+                                {visiblePasswords[s._id] ? '🙈' : '👁️'}
+                              </button>
+                            </div>
+                          </td>
+                          <td>{s.phone || '-'}</td>
+                          <td>
+                            <span className="notice-tag" style={{
+                              background: s.role === 'staff_principal' ? '#fee2e2' :
+                                         s.role === 'staff_student' ? '#dbeafe' :
+                                         s.role === 'staff_accounts' ? '#dcfce7' :
+                                         s.role === 'staff_exam' ? '#fef3c7' :
+                                         s.role === 'staff_scholarship' ? '#f3e8ff' : '#e5e7eb',
+                              color: s.role === 'staff_principal' ? '#991b1b' :
+                                    s.role === 'staff_student' ? '#1e40af' :
+                                    s.role === 'staff_accounts' ? '#15803d' :
+                                    s.role === 'staff_exam' ? '#92400e' :
+                                    s.role === 'staff_scholarship' ? '#7e22ce' : '#374151'
+                            }}>
+                              {s.role === 'staff_principal' ? '👨‍🏫 Principal' :
+                               s.role === 'staff_student' ? '👩‍🎓 Student Section' :
+                               s.role === 'staff_accounts' ? '💰 Accounts' :
+                               s.role === 'staff_exam' ? '📝 Examination' :
+                               s.role === 'staff_scholarship' ? '🎓 Scholarship' : s.role}
+                            </span>
+                          </td>
+                          <td>{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          <td>
+                            <div style={{display:'flex',gap:'6px'}}>
+                              <button
+                                className="btn btn-primary"
+                                style={{padding:'5px 12px',fontSize:'13px',background:'#1565C0'}}
+                                onClick={() => setEditStaff({...s})}>
+                                ✏️ Edit
+                              </button>
+                              <button className="btn-delete" onClick={() => deleteStaff(s._id)}>
+                                🗑️ Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
           {/* ============ END STAFF LOGIN TAB ============ */}
 
           {activeTab === 'gallery' && (
@@ -1156,12 +1160,12 @@ showCredentials.role
                             onClick={() => updateAdmissionStatus(selectedAdmission._id, 'rejected')}
                           >❌ Reject</button>
                           <button
-  className="btn btn-primary"
-  style={{ background: selectedAdmission?.feesPaid ? '#dc3545' : '#28a745' }}
-  onClick={() => toggleFeesPaid(selectedAdmission)}
->
-  {selectedAdmission?.feesPaid ? '💸 Mark Unpaid' : '💰 Mark Fees Paid'}
-</button>
+                            className="btn btn-primary"
+                            style={{ background: selectedAdmission?.feesPaid ? '#dc3545' : '#28a745' }}
+                            onClick={() => toggleFeesPaid(selectedAdmission)}
+                          >
+                            {selectedAdmission?.feesPaid ? '💸 Mark Unpaid' : '💰 Mark Fees Paid'}
+                          </button>
                           <button
                             className="btn-delete"
                             onClick={() => deleteAdmission(selectedAdmission._id)}
