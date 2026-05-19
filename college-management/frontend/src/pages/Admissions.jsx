@@ -1824,7 +1824,7 @@ const [activeTab, setActiveTab] = useState('process');
           </div>
         )}
 
-        {/* ============= ENQUIRY TAB ============= */}
+        {/* =============ADMISSION ENQUIRY TAB ============= */}
         {activeTab === 'enquiry' && (
           <div className="tab-content">
             <h2>💬 Admission Enquiry Form</h2>
