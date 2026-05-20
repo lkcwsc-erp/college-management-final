@@ -58,9 +58,14 @@ router.post('/', uploadFields, async (req, res) => {
     if (!data.dateOfBirth || data.dateOfBirth === '') delete data.dateOfBirth;
     if (!data.casteValidityDate || data.casteValidityDate === '') delete data.casteValidityDate;
 
+    
     // Workflow status
-    data.studentSectionStatus = 'pending';
-    data.status = 'pending';
+data.studentSectionStatus = 'pending';
+
+data.principalStatus = 'pending';
+
+data.status = 'pending';
+
 
     const admission = await Admission.create(data);
     console.log('✅ Admission created:', admission._id);
