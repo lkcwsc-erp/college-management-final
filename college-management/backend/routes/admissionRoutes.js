@@ -135,7 +135,7 @@ router.put('/staff-approve/:id', protect, authorizeRoles('staff_student', 'admin
     if (!admission) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
-    if (admission.staffStatus !== 'pending') {
+    if (admission.studentSectionStatus !== 'pending')
       return res.status(400).json({ success: false, message: 'Already processed' });
     }
 
@@ -196,7 +196,7 @@ router.get('/principal/pending', protect, authorizeRoles('staff_principal', 'adm
 router.get('/principal/all', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
   try {
     const admissions = await Admission.find({
-      $or: [{ staffStatus: 'staff_approved' }, { status: 'approved' }]
+     $or: [{ studentSectionStatus: 'verified' }, { status: 'approved' }]
     })
       .populate('course', 'name type code')
       .sort({ createdAt: -1 });
@@ -215,7 +215,7 @@ router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 
     if (!admission) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
-    if (admission.staffStatus !== 'staff_approved') {
+   if (admission.studentSectionStatus !== 'verified')
       return res.status(400).json({ success: false, message: 'Not yet approved by Student Section' });
     }
     if (admission.status === 'approved') {
