@@ -76,6 +76,21 @@ const admissionSchema = new mongoose.Schema({
 
   fees: { type: Number, default: 0 },
   feesPaid: { type: Boolean, default: false },
+  
+studentId: {
+  type: String,
+  default: ''
+},
+
+studentSectionRemark: {
+  type: String,
+  default: ''
+},
+
+principalRemark: {
+  type: String,
+  default: ''
+},
 studentSectionStatus: {
   type: String,
   enum: ['pending', 'verified', 'rejected'],
