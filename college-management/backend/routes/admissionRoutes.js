@@ -135,11 +135,14 @@ router.put('/staff-approve/:id', protect, authorizeRoles('staff_student', 'admin
     if (!admission) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
-    if (admission.studentSectionStatus !== 'pending')
-      return res.status(400).json({ success: false, message: 'Already processed' });
-    }
-
-    admission.studentSectionStatus = 'verified';
+    if (admission.studentSectionStatus !== 'pending') {
+  return res.status(400).json({
+    success: false,
+    message: 'Already processed'
+  });
+}
+    
+     admission.studentSectionStatus = 'verified';
     admission.staffNotes = notes || '';
     admission.staffApprovedBy = req.user.name || req.user.email;
     admission.staffApprovedDate = new Date();
