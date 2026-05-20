@@ -211,47 +211,77 @@ router.get('/principal/all', protect, authorizeRoles('staff_principal', 'admin')
 
 // ========== PRINCIPAL: Final Approve + Generate Student ID ==========
 router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
+
   try {
+
     const { notes } = req.body;
+
     const admission = await Admission.findById(req.params.id);
 
     if (!admission) {
-      return res.status(404).json({ success: false, message: 'Application not found' });
-    }
-   if (admission.studentSectionStatus !== 'verified')
-      return res.status(400).json({ success: false, message: 'Not yet approved by Student Section' });
-    }
-    if (admission.status === 'approved') {
-      return res.status(400).json({ success: false, message: 'Already approved' });
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
     }
 
-    // Generate unique Student ID: LKCWSC/YEAR/COURSE/RANDOM
+    if (admission.studentSectionStatus !== 'verified') {
+      return res.status(400).json({
+        success: false,
+        message: 'Not approved by Student Section'
+      });
+    }
+
+    if (admission.status === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Already approved'
+      });
+    }
+
+    // Generate Student ID
     const year = new Date().getFullYear();
 
-const courseName = admission.preferredSubject
-  ? admission.preferredSubject.substring(0,3).toUpperCase()
-  : 'GEN';
+    const courseName = admission.preferredSubject
+      ? admission.preferredSubject.substring(0,3).toUpperCase()
+      : 'GEN';
 
-const randomNum = Math.floor(100 + Math.random() * 900);
+    const randomNum = Math.floor(100 + Math.random() * 900);
 
-const studentId = `${courseName}${year}${randomNum}`;
+    const studentId = `${courseName}${year}${randomNum}`;
+
     admission.status = 'approved';
+
+    admission.principalStatus = 'approved';
+
     admission.principalApprovedBy = req.user.name || req.user.email;
+
     admission.principalApprovedDate = new Date();
+
     admission.principalNotes = notes || '';
+
     admission.studentId = studentId;
+
     await admission.save();
 
     res.json({
       success: true,
-      message: `✅ Admission approved! Student ID: ${studentId}`,
-      admission,
-      studentId
+      message: `Admission approved! Student ID: ${studentId}`,
+      studentId,
+      admission
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
   }
+
 });
+    
 
 // ========== PRINCIPAL: Reject ==========
 router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
