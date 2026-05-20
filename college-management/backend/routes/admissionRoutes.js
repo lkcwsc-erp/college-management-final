@@ -59,7 +59,7 @@ router.post('/', uploadFields, async (req, res) => {
     if (!data.casteValidityDate || data.casteValidityDate === '') delete data.casteValidityDate;
 
     // Workflow status
-    data.staffStatus = 'pending';
+    data.studentSectionStatus = 'pending';
     data.status = 'pending';
 
     const admission = await Admission.create(data);
@@ -106,7 +106,7 @@ router.get('/by-email/:email', protect, async (req, res) => {
 // ========== STUDENT SECTION: View Pending Admissions ==========
 router.get('/student-section/pending', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
   try {
-    const admissions = await Admission.find({ staffStatus: 'pending' })
+    const admissions = await Admission.find({ studentSectionStatus: 'pending' })
       .populate('course', 'name type code')
       .sort({ createdAt: -1 });
     res.json({ success: true, admissions });
@@ -139,7 +139,7 @@ router.put('/staff-approve/:id', protect, authorizeRoles('staff_student', 'admin
       return res.status(400).json({ success: false, message: 'Already processed' });
     }
 
-    admission.staffStatus = 'staff_approved';
+    admission.studentSectionStatus = 'verified';
     admission.staffNotes = notes || '';
     admission.staffApprovedBy = req.user.name || req.user.email;
     admission.staffApprovedDate = new Date();
@@ -165,7 +165,7 @@ router.put('/staff-reject/:id', protect, authorizeRoles('staff_student', 'admin'
     const admission = await Admission.findByIdAndUpdate(
       req.params.id,
       {
-        staffStatus: 'rejected_by_staff',
+        studentSectionStatus: 'rejected',
         status: 'rejected',
         staffNotes: reason,
         staffApprovedBy: req.user.name || req.user.email,
@@ -183,7 +183,7 @@ router.put('/staff-reject/:id', protect, authorizeRoles('staff_student', 'admin'
 // ========== PRINCIPAL: View Pending Admissions ==========
 router.get('/principal/pending', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
   try {
-    const admissions = await Admission.find({ staffStatus: 'staff_approved', status: 'pending' })
+    const admissions = await Admission.find({ studentSectionStatus: 'verified', status: 'pending' })
       .populate('course', 'name type code')
       .sort({ staffApprovedDate: -1 });
     res.json({ success: true, admissions });
@@ -224,10 +224,14 @@ router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 
 
     // Generate unique Student ID: LKCWSC/YEAR/COURSE/RANDOM
     const year = new Date().getFullYear();
-    const courseCode = (admission.courseType || 'XX').toUpperCase().replace(/[^A-Z]/g, '');
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const studentId = `LKCWSC/${year}/${courseCode}/${randomNum}`;
 
+const courseName = admission.preferredSubject
+  ? admission.preferredSubject.substring(0,3).toUpperCase()
+  : 'GEN';
+
+const randomNum = Math.floor(100 + Math.random() * 900);
+
+const studentId = `${courseName}${year}${randomNum}`;
     admission.status = 'approved';
     admission.principalApprovedBy = req.user.name || req.user.email;
     admission.principalApprovedDate = new Date();
