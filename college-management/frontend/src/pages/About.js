@@ -69,7 +69,6 @@ const cards = [
   return (
     <div>
       <Navbar />
-
     <section className="page-header">
         <h1>About Us</h1>
         <p>Learn about our history, vision, and mission</p>
