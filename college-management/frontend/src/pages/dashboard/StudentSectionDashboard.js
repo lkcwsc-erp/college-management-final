@@ -737,7 +737,7 @@ const StudentSectionDashboard = () => {
               )}
             </div>
           )}
-
+          
           {/* ── OTHER TABS ── */}
           {!['home', 'enquiries', 'admissions'].includes(activeTab) && (
             <div className="empty-state">
