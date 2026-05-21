@@ -24,47 +24,55 @@ const About = () => {
   useEffect(() => {
     API.get('/about')
       .then(res => {
-        // Fallback in case API structural response varies slightly
-        setAboutData(res.data.about || res.data);
+        // Safe check for both API structures (res.data or res.data.about)
+        if (res.data && res.data.about) {
+          setAboutData(res.data.about);
+        } else if (res.data) {
+          setAboutData(res.data);
+        }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error("API Fetch Error: ", err);
+        setLoading(false);
+      });
   }, []);
 
-  // 1. Moved the cards array up here so it is in scope for the entire component
   const cards = [
     {
       icon: '🏛️',
       title: 'Our History',
-      text: aboutData.history,
+      text: aboutData.history || 'Loading history details...',
       photo: aboutData.historyPhoto
     },
     {
       icon: '🎯',
       title: 'Our Vision',
-      text: aboutData.vision || 'To be a centre of excellence in women’s higher education that empowers every girl and woman of the Marathwada region...',
+      text: aboutData.vision || 'To be a centre of excellence in women’s higher education that empowers every girl and woman of the Marathwada region to become enlightened, socially responsible leaders who contribute to nation-building through quality education.',
       photo: aboutData.visionPhoto
     },
     {
       icon: '🚀',
       title: 'Our Mission',
-      text: aboutData.mission || 'Provide accessible higher education, develop skilled and independent women, foster ethical values...',
+      text: aboutData.mission || 'Provide accessible higher education, develop skilled and independent women, foster ethical values, promote leadership and community engagement, and uphold academic excellence.',
       photo: aboutData.missionPhoto
     }
   ];
 
   if (loading) {
     return (
-      <div>
+      <div className="about-page-loading-wrapper">
         <Navbar />
-        <div className="loading">Loading...</div>
+        <div className="loading" style={{ padding: '100px', textAlignment: 'center', fontSize: '20px' }}>
+          Loading College Profile...
+        </div>
         <Footer />
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="about-page-global-scope">
       <Navbar />
 
       <section className="about-hero">
@@ -85,20 +93,14 @@ const About = () => {
       <section className="about-section container">
         <div className="about-grid">
           {cards.map((card, i) => (
-            <div className="about-info-card glass-card" key={i}>
+            <div className="about-info-card" key={i}>
               <div className="about-icon">{card.icon}</div>
               <h3>{card.title}</h3>
               {card.photo && (
                 <img
                   src={card.photo}
                   alt={card.title}
-                  style={{
-                    width: '100%',
-                    height: '180px',
-                    objectFit: 'cover',
-                    borderRadius: '10px',
-                    marginBottom: '12px'
-                  }}
+                  className="card-photo-preview"
                 />
               )}
               <p>{card.text}</p>
@@ -107,7 +109,7 @@ const About = () => {
         </div>
       </section>
 
-      <section className="stats-section">
+      <section className="stats-section container">
         <div className="stat-card">
           <h2>20+</h2>
           <p>Years of Excellence</p>
@@ -128,19 +130,13 @@ const About = () => {
 
       <section className="principal-section">
         <div className="container">
-          <h2 className="section-title text-center">Principal's Message</h2>
+          <h2 className="section-title text-center" style={{ fontSize: '2rem', color: '#003366' }}>Principal's Message</h2>
           <div className="principal-card">
             <div className="principal-avatar">
               {aboutData.principalPhoto ? (
                 <img
                   src={aboutData.principalPhoto}
                   alt="Principal"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    borderRadius: '50%'
-                  }}
                 />
               ) : (
                 <span style={{ fontSize: '4rem' }}>👩‍💼</span>
@@ -148,15 +144,14 @@ const About = () => {
             </div>
             <div className="principal-message">
               <h3>From the Desk of the Principal</h3>
-              {/* 2. Changed hardcoded text to draw dynamically from API state */}
               <p>
-                {aboutData.principalMessage || "Welcome to our institution..."}
+                {aboutData.principalMessage || `"At Late Kalpana Chawala Women’s Senior College, we believe education is not merely about acquiring knowledge but about shaping character, building confidence, and preparing young women to face the challenges of the modern world..."`}
               </p>
               <br />
               <p className="principal-name">
                 — {aboutData.principalName || 'Principal'}
               </p>
-              <p style={{ fontSize: '13px', color: '#666' }}>
+              <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
                 Late Kalpana Chawla Mahila Senior Science & Arts College, Gangakhed
               </p>
             </div>
@@ -165,7 +160,7 @@ const About = () => {
       </section>
 
       <section className="values-section container">
-        <h2 className="section-title text-center">Our Core Values</h2>
+        <h2 className="section-title text-center" style={{ fontSize: '2rem', color: '#003366', marginBottom: '10px' }}>Our Core Values</h2>
         <div className="values-grid">
           {[
             'Women Empowerment',
