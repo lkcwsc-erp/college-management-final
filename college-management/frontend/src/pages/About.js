@@ -70,7 +70,7 @@ const cards = [
     <div>
       <Navbar />
 
-    <section className="about-hero">
+   <section className="about-hero">
 
   <div className="hero-overlay">
 
@@ -91,14 +91,16 @@ const cards = [
       </Link>
 
       <Link to="/gallery">
-  <button className="explore-btn">
-    Explore Campus
-  </button>
-</Link>
-   </div>
-    </div>
-</section>
+        <button className="explore-btn">
+          Explore Campus
+        </button>
+      </Link>
 
+    </div>
+
+  </div>
+
+</section>
       <section className="about-section container">
         <div className="about-grid">
           {cards.map((card, i) => (
