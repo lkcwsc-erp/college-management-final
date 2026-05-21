@@ -216,3 +216,159 @@
   line-height:1.8;
   margin-bottom:20px;
 }
+.about-hero{
+  height:70vh;
+  background:linear-gradient(135deg,#001f5c,#0055ff);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  color:white;
+  position:relative;
+  overflow:hidden;
+}
+
+.hero-overlay{
+  z-index:2;
+}
+
+.hero-title{
+  font-size:70px;
+  font-weight:700;
+  margin-bottom:20px;
+  animation:fadeDown 1s ease;
+}
+
+.hero-subtitle{
+  font-size:24px;
+  margin-bottom:30px;
+  animation:fadeUp 1s ease;
+}
+
+.hero-buttons{
+  display:flex;
+  gap:20px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.parent-org-btn,
+.explore-btn{
+  padding:14px 28px;
+  border:none;
+  border-radius:40px;
+  font-size:17px;
+  cursor:pointer;
+  transition:0.3s;
+  font-weight:600;
+}
+
+.parent-org-btn{
+  background:white;
+  color:#003366;
+}
+
+.explore-btn{
+  background:transparent;
+  border:2px solid white;
+  color:white;
+}
+
+.parent-org-btn:hover,
+.explore-btn:hover{
+  transform:translateY(-5px) scale(1.05);
+}
+
+.about-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:30px;
+  margin-top:-80px;
+  position:relative;
+  z-index:10;
+}
+
+.glass-card{
+  backdrop-filter:blur(12px);
+  background:rgba(255,255,255,0.95);
+  border-radius:20px;
+  padding:25px;
+  transition:0.4s;
+  box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+
+.glass-card:hover{
+  transform:translateY(-12px);
+  box-shadow:0 20px 40px rgba(0,0,0,0.2);
+}
+
+.about-icon{
+  font-size:50px;
+  margin-bottom:15px;
+}
+
+.stats-section{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:25px;
+  padding:70px 40px;
+}
+
+.stat-card{
+  background:white;
+  border-radius:20px;
+  padding:35px;
+  text-align:center;
+  box-shadow:0 8px 25px rgba(0,0,0,0.1);
+  transition:0.3s;
+}
+
+.stat-card:hover{
+  transform:translateY(-10px);
+}
+
+.stat-card h2{
+  color:#0044cc;
+  font-size:42px;
+  margin-bottom:10px;
+}
+
+.principal-card{
+  transition:0.4s;
+}
+
+.principal-card:hover{
+  transform:scale(1.01);
+}
+
+.value-badge{
+  transition:0.3s;
+}
+
+.value-badge:hover{
+  background:#0044cc;
+  color:white;
+  transform:scale(1.05);
+}
+
+@keyframes fadeDown{
+  from{
+    opacity:0;
+    transform:translateY(-40px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+@keyframes fadeUp{
+  from{
+    opacity:0;
+    transform:translateY(40px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
