@@ -3,15 +3,15 @@ const OTP = require('../models/OTP');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { sendOTPEmail, generateOTP } = require('../utils/emailService');
-
+ 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
-
+ 
 // ===== STAFF ROLES CONSTANT =====
 const STAFF_ROLES = ['staff', 'staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship', 'staff_principal'];
 const VALID_STAFF_ROLES = ['staff_student', 'staff_accounts', 'staff_exam', 'staff_scholarship', 'staff_principal'];
-
+ 
 // ===== AUTO PASSWORD GENERATOR =====
 const generateStudentPassword = (firstName, dob) => {
   const namePart = firstName.toLowerCase().slice(0, 4);
@@ -20,19 +20,19 @@ const generateStudentPassword = (firstName, dob) => {
   const yy = String(date.getFullYear()).slice(-2);
   return `${namePart}@${dd}${yy}`;
 };
-
+ 
 // ===== STAFF/ADMIN: Register a New Student =====
 exports.registerStudent = async (req, res) => {
   try {
     const { firstName, middleName, lastName, email, phone, dateOfBirth } = req.body;
-
+ 
     if (!firstName || !email || !dateOfBirth) {
       return res.status(400).json({
         success: false,
         message: 'First name, email and date of birth are required'
       });
     }
-
+ 
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({
@@ -40,10 +40,10 @@ exports.registerStudent = async (req, res) => {
         message: 'A user with this email already exists'
       });
     }
-
+ 
     const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
     const password = generateStudentPassword(firstName, dateOfBirth);
-
+ 
     const user = await User.create({
       name,
       email,
@@ -55,7 +55,7 @@ exports.registerStudent = async (req, res) => {
       middleName: middleName || '',
       lastName: lastName || ''
     });
-
+ 
     res.status(201).json({
       success: true,
       message: 'Student registered successfully!',
@@ -72,7 +72,7 @@ exports.registerStudent = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== Register Staff/Admin =====
 exports.register = async (req, res) => {
   try {
@@ -99,7 +99,7 @@ exports.register = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 exports.getAllStudentUsers = async (req, res) => {
   try {
     const students = await User.find({ role: 'student' }).select('-password').sort({ createdAt: -1 });
@@ -108,7 +108,7 @@ exports.getAllStudentUsers = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 exports.deleteStudentUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -120,77 +120,81 @@ exports.deleteStudentUser = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== STEP 1: LOGIN =====
 exports.login = async (req, res) => {
   try {
     const { email, password, captchaToken } = req.body;
-
-    if (!captchaToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please complete the CAPTCHA verification.'
-      });
-    }
-
-    try {
-      const captchaResponse = await axios.post(
-        'https://www.google.com/recaptcha/api/siteverify',
-        null,
-        {
-          params: {
-            secret: process.env.RECAPTCHA_SECRET_KEY,
-            response: captchaToken
-          }
-        }
-      );
-
-      if (!captchaResponse.data.success) {
-        return res.status(400).json({
-          success: false,
-          message: 'CAPTCHA verification failed. Please try again.'
-        });
-      }
-    } catch (captchaError) {
-      console.error('CAPTCHA error:', captchaError.message);
-      return res.status(500).json({
-        success: false,
-        message: 'CAPTCHA service unavailable. Please try again.'
-      });
-    }
-
+ 
+    // Pehle user dhundho
     const user = await User.findOne({
       $or: [
         { email: email.toLowerCase() },
         { username: email.toLowerCase() }
       ]
     });
-
+ 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
     }
-
+ 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
     }
-
+ 
     if (!user.isActive) {
       return res.status(401).json({ success: false, message: 'Account is deactivated' });
     }
-
+ 
+    // 🔐 CAPTCHA sirf Staff aur Admin ke liye — Student ke liye nahi
+    if (STAFF_ROLES.includes(user.role) || user.role === 'admin') {
+      if (!captchaToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please complete the CAPTCHA verification.'
+        });
+      }
+ 
+      try {
+        const captchaResponse = await axios.post(
+          'https://www.google.com/recaptcha/api/siteverify',
+          null,
+          {
+            params: {
+              secret: process.env.RECAPTCHA_SECRET_KEY,
+              response: captchaToken
+            }
+          }
+        );
+ 
+        if (!captchaResponse.data.success) {
+          return res.status(400).json({
+            success: false,
+            message: 'CAPTCHA verification failed. Please try again.'
+          });
+        }
+      } catch (captchaError) {
+        console.error('CAPTCHA error:', captchaError.message);
+        return res.status(500).json({
+          success: false,
+          message: 'CAPTCHA service unavailable. Please try again.'
+        });
+      }
+    }
+ 
     // 🔐 If user is STAFF (any type including Principal) or ADMIN → send OTP
     if (STAFF_ROLES.includes(user.role) || user.role === 'admin') {
       await OTP.deleteMany({ email: user.email.toLowerCase() });
-
+ 
       const otp = generateOTP();
-
+ 
       await OTP.create({
         email: user.email.toLowerCase(),
         otp,
         purpose: 'login'
       });
-
+ 
       const emailResult = await sendOTPEmail(user.email, otp, user.name);
       if (!emailResult.success) {
         return res.status(500).json({
@@ -198,7 +202,7 @@ exports.login = async (req, res) => {
           message: 'Failed to send OTP email. Please try again or contact admin.'
         });
       }
-
+ 
       return res.status(200).json({
         success: true,
         otpRequired: true,
@@ -206,7 +210,7 @@ exports.login = async (req, res) => {
         email: user.email
       });
     }
-
+ 
     // For STUDENTS — direct login
     res.status(200).json({
       success: true,
@@ -226,16 +230,16 @@ exports.login = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== STEP 2: VERIFY OTP =====
 exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
-
+ 
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
-
+ 
     const otpRecord = await OTP.findOne({ email: email.toLowerCase() });
     if (!otpRecord) {
       return res.status(400).json({
@@ -243,7 +247,7 @@ exports.verifyOTP = async (req, res) => {
         message: 'OTP has expired or not found. Please request a new one.'
       });
     }
-
+ 
     if (otpRecord.attempts >= 5) {
       await OTP.deleteOne({ _id: otpRecord._id });
       return res.status(400).json({
@@ -251,7 +255,7 @@ exports.verifyOTP = async (req, res) => {
         message: 'Too many wrong attempts. Please request a new OTP.'
       });
     }
-
+ 
     if (otpRecord.otp !== otp) {
       otpRecord.attempts += 1;
       await otpRecord.save();
@@ -261,14 +265,14 @@ exports.verifyOTP = async (req, res) => {
         message: `Wrong OTP. ${remaining} attempts remaining.`
       });
     }
-
+ 
     await OTP.deleteOne({ _id: otpRecord._id });
-
+ 
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-
+ 
     res.status(200).json({
       success: true,
       message: 'OTP verified! Login successful.',
@@ -286,7 +290,7 @@ exports.verifyOTP = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== RESEND OTP =====
 exports.resendOTP = async (req, res) => {
   try {
@@ -295,12 +299,12 @@ exports.resendOTP = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-
+ 
     await OTP.deleteMany({ email: email.toLowerCase() });
-
+ 
     const otp = generateOTP();
     await OTP.create({ email: email.toLowerCase(), otp, purpose: 'login' });
-
+ 
     const emailResult = await sendOTPEmail(email, otp, user.name);
     if (!emailResult.success) {
       return res.status(500).json({
@@ -308,7 +312,7 @@ exports.resendOTP = async (req, res) => {
         message: 'Failed to send OTP email.'
       });
     }
-
+ 
     res.status(200).json({
       success: true,
       message: `New OTP sent to ${email}`
@@ -317,7 +321,7 @@ exports.resendOTP = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
@@ -326,7 +330,7 @@ exports.getMe = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 exports.updateProfile = async (req, res) => {
   try {
     const { name, phone, address } = req.body;
@@ -340,7 +344,7 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 exports.changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
@@ -356,26 +360,26 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== ADMIN: Create Staff Login (includes Principal) =====
 exports.createStaff = async (req, res) => {
   try {
     const { name, username, email, password, phone, role } = req.body;
-
+ 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
         success: false,
         message: 'Name, email, password and role are required'
       });
     }
-
+ 
     if (!VALID_STAFF_ROLES.includes(role)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid role. Must be one of: ' + VALID_STAFF_ROLES.join(', ')
       });
     }
-
+ 
     const emailExists = await User.findOne({ email });
     if (emailExists) {
       return res.status(400).json({
@@ -383,7 +387,7 @@ exports.createStaff = async (req, res) => {
         message: 'A user with this email already exists'
       });
     }
-
+ 
     if (username) {
       const usernameExists = await User.findOne({ username: username.toLowerCase() });
       if (usernameExists) {
@@ -393,7 +397,7 @@ exports.createStaff = async (req, res) => {
         });
       }
     }
-
+ 
     const user = await User.create({
       name,
       username: username ? username.toLowerCase() : undefined,
@@ -403,7 +407,7 @@ exports.createStaff = async (req, res) => {
       phone: phone || '',
       role
     });
-
+ 
     res.status(201).json({
       success: true,
       message: 'Staff created successfully!',
@@ -421,14 +425,14 @@ exports.createStaff = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== ADMIN: Get All Staff (includes Principal) =====
 exports.getAllStaff = async (req, res) => {
   try {
     const staff = await User.find({ role: { $in: STAFF_ROLES } })
       .select('-password')
       .sort({ createdAt: -1 });
-
+ 
     res.status(200).json({
       success: true,
       count: staff.length,
@@ -438,7 +442,7 @@ exports.getAllStaff = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== ADMIN: Delete Staff =====
 exports.deleteStaff = async (req, res) => {
   try {
@@ -446,35 +450,35 @@ exports.deleteStaff = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'Staff not found' });
     }
-
+ 
     if (!STAFF_ROLES.includes(user.role)) {
       return res.status(400).json({ success: false, message: 'Not a staff user' });
     }
-
+ 
     await User.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Staff deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // ===== ADMIN: Update Staff =====
 exports.updateStaff = async (req, res) => {
   try {
     const { name, username, email, phone } = req.body;
-
+ 
     const staff = await User.findById(req.params.id);
     if (!staff) {
       return res.status(404).json({ success: false, message: 'Staff not found' });
     }
-
+ 
     if (email && email !== staff.email) {
       const emailExists = await User.findOne({ email, _id: { $ne: req.params.id } });
       if (emailExists) {
         return res.status(400).json({ success: false, message: 'Email already in use by another user' });
       }
     }
-
+ 
     if (username && username !== staff.username) {
       const usernameExists = await User.findOne({
         username: username.toLowerCase(),
@@ -484,7 +488,7 @@ exports.updateStaff = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Username already taken' });
       }
     }
-
+ 
     const updated = await User.findByIdAndUpdate(
       req.params.id,
       {
@@ -495,7 +499,7 @@ exports.updateStaff = async (req, res) => {
       },
       { new: true }
     ).select('-password');
-
+ 
     res.status(200).json({
       success: true,
       message: 'Staff updated successfully!',
@@ -505,3 +509,4 @@ exports.updateStaff = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+ 
