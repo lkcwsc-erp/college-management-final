@@ -48,7 +48,7 @@ router.post('/', uploadFields, async (req, res) => {
     if (req.files) {
       Object.keys(req.files).forEach(field => {
         if (req.files[field] && req.files[field][0]) {
-          data[field] = req.files[field][0].filename;
+          data[field] = req.files[field][0].path;
         }
       });
     }
