@@ -24,11 +24,34 @@ const About = () => {
   useEffect(() => {
     API.get('/about')
       .then(res => {
-        setAboutData(res.data.about);
+        // Fallback in case API structural response varies slightly
+        setAboutData(res.data.about || res.data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // 1. Moved the cards array up here so it is in scope for the entire component
+  const cards = [
+    {
+      icon: '🏛️',
+      title: 'Our History',
+      text: aboutData.history,
+      photo: aboutData.historyPhoto
+    },
+    {
+      icon: '🎯',
+      title: 'Our Vision',
+      text: aboutData.vision || 'To be a centre of excellence in women’s higher education that empowers every girl and woman of the Marathwada region...',
+      photo: aboutData.visionPhoto
+    },
+    {
+      icon: '🚀',
+      title: 'Our Mission',
+      text: aboutData.mission || 'Provide accessible higher education, develop skilled and independent women, foster ethical values...',
+      photo: aboutData.missionPhoto
+    }
+  ];
 
   if (loading) {
     return (
@@ -40,67 +63,25 @@ const About = () => {
     );
   }
 
-const cards = [
-  {
-    icon: '🏛️',
-    title: 'Our History',
-    text: aboutData.history,
-    photo: aboutData.historyPhoto
-  },
-  {
-    icon: '🎯',
-    title: 'Our Vision',
-    text: 'To be a centre of excellence in women’s higher education that empowers every girl and woman of the Marathwada region to become enlightened, socially responsible leaders who contribute to nation-building through quality education.',
-    photo: aboutData.visionPhoto
-  },
-  {
-    icon: '🚀',
-    title: 'Our Mission',
-    text: 'Provide accessible higher education, develop skilled and independent women, foster ethical values, promote leadership and community engagement, and uphold academic excellence.',
-    photo: aboutData.missionPhoto
-  },
-  {
-  icon: '🌟',
-  title: 'Our Core Values',
-  text: 'Women Empowerment, Accessibility, Excellence & Quality, Inclusivity & Dignity, Social Justice, Human Values, Nation-Building Commitment and Continuous Improvement.',
-  photo: ''
-}
-];
   return (
     <div>
       <Navbar />
 
-   <section className="about-hero">
+      <section className="about-hero">
+        <div className="hero-overlay">
+          <h1 className="hero-title">About Us</h1>
+          <p className="hero-subtitle">Learn about our history, vision, mission and values</p>
+          <div className="hero-buttons">
+            <Link to="/parent-org">
+              <button className="parent-org-btn">About Our Parent Organisation</button>
+            </Link>
+            <Link to="/gallery">
+              <button className="explore-btn">Explore Campus</button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
-  <div className="hero-overlay">
-
-    <h1 className="hero-title">
-      About Us
-    </h1>
-
-    <p className="hero-subtitle">
-      Learn about our history, vision, mission and values
-    </p>
-
-    <div className="hero-buttons">
-
-      <Link to="/parent-org">
-        <button className="parent-org-btn">
-          About Our Parent Organisation
-        </button>
-      </Link>
-
-      <Link to="/gallery">
-        <button className="explore-btn">
-          Explore Campus
-        </button>
-      </Link>
-
-    </div>
-
-  </div>
-
-</section>
       <section className="about-section container">
         <div className="about-grid">
           {cards.map((card, i) => (
@@ -125,29 +106,25 @@ const cards = [
           ))}
         </div>
       </section>
+
       <section className="stats-section">
-
-       <div className="stat-card">
-        <h2>20+</h2>
-        <p>Years of Excellence</p>
-       </div>
-
-     <div className="stat-card">
-     <h2>5000+</h2>
-     <p>Students</p>
-     </div>
-
-      <div className="stat-card">
-      <h2>100+</h2>
-      <p>Faculty Members</p>
-      </div>
-
-     <div className="stat-card">
-      <h2>50+</h2>
-      <p>Awards</p>
-     </div>
-
-</section>
+        <div className="stat-card">
+          <h2>20+</h2>
+          <p>Years of Excellence</p>
+        </div>
+        <div className="stat-card">
+          <h2>5000+</h2>
+          <p>Students</p>
+        </div>
+        <div className="stat-card">
+          <h2>100+</h2>
+          <p>Faculty Members</p>
+        </div>
+        <div className="stat-card">
+          <h2>50+</h2>
+          <p>Awards</p>
+        </div>
+      </section>
 
       <section className="principal-section">
         <div className="container">
@@ -171,13 +148,10 @@ const cards = [
             </div>
             <div className="principal-message">
               <h3>From the Desk of the Principal</h3>
+              {/* 2. Changed hardcoded text to draw dynamically from API state */}
               <p>
-"At Late Kalpana Chawala Women’s Senior College, we believe education is not merely about acquiring knowledge but about shaping character, building confidence, and preparing young women to face the challenges of the modern world.
-
-Our institution is committed to providing quality education in Arts and Science while creating an environment that encourages critical thinking, creativity, and lifelong learning.
-
-Inspired by the vision of Kalpana Chawla, we encourage our students to dream big, work hard, and contribute positively to society and nation-building."
-</p>
+                {aboutData.principalMessage || "Welcome to our institution..."}
+              </p>
               <br />
               <p className="principal-name">
                 — {aboutData.principalName || 'Principal'}
@@ -208,7 +182,7 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
         </div>
       </section>
 
-<Footer />
+      <Footer />
     </div>
   );
 };
