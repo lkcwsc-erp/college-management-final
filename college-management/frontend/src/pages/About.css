@@ -8,7 +8,9 @@
 .page-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
 .page-header p { font-size: 1.1rem; opacity: 0.85; }
 
-.about-section { padding: 80px 20px; }
+.about-section {
+   margin-top:20px;
+  padding: 80px 20px; }
 
 .about-grid {
   display: grid;
@@ -217,7 +219,7 @@
   margin-bottom:20px;
 }
 .about-hero{
-  height:70vh;
+   min-height:50vh;
   background:linear-gradient(135deg,#001f5c,#0055ff);
   display:flex;
   justify-content:center;
@@ -226,6 +228,8 @@
   color:white;
   position:relative;
   overflow:hidden;
+  padding:80px 20px 120px;
+}
 }
 
 .hero-overlay{
@@ -233,7 +237,7 @@
 }
 
 .hero-title{
-  font-size:70px;
+  font-size:52px;
   font-weight:700;
   margin-bottom:20px;
   animation:fadeDown 1s ease;
@@ -283,7 +287,7 @@
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
   gap:30px;
-  margin-top:-80px;
+  margin-top:-40px;
   position:relative;
   z-index:10;
 }
