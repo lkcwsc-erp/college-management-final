@@ -89,11 +89,11 @@ const cards = [
           About Our Parent Organisation
         </button>
       </Link>
-     <Link  to="/gallery">
-      <button className="explore-btn">
-        Explore Campus
-      </button>
-    </Link>
+    <Link to="/gallery">
+  <button className="explore-btn">
+    Explore Campus
+  </button>
+</Link>
     </div>
 
   </div>
