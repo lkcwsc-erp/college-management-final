@@ -273,12 +273,6 @@
   color:#003366;
 }
 
-.explore-btn{
-  background:transparent;
-  border:2px solid white;
-  color:white;
-}
-
 .parent-org-btn:hover,
 .explore-btn:hover{
   transform:translateY(-5px) scale(1.05);
