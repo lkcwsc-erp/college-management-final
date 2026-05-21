@@ -56,7 +56,13 @@ const About = () => {
       title: 'Our Mission',
       text: aboutData.mission || 'Provide accessible higher education, develop skilled and independent women, foster ethical values, promote leadership and community engagement, and uphold academic excellence.',
       photo: aboutData.missionPhoto
-    }
+    },
+    {
+       icon: '🌟',
+       title: 'Our Core Values',
+       text: 'Women Empowerment, Accessibility, Excellence & Quality, Inclusivity & Dignity, Social Justice, Human Values, Nation-Building Commitment and Continuous Improvement.',
+      photo: ''
+     }
   ];
 
   if (loading) {
@@ -144,12 +150,19 @@ const About = () => {
             </div>
             <div className="principal-message">
               <h3>From the Desk of the Principal</h3>
-              <p>
-                {aboutData.principalMessage || `"At Late Kalpana Chawala Women’s Senior College, we believe education is not merely about acquiring knowledge but about shaping character, building confidence, and preparing young women to face the challenges of the modern world..."`}
-              </p>
-              <br />
+                 <p>
+"At Late Kalpana Chawala Women’s Senior College, we believe education is not merely about acquiring knowledge but about shaping character, building confidence, and preparing young women to face the challenges of the modern world.
+
+Our institution is committed to providing quality education in Arts and Science while creating an environment that encourages critical thinking, creativity, and lifelong learning.
+
+Inspired by the vision of Kalpana Chawla, we encourage our students to dream big, work hard, and contribute positively to society and nation-building."
+           </p>
+           <br />
               <p className="principal-name">
                 — {aboutData.principalName || 'Principal'}
+              </p>
+              <p>
+                {aboutData.principalMessage || `"At Late Kalpana Chawala Women’s Senior College, we believe education is not merely about acquiring knowledge but about shaping character, building confidence, and preparing young women to face the challenges of the modern world..."`}
               </p>
               <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
                 Late Kalpana Chawla Mahila Senior Science & Arts College, Gangakhed
