@@ -1,10 +1,9 @@
-/* ==========================================================================
-   1. Typography & Global Helpers
-   ========================================================================== */
+/* Container Standard Layout rules */
 .container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 20px;
   box-sizing: border-box;
 }
 
@@ -12,21 +11,9 @@
   text-align: center;
 }
 
-/* ==========================================================================
-   2. Hero & Header Sections
-   ========================================================================== */
-.page-header {
-  background: linear-gradient(135deg, #1565C0, #0D1B3E);
-  color: white;
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.page-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
-.page-header p { font-size: 1.1rem; opacity: 0.85; }
-
+/* Hero Section Styles */
 .about-hero {
-  min-height: 50vh;
+  min-height: 45vh;
   background: linear-gradient(135deg, #001f5c, #0055ff);
   display: flex;
   justify-content: center;
@@ -35,7 +22,7 @@
   color: white;
   position: relative;
   overflow: hidden;
-  padding: 80px 20px;
+  padding: 60px 20px;
 }
 
 .hero-overlay {
@@ -43,31 +30,32 @@
 }
 
 .hero-title {
-  font-size: 52px;
+  font-size: 48px;
   font-weight: 700;
-  margin-bottom: 20px;
-  animation: fadeDown 1s ease;
+  margin-bottom: 15px;
+  animation: fadeDown 0.8s ease-out;
 }
 
 .hero-subtitle {
-  font-size: 24px;
+  font-size: 20px;
   margin-bottom: 30px;
-  animation: fadeUp 1s ease;
+  opacity: 0.9;
+  animation: fadeUp 0.8s ease-out;
 }
 
 .hero-buttons {
   display: flex;
-  gap: 20px;
+  gap: 15px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .parent-org-btn,
 .explore-btn {
-  padding: 14px 28px;
+  padding: 12px 28px;
   border: none;
   border-radius: 40px;
-  font-size: 17px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
@@ -76,7 +64,6 @@
 .parent-org-btn {
   background: white;
   color: #003366;
-  margin-top: 20px;
 }
 
 .explore-btn {
@@ -85,97 +72,106 @@
   color: white;
 }
 
-.parent-org-btn:hover,
-.explore-btn:hover {
-  transform: translateY(-5px) scale(1.05);
-  background: #0055aa;
-  color: white;
+.parent-org-btn:hover {
+  background: #f0f4f8;
+  transform: translateY(-3px);
 }
 
-/* ==========================================================================
-   3. Info Cards Grid (Merged Duplications)
-   ========================================================================== */
+.explore-btn:hover {
+  background: white;
+  color: #0055ff;
+  transform: translateY(-3px);
+}
+
+/* About Cards Layout */
 .about-section {
-  padding: 80px 20px;
+  padding: 60px 0;
 }
 
 .about-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 30px;
-  margin-top: 40px;
-  position: relative;
-  z-index: 10;
 }
 
-/* Combined styling from both your old info-card and glass-card sets */
-.about-info-card.glass-card {
+.about-info-card {
   backdrop-filter: blur(12px);
   background: rgba(255, 255, 255, 0.95);
   padding: 30px;
-  border-radius: 20px;
+  border-radius: 16px;
   border-top: 4px solid #1565C0;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  transition: all 0.4s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
 }
 
-.about-info-card.glass-card:hover {
-  transform: translateY(-12px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+.about-info-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
 }
 
-.about-icon { 
-  font-size: 50px; 
-  margin-bottom: 16px; 
+.about-icon {
+  font-size: 45px;
+  margin-bottom: 15px;
 }
 
 .about-info-card h3 {
-  color: #1565C0;
-  margin-bottom: 12px;
-  font-size: 1.2rem;
+  color: #003366;
+  margin-bottom: 15px;
+  font-size: 1.4rem;
 }
 
 .about-info-card p {
   color: #555;
-  line-height: 1.8;
+  line-height: 1.7;
   font-size: 15px;
 }
 
-/* ==========================================================================
-   4. Stats Section
-   ========================================================================== */
+.card-photo-preview {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+/* Metrics/Stats Layout */
 .stats-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 25px;
-  padding: 70px 40px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 40px 0 60px 0;
 }
 
 .stat-card {
-  background: white;
-  border-radius: 20px;
-  padding: 35px;
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 30px;
   text-align: center;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  transition: transform 0.3s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-10px);
+  transform: translateY(-5px);
 }
 
 .stat-card h2 {
-  color: #0044cc;
-  font-size: 42px;
-  margin-bottom: 10px;
+  color: #0055ff;
+  font-size: 36px;
+  margin-bottom: 8px;
 }
 
-/* ==========================================================================
-   5. Principal's Section (Merged Duplications)
-   ========================================================================== */
+.stat-card p {
+  color: #475569;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Principal Frame Styles */
 .principal-section {
-  background-color: #e8f0fe;
-  padding: 80px 20px;
+  background-color: #f0f6ff;
+  padding: 60px 0;
 }
 
 .principal-card {
@@ -184,206 +180,95 @@
   background: white;
   padding: 40px;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  margin-top: 30px;
-  align-items: flex-start;
-  transition: all 0.4s ease;
-}
-
-.principal-card:hover {
-  transform: scale(1.01);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  margin-top: 25px;
+  align-items: center;
 }
 
 .principal-avatar {
   background: #e3f2fd;
   border-radius: 50%;
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  border: 3px solid #1565C0;
+}
+
+.principal-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .principal-message h3 {
   color: #1565C0;
-  font-size: 1.3rem;
-  margin-bottom: 16px;
+  font-size: 1.4rem;
+  margin-bottom: 12px;
 }
 
 .principal-message p {
-  color: #555;
-  line-height: 1.9;
+  color: #334155;
+  line-height: 1.8;
   font-style: italic;
+  font-size: 15px;
 }
 
 .principal-name {
   font-style: normal !important;
-  font-weight: 600;
-  color: #1565C0 !important;
+  font-weight: 700;
+  color: #003366 !important;
 }
 
-/* ==========================================================================
-   6. Core Values Section
-   ========================================================================== */
+/* Bottom Value Badges */
 .values-section {
-  padding: 80px 20px;
-  text-align: center;
+  padding: 60px 0;
 }
 
 .values-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
   justify-content: center;
-  margin-top: 30px;
+  margin-top: 25px;
 }
 
 .value-badge {
   background-color: #1565C0;
   color: white;
-  padding: 12px 28px;
+  padding: 10px 24px;
   border-radius: 30px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
-  transform: scale(1);
   transition: all 0.3s ease;
 }
 
 .value-badge:hover {
-  background: #0044cc;
-  color: white;
-  transform: scale(1.05);
+  background: #003366;
+  transform: translateY(-2px);
 }
 
-/* ==========================================================================
-   7. Form Inputs & Admin Messaging (Optional Admin Controls)
-   ========================================================================== */
-.edit-btn {
-  margin-top: 14px;
-  padding: 7px 16px;
-  background: #e3f2fd;
-  color: #1565C0;
-  border: 1px solid #1565C0;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  display: inline-block;
-  transition: all 0.2s;
-}
-
-.edit-btn:hover { background: #1565C0; color: white; }
-
-.save-btn {
-  padding: 7px 16px;
-  background: #1565C0;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.cancel-btn {
-  padding: 7px 16px;
-  background: white;
-  color: #666;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.edit-textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1.5px solid #1565C0;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  line-height: 1.6;
-  resize: vertical;
-}
-
-.edit-input {
-  width: 100%;
-  padding: 10px;
-  border: 1.5px solid #1565C0;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  margin-top: 4px;
-}
-
-.edit-label {
-  font-size: 13px;
-  color: #666;
-  font-weight: 500;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.about-success-msg {
-  background: #e3f2fd;
-  color: #1565C0;
-  padding: 12px 20px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-/* ==========================================================================
-   8. Sub-Pages (e.g., Parent Org)
-   ========================================================================== */
-.parent-org-page {
-  padding: 50px;
-}
-
-.parent-org-page h1 {
-  color: #003366;
-  margin-bottom: 20px;
-}
-
-.parent-org-page h2 {
-  margin-bottom: 20px;
-}
-
-.parent-org-page p {
-  font-size: 18px;
-  line-height: 1.8;
-  margin-bottom: 20px;
-}
-
-/* ==========================================================================
-   9. Media Queries & Animations
-   ========================================================================== */
-@media (max-width: 768px) {
-  .principal-card { 
-    flex-direction: column; 
-    align-items: center; 
-    text-align: center;
-  }
-}
-
+/* Animations Core definitions */
 @keyframes fadeDown {
-  from {
-    opacity: 0;
-    transform: translateY(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Clean Responsiveness Viewports */
+@media (max-width: 768px) {
+  .hero-title { font-size: 36px; }
+  .hero-subtitle { font-size: 18px; }
+  .principal-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 30px 20px;
   }
 }
