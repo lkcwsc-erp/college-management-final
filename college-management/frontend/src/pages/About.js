@@ -89,7 +89,7 @@ const cards = [
           About Our Parent Organisation
         </button>
       </Link>
-    <Link to="/gallery">
+    <Link to="/Gallery">
   <button className="explore-btn">
     Explore Campus
   </button>
