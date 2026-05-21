@@ -74,22 +74,23 @@ const cards = [
 
   <div className="hero-overlay">
 
-    <h1 className="hero-title">
-      About Us
-    </h1>
+   <h1 className="hero-title">
+  About Us
+</h1>
 
-    <p className="hero-subtitle">
-      Learn about our history, vision, mission and values
-    </p>
+<p className="hero-subtitle">
+  Learn about our history, vision, mission and values
+</p>
 
-    <div className="hero-buttons">
+<div className="hero-buttons">
 
-      <Link to="/parent-org">
-        <button className="parent-org-btn">
-          About Our Parent Organisation
-        </button>
-      </Link>
-    
+  <Link to="/parent-org">
+    <button className="parent-org-btn">
+      About Our Parent Organisation
+    </button>
+  </Link>
+
+</div>
     </div>
 
   </div>
