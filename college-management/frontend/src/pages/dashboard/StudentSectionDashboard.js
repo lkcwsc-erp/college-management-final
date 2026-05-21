@@ -270,6 +270,13 @@ const StudentSectionDashboard = () => {
   const [updateMsg, setUpdateMsg] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchText, setSearchText] = useState('');
+ // Generate Credentials states
+  const [credForm, setCredForm] = useState({
+    firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: ''
+  });
+  const [credLoading, setCredLoading] = useState(false);
+  const [credMsg, setCredMsg] = useState('');
+  const [generatedCreds, setGeneratedCreds] = useState(null);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -339,7 +346,29 @@ const StudentSectionDashboard = () => {
       alert('Failed to delete enquiry.');
     }
   };
-
+// Create Student Account
+  const handleCreateStudent = async (e) => {
+    e.preventDefault();
+    setCredLoading(true);
+    setCredMsg('');
+    try {
+      const res = await API.post('/auth/register-student', credForm);
+      if (res.data.success) {
+        setGeneratedCreds({
+          name: res.data.user.name,
+          email: res.data.user.email,
+          password: res.data.generatedPassword
+        });
+        setCredMsg('✅ Student account created successfully!');
+        setCredForm({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '' });
+      }
+    } catch (err) {
+      setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account'));
+    } finally {
+      setCredLoading(false);
+    }
+  };
+  
   const getStatusStyle = (status) => {
     const styles = {
       pending:            { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' },
@@ -737,9 +766,108 @@ const StudentSectionDashboard = () => {
               )}
             </div>
           )}
-          
+          {/* ── GENERATE CREDENTIALS ── */}
+{activeTab === 'credentials' && (
+  <div>
+    <h3 style={{ marginBottom: '8px', color: '#1565C0' }}>👥 Generate Student Login</h3>
+    <p style={{ color: '#666', marginBottom: '20px' }}>
+      Create login credentials for a new student. Password is auto-generated from name + date of birth.
+    </p>
+
+    {credMsg && (
+      <div style={{ padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', background: credMsg.includes('✅') ? '#e8f5e9' : '#ffebee', color: credMsg.includes('✅') ? '#2E7D32' : '#C62828', fontWeight: '500' }}>
+        {credMsg}
+      </div>
+    )}
+
+    {/* Generated Credentials Popup */}
+    {generatedCreds && (
+      <div style={{ background: '#e8f5e9', border: '2px solid #2E7D32', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+        <h3 style={{ color: '#2E7D32', marginBottom: '14px' }}>✅ Student Account Created!</h3>
+        <p style={{ color: '#555', marginBottom: '14px', fontSize: '14px' }}>
+          Share these login details with the student:
+        </p>
+        <div style={{ background: 'white', padding: '16px', borderRadius: '8px', fontSize: '15px' }}>
+          <p style={{ marginBottom: '8px' }}><strong>👤 Name:</strong> {generatedCreds.name}</p>
+          <p style={{ marginBottom: '8px' }}><strong>📧 Email:</strong> {generatedCreds.email}</p>
+          <p><strong>🔑 Password:</strong> <code style={{ background: '#fff3e0', padding: '4px 12px', borderRadius: '6px', fontFamily: 'monospace', fontSize: '16px', color: '#E65100', fontWeight: '700' }}>{generatedCreds.password}</code></p>
+        </div>
+        <div style={{ background: '#fff3cd', padding: '12px', borderRadius: '8px', marginTop: '14px', fontSize: '13px', color: '#856404' }}>
+          ⚠️ Note this password! Student will use it to login at the student portal.
+        </div>
+        <button onClick={() => setGeneratedCreds(null)}
+          style={{ marginTop: '14px', background: '#2E7D32', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+          ✓ Got It, Close
+        </button>
+      </div>
+    )}
+
+    {/* Create Form */}
+    <div className="form-card">
+      <h3 style={{ marginBottom: '16px' }}>📝 New Student Details</h3>
+      <form onSubmit={handleCreateStudent}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+          <div className="form-group">
+            <label>First Name *</label>
+            <input type="text" placeholder="e.g. Tejas"
+              value={credForm.firstName}
+              onChange={e => setCredForm({ ...credForm, firstName: e.target.value })}
+              required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+          </div>
+          <div className="form-group">
+            <label>Middle Name</label>
+            <input type="text" placeholder="e.g. Sanjay"
+              value={credForm.middleName}
+              onChange={e => setCredForm({ ...credForm, middleName: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+          </div>
+          <div className="form-group">
+            <label>Last Name</label>
+            <input type="text" placeholder="e.g. Bargal"
+              value={credForm.lastName}
+              onChange={e => setCredForm({ ...credForm, lastName: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-group">
+            <label>Email Address *</label>
+            <input type="email" placeholder="student@gmail.com"
+              value={credForm.email}
+              onChange={e => setCredForm({ ...credForm, email: e.target.value })}
+              required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+          </div>
+          <div className="form-group">
+            <label>Phone Number</label>
+            <input type="text" placeholder="9876543210" maxLength="10"
+              value={credForm.phone}
+              onChange={e => { if (/^\d{0,10}$/.test(e.target.value)) setCredForm({ ...credForm, phone: e.target.value }); }}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Date of Birth *</label>
+          <input type="date"
+            value={credForm.dateOfBirth}
+            onChange={e => setCredForm({ ...credForm, dateOfBirth: e.target.value })}
+            required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+          <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>
+            💡 Password will be auto-generated: first 4 letters of name + @ + DD + YY
+          </small>
+        </div>
+
+        <button type="submit" disabled={credLoading}
+          style={{ background: '#1565C0', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '8px', cursor: credLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: credLoading ? 0.6 : 1 }}>
+          {credLoading ? '⏳ Creating...' : '➕ Create Student Account'}
+        </button>
+      </form>
+    </div>
+  </div>
+)}
           {/* ── OTHER TABS ── */}
-          {!['home', 'enquiries', 'admissions'].includes(activeTab) && (
+          {!['home', 'enquiries', 'admissions', 'credentials'].includes(activeTab) && (
             <div className="empty-state">
               <div className="empty-icon">🚧</div>
               <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
