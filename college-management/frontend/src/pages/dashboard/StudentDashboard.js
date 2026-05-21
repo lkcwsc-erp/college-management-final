@@ -8,8 +8,7 @@ import './Dashboard.css';
 const AdmissionTimeline = ({ admission }) => {
   if (!admission) return null;
 
-  const { studentSectionStatus, status, studentId, rejectionReason, staffNotes, principalNotes } = admission;
-
+  const { studentSectionStatus, status, rejectionReason, principalNotes } = admission;
   const steps = [
     {
       label: 'Form Submitted',
