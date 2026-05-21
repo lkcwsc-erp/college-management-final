@@ -63,10 +63,12 @@
   width: 100%;
   text-align: center;
 }
+
 .lightbox.active {
   opacity: 1;
   pointer-events: auto;
   z-index: 2000000; 
+}
 
 .lightbox-content img {
   max-width: 100%;
