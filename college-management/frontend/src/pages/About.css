@@ -1,9 +1,9 @@
 /* Container Standard Layout rules */
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 40px 20px;
   box-sizing: border-box;
 }
 
@@ -90,17 +90,17 @@
 
 .about-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
 }
 
 .about-info-card {
   backdrop-filter: blur(12px);
   background: rgba(255, 255, 255, 0.95);
-  padding: 30px;
-  border-radius: 16px;
+  padding: 20px;
+  border-radius: 12px;
   border-top: 4px solid #1565C0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
 }
 
@@ -110,20 +110,20 @@
 }
 
 .about-icon {
-  font-size: 45px;
-  margin-bottom: 15px;
+  font-size: 32px;
+  margin-bottom: 10px;
 }
 
 .about-info-card h3 {
   color: #003366;
-  margin-bottom: 15px;
-  font-size: 1.4rem;
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
 }
 
 .about-info-card p {
   color: #555;
-  line-height: 1.7;
-  font-size: 15px;
+  line-height: 1.6;
+  font-size: 13.5px;
 }
 
 .card-photo-preview {
