@@ -97,9 +97,6 @@ const cards = [
 </Link>
 
     </div>
-
-  </div>
-
 </section>
 
       <section className="about-section container">
