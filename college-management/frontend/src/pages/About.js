@@ -95,7 +95,7 @@ const cards = [
     Explore Campus
   </button>
 </Link>
-
+   </div>
     </div>
 </section>
 
