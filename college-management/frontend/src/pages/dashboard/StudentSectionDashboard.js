@@ -143,13 +143,13 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
               <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', color: '#888', fontWeight: '600' }}>{doc.label}</span>
               {adm[doc.key] ? (
                 <a
-                 href={adm[doc.key]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '13px', color: '#1565C0', textDecoration: 'underline' }}
-                >
-                  📎 View Document
-                </a>
+                href={`https://college-management-nnve.onrender.com/uploads/${adm[doc.key]}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  style={{ fontSize: '13px', color: '#1565C0', textDecoration: 'underline' }}
+>
+  📎 View Document
+</a>
               ) : (
                 <span style={{ fontSize: '13px', color: '#bbb' }}>Not uploaded</span>
               )}
