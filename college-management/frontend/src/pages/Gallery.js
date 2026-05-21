@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Gallery from "./pages/Gallery";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import API from '../api/axios';
