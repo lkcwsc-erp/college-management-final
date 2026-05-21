@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
@@ -6,11 +6,11 @@ import './Dashboard.css';
 
 // ── Default fee structure (persisted in localStorage) ──────────────────────
 const DEFAULT_FEES = {
-  BONAFIDE: { label: '📋 Bonafide Certificate', price: 30 },
-  ID_CARD:  { label: '🪪 ID Card',              price: 100 },
-  MARKSHEET:  { label: '📄 Marksheet',           price: 0 },
-  MIGRATION:  { label: '📜 Migration Certificate', price: 0 },
-  TC:         { label: '🎓 Transfer Certificate (TC)', price: 0 },
+  BONAFIDE:  { label: '📋 Bonafide Certificate',       price: 30 },
+  ID_CARD:   { label: '🪪 ID Card',                    price: 100 },
+  MARKSHEET: { label: '📄 Marksheet',                  price: 0 },
+  MIGRATION: { label: '📜 Migration Certificate',      price: 0 },
+  TC:        { label: '🎓 Transfer Certificate (TC)',  price: 0 },
 };
 
 const loadFees = () => {
@@ -54,7 +54,7 @@ const printReceipt = (receiptData) => {
       <div class="receipt">
         <div class="header">
           <div class="college-name">Late Kalpana Chawla Mahila College</div>
-          <div class="sub-title">Women's Science College, Wani</div>
+          <div class="sub-title">Senior Science & Arts College, Gangakhed</div>
           <div class="receipt-title">🧾 OFFICIAL FEE RECEIPT</div>
           <div class="receipt-no">Receipt No: ${receiptData.receiptNo}</div>
         </div>
@@ -107,7 +107,6 @@ const AccountsSectionDashboard = () => {
   // Collect fees modal state
   const [paymentMode, setPaymentMode] = useState('cash'); // 'cash' | 'online'
   const [transactionId, setTransactionId] = useState('');
-  const [receiptReady, setReceiptReady] = useState(false);
 
   useEffect(() => { fetchRequests(); }, []);
 
@@ -130,7 +129,6 @@ const AccountsSectionDashboard = () => {
     setNotes('');
     setPaymentMode('cash');
     setTransactionId('');
-    setReceiptReady(false);
   };
 
   // ── Reject request ─────────────────────────────────────────────────────
@@ -220,11 +218,6 @@ const AccountsSectionDashboard = () => {
     }
   };
 
-  const hasFee = (req) => {
-    const price = feeStructure[req.documentType]?.price;
-    return price !== undefined && price > 0;
-  };
-
   const pendingRequests = docRequests.filter(r => r.status === 'pending_accounts');
   const processedRequests = docRequests.filter(r => r.status !== 'pending_accounts');
 
@@ -251,7 +244,6 @@ const AccountsSectionDashboard = () => {
           <button>🧾 Generate Receipts</button>
           <button>📊 Outstanding Dues</button>
           <button>💳 Payment History</button>
-          <button>📈 Financial Reports</button>
         </nav>
         <button className="sidebar-logout" onClick={handleLogout}>🚪 Logout</button>
       </aside>
@@ -321,7 +313,6 @@ const AccountsSectionDashboard = () => {
               </div>
 
               <div style={{ background: 'white', borderRadius: '14px', overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-                {/* Table Header */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', background: '#1565C0', padding: '14px 20px' }}>
                   <span style={{ color: 'white', fontWeight: '700', fontSize: '14px' }}>Document Type</span>
                   <span style={{ color: 'white', fontWeight: '700', fontSize: '14px', textAlign: 'right' }}>Fee Amount (₹)</span>
@@ -372,7 +363,7 @@ const AccountsSectionDashboard = () => {
             </div>
           )}
 
-          {/* ── DOCUMENT REQUESTS TAB ─────────────────────────── */}
+{/* ── DOCUMENT REQUESTS TAB ─────────────────────────── */}
           {activeTab === 'documents' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: '8px' }}>📄 Document Requests</h2>
@@ -437,7 +428,7 @@ const AccountsSectionDashboard = () => {
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
                           <button
-                            onClick={() => { setSelectedReq(req); setActionType('collect_fees'); setPaymentMode('cash'); setTransactionId(''); setReceiptReady(false); }}
+                            onClick={() => { setSelectedReq(req); setActionType('collect_fees'); setPaymentMode('cash'); setTransactionId(''); }}
                             style={{ background: '#1565C0', color: 'white', padding: '10px 22px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                           >
                             💰 Collect Fees {fee && fee.price > 0 ? `(₹${fee.price})` : '(₹0)'}
