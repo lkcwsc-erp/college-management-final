@@ -69,20 +69,41 @@ const cards = [
   return (
     <div>
       <Navbar />
-    <section className="page-header">
-        <h1>About Us</h1>
-        <p>Learn about our history, vision, and mission</p>
-    <Link to="/parent-org">
-  <button className="parent-org-btn">
-    About Our Parent Organisation
-  </button>
-</Link>
-    </section>
+
+    <section className="about-hero">
+
+  <div className="hero-overlay">
+
+    <h1 className="hero-title">
+      About Us
+    </h1>
+
+    <p className="hero-subtitle">
+      Learn about our history, vision, mission and values
+    </p>
+
+    <div className="hero-buttons">
+
+      <Link to="/parent-org">
+        <button className="parent-org-btn">
+          About Our Parent Organisation
+        </button>
+      </Link>
+
+      <button className="explore-btn">
+        Explore Campus
+      </button>
+
+    </div>
+
+  </div>
+
+</section>
 
       <section className="about-section container">
         <div className="about-grid">
           {cards.map((card, i) => (
-            <div className="about-info-card" key={i}>
+            <div className="about-info-card glass-card" key={i}>
               <div className="about-icon">{card.icon}</div>
               <h3>{card.title}</h3>
               {card.photo && (
@@ -103,6 +124,29 @@ const cards = [
           ))}
         </div>
       </section>
+      <section className="stats-section">
+
+       <div className="stat-card">
+        <h2>20+</h2>
+        <p>Years of Excellence</p>
+       </div>
+
+     <div className="stat-card">
+     <h2>5000+</h2>
+     <p>Students</p>
+     </div>
+
+      <div className="stat-card">
+      <h2>100+</h2>
+      <p>Faculty Members</p>
+      </div>
+
+     <div className="stat-card">
+      <h2>50+</h2>
+      <p>Awards</p>
+     </div>
+
+</section>
 
       <section className="principal-section">
         <div className="container">
