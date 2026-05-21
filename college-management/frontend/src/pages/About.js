@@ -161,9 +161,6 @@ Inspired by the vision of Kalpana Chawla, we encourage our students to dream big
               <p className="principal-name">
                 — {aboutData.principalName || 'Principal'}
               </p>
-              <p>
-                {aboutData.principalMessage || `"At Late Kalpana Chawala Women’s Senior College, we believe education is not merely about acquiring knowledge but about shaping character, building confidence, and preparing young women to face the challenges of the modern world..."`}
-              </p>
               <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
                 Late Kalpana Chawla Mahila Senior Science & Arts College, Gangakhed
               </p>
