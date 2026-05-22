@@ -256,9 +256,11 @@ router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 
 
     // Generate Student ID
     const year       = new Date().getFullYear();
-    const courseName = admission.preferredSubject
-      ? admission.preferredSubject.substring(0, 3).toUpperCase()
-      : 'GEN';
+    const courseName = admission.courseType
+      ? admission.courseType.toUpperCase()
+      : (admission.preferredSubject
+          ? admission.preferredSubject.substring(0, 3).toUpperCase()
+          : 'GEN');
     const randomNum  = Math.floor(100 + Math.random() * 900);
     const studentId  = `${courseName}${year}${randomNum}`;
 
