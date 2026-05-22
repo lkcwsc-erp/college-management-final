@@ -148,12 +148,12 @@ const About = () => {
             <div className="principal-message">
               <h3>From the Desk of the Principal</h3>
                  <p>
-"At Late Kalpana Chawala Women’s Senior College, we believe education is not merely about acquiring knowledge but about shaping character, building confidence, and preparing young women to face the challenges of the modern world.
-
-Our institution is committed to providing quality education in Arts and Science while creating an environment that encourages critical thinking, creativity, and lifelong learning.
-
-Inspired by the vision of Kalpana Chawla, we encourage our students to dream big, work hard, and contribute positively to society and nation-building."
-           </p>
+Education isn’t just about memorizing facts; it’s about training your mind how to think. Every late-night study session and every difficult problem you solve is building a "mental muscle" that no one can ever take away from you.
+​Three Truths for the Journey:
+​Growth lives in the struggle. If it feels hard, it means you’re leveling up. Real progress happens at the edge of your comfort zone.
+​Consistency beats intensity. You don’t have to be a genius every single day. You just have to show up. Small, daily efforts compound into massive results over time.
+​Your "Current" is not your "Future." A single grade or a bad semester is a data point, not a destination. You are a work in progress, and the story isn't over yet.               
+                </p>
            <br />
               <p className="principal-name">
                 — {aboutData.principalName || 'Principal'}
