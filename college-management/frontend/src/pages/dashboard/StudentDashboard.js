@@ -195,7 +195,7 @@ return (
                 </div>
               </div>
 
-              {/* Student ID Card — Shows after Principal approval */}
+            {/* Student ID Card — Shows after Principal approval */}
               {myAdmission?.studentId && (
                 <div style={{
                   background: 'linear-gradient(135deg, #2E7D32 0%, #43A047 100%)',
@@ -243,7 +243,6 @@ return (
                   </div>
                 </div>
               )}
-
               {/* Admission Workflow Progress */}
               {myAdmission && (
                 <div className="recent-section" style={{ marginTop: '20px' }}>
