@@ -165,36 +165,92 @@ return (
         </div>
 
         <div className="dashboard-content">
-
-          {/* ============ HOME TAB ============ */}
+          
+        {/* ============ HOME TAB ============ */}
           {activeTab === 'home' && (
             <div>
-              <div className="dash-cards">
-                <div className="dash-card blue">
-                  <div className="dash-card-icon">📋</div>
-                  <div>
-                    <h3>Application</h3>
-                    <p style={{ color: myAdmission ? getStatusStyle(myAdmission.status).color : '#888', fontWeight: '500', fontSize: '13px' }}>
-                      {myAdmission ? getStatusStyle(myAdmission.status).label : 'Not Applied'}
+              {/* ── MIT/JUNO style Profile Card ── */}
+              <div style={{
+                background: '#fff', borderRadius: '16px', padding: '28px 24px',
+                marginBottom: '22px', boxShadow: '0 4px 18px rgba(0,0,0,0.08)',
+                textAlign: 'center', border: '1px solid #e3f2fd'
+              }}>
+                <div style={{
+                  width: '110px', height: '110px', borderRadius: '50%',
+                  margin: '0 auto 14px', overflow: 'hidden',
+                  border: '4px solid #1565C0', background: '#e3f2fd',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {myAdmission?.studentPhoto ? (
+                    <img
+                      src={(myAdmission.studentPhoto || '').startsWith('http')
+                        ? myAdmission.studentPhoto
+                        : `https://college-management-nnve.onrender.com/uploads/${myAdmission.studentPhoto}`}
+                      alt="Student"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: '3rem' }}>👩‍🎓</span>
+                  )}
+                </div>
+
+                <h2 style={{ color: '#0d1b3e', margin: '0 0 4px', fontSize: '1.5rem' }}>
+                  {myAdmission?.applicantName || user?.name}
+                </h2>
+
+                {myAdmission?.studentId ? (
+                  <div style={{
+                    display: 'inline-block', background: '#e8f5e9',
+                    color: '#2E7D32', padding: '5px 16px', borderRadius: '20px',
+                    fontSize: '14px', fontWeight: '700', fontFamily: 'monospace',
+                    letterSpacing: '1px', margin: '4px 0 14px'
+                  }}>
+                    🎓 ID: {myAdmission.studentId}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'inline-block', background: '#fff3e0',
+                    color: '#E65100', padding: '5px 16px', borderRadius: '20px',
+                    fontSize: '13px', fontWeight: '600', margin: '4px 0 14px'
+                  }}>
+                    ⏳ Student ID Pending
+                  </div>
+                )}
+
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+                  gap: '10px', borderTop: '1px solid #f0f0f0', paddingTop: '16px'
+                }}>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>COURSE</p>
+                    <p style={{ fontSize: '14px', color: '#1565C0', fontWeight: '600', margin: '2px 0 0' }}>
+                      {myAdmission?.courseType || myAdmission?.hscStream || 'N/A'}
                     </p>
                   </div>
-                </div>
-                <div className="dash-card green">
-                  <div className="dash-card-icon">💰</div>
-                  <div>
-                    <h3>Fees</h3>
-                    <p>{myAdmission?.fees ? `₹${myAdmission.fees}` : 'Not Set'}</p>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>EMAIL</p>
+                    <p style={{ fontSize: '13px', color: '#333', fontWeight: '500', margin: '2px 0 0', wordBreak: 'break-all' }}>
+                      {myAdmission?.email || user?.email}
+                    </p>
                   </div>
-                </div>
-                <div className="dash-card orange">
-                  <div className="dash-card-icon">📢</div>
-                  <div>
-                    <h3>Notices</h3>
-                    <p>{notices.length} notices</p>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>PHONE</p>
+                    <p style={{ fontSize: '14px', color: '#333', fontWeight: '500', margin: '2px 0 0' }}>
+                      {myAdmission?.phone || user?.phone || 'N/A'}
+                    </p>
+                  </div>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>STATUS</p>
+                    <p style={{ fontSize: '14px', fontWeight: '600', margin: '2px 0 0',
+                      color: myAdmission?.status === 'approved' ? '#2E7D32' : '#E65100' }}>
+                      {myAdmission?.status === 'approved' ? '✅ Approved' : '⏳ Under Review'}
+                    </p>
                   </div>
                 </div>
               </div>
 
+              <div className="dash-cards">
             {/* Student ID Card — Shows after Principal approval */}
               {myAdmission?.studentId && (
                 <div style={{
