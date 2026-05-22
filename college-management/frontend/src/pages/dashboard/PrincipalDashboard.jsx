@@ -150,7 +150,7 @@ const AdmissionModal = ({ adm, onClose, onRefresh, showMsg }) => {
             <div key={doc.key} style={{ display: 'flex', padding: '8px 0', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
               <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', color: '#888', fontWeight: '600' }}>{doc.label}</span>
               {adm[doc.key] ? (
-                <a href={adm[doc.key]} target="_blank" rel="noopener noreferrer"
+               <a href={adm[doc.key].startsWith('http') ? adm[doc.key] : `https://college-management-nnve.onrender.com/uploads/${adm[doc.key]}`} target="_blank" rel="noopener noreferrer"
                   style={{ fontSize: '13px', color: '#1565C0', textDecoration: 'underline' }}>
                   📎 View Document
                 </a>
