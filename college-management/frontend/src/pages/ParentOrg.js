@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "./About.css";
@@ -12,22 +11,8 @@ const founders = [
     photo: null,
     description:
       "A visionary educationist and social reformer who established VNSS with the mission of bringing quality education to rural Maharashtra. Dedicated over 30 years to community development and student welfare.",
-  },
-  {
-    name: "Founder Name 2",
-    title: "Co-Founder & Secretary",
-    photo: null,
-    description:
-      "A committed social worker and educator who co-founded VNSS and has been instrumental in expanding its reach across the Dongargaon region. Champion of women empowerment and girl child education.",
-  },
-  {
-    name: "Founder Name 3",
-    title: "Co-Founder & Treasurer",
-    photo: null,
-    description:
-      "An accomplished administrator and philanthropist who helped build the financial and institutional framework of VNSS. Passionate advocate for affordable, accessible higher education.",
-  },
-];
+  }
+ ];
 
 const stats = [
   { number: "30+", label: "Years of Service" },
