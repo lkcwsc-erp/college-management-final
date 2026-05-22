@@ -64,8 +64,12 @@ const admissionSchema = new mongoose.Schema({
     ref: 'Course'
   },
 
-  preferredSubject: { type: String },
+  courseType: { type: String, default: '' },
+  admissionYear: { type: String, default: '' },
+  primarySubject: { type: String, default: '' },
+  optionalSubjects: { type: String, default: '' },
 
+  preferredSubject: { type: String },
   fatherName: { type: String },
   motherName: { type: String },
   guardianPhone: { type: String },
