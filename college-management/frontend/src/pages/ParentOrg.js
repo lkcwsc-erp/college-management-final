@@ -3,8 +3,6 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "./About.css";
 import "./ParentOrg.css";
-import VNSSLogo from "../assets/Sanshta_logo.jpeg";
-// To add founder photo: import FounderPhoto from "../assets/sopan_sodgir.jpg";
 
 const stats = [
   { number: "30+", label: "Years of Service" },
@@ -57,7 +55,7 @@ const ParentOrg = () => {
         <section className="po-hero">
           <div className="po-hero-bg" />
           <div className="po-hero-content">
-            <img src={VNSSLogo} alt="VNSS Logo" className="po-hero-logo" />
+            <img src="/Sanshta_logo.jpeg" alt="VNSS Logo" className="po-hero-logo" />
             <div className="po-hero-text">
               <p className="po-hero-tag">Our Parent Organisation</p>
               <h1 className="po-hero-title">Vidyaniketan Sevabhavi Sanstha</h1>
@@ -107,7 +105,7 @@ const ParentOrg = () => {
                 </p>
               </div>
               <div className="po-about-logo-box">
-                <img src={VNSSLogo} alt="VNSS" className="po-about-logo" />
+                <img src="/Sanshta_logo.jpeg" alt="VNSS" className="po-about-logo" />
                 <div className="po-about-reg">
                   <span>📌 Registered under Maharashtra Societies Act</span>
                   <span>📍 Headquartered in Dongargaon, Maharashtra</span>
@@ -187,18 +185,20 @@ const ParentOrg = () => {
               {/* LEFT — Photo + Years */}
               <div className="po-founder-left">
                 <div className="po-founder-photo-large">
-                  {/* To add photo: replace the div below with:
-                      <img src={FounderPhoto} alt="Late Shri Sopan Sodgir" /> */}
+                  {/* To add photo later:
+                      1. Save photo as public/sopan_sodgir.jpg
+                      2. Replace the div below with:
+                         <img src="/sopan_sodgir.jpg" alt="Late Shri Sopan Sodgir" /> */}
                   <div className="po-photo-placeholder-large">
                     <span>S</span>
                     <p className="po-photo-hint">
                       📷 Add photo as<br />
-                      <code>src/assets/sopan_sodgir.jpg</code>
+                      <code>public/sopan_sodgir.jpg</code>
                     </p>
                   </div>
                 </div>
                 <div className="po-founder-years">
-                  {/* UPDATE: change years below */}
+                  {/* UPDATE: change years below when known */}
                   <span>1940 – 2025</span>
                   <small>Born – Passed Away</small>
                 </div>
@@ -209,7 +209,7 @@ const ParentOrg = () => {
                 <h3>Late Shri Sopan Sodgir</h3>
                 <span className="po-founder-badge">Founder & President, VNSS</span>
 
-                {/* UPDATE: replace this paragraph with real bio */}
+                {/* UPDATE: replace paragraphs below with real bio */}
                 <p>
                   Late Shri Sopan Sodgir was a visionary educationist, dedicated social
                   worker, and the founding force behind Vidyaniketan Sevabhavi Sanstha.
