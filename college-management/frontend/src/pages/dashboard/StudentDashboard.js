@@ -428,8 +428,12 @@ const StudentDashboard = () => {
                 )}
                 <div className="profile-info-grid">
                   <div className="profile-info-item"><label>Email</label><p>{user?.email}</p></div>
-                  <div className="profile-info-item"><label>Phone</label><p>{user?.phone || 'Not provided'}</p></div>
-                  <div className="profile-info-item"><label>Role</label><p>Student</p></div>
+                  <div className="profile-info-item"><label>Phone</label><p>{myAdmission?.phone || user?.phone || 'Not provided'}</p></div>
+                  <div className="profile-info-item"><label>Academic Year</label><p>{myAdmission?.admissionYear || 'Not set'}</p></div>
+                  <div className="profile-info-item"><label>ABC ID</label><p>{myAdmission?.aparIdNumber || 'Not provided'}</p></div>
+                  <div className="profile-info-item"><label>Course</label><p>{myAdmission?.courseType || myAdmission?.course?.name || 'Not set'}</p></div>
+                  <div className="profile-info-item"><label>Category</label><p>{myAdmission?.category ? myAdmission.category.toUpperCase() : 'Not set'}</p></div>
+                  <div className="profile-info-item" style={{ gridColumn: '1 / -1' }}><label>Address</label><p>{myAdmission?.address || 'Not provided'}</p></div>
                   <div className="profile-info-item"><label>Account Status</label><p className="status-active">Active</p></div>
                 </div>
               </div>
