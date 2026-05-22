@@ -1,19 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "./About.css";
 import "./ParentOrg.css";
 import VNSSLogo from "../assets/Sanshta_logo.jpeg";
-
-const founders = [
-  {
-    name: "Founder Name 1",
-    title: "President & Founder",
-    photo: null,
-    description:
-      "A visionary educationist and social reformer who established VNSS with the mission of bringing quality education to rural Maharashtra. Dedicated over 30 years to community development and student welfare.",
-  }
- ];
+// To add founder photo: import FounderPhoto from "../assets/sopan_sodgir.jpg";
 
 const stats = [
   { number: "30+", label: "Years of Service" },
@@ -56,8 +47,6 @@ const activities = [
 ];
 
 const ParentOrg = () => {
-  const [activeFounder, setActiveFounder] = useState(0);
-
   return (
     <>
       <Navbar />
@@ -183,69 +172,75 @@ const ParentOrg = () => {
           </div>
         </section>
 
-        {/* FOUNDERS */}
+        {/* FOUNDER MEMORIAL */}
         <section className="po-section po-founders">
           <div className="po-section-inner">
-            <div className="po-section-label">Leadership</div>
-            <h2 className="po-section-title">Our Founders</h2>
+            <div className="po-section-label">In Loving Memory</div>
+            <h2 className="po-section-title">Our Founder</h2>
             <p className="po-section-sub">
-              Meet the visionaries who laid the foundation of VNSS and dedicated
-              their lives to education and social service.
+              We honour the life and legacy of the visionary who built VNSS
+              from the ground up and devoted his life to education and community service.
             </p>
 
-            <div className="po-founders-layout">
-              <div className="po-founders-tabs">
-                {founders.map((f, i) => (
-                  <button
-                    key={i}
-                    className={`po-founder-tab ${activeFounder === i ? "active" : ""}`}
-                    onClick={() => setActiveFounder(i)}
-                  >
-                    <div className="po-tab-photo">
-                      {f.photo ? (
-                        <img src={f.photo} alt={f.name} />
-                      ) : (
-                        <div className="po-tab-placeholder">
-                          {f.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="po-tab-name">{f.name}</div>
-                      <div className="po-tab-title">{f.title}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+            <div className="po-founder-card">
 
-              <div className="po-founder-detail">
+              {/* LEFT — Photo + Years */}
+              <div className="po-founder-left">
                 <div className="po-founder-photo-large">
-                  {founders[activeFounder].photo ? (
-                    <img
-                      src={founders[activeFounder].photo}
-                      alt={founders[activeFounder].name}
-                    />
-                  ) : (
-                    <div className="po-photo-placeholder-large">
-                      <span>{founders[activeFounder].name.charAt(0)}</span>
-                      <p className="po-photo-hint">
-                        📷 Add photo in <code>src/assets/</code> and update founders array
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="po-founder-info">
-                  <h3>{founders[activeFounder].name}</h3>
-                  <span className="po-founder-badge">
-                    {founders[activeFounder].title}
-                  </span>
-                  <p>{founders[activeFounder].description}</p>
-                  <div className="po-founder-quote">
-                    <span>"</span> Dedicated to the vision of educated,
-                    empowered communities across Maharashtra. <span>"</span>
+                  {/* To add photo: replace the div below with:
+                      <img src={FounderPhoto} alt="Late Shri Sopan Sodgir" /> */}
+                  <div className="po-photo-placeholder-large">
+                    <span>S</span>
+                    <p className="po-photo-hint">
+                      📷 Add photo as<br />
+                      <code>src/assets/sopan_sodgir.jpg</code>
+                    </p>
                   </div>
                 </div>
+                <div className="po-founder-years">
+                  {/* UPDATE: change years below */}
+                  <span>1940 – 2025</span>
+                  <small>Born – Passed Away</small>
+                </div>
               </div>
+
+              {/* RIGHT — Info */}
+              <div className="po-founder-info">
+                <h3>Late Shri Sopan Sodgir</h3>
+                <span className="po-founder-badge">Founder & President, VNSS</span>
+
+                {/* UPDATE: replace this paragraph with real bio */}
+                <p>
+                  Late Shri Sopan Sodgir was a visionary educationist, dedicated social
+                  worker, and the founding force behind Vidyaniketan Sevabhavi Sanstha.
+                  With an unwavering belief that education is the most powerful tool for
+                  social transformation, he established VNSS with the mission of bringing
+                  quality education to the doorstep of every child in rural Maharashtra.
+                </p>
+                <p>
+                  Throughout his life, he championed the causes of women empowerment,
+                  student welfare, and community development — tirelessly working to
+                  build institutions that would outlast him and continue serving
+                  generations to come. His leadership, humility, and compassion
+                  inspired all who had the privilege of working alongside him.
+                </p>
+
+                {/* UPDATE: replace with a real quote if available */}
+                <div className="po-founder-quote">
+                  <span>"</span> Education is not just about knowledge — it is about
+                  building character, nurturing compassion, and empowering every individual
+                  to contribute meaningfully to society. <span>"</span>
+                </div>
+
+                <div className="po-founder-rip">
+                  🕊️ &nbsp;
+                  <span>
+                    <strong>Late Shri Sopan Sodgir</strong> — Forever in our hearts.
+                    His vision lives on through every student we serve.
+                  </span>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
