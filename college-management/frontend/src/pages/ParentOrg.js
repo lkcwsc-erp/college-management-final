@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "./About.css";
 import "./ParentOrg.css";
-import VNSSLogo from "../assets/Sanshta_logo.jpeg"; // place logo in src/assets/
+import VNSSLogo from "../assets/Sanshta_logo.jpeg";
 
 const founders = [
   {
