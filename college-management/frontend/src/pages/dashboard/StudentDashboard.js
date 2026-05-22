@@ -12,32 +12,22 @@ const StudentDashboard = () => {
   const [myAdmission, setMyAdmission] = useState(null);
   const [admissionLoading, setAdmissionLoading] = useState(true);
 
-  // Document Request States
   const [myDocRequests, setMyDocRequests] = useState([]);
   const [docFormData, setDocFormData] = useState({
-    documentType: '',
-    reason: '',
-    urgency: 'normal'
+    documentType: '', reason: '', urgency: 'normal'
   });
   const [docMessage, setDocMessage] = useState('');
   const [docLoading, setDocLoading] = useState(false);
 
   useEffect(() => {
-    API.get('/notices')
-      .then(res => setNotices(res.data.notices || []));
-
+    API.get('/notices').then(res => setNotices(res.data.notices || []));
     if (user?.email) {
       API.get(`/admissions/by-email/${user.email}`)
         .then(res => {
-          if (res.data.success) {
-            setMyAdmission(res.data.admission);
-          }
+          if (res.data.success) setMyAdmission(res.data.admission);
           setAdmissionLoading(false);
         })
-        .catch(() => {
-          setAdmissionLoading(false);
-        });
-
+        .catch(() => setAdmissionLoading(false));
       API.get('/document-requests/my')
         .then(res => setMyDocRequests(res.data.requests || []))
         .catch(() => {});
@@ -46,10 +36,7 @@ const StudentDashboard = () => {
     }
   }, [user]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
+  const handleLogout = () => { logout(); navigate('/'); };
 
   const handleDocSubmit = async (e) => {
     e.preventDefault();
@@ -63,8 +50,7 @@ const StudentDashboard = () => {
       if (res.data.success) {
         setDocMessage('✅ Request submitted! Waiting for Accounts Section approval.');
         setDocFormData({ documentType: '', reason: '', urgency: 'normal' });
-        API.get('/document-requests/my')
-          .then(r => setMyDocRequests(r.data.requests || []));
+        API.get('/document-requests/my').then(r => setMyDocRequests(r.data.requests || []));
         setTimeout(() => setDocMessage(''), 4000);
       }
     } catch (err) {
@@ -76,22 +62,15 @@ const StudentDashboard = () => {
 
   const getDocStatusStyle = (status) => {
     switch (status) {
-      case 'pending_accounts':
-        return { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending - Accounts' };
-      case 'rejected_by_accounts':
-        return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' };
+      case 'pending_accounts': return { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending - Accounts' };
+      case 'rejected_by_accounts': return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' };
       case 'approved_by_accounts':
-      case 'pending_principal':
-        return { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending - Principal' };
-      case 'rejected_by_principal':
-        return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' };
+      case 'pending_principal': return { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending - Principal' };
+      case 'rejected_by_principal': return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' };
       case 'approved_by_principal':
-      case 'pending_generation':
-        return { bg: '#e3f2fd', color: '#1565C0', label: '🎯 Pending - Generation' };
-      case 'completed':
-        return { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Completed' };
-      default:
-        return { bg: '#f5f5f5', color: '#666', label: status };
+      case 'pending_generation': return { bg: '#e3f2fd', color: '#1565C0', label: '🎯 Pending - Generation' };
+      case 'completed': return { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Completed' };
+      default: return { bg: '#f5f5f5', color: '#666', label: status };
     }
   };
 
@@ -124,6 +103,10 @@ const StudentDashboard = () => {
     return '⏳';
   };
 
+  const docUrl = (f) => (f || '').startsWith('http')
+    ? f
+    : `https://college-management-nnve.onrender.com/uploads/${f}`;
+
   const docList = [
     { key: 'studentPhoto', label: '📸 Student Photo' },
     { key: 'aadharPhoto', label: '🪪 Aadhar Card' },
@@ -133,7 +116,7 @@ const StudentDashboard = () => {
     { key: 'casteCertificate', label: '📋 Caste Certificate' },
     { key: 'casteValidityCertificate', label: '✅ Caste Validity' },
   ];
-return (
+  return (
     <div className="dashboard-layout">
       <aside className="sidebar">
         <div className="sidebar-header">
@@ -145,9 +128,7 @@ return (
         </div>
         <nav className="sidebar-nav">
           {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={activeTab === tab.id ? 'active' : ''}
+            <button key={tab.id} className={activeTab === tab.id ? 'active' : ''}
               onClick={() => setActiveTab(tab.id)}>
               {tab.label}
             </button>
@@ -159,14 +140,12 @@ return (
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <h2>{tabs.find(t => t.id === activeTab)?.label}</h2>
-          <div className="user-info">
-            <span>👋 Welcome, {user?.name}</span>
-          </div>
+          <div className="user-info"><span>👋 Welcome, {user?.name}</span></div>
         </div>
 
         <div className="dashboard-content">
-          
-        {/* ============ HOME TAB ============ */}
+
+          {/* ============ HOME TAB ============ */}
           {activeTab === 'home' && (
             <div>
               {/* ── MIT/JUNO style Profile Card ── */}
@@ -182,14 +161,9 @@ return (
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   {myAdmission?.studentPhoto ? (
-                    <img
-                      src={(myAdmission.studentPhoto || '').startsWith('http')
-                        ? myAdmission.studentPhoto
-                        : `https://college-management-nnve.onrender.com/uploads/${myAdmission.studentPhoto}`}
-                      alt="Student"
+                    <img src={docUrl(myAdmission.studentPhoto)} alt="Student"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
+                      onError={(e) => { e.target.style.display = 'none'; }} />
                   ) : (
                     <span style={{ fontSize: '3rem' }}>👩‍🎓</span>
                   )}
@@ -201,18 +175,18 @@ return (
 
                 {myAdmission?.studentId ? (
                   <div style={{
-                    display: 'inline-block', background: '#e8f5e9',
-                    color: '#2E7D32', padding: '5px 16px', borderRadius: '20px',
-                    fontSize: '14px', fontWeight: '700', fontFamily: 'monospace',
-                    letterSpacing: '1px', margin: '4px 0 14px'
+                    display: 'inline-block', background: '#e8f5e9', color: '#2E7D32',
+                    padding: '5px 16px', borderRadius: '20px', fontSize: '14px',
+                    fontWeight: '700', fontFamily: 'monospace', letterSpacing: '1px',
+                    margin: '4px 0 14px'
                   }}>
                     🎓 ID: {myAdmission.studentId}
                   </div>
                 ) : (
                   <div style={{
-                    display: 'inline-block', background: '#fff3e0',
-                    color: '#E65100', padding: '5px 16px', borderRadius: '20px',
-                    fontSize: '13px', fontWeight: '600', margin: '4px 0 14px'
+                    display: 'inline-block', background: '#fff3e0', color: '#E65100',
+                    padding: '5px 16px', borderRadius: '20px', fontSize: '13px',
+                    fontWeight: '600', margin: '4px 0 14px'
                   }}>
                     ⏳ Student ID Pending
                   </div>
@@ -251,22 +225,30 @@ return (
               </div>
 
               <div className="dash-cards">
-            {/* Student ID Card — Shows after Principal approval */}
-              {myAdmission?.studentId && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #2E7D32 0%, #43A047 100%)',
-                  borderRadius: '14px', padding: '24px', marginTop: '20px',
-                  color: 'white', boxShadow: '0 6px 20px rgba(46,125,50,0.3)'
-                }}>
-                  <p style={{ fontSize: '14px', opacity: 0.9, marginBottom: '6px' }}>🎓 Your Official Student ID</p>
-                  <h2 style={{ color: 'white', fontSize: '1.8rem', letterSpacing: '1px', fontFamily: 'monospace' }}>
-                    {myAdmission.studentId}
-                  </h2>
-                  <p style={{ fontSize: '13px', opacity: 0.85, marginTop: '8px' }}>
-                    ✅ Admission Approved — Keep this ID safe for all college work.
-                  </p>
+                <div className="dash-card blue">
+                  <div className="dash-card-icon">📋</div>
+                  <div>
+                    <h3>Application</h3>
+                    <p style={{ color: myAdmission ? getStatusStyle(myAdmission.status).color : '#888', fontWeight: '500', fontSize: '13px' }}>
+                      {myAdmission ? getStatusStyle(myAdmission.status).label : 'Not Applied'}
+                    </p>
+                  </div>
                 </div>
-              )}
+                <div className="dash-card green">
+                  <div className="dash-card-icon">💰</div>
+                  <div>
+                    <h3>Fees</h3>
+                    <p>{myAdmission?.fees ? `₹${myAdmission.fees}` : 'Not Set'}</p>
+                  </div>
+                </div>
+                <div className="dash-card orange">
+                  <div className="dash-card-icon">📢</div>
+                  <div>
+                    <h3>Notices</h3>
+                    <p>{notices.length} notices</p>
+                  </div>
+                </div>
+              </div>
 
               {myAdmission && (
                 <div className="recent-section" style={{ marginTop: '20px' }}>
@@ -299,7 +281,7 @@ return (
                   </div>
                 </div>
               )}
-              {/* Admission Workflow Progress */}
+
               {myAdmission && (
                 <div className="recent-section" style={{ marginTop: '20px' }}>
                   <h3>📊 Admission Approval Progress</h3>
@@ -307,10 +289,10 @@ return (
                     <span style={{ fontWeight: '600' }}>📝 Submitted</span>
                     <span>→</span>
                     <span style={{
-                      color: (myAdmission.staffStatus === 'staff_approved' || myAdmission.status === 'approved') ? '#2E7D32' : '#999',
-                      fontWeight: (myAdmission.staffStatus === 'staff_approved' || myAdmission.status === 'approved') ? '600' : '400'
+                      color: (myAdmission.studentSectionStatus === 'verified' || myAdmission.status === 'approved') ? '#2E7D32' : '#999',
+                      fontWeight: (myAdmission.studentSectionStatus === 'verified' || myAdmission.status === 'approved') ? '600' : '400'
                     }}>
-                      {(myAdmission.staffStatus === 'staff_approved' || myAdmission.status === 'approved') ? '✅' : '⏳'} Student Section
+                      {(myAdmission.studentSectionStatus === 'verified' || myAdmission.status === 'approved') ? '✅' : '⏳'} Student Section
                     </span>
                     <span>→</span>
                     <span style={{
@@ -408,11 +390,11 @@ return (
                         if (!myAdmission[doc.key]) return null;
                         return (
                           <div key={doc.key} style={{ background: '#f8faff', border: '1px solid #e3f2fd', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                            <img src={`https://college-management-nnve.onrender.com/uploads/${myAdmission[doc.key]}`} alt={doc.label}
+                            <img src={docUrl(myAdmission[doc.key])} alt={doc.label}
                               style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }}
                               onError={(e) => { e.target.style.display = 'none'; }} />
                             <p style={{ fontSize: '11px', color: '#1565C0', fontWeight: '500', marginBottom: '6px' }}>{doc.label}</p>
-                            <a href={`https://college-management-nnve.onrender.com/uploads/${myAdmission[doc.key]}`} target="_blank" rel="noreferrer"
+                            <a href={docUrl(myAdmission[doc.key])} target="_blank" rel="noreferrer"
                               style={{ fontSize: '11px', color: '#1565C0', textDecoration: 'underline' }}>View Full</a>
                           </div>
                         );
@@ -432,7 +414,7 @@ return (
             <div className="profile-card">
               <div className="profile-avatar">
                 {myAdmission?.studentPhoto ? (
-                  <img src={`https://college-management-nnve.onrender.com/uploads/${myAdmission.studentPhoto}`} alt="Student"
+                  <img src={docUrl(myAdmission.studentPhoto)} alt="Student"
                     style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                 ) : (
                   <span style={{ fontSize: '3rem' }}>👩‍🎓</span>
@@ -632,7 +614,7 @@ return (
 
                             {req.rejectionReason && (
                               <div style={{ background: '#ffebee', padding: '10px 14px', borderRadius: '8px', marginTop: '10px', fontSize: '13px', color: '#C62828' }}>
-                                <strong>❌ Rejected by {req.rejectedAt}:</strong> {req.rejectionReason}
+                                <strong>❌ Rejected:</strong> {req.rejectionReason}
                               </div>
                             )}
 
