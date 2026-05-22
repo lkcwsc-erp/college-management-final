@@ -77,7 +77,7 @@ const printReceipt = (receiptData) => {
           This is a computer-generated receipt.
         </div>
       </div>
-      <script>window.onload = () => window.print();<\/script>
+     <scrip${'t'}>window.onload = () => window.print();</scrip${'t'}>
     </body>
     </html>
   `;
