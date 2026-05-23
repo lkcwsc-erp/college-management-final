@@ -106,11 +106,6 @@ const ParentOrg = () => {
               {/* Logo + Contact + Address */}
               <div className="po-about-logo-box">
                 <img src="/Sanshta_logo.jpeg" alt="VNSS" className="po-about-logo" />
-                <div className="po-about-reg">
-                  <span>📌 Registered under Maharashtra Societies Act</span>
-                  <span>📍 Headquartered in Dongargaon, Maharashtra</span>
-                  <span>🏛️ Recognised by State Government of Maharashtra</span>
-                </div>
                 <div className="po-about-contact">
                   <div className="po-contact-item">
                     <span className="po-contact-icon">📍</span>
