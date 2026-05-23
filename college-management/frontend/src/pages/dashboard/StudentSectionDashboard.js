@@ -86,10 +86,13 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           <Field label="Blood Group" value={adm.bloodGroup} />
           <Field label="Category" value={adm.category} />
           <Field label="Caste" value={adm.caste} />
+          <Field label="Sub-Caste" value={adm.subCaste} />
           <Field label="Religion" value={adm.religion} />
           <Field label="Nationality" value={adm.nationality} />
+          <Field label="Mother Tongue" value={adm.motherTongue} />
           <Field label="Aadhar No." value={adm.aadharNumber} />
-          <Field label="APAR ID" value={adm.aparId} />
+          <Field label="APAR / ABC ID" value={adm.aparIdNumber} />
+          <Field label="Is Married" value={adm.isMarried ? 'Yes' : 'No'} />
         </Section>
 
         {/* Contact Info */}
@@ -97,18 +100,18 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           <Field label="Email" value={adm.email} />
           <Field label="Phone" value={adm.phone} />
           <Field label="Address" value={adm.address} />
-          <Field label="City" value={adm.city} />
-          <Field label="State" value={adm.state} />
-          <Field label="Pincode" value={adm.pincode} />
         </Section>
 
         {/* Academic Info */}
         <Section title="🎓 Academic Information">
-          <Field label="Preferred Course" value={adm.preferredSubject || adm.course} />
+          <Field label="Course Type" value={adm.courseType} />
+          <Field label="Preferred Subject" value={adm.preferredSubject} />
+          <Field label="Admission Year" value={adm.admissionYear} />
           <Field label="SSC Marks" value={adm.sscObtainedMarks ? `${adm.sscObtainedMarks}/${adm.sscTotalMarks} (${adm.sscPercentage}%)` : null} />
           <Field label="HSC Marks" value={adm.hscObtainedMarks ? `${adm.hscObtainedMarks}/${adm.hscTotalMarks} (${adm.hscPercentage}%)` : null} />
           <Field label="Previous Year Marks" value={adm.prevYearObtainedMarks ? `${adm.prevYearObtainedMarks}/${adm.prevYearTotalMarks} (${adm.prevYearPercentage}%)` : null} />
           <Field label="Has Gap Year" value={adm.hasGap ? 'Yes' : 'No'} />
+          <Field label="Has Caste Validity" value={adm.hasCasteValidity ? 'Yes' : 'No'} />
         </Section>
 
         {/* Parents Info */}
@@ -118,7 +121,7 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           <Field label="Father's Occupation" value={adm.fatherOccupation} />
           <Field label="Mother's Name" value={adm.motherName} />
           <Field label="Mother's Phone" value={adm.motherPhone} />
-          <Field label="Annual Income" value={adm.annualIncome} />
+          <Field label="Annual Income" value={adm.annualIncome ? `₹ ${adm.annualIncome}` : null} />
         </Section>
 
         {/* Documents */}
@@ -272,7 +275,7 @@ const StudentSectionDashboard = () => {
   const [searchText, setSearchText] = useState('');
  // Generate Credentials states
   const [credForm, setCredForm] = useState({
-    firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '', aadharNumber: ''
+    firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: ''
   });
   const [credLoading, setCredLoading] = useState(false);
   const [credMsg, setCredMsg] = useState('');
@@ -360,7 +363,7 @@ const StudentSectionDashboard = () => {
           password: res.data.generatedPassword
         });
         setCredMsg('✅ Student account created successfully!');
-      setCredForm({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '', aadharNumber: '' });
+        setCredForm({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '' });
       }
     } catch (err) {
       setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account'));
@@ -855,19 +858,6 @@ const StudentSectionDashboard = () => {
             required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
           <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>
             💡 Password will be auto-generated: first 4 letters of name + @ + DD + YY
-          </small>
-        </div>
-
-        <div className="form-group">
-          <label>Aadhaar Number *</label>
-          <input type="text"
-            placeholder="12 digit Aadhaar number"
-            value={credForm.aadharNumber}
-            onChange={e => { if (/^\d{0,12}$/.test(e.target.value)) setCredForm({ ...credForm, aadharNumber: e.target.value }); }}
-            required maxLength="12"
-            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>
-            🪪 Aadhaar prevents duplicate student accounts
           </small>
         </div>
 
