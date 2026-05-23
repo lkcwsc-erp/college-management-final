@@ -1465,55 +1465,82 @@ const [activeTab, setActiveTab] = useState('process');
                     )}
                   </div>
 
-                  {/* ===== COURSE & YEAR SELECTION ===== */}
-                  <div className="form-section highlight-section">
-                    <h3 className="form-section-title">📚 Course &amp; Year Selection</h3>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Course *</label>
-                        <select name="courseType" value={formData.courseType}
-                          onChange={handleChange} required>
-                          <option value="">Select Course</option>
-                          <option value="BA">Bachelor of Arts (BA)</option>
-                          <option value="BSc">Bachelor of Science (BSc)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Admission Year *</label>
-                        <select name="admissionYear" value={formData.admissionYear}
-                          onChange={handleChange} required>
-                          <option value="">Select Year</option>
-                          <option value="1st Year">1st Year</option>
-                          <option value="Direct Second Year">Direct Second Year</option>
-                          <option value="Direct Third Year">Direct Third Year</option>
-                        </select>
-                      </div>
-                    </div>
+                 {/* ===== COURSE & YEAR SELECTION ===== */}
+<div className="form-section highlight-section">
+  <h3 className="form-section-title">📚 Course &amp; Year Selection</h3>
 
-                    {formData.courseType && (
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Primary Subject / Specialization *</label>
-                          <select name="primarySubject" value={formData.primarySubject}
-                            onChange={handleChange} required>
-                            <option value="">Select Subject</option>
-                            {(SUBJECTS_BY_COURSE[formData.courseType] || []).map(s => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
-                          <small className="field-hint">
-                            💡 Subjects available for {formData.courseType}
-                          </small>
-                        </div>
-                        <div className="form-group">
-                          <label>Optional Subjects</label>
-                          <input type="text" name="optionalSubjects"
-                            placeholder="e.g. English, Marathi (comma separated)"
-                            value={formData.optionalSubjects} onChange={handleChange} />
-                        </div>
-                      </div>
-                    )}
+  <div className="form-row">
+    <div className="form-group">
+      <label>Course *</label>
+      <select
+        name="courseType"
+        value={formData.courseType}
+        onChange={handleChange}
+        required
+      >
+        <option value="">Select Course</option>
+        <option value="BA">Bachelor of Arts (BA)</option>
+        <option value="BSc">Bachelor of Science (BSc)</option>
+      </select>
+    </div>
 
+    <div className="form-group">
+      <label>Admission Year *</label>
+      <select
+        name="admissionYear"
+        value={formData.admissionYear}
+        onChange={handleChange}
+        required
+      >
+        <option value="">Select Year</option>
+        <option value="1st Year">1st Year</option>
+        <option value="2nd Year">2nd Year</option>
+        <option value="3rd Year">3rd Year</option>
+        <option value="Direct Second Year">Direct Second Year</option>
+        <option value="Direct Third Year">Direct Third Year</option>
+      </select>
+    </div>
+  </div>
+
+  {formData.courseType && (
+    <div className="form-row">
+      <div className="form-group">
+        <label>Primary Subject / Specialization *</label>
+
+        <select
+          name="primarySubject"
+          value={formData.primarySubject}
+          onChange={handleChange}
+          required
+        >
+          <option value="">Select Subject</option>
+
+          {(SUBJECTS_BY_COURSE[formData.courseType] || []).map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+
+        <small className="field-hint">
+          💡 Subjects available for {formData.courseType}
+        </small>
+      </div>
+
+      <div className="form-group">
+        <label>Optional Subjects</label>
+
+        <input
+          type="text"
+          name="optionalSubjects"
+          placeholder="e.g. English, Marathi (comma separated)"
+          value={formData.optionalSubjects}
+          onChange={handleChange}
+        />
+      </div>
+    </div>
+  )}
+</div>
                     {/* Direct Admission - Previous College */}
                     {isDirectAdmission && (
                       <div className="conditional-block">
