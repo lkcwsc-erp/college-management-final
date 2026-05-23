@@ -1,122 +1,275 @@
 const mongoose = require('mongoose');
 
-const admissionSchema = new mongoose.Schema({
-  applicantName: { type: String, required: true },
-  email: { type: String, required: true },
-  phone: { type: String, required: true },
-  address: { type: String },
-  dateOfBirth: { type: Date },
-  gender: { type: String },
-  category: { type: String },
+const admissionSchema = new mongoose.Schema(
+  {
+    /* ================================================================
+       APPLICANT — BASIC CONTACT
+    ================================================================ */
+    applicantName: { type: String, required: true, trim: true },
+    email:         { type: String, required: true, trim: true, lowercase: true },
+    phone:         { type: String, required: true, trim: true },
 
-  // Married fields
-  isMarried: { type: Boolean, default: false },
-  husbandName: { type: String },
-  guardianName: { type: String },
+    /* ================================================================
+       PERSONAL DETAILS
+    ================================================================ */
+    dateOfBirth: { type: Date },
 
-  casteCertificateNo: { type: String },
-  casteCertificateAuthority: { type: String },
-  hasCasteValidity: { type: Boolean, default: false },
-  casteValidity: { type: String },
-  casteValidityDate: { type: Date },
+    placeOfBirth: {
+      type:     String,
+      trim:     true,
+      required: [true, 'Place of Birth is required'],
+      default:  '',
+    },
 
-  aadharNumber: { type: String },
-  aadharName: { type: String },
+    gender:      { type: String, trim: true },
 
-  aparIdNumber: { type: String },
-  aparIdDocument: { type: String, default: '' },
-  
-  studentPhoto: { type: String, default: '' },
-  aadharPhoto: { type: String, default: '' },
+    category:    { type: String, trim: true },
 
-  sscSchoolName: { type: String },
-  sscBoard: { type: String },
-  sscYOP: { type: String },
-  sscRollNumber: { type: String },
-  sscObtainedMarks: { type: Number },
-  sscTotalMarks: { type: Number },
-  sscPercentage: { type: Number },
-  sscGrade: { type: String },
-  sscMarksheet: { type: String, default: '' },
+    caste: {
+      type:     String,
+      trim:     true,
+      required: [true, 'Caste is required'],
+      default:  '',
+    },
 
-  hscCollegeName: { type: String },
-  hscBoard: { type: String },
-  hscStream: { type: String },
-  hscYOP: { type: String },
-  hscRollNumber: { type: String },
-  hscMedium: { type: String },
-  hscObtainedMarks: { type: Number },
-  hscTotalMarks: { type: Number },
-  hscPercentage: { type: Number },
-  hscGrade: { type: String },
-  hscMarksheet: { type: String, default: '' },
+    subCaste: {
+      type:    String,
+      trim:    true,
+      default: '',
+    },
 
-  hasGap: { type: Boolean, default: false },
-  gapYear: { type: String },
-  gapReason: { type: String },
-  gapCertificate: { type: String, default: '' },
+    isDisabled: {
+      type:    String,
+      enum:    ['yes', 'no', ''],
+      default: '',
+    },
 
-  casteCertificate: { type: String, default: '' },
-  casteValidityCertificate: { type: String, default: '' },
+    bloodGroup:   { type: String, trim: true, default: '' },
+    religion:     { type: String, trim: true, default: '' },
+    nationality:  { type: String, trim: true, default: 'Indian' },
 
-  course: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Course'
+    /* ================================================================
+       MARITAL STATUS & HUSBAND DETAILS
+    ================================================================ */
+    isMarried: { type: Boolean, default: false },
+
+    husbandName: {
+      type:    String,
+      trim:    true,
+      default: '',
+    },
+
+    husbandContactNumber: {
+      type:    String,
+      trim:    true,
+      default: '',
+      validate: {
+        validator: function (v) {
+          // Optional — if provided must be exactly 10 digits
+          return v === '' || /^\d{10}$/.test(v);
+        },
+        message: 'Husband Contact Number must be exactly 10 digits',
+      },
+    },
+
+    /* ================================================================
+       GUARDIAN / PARENT DETAILS
+    ================================================================ */
+    guardianFullName: {
+      type:     String,
+      trim:     true,
+      required: [true, 'Guardian Full Name is required'],
+      default:  '',
+    },
+
+    guardianName:  { type: String, trim: true, default: '' },
+    fatherName:    { type: String, trim: true, default: '' },
+    motherName:    { type: String, trim: true, default: '' },
+    guardianPhone: { type: String, trim: true, default: '' },
+    familyIncome:  { type: String, trim: true, default: '' },
+
+    /* ================================================================
+       ADDRESS
+    ================================================================ */
+    address:          { type: String, trim: true, default: '' },
+    houseNumber:      { type: String, trim: true, default: '' },
+    streetArea:       { type: String, trim: true, default: '' },
+    subdistrict:      { type: String, trim: true, default: '' },
+    cityTownVillage:  { type: String, trim: true, default: '' },
+    district:         { type: String, trim: true, default: '' },
+    state:            { type: String, trim: true, default: '' },
+    pincode:          { type: String, trim: true, default: '' },
+
+    /* ================================================================
+       AADHAR VERIFICATION
+    ================================================================ */
+    aadharNumber: { type: String, trim: true, default: '' },
+    aadharName:   { type: String, trim: true, default: '' },
+    aadharPhoto:  { type: String, default: '' },
+
+    /* ================================================================
+       APAR ID
+    ================================================================ */
+    aparIdNumber: {
+      type:    String,
+      trim:    true,
+      default: '',
+      validate: {
+        validator: function (v) {
+          // Allow empty string (validated as required in controller);
+          // if provided, must be exactly 12 digits
+          return v === '' || /^\d{12}$/.test(v);
+        },
+        message: 'APAR ID must be exactly 12 numeric digits',
+      },
+    },
+
+    aparIdDocument: { type: String, default: '' },
+
+    /* ================================================================
+       SSC (10th) DETAILS
+    ================================================================ */
+    sscSchoolName:    { type: String, trim: true, default: '' },
+    sscBoard:         { type: String, trim: true, default: '' },
+    sscYOP:           { type: String, trim: true, default: '' },
+    sscRollNumber:    { type: String, trim: true, default: '' },
+    sscObtainedMarks: { type: Number, default: null },
+    sscTotalMarks:    { type: Number, default: null },
+    sscPercentage:    { type: Number, default: null },
+    sscGrade:         { type: String, trim: true, default: '' },
+    sscMarksheet:     { type: String, default: '' },
+
+    /* ================================================================
+       HSC (12th) DETAILS
+    ================================================================ */
+    hscCollegeName:    { type: String, trim: true, default: '' },
+    hscBoard:          { type: String, trim: true, default: '' },
+    hscStream:         { type: String, trim: true, default: '' },
+    hscYOP:            { type: String, trim: true, default: '' },
+    hscRollNumber:     { type: String, trim: true, default: '' },
+    hscMedium:         { type: String, trim: true, default: '' },
+    hscObtainedMarks:  { type: Number, default: null },
+    hscTotalMarks:     { type: Number, default: null },
+    hscPercentage:     { type: Number, default: null },
+    hscGrade:          { type: String, trim: true, default: '' },
+    hscMarksheet:      { type: String, default: '' },
+
+    /* ================================================================
+       GAP YEAR
+    ================================================================ */
+    hasGap:          { type: Boolean, default: false },
+    gapFromYear:     { type: String, trim: true, default: '' },
+    gapToYear:       { type: String, trim: true, default: '' },
+    gapTotalYears:   { type: String, trim: true, default: '' },
+    gapYear:         { type: String, trim: true, default: '' },   // legacy field kept
+    gapReason:       { type: String, trim: true, default: '' },
+    gapCertificate:  { type: String, default: '' },
+    gapyeardocument: { type: String, default: '' },
+
+    /* ================================================================
+       CASTE CERTIFICATE DETAILS
+    ================================================================ */
+    casteCertificateNo:        { type: String, trim: true, default: '' },
+    casteCertificateAuthority: { type: String, trim: true, default: '' },
+    hasCasteValidity:          { type: Boolean, default: false },
+    casteValidity:             { type: String, trim: true, default: '' },
+    casteValidityDate:         { type: Date },
+    casteCertificate:          { type: String, default: '' },
+    casteValidityCertificate:  { type: String, default: '' },
+
+    /* ================================================================
+       COURSE & YEAR SELECTION
+    ================================================================ */
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref:  'Course',
+    },
+    courseType:       { type: String, trim: true, default: '' },
+    admissionYear:    { type: String, trim: true, default: '' },
+    primarySubject:   { type: String, trim: true, default: '' },
+    optionalSubjects: { type: String, trim: true, default: '' },
+    preferredSubject: { type: String, trim: true, default: '' },
+
+    /* ================================================================
+       PREVIOUS COLLEGE (Direct Admission — 2nd / 3rd Year)
+    ================================================================ */
+    prevCollegeName:       { type: String, trim: true, default: '' },
+    prevCollegeYear:       { type: String, trim: true, default: '' },
+    tcNumber:              { type: String, trim: true, default: '' },
+    prevYearObtainedMarks: { type: Number, default: null },
+    prevYearTotalMarks:    { type: Number, default: null },
+    prevYearPercentage:    { type: Number, default: null },
+    prevYearMarksheet:     { type: String, default: '' },
+    transferCertificate:   { type: String, default: '' },
+
+    /* ================================================================
+       BANK DETAILS  (all optional)
+    ================================================================ */
+    bankAccountHolder: { type: String, trim: true, default: '' },
+    bankAccountNumber: { type: String, trim: true, default: '' },
+    bankIFSC:          { type: String, trim: true, default: '' },
+    bankName:          { type: String, trim: true, default: '' },
+    bankBranch:        { type: String, trim: true, default: '' },
+    bankPassbook:      { type: String, default: '' },
+
+    /* ================================================================
+       DOCUMENT FILE PATHS
+    ================================================================ */
+    studentPhoto:           { type: String, default: '' },
+    signaturePhoto:         { type: String, default: '' },
+    domicileCertificate:    { type: String, default: '' },
+    incomeCertificate:      { type: String, default: '' },
+    marriageCertificate:    { type: String, default: '' },
+    twelfthTC:              { type: String, default: '' },  // NEW — 12th TC upload
+
+    /* ================================================================
+       ADDITIONAL INFO
+    ================================================================ */
+    referralSource: { type: String, trim: true, default: '' },
+    reference:      { type: String, trim: true, default: '' },
+    message:        { type: String, trim: true, default: '' },
+    declaration:    { type: Boolean, default: false },
+
+    /* ================================================================
+       FEES
+    ================================================================ */
+    fees:      { type: Number, default: 0 },
+    feesPaid:  { type: Boolean, default: false },
+
+    /* ================================================================
+       ADMIN WORKFLOW — STATUS & REMARKS
+    ================================================================ */
+    studentId: { type: String, default: '' },
+
+    studentSectionRemark: { type: String, default: '' },
+    principalRemark:      { type: String, default: '' },
+
+    studentSectionStatus: {
+      type:    String,
+      enum:    ['pending', 'verified', 'rejected'],
+      default: 'pending',
+    },
+
+    principalStatus: {
+      type:    String,
+      enum:    ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+
+    status: {
+      type:    String,
+      enum:    ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+
+    appliedDate: {
+      type:    Date,
+      default: Date.now,
+    },
   },
-
-  courseType: { type: String, default: '' },
-  admissionYear: { type: String, default: '' },
-  primarySubject: { type: String, default: '' },
-  optionalSubjects: { type: String, default: '' },
-
-  preferredSubject: { type: String },
-  fatherName: { type: String },
-  motherName: { type: String },
-  guardianPhone: { type: String },
-
-  familyIncome: { type: String },
-  referralSource: { type: String },
-  message: { type: String },
-
-  fees: { type: Number, default: 0 },
-  feesPaid: { type: Boolean, default: false },
-  
-studentId: {
-  type: String,
-  default: ''
-},
-
-studentSectionRemark: {
-  type: String,
-  default: ''
-},
-
-principalRemark: {
-  type: String,
-  default: ''
-},
-studentSectionStatus: {
-  type: String,
-  enum: ['pending', 'verified', 'rejected'],
-  default: 'pending'
-},
-
-principalStatus: {
-  type: String,
-  enum: ['pending', 'approved', 'rejected'],
-  default: 'pending'
-},
-  status: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
-  },
-
-  appliedDate: {
-    type: Date,
-    default: Date.now
+  {
+    timestamps: true, // adds createdAt + updatedAt automatically
   }
-
-}, { timestamps: true });
+);
 
 module.exports = mongoose.model('Admission', admissionSchema);
