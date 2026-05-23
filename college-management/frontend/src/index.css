@@ -73,9 +73,3 @@ ul { list-style: none; }
 .success { color: green; font-size: 14px; margin-top: 5px; }
 
 
-/* Prevent .btn from affecting header links */
-.header .btn {
-  display: inline-block !important;
-  width: auto !important;
-}
-
