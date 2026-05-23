@@ -96,9 +96,13 @@ const AdmissionModal = ({ adm, onClose, onRefresh, showMsg }) => {
           <Field label="Blood Group" value={adm.bloodGroup} />
           <Field label="Category" value={adm.category} />
           <Field label="Caste" value={adm.caste} />
+          <Field label="Sub-Caste" value={adm.subCaste} />
           <Field label="Religion" value={adm.religion} />
           <Field label="Nationality" value={adm.nationality} />
+          <Field label="Mother Tongue" value={adm.motherTongue} />
           <Field label="Aadhar No." value={adm.aadharNumber} />
+          <Field label="APAR / ABC ID" value={adm.aparIdNumber} />
+          <Field label="Is Married" value={adm.isMarried ? 'Yes' : 'No'} />
         </Section>
 
         {/* Contact */}
@@ -106,18 +110,18 @@ const AdmissionModal = ({ adm, onClose, onRefresh, showMsg }) => {
           <Field label="Email" value={adm.email} />
           <Field label="Phone" value={adm.phone} />
           <Field label="Address" value={adm.address} />
-          <Field label="City" value={adm.city} />
-          <Field label="State" value={adm.state} />
-          <Field label="Pincode" value={adm.pincode} />
         </Section>
 
         {/* Academic */}
         <Section title="🎓 Academic Information">
-          <Field label="Preferred Course" value={adm.preferredSubject || adm.course} />
+          <Field label="Course Type" value={adm.courseType} />
+          <Field label="Preferred Subject" value={adm.preferredSubject} />
+          <Field label="Admission Year" value={adm.admissionYear} />
           <Field label="SSC Marks" value={adm.sscObtainedMarks ? `${adm.sscObtainedMarks}/${adm.sscTotalMarks} (${adm.sscPercentage}%)` : null} />
           <Field label="HSC Marks" value={adm.hscObtainedMarks ? `${adm.hscObtainedMarks}/${adm.hscTotalMarks} (${adm.hscPercentage}%)` : null} />
           <Field label="Previous Year" value={adm.prevYearObtainedMarks ? `${adm.prevYearObtainedMarks}/${adm.prevYearTotalMarks} (${adm.prevYearPercentage}%)` : null} />
           <Field label="Has Gap Year" value={adm.hasGap ? 'Yes' : 'No'} />
+          <Field label="Has Caste Validity" value={adm.hasCasteValidity ? 'Yes' : 'No'} />
         </Section>
 
         {/* Parents */}
