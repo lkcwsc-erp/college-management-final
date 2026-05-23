@@ -1,6 +1,5 @@
 /* ============================================
    ParentOrg.css — VNSS Page Styles
-   Updated: Single Founder Memorial Version
    ============================================ */
 
 .po-page {
@@ -67,37 +66,6 @@
   font-weight: 600;
 }
 
-/* STATS BAR */
-.po-stats {
-  background: #ffffff;
-  display: flex;
-  justify-content: center;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-}
-.po-stat-item {
-  flex: 1;
-  max-width: 200px;
-  text-align: center;
-  padding: 28px 20px;
-  border-right: 1px solid #f0f4f8;
-  transition: background 0.2s;
-}
-.po-stat-item:last-child { border-right: none; }
-.po-stat-item:hover { background: #f0f4f8; }
-.po-stat-number {
-  display: block;
-  font-size: 2rem;
-  font-weight: 800;
-  color: #1565C0;
-  line-height: 1;
-}
-.po-stat-label {
-  display: block;
-  font-size: 13px;
-  color: #666;
-  margin-top: 6px;
-}
-
 /* SECTION COMMON */
 .po-section { padding: 70px 20px; }
 .po-section-inner { max-width: 1100px; margin: 0 auto; }
@@ -140,25 +108,26 @@
 }
 .po-about-text strong { color: #1565C0; }
 .po-about-text em { color: #6a1b9a; font-style: italic; }
+
 .po-about-logo-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   background: white;
   border-radius: 16px;
   padding: 28px 20px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 .po-about-logo {
-  width: 160px;
-  height: 160px;
+  width: 140px;
+  height: 140px;
   object-fit: contain;
 }
 .po-about-reg {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
 }
 .po-about-reg span {
@@ -169,6 +138,41 @@
   border-radius: 8px;
   border-left: 3px solid #1565C0;
   display: block;
+}
+
+/* CONTACT DETAILS inside logo box */
+.po-about-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  border-top: 1px solid #e8edf2;
+  padding-top: 16px;
+}
+.po-contact-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.po-contact-icon {
+  font-size: 1rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.po-contact-item strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1565C0;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.po-contact-item p {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* MISSION VISION VALUES */
@@ -236,7 +240,7 @@
   line-height: 1.7;
 }
 
-/* ── FOUNDER MEMORIAL SECTION ── */
+/* VISIONARY LEADER SECTION */
 .po-founders { background: #f0f4f8; }
 
 .po-founder-card {
@@ -250,7 +254,6 @@
   margin-top: 36px;
   border-top: 5px solid #1565C0;
 }
-
 .po-founder-left {
   display: flex;
   flex-direction: column;
@@ -258,7 +261,6 @@
   gap: 16px;
   flex-shrink: 0;
 }
-
 .po-founder-photo-large {
   width: 180px;
   height: 200px;
@@ -299,7 +301,6 @@
   padding: 1px 4px;
   border-radius: 4px;
 }
-
 .po-founder-years {
   background: #f0f4f8;
   border-radius: 10px;
@@ -317,11 +318,7 @@
   font-size: 11px;
   color: #888;
 }
-
-/* Founder right side info */
-.po-founder-info {
-  flex: 1;
-}
+.po-founder-info { flex: 1; }
 .po-founder-info h3 {
   font-size: 1.8rem;
   font-weight: 800;
@@ -363,8 +360,6 @@
   line-height: 0;
   vertical-align: -8px;
 }
-
-/* RIP badge */
 .po-founder-rip {
   display: inline-flex;
   align-items: center;
@@ -393,8 +388,6 @@
   .po-hero-content { flex-direction: column; text-align: center; }
   .po-hero-title { font-size: 1.6rem; }
   .po-hero-logo { width: 110px; height: 110px; }
-  .po-stats { flex-wrap: wrap; }
-  .po-stat-item { min-width: 50%; border-bottom: 1px solid #f0f4f8; }
   .po-activities-grid { grid-template-columns: 1fr; }
   .po-founder-card { padding: 24px 18px; }
   .po-founder-info h3 { font-size: 1.4rem; }
