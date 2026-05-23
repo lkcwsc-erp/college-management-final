@@ -254,15 +254,18 @@ router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 
     if (admission.status === 'approved')
       return res.status(400).json({ success: false, message: 'Already approved' });
 
-    // Generate Student ID
+    // Generate Student ID — serial number
     const year       = new Date().getFullYear();
     const courseName = admission.courseType
       ? admission.courseType.toUpperCase()
-      : (admission.preferredSubject
-          ? admission.preferredSubject.substring(0, 3).toUpperCase()
-          : 'GEN');
-    const randomNum  = Math.floor(100 + Math.random() * 900);
-    const studentId  = `${courseName}${year}${randomNum}`;
+      : 'GEN';
+
+    // Count how many students already have a studentId → next serial
+    const approvedCount = await Admission.countDocuments({
+      studentId: { $exists: true, $ne: null, $ne: '' }
+    });
+    const serialNum  = String(approvedCount + 1).padStart(3, '0');
+    const studentId  = `${courseName}${year}${serialNum}`;
 
     admission.status                = 'approved';
     admission.principalStatus       = 'approved';
