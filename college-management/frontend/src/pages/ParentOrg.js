@@ -4,43 +4,51 @@ import Footer from "../components/Footer";
 import "./About.css";
 import "./ParentOrg.css";
 
-const stats = [
-  { number: "30+", label: "Years of Service" },
-  { number: "5000+", label: "Students Benefited" },
-  { number: "10+", label: "Institutions" },
-  { number: "50+", label: "Social Initiatives" },
-];
-
 const activities = [
   {
     icon: "🎓",
     title: "Quality Education",
-    desc: "Providing accessible, affordable education from primary to higher levels across rural Maharashtra.",
+    desc: "Providing accessible, affordable education from primary to higher levels across rural Maharashtra, ensuring no child is left behind due to financial constraints.",
   },
   {
     icon: "👩",
     title: "Women Empowerment",
-    desc: "Running skill development programs, scholarships, and awareness drives for girls and women.",
+    desc: "Running skill development programs, scholarships, and awareness drives for girls and women to help them become independent and confident contributors to society.",
   },
   {
     icon: "🤝",
     title: "Social Welfare",
-    desc: "Organizing health camps, blood donation drives, and community upliftment programs.",
+    desc: "Organizing health camps, blood donation drives, clean village campaigns, and community upliftment programs benefiting thousands of families annually.",
   },
   {
     icon: "🌱",
     title: "Student Development",
-    desc: "Fostering holistic growth through sports, cultural activities, and leadership programs.",
+    desc: "Fostering holistic growth through sports, cultural activities, leadership programs, and personality development workshops for well-rounded individuals.",
   },
   {
     icon: "📚",
     title: "Academic Excellence",
-    desc: "Encouraging research, innovation, and academic distinction through merit-based rewards.",
+    desc: "Encouraging research, innovation, and academic distinction through merit-based rewards, scholarships, and recognition of outstanding student achievements.",
   },
   {
     icon: "🏘️",
     title: "Rural Outreach",
-    desc: "Extending educational and welfare services to underserved villages across the region.",
+    desc: "Extending educational and welfare services to underserved villages across the region through mobile camps, awareness programs, and field visits.",
+  },
+  {
+    icon: "🩺",
+    title: "Health & Wellness",
+    desc: "Conducting free medical check-up camps, eye donation drives, and mental health awareness programs in collaboration with local health authorities.",
+  },
+  {
+    icon: "🌿",
+    title: "Environmental Awareness",
+    desc: "Promoting tree plantation drives, eco-friendly campus initiatives, and environmental education programs to build a greener, sustainable future.",
+  },
+  {
+    icon: "🏛️",
+    title: "Institutional Development",
+    desc: "Continuously upgrading infrastructure, laboratories, libraries, and facilities across all affiliated institutions to provide world-class learning environments.",
   },
 ];
 
@@ -63,16 +71,6 @@ const ParentOrg = () => {
               <p className="po-hero-motto">॥ विद्या विनयेन शोभते ॥</p>
             </div>
           </div>
-        </section>
-
-        {/* STATS BAR */}
-        <section className="po-stats">
-          {stats.map((s, i) => (
-            <div className="po-stat-item" key={i}>
-              <span className="po-stat-number">{s.number}</span>
-              <span className="po-stat-label">{s.label}</span>
-            </div>
-          ))}
         </section>
 
         {/* ABOUT VNSS */}
@@ -104,12 +102,37 @@ const ParentOrg = () => {
                   bodies to bridge the urban-rural educational divide.
                 </p>
               </div>
+
+              {/* Logo + Contact + Address */}
               <div className="po-about-logo-box">
                 <img src="/Sanshta_logo.jpeg" alt="VNSS" className="po-about-logo" />
                 <div className="po-about-reg">
                   <span>📌 Registered under Maharashtra Societies Act</span>
                   <span>📍 Headquartered in Dongargaon, Maharashtra</span>
                   <span>🏛️ Recognised by State Government of Maharashtra</span>
+                </div>
+                <div className="po-about-contact">
+                  <div className="po-contact-item">
+                    <span className="po-contact-icon">📍</span>
+                    <div>
+                      <strong>Address</strong>
+                      <p>Vidyaniketan Sevabhavi Sanstha,<br />Dongargaon, Dist. Chandrapur,<br />Maharashtra — 441207</p>
+                    </div>
+                  </div>
+                  <div className="po-contact-item">
+                    <span className="po-contact-icon">📞</span>
+                    <div>
+                      <strong>Phone</strong>
+                      <p>+91 XXXXX XXXXX</p>
+                    </div>
+                  </div>
+                  <div className="po-contact-item">
+                    <span className="po-contact-icon">✉️</span>
+                    <div>
+                      <strong>Email</strong>
+                      <p>info@vnss.org</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -170,11 +193,11 @@ const ParentOrg = () => {
           </div>
         </section>
 
-        {/* FOUNDER MEMORIAL */}
+        {/* VISIONARY LEADER — renamed from Our Founder */}
         <section className="po-section po-founders">
           <div className="po-section-inner">
             <div className="po-section-label">In Loving Memory</div>
-            <h2 className="po-section-title">Our Founder</h2>
+            <h2 className="po-section-title">Our Visionary Leader</h2>
             <p className="po-section-sub">
               We honour the life and legacy of the visionary who built VNSS
               from the ground up and devoted his life to education and community service.
@@ -198,7 +221,6 @@ const ParentOrg = () => {
                   </div>
                 </div>
                 <div className="po-founder-years">
-                  {/* UPDATE: change years below when known */}
                   <span>1940 – 2025</span>
                   <small>Born – Passed Away</small>
                 </div>
@@ -209,7 +231,6 @@ const ParentOrg = () => {
                 <h3>Late Shri Sopan Sodgir</h3>
                 <span className="po-founder-badge">Founder & President, VNSS</span>
 
-                {/* UPDATE: replace paragraphs below with real bio */}
                 <p>
                   Late Shri Sopan Sodgir was a visionary educationist, dedicated social
                   worker, and the founding force behind Vidyaniketan Sevabhavi Sanstha.
@@ -225,7 +246,6 @@ const ParentOrg = () => {
                   inspired all who had the privilege of working alongside him.
                 </p>
 
-                {/* UPDATE: replace with a real quote if available */}
                 <div className="po-founder-quote">
                   <span>"</span> Education is not just about knowledge — it is about
                   building character, nurturing compassion, and empowering every individual
