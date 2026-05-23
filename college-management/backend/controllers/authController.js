@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Student = require('../models/Student');
 const OTP = require('../models/OTP');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
@@ -54,6 +55,22 @@ exports.registerStudent = async (req, res) => {
       firstName,
       middleName: middleName || '',
       lastName: lastName || ''
+    });
+
+    // Student collection mein bhi save karo taaki Staff dashboard mein dikhe
+    const lastStudent = await Student.findOne().sort({ createdAt: -1 });
+    let rollNumber = 'STU0001';
+    if (lastStudent && lastStudent.rollNumber) {
+      const lastNum = parseInt(lastStudent.rollNumber.replace('STU', '')) + 1;
+      rollNumber = 'STU' + String(lastNum).padStart(4, '0');
+    }
+
+    await Student.create({
+      user: user._id,
+      rollNumber,
+      admissionYear: new Date().getFullYear(),
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      isActive: true
     });
  
     res.status(201).json({
@@ -382,13 +399,10 @@ exports.createStaff = async (req, res) => {
  
     const emailExists = await User.findOne({ email });
     if (emailExists) {
-      // Same email allowed only if username is different (different staff member)
-      if (!username) {
-        return res.status(400).json({
-          success: false,
-          message: 'A user with this email already exists. Please provide a unique username.'
-        });
-      }
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists'
+      });
     }
  
     if (username) {
