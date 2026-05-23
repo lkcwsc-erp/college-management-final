@@ -96,6 +96,7 @@ const About = () => {
     <div className="about-page-global-scope">
       <Navbar />
 
+      {/* HERO — same blue gradient as all other pages */}
       <section className="about-hero">
         <div className="hero-overlay">
           <h1 className="hero-title">About Us</h1>
@@ -105,19 +106,10 @@ const About = () => {
               <button className="parent-org-btn">About Our Parent Organisation</button>
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* VNSS Banner */}
-      <section className="vnss-banner">
-        <div className="vnss-banner-inner">
-          <img src="/Sanshta_logo.jpeg" alt="VNSS Logo" className="vnss-banner-logo" />
-          <div className="vnss-banner-text">
-            <p className="vnss-banner-label">Under the Aegis of</p>
-            <h2 className="vnss-banner-name">Vidyaniketan Sevabhavi Sanstha (VNSS)</h2>
-            <p className="vnss-banner-sub">Dongargaon, Maharashtra &nbsp;|&nbsp; ॥ विद्या विनयेन शोभते ॥</p>
-          </div>
-          <Link to="/parent-org" className="vnss-banner-btn">Know More →</Link>
+          {/* VNSS subtitle line — under the button */}
+          <p className="vnss-hero-line">
+            Under the aegis of &nbsp;<strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon
+          </p>
         </div>
       </section>
 
@@ -152,7 +144,7 @@ const About = () => {
         </div>
       </section>
 
-      {/* STATS — removed Awards, changed Faculty to 50+ */}
+      {/* STATS */}
       <section className="stats-section container">
         <div className="stat-card">
           <h2>20+</h2>
@@ -163,7 +155,7 @@ const About = () => {
           <p>Students</p>
         </div>
         <div className="stat-card">
-          <h2>50+</h2>
+          <h2>20+</h2>
           <p>Faculty Members</p>
         </div>
       </section>
