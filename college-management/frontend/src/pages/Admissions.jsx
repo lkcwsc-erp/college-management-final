@@ -1465,7 +1465,7 @@ const [activeTab, setActiveTab] = useState('process');
                     )}
                   </div>
 
-               /* ===== COURSE & YEAR SELECTION ===== */}
+                  {/* ===== COURSE & YEAR SELECTION ===== */}
                   <div className="form-section highlight-section">
                     <h3 className="form-section-title">📚 Course &amp; Year Selection</h3>
                     <div className="form-row">
@@ -1484,8 +1484,6 @@ const [activeTab, setActiveTab] = useState('process');
                           onChange={handleChange} required>
                           <option value="">Select Year</option>
                           <option value="1st Year">1st Year</option>
-                          <option value="2nd Year">2nd Year</option>
-                          <option value="3rd Year">3rd Year</option>
                           <option value="Direct Second Year">Direct Second Year</option>
                           <option value="Direct Third Year">Direct Third Year</option>
                         </select>
@@ -1515,6 +1513,7 @@ const [activeTab, setActiveTab] = useState('process');
                         </div>
                       </div>
                     )}
+
                     {/* Direct Admission - Previous College */}
                     {isDirectAdmission && (
                       <div className="conditional-block">
