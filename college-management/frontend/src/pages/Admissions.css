@@ -2,7 +2,24 @@
    ADMISSIONS — PREMIUM PRODUCTION UI
    Blue & White college admission theme
    =========================================================== */
+/* ── PAGE HERO BANNER ── */
+.page-header {
+  background: linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%);
+  padding: 60px 20px;
+  text-align: center;
+}
 
+.page-header h1 {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.page-header p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+}
 :root {
   --adm-primary: #1565C0;
   --adm-primary-dark: #0D47A1;
