@@ -13,29 +13,23 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
   const [msg, setMsg] = useState('');
 
   const handleApprove = async () => {
-    setLoading(true);
-    setMsg('');
+    setLoading(true); setMsg('');
     try {
       await API.put(`/admissions/staff-approve/${adm._id}`, { notes });
       setMsg('✅ Approved! Forwarded to Principal.');
       setTimeout(() => { onClose(); onRefresh(); }, 1500);
-    } catch (err) {
-      setMsg('❌ ' + (err.response?.data?.message || 'Approval failed.'));
-    }
+    } catch (err) { setMsg('❌ ' + (err.response?.data?.message || 'Approval failed.')); }
     setLoading(false);
   };
 
   const handleReject = async () => {
     if (!rejectReason.trim()) { setMsg('❌ Please enter rejection reason.'); return; }
-    setLoading(true);
-    setMsg('');
+    setLoading(true); setMsg('');
     try {
       await API.put(`/admissions/staff-reject/${adm._id}`, { reason: rejectReason });
       setMsg('✅ Application rejected.');
       setTimeout(() => { onClose(); onRefresh(); }, 1500);
-    } catch (err) {
-      setMsg('❌ ' + (err.response?.data?.message || 'Rejection failed.'));
-    }
+    } catch (err) { setMsg('❌ ' + (err.response?.data?.message || 'Rejection failed.')); }
     setLoading(false);
   };
 
@@ -54,31 +48,16 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
   );
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-    }}>
-      <div style={{
-        background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '680px',
-        maxHeight: '90vh', overflowY: 'auto', padding: '28px',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.2)'
-      }}>
-        {/* Header */}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ color: '#1565C0', margin: 0 }}>📋 Admission Form Details</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#555' }}>✕</button>
         </div>
-
-        {/* Status Badge */}
-        <div style={{
-          background: '#fff3e0', color: '#E65100', padding: '8px 16px',
-          borderRadius: '20px', display: 'inline-block', fontSize: '13px',
-          fontWeight: '600', marginBottom: '20px', borderLeft: '4px solid #E65100'
-        }}>
+        <div style={{ background: '#fff3e0', color: '#E65100', padding: '8px 16px', borderRadius: '20px', display: 'inline-block', fontSize: '13px', fontWeight: '600', marginBottom: '20px', borderLeft: '4px solid #E65100' }}>
           ⏳ Pending Verification
         </div>
 
-        {/* Personal Info */}
         <Section title="👤 Personal Information">
           <Field label="Full Name" value={adm.applicantName} />
           <Field label="Date of Birth" value={adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : null} />
@@ -95,14 +74,12 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           <Field label="Is Married" value={adm.isMarried ? 'Yes' : 'No'} />
         </Section>
 
-        {/* Contact Info */}
         <Section title="📞 Contact Information">
           <Field label="Email" value={adm.email} />
           <Field label="Phone" value={adm.phone} />
           <Field label="Address" value={adm.address} />
         </Section>
 
-        {/* Academic Info */}
         <Section title="🎓 Academic Information">
           <Field label="Course Type" value={adm.courseType} />
           <Field label="Preferred Subject" value={adm.preferredSubject} />
@@ -114,7 +91,6 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           <Field label="Has Caste Validity" value={adm.hasCasteValidity ? 'Yes' : 'No'} />
         </Section>
 
-        {/* Parents Info */}
         <Section title="👨‍👩‍👧 Parents Information">
           <Field label="Father's Name" value={adm.fatherName} />
           <Field label="Father's Phone" value={adm.fatherPhone} />
@@ -124,7 +100,6 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           <Field label="Annual Income" value={adm.annualIncome ? `₹ ${adm.annualIncome}` : null} />
         </Section>
 
-        {/* Documents */}
         <Section title="📄 Uploaded Documents">
           {[
             { label: 'Student Photo', key: 'studentPhoto' },
@@ -145,14 +120,11 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
             <div key={doc.key} style={{ display: 'flex', padding: '8px 0', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
               <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', color: '#888', fontWeight: '600' }}>{doc.label}</span>
               {adm[doc.key] ? (
-                <a
-               href={adm[doc.key].startsWith('http') ? adm[doc.key] : `https://college-management-nnve.onrender.com/uploads/${adm[doc.key]}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  style={{ fontSize: '13px', color: '#1565C0', textDecoration: 'underline' }}
->
-  📎 View Document
-</a>
+                <a href={adm[doc.key].startsWith('http') ? adm[doc.key] : `https://college-management-nnve.onrender.com/uploads/${adm[doc.key]}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: '13px', color: '#1565C0', textDecoration: 'underline' }}>
+                  📎 View Document
+                </a>
               ) : (
                 <span style={{ fontSize: '13px', color: '#bbb' }}>Not uploaded</span>
               )}
@@ -160,54 +132,30 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           ))}
         </Section>
 
-        {/* Submitted On */}
         <div style={{ background: '#f8faff', borderRadius: '8px', padding: '12px', marginBottom: '20px', fontSize: '13px', color: '#555' }}>
           📅 Submitted on: <strong>{new Date(adm.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
         </div>
 
-        {/* Action Buttons */}
         <div style={{ borderTop: '2px solid #f0f0f0', paddingTop: '20px' }}>
           <h4 style={{ marginBottom: '12px', color: '#333' }}>🔄 Take Action</h4>
-
-          {/* Staff Notes */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '6px' }}>
-              Staff Notes (Optional)
-            </label>
-            <textarea
-              rows="2"
-              placeholder="Add any notes for principal..."
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }}
-            />
+            <label style={{ fontSize: '13px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '6px' }}>Staff Notes (Optional)</label>
+            <textarea rows="2" placeholder="Add any notes for principal..." value={notes} onChange={e => setNotes(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
           </div>
 
-          {/* Reject Reason */}
           {showReject && (
             <div style={{ marginBottom: '16px', background: '#ffebee', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #C62828' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#C62828', display: 'block', marginBottom: '6px' }}>
-                ❌ Rejection Reason *
-              </label>
-              <textarea
-                rows="3"
-                placeholder="Enter reason for rejection (student will see this)..."
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ffcdd2', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }}
-              />
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#C62828', display: 'block', marginBottom: '6px' }}>❌ Rejection Reason *</label>
+              <textarea rows="3" placeholder="Enter reason for rejection (student will see this)..." value={rejectReason} onChange={e => setRejectReason(e.target.value)}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ffcdd2', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
               <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button
-                  onClick={handleReject}
-                  disabled={loading}
-                  style={{ flex: 1, padding: '10px', background: '#C62828', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
-                >
+                <button onClick={handleReject} disabled={loading}
+                  style={{ flex: 1, padding: '10px', background: '#C62828', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
                   {loading ? '⏳ Rejecting...' : '❌ Confirm Reject'}
                 </button>
-                <button
-                  onClick={() => { setShowReject(false); setRejectReason(''); setMsg(''); }}
-                  style={{ padding: '10px 18px', background: '#f5f5f5', color: '#555', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer' }}
-                >
+                <button onClick={() => { setShowReject(false); setRejectReason(''); setMsg(''); }}
+                  style={{ padding: '10px 18px', background: '#f5f5f5', color: '#555', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer' }}>
                   Cancel
                 </button>
               </div>
@@ -215,37 +163,19 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           )}
 
           {msg && (
-            <div style={{
-              padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px',
-              background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee',
-              color: msg.startsWith('✅') ? '#2E7D32' : '#C62828',
-            }}>
+            <div style={{ padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px', background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>
               {msg}
             </div>
           )}
 
           {!showReject && (
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={handleApprove}
-                disabled={loading}
-                style={{
-                  flex: 1, padding: '12px', background: '#2E7D32', color: '#fff',
-                  border: 'none', borderRadius: '9px', fontWeight: '600',
-                  fontSize: '14px', cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.7 : 1
-                }}
-              >
+              <button onClick={handleApprove} disabled={loading}
+                style={{ flex: 1, padding: '12px', background: '#2E7D32', color: '#fff', border: 'none', borderRadius: '9px', fontWeight: '600', fontSize: '14px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
                 {loading ? '⏳ Processing...' : '✅ Approve & Forward to Principal'}
               </button>
-              <button
-                onClick={() => setShowReject(true)}
-                style={{
-                  padding: '12px 20px', background: '#ffebee', color: '#C62828',
-                  border: '1px solid #C62828', borderRadius: '9px',
-                  fontWeight: '600', fontSize: '14px', cursor: 'pointer'
-                }}
-              >
+              <button onClick={() => setShowReject(true)}
+                style={{ padding: '12px 20px', background: '#ffebee', color: '#C62828', border: '1px solid #C62828', borderRadius: '9px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>
                 ❌ Reject
               </button>
             </div>
@@ -273,13 +203,17 @@ const StudentSectionDashboard = () => {
   const [updateMsg, setUpdateMsg] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchText, setSearchText] = useState('');
- // Generate Credentials states
-  const [credForm, setCredForm] = useState({
-    firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: ''
-  });
+
+  // Generate Credentials states
+  const [credForm, setCredForm] = useState({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '' });
   const [credLoading, setCredLoading] = useState(false);
   const [credMsg, setCredMsg] = useState('');
   const [generatedCreds, setGeneratedCreds] = useState(null);
+
+  // ✅ NEW: All Students states
+  const [allStudents, setAllStudents] = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -288,11 +222,8 @@ const StudentSectionDashboard = () => {
     try {
       const res = await API.get('/enquiries');
       if (res.data.success) setEnquiries(res.data.enquiries || []);
-    } catch (err) {
-      console.error('Failed to fetch enquiries:', err);
-    } finally {
-      setEnquiriesLoading(false);
-    }
+    } catch (err) { console.error('Failed to fetch enquiries:', err); }
+    finally { setEnquiriesLoading(false); }
   };
 
   const fetchAdmissions = async () => {
@@ -300,11 +231,18 @@ const StudentSectionDashboard = () => {
     try {
       const res = await API.get('/admissions/student-section/pending');
       if (res.data.success) setAdmissions(res.data.admissions || []);
-    } catch (err) {
-      console.error('Failed to fetch admissions:', err);
-    } finally {
-      setAdmissionsLoading(false);
-    }
+    } catch (err) { console.error('Failed to fetch admissions:', err); }
+    finally { setAdmissionsLoading(false); }
+  };
+
+  // ✅ NEW: Fetch All Students
+  const fetchAllStudents = async () => {
+    setStudentsLoading(true);
+    try {
+      const res = await API.get('/students');
+      if (res.data.success) setAllStudents(res.data.students || []);
+    } catch (err) { console.error('Failed to fetch students:', err); }
+    finally { setStudentsLoading(false); }
   };
 
   useEffect(() => {
@@ -312,66 +250,45 @@ const StudentSectionDashboard = () => {
       fetchEnquiries();
       fetchAdmissions();
     }
+    // ✅ NEW: Load students when tab opens
+    if (activeTab === 'students') {
+      fetchAllStudents();
+    }
   }, [activeTab]);
 
   const handleStatusUpdate = async (id) => {
     if (!statusUpdate.status) { setUpdateMsg('❌ Please select a status.'); return; }
-    setUpdateLoading(true);
-    setUpdateMsg('');
+    setUpdateLoading(true); setUpdateMsg('');
     try {
-      const res = await API.put(`/enquiries/${id}`, {
-        status: statusUpdate.status,
-        notes: statusUpdate.notes,
-      });
+      const res = await API.put(`/enquiries/${id}`, { status: statusUpdate.status, notes: statusUpdate.notes });
       if (res.data.success) {
         setUpdateMsg('✅ Status updated successfully!');
         fetchEnquiries();
-        setTimeout(() => {
-          setSelectedEnquiry(null);
-          setStatusUpdate({ status: '', notes: '' });
-          setUpdateMsg('');
-        }, 1500);
+        setTimeout(() => { setSelectedEnquiry(null); setStatusUpdate({ status: '', notes: '' }); setUpdateMsg(''); }, 1500);
       }
-    } catch (err) {
-      setUpdateMsg('❌ Failed to update. Please try again.');
-    } finally {
-      setUpdateLoading(false);
-    }
+    } catch (err) { setUpdateMsg('❌ Failed to update. Please try again.'); }
+    finally { setUpdateLoading(false); }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this enquiry?')) return;
-    try {
-      await API.delete(`/enquiries/${id}`);
-      fetchEnquiries();
-      setSelectedEnquiry(null);
-    } catch (err) {
-      alert('Failed to delete enquiry.');
-    }
+    try { await API.delete(`/enquiries/${id}`); fetchEnquiries(); setSelectedEnquiry(null); }
+    catch (err) { alert('Failed to delete enquiry.'); }
   };
-// Create Student Account
+
   const handleCreateStudent = async (e) => {
-    e.preventDefault();
-    setCredLoading(true);
-    setCredMsg('');
+    e.preventDefault(); setCredLoading(true); setCredMsg('');
     try {
       const res = await API.post('/auth/register-student', credForm);
       if (res.data.success) {
-        setGeneratedCreds({
-          name: res.data.user.name,
-          email: res.data.user.email,
-          password: res.data.generatedPassword
-        });
+        setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
         setCredMsg('✅ Student account created successfully!');
         setCredForm({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '' });
       }
-    } catch (err) {
-      setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account'));
-    } finally {
-      setCredLoading(false);
-    }
+    } catch (err) { setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account')); }
+    finally { setCredLoading(false); }
   };
-  
+
   const getStatusStyle = (status) => {
     const styles = {
       pending:            { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' },
@@ -385,10 +302,7 @@ const StudentSectionDashboard = () => {
 
   const filteredEnquiries = enquiries.filter(e => {
     const matchStatus = filterStatus === 'all' || e.status === filterStatus;
-    const matchSearch = !searchText ||
-      e.studentFullName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      e.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-      e.phone?.includes(searchText);
+    const matchSearch = !searchText || e.studentFullName?.toLowerCase().includes(searchText.toLowerCase()) || e.email?.toLowerCase().includes(searchText.toLowerCase()) || e.phone?.includes(searchText);
     return matchStatus && matchSearch;
   });
 
@@ -422,27 +336,13 @@ const StudentSectionDashboard = () => {
         </div>
         <nav className="sidebar-nav">
           {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={activeTab === tab.id ? 'active' : ''}
-              onClick={() => setActiveTab(tab.id)}
-            >
+            <button key={tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}>
               {tab.label}
               {tab.id === 'enquiries' && pendingCount > 0 && (
-                <span style={{
-                  marginLeft: '8px', background: '#C62828', color: '#fff',
-                  borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700',
-                }}>
-                  {pendingCount}
-                </span>
+                <span style={{ marginLeft: '8px', background: '#C62828', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700' }}>{pendingCount}</span>
               )}
               {tab.id === 'admissions' && admissions.length > 0 && (
-                <span style={{
-                  marginLeft: '8px', background: '#E65100', color: '#fff',
-                  borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700',
-                }}>
-                  {admissions.length}
-                </span>
+                <span style={{ marginLeft: '8px', background: '#E65100', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700' }}>{admissions.length}</span>
               )}
             </button>
           ))}
@@ -461,33 +361,24 @@ const StudentSectionDashboard = () => {
           {/* ── HOME ── */}
           {activeTab === 'home' && (
             <div>
-              <div style={{
-                background: '#e3f2fd', padding: '20px', borderRadius: '12px',
-                marginBottom: '20px', borderLeft: '5px solid #1565C0'
-              }}>
+              <div style={{ background: '#e3f2fd', padding: '20px', borderRadius: '12px', marginBottom: '20px', borderLeft: '5px solid #1565C0' }}>
                 <h3 style={{ color: '#1565C0', marginBottom: '8px' }}>👋 Welcome to Student Section!</h3>
                 <p>Manage student admissions, verify documents, generate certificates, and maintain student records.</p>
               </div>
-
               <div className="dash-cards">
                 <div className="dash-card blue" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('enquiries')}>
-                  <div className="dash-card-icon">📝</div>
-                  <div><h3>{pendingCount}</h3><p>Pending Enquiries</p></div>
+                  <div className="dash-card-icon">📝</div><div><h3>{pendingCount}</h3><p>Pending Enquiries</p></div>
                 </div>
                 <div className="dash-card green">
-                  <div className="dash-card-icon">📞</div>
-                  <div><h3>{contactedCount}</h3><p>Contacted</p></div>
+                  <div className="dash-card-icon">📞</div><div><h3>{contactedCount}</h3><p>Contacted</p></div>
                 </div>
                 <div className="dash-card orange" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('admissions')}>
-                  <div className="dash-card-icon">🎓</div>
-                  <div><h3>{admissions.length}</h3><p>Pending Admissions</p></div>
+                  <div className="dash-card-icon">🎓</div><div><h3>{admissions.length}</h3><p>Pending Admissions</p></div>
                 </div>
                 <div className="dash-card red">
-                  <div className="dash-card-icon">📊</div>
-                  <div><h3>{enquiries.length}</h3><p>Total Enquiries</p></div>
+                  <div className="dash-card-icon">📊</div><div><h3>{enquiries.length}</h3><p>Total Enquiries</p></div>
                 </div>
               </div>
-
               {pendingCount > 0 && (
                 <div className="recent-section" style={{ marginTop: '24px' }}>
                   <h3>⏳ Recent Pending Enquiries</h3>
@@ -495,23 +386,15 @@ const StudentSectionDashboard = () => {
                     <div key={enq._id} className="notice-row" style={{ cursor: 'pointer' }}
                       onClick={() => { setActiveTab('enquiries'); setSelectedEnquiry(enq); setStatusUpdate({ status: enq.status, notes: enq.notes || '' }); }}>
                       <span className="notice-dot"></span>
-                      <div>
-                        <p className="notice-title">{enq.studentFullName}</p>
-                        <p className="notice-date">{enq.phone} · {enq.email}</p>
-                      </div>
+                      <div><p className="notice-title">{enq.studentFullName}</p><p className="notice-date">{enq.phone} · {enq.email}</p></div>
                       <span className="notice-tag">Pending</span>
                     </div>
                   ))}
-                  <button onClick={() => setActiveTab('enquiries')} style={{
-                    marginTop: '12px', background: 'none', border: '1px solid #1565C0',
-                    color: '#1565C0', borderRadius: '8px', padding: '8px 18px',
-                    cursor: 'pointer', fontWeight: '600', fontSize: '13px'
-                  }}>
+                  <button onClick={() => setActiveTab('enquiries')} style={{ marginTop: '12px', background: 'none', border: '1px solid #1565C0', color: '#1565C0', borderRadius: '8px', padding: '8px 18px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
                     View All Enquiries →
                   </button>
                 </div>
               )}
-
               <h3 style={{ margin: '30px 0 16px' }}>🚀 Quick Actions</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                 {[
@@ -521,9 +404,7 @@ const StudentSectionDashboard = () => {
                   { label: '📋 Verify Documents', sub: 'Review uploaded student documents', tab: 'documents', tag: 'Important' },
                 ].map((item, i) => (
                   <div key={i} className="event-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab(item.tab)}>
-                    <span className="notice-tag">{item.tag}</span>
-                    <h4>{item.label}</h4>
-                    <p>{item.sub}</p>
+                    <span className="notice-tag">{item.tag}</span><h4>{item.label}</h4><p>{item.sub}</p>
                   </div>
                 ))}
               </div>
@@ -534,21 +415,13 @@ const StudentSectionDashboard = () => {
           {activeTab === 'enquiries' && (
             <div>
               {selectedEnquiry && (
-                <div style={{
-                  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-                  zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-                }}>
-                  <div style={{
-                    background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '520px',
-                    maxHeight: '90vh', overflowY: 'auto', padding: '28px',
-                    boxShadow: '0 8px 40px rgba(0,0,0,0.2)'
-                  }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                  <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                       <h3 style={{ color: '#1565C0', margin: 0 }}>📋 Enquiry Details</h3>
                       <button onClick={() => { setSelectedEnquiry(null); setStatusUpdate({ status: '', notes: '' }); setUpdateMsg(''); }}
                         style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#555' }}>✕</button>
                     </div>
-
                     <div style={{ background: '#f8faff', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
                       {[
                         { label: 'Full Name', value: selectedEnquiry.studentFullName },
@@ -564,23 +437,17 @@ const StudentSectionDashboard = () => {
                       ))}
                       <div className="fees-info-row">
                         <span className="fees-info-label">Current Status</span>
-                        <span style={{
-                          padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
-                          background: getStatusStyle(selectedEnquiry.status).bg,
-                          color: getStatusStyle(selectedEnquiry.status).color,
-                        }}>
+                        <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', background: getStatusStyle(selectedEnquiry.status).bg, color: getStatusStyle(selectedEnquiry.status).color }}>
                           {getStatusStyle(selectedEnquiry.status).label}
                         </span>
                       </div>
                     </div>
-
                     {selectedEnquiry.notes && (
                       <div style={{ background: '#fffde7', borderRadius: '8px', padding: '12px', marginBottom: '16px', borderLeft: '4px solid #f59e0b' }}>
                         <p style={{ fontSize: '13px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>💬 Student Message:</p>
                         <p style={{ fontSize: '13px', color: '#555' }}>{selectedEnquiry.notes}</p>
                       </div>
                     )}
-
                     <div style={{ borderTop: '1px solid #eee', paddingTop: '16px' }}>
                       <h4 style={{ color: '#333', marginBottom: '12px' }}>🔄 Update Status</h4>
                       <div className="form-group" style={{ marginBottom: '12px' }}>
@@ -597,19 +464,12 @@ const StudentSectionDashboard = () => {
                       </div>
                       <div className="form-group" style={{ marginBottom: '16px' }}>
                         <label style={{ fontSize: '13px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '6px' }}>Staff Notes</label>
-                        <textarea rows="3" placeholder="Add internal notes..."
-                          value={statusUpdate.notes} onChange={e => setStatusUpdate({ ...statusUpdate, notes: e.target.value })}
+                        <textarea rows="3" placeholder="Add internal notes..." value={statusUpdate.notes} onChange={e => setStatusUpdate({ ...statusUpdate, notes: e.target.value })}
                           style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
                       </div>
-
                       {updateMsg && (
-                        <div style={{
-                          padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px',
-                          background: updateMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee',
-                          color: updateMsg.startsWith('✅') ? '#2E7D32' : '#C62828',
-                        }}>{updateMsg}</div>
+                        <div style={{ padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px', background: updateMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: updateMsg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{updateMsg}</div>
                       )}
-
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <button onClick={() => handleStatusUpdate(selectedEnquiry._id)} disabled={updateLoading}
                           style={{ flex: 1, padding: '11px', background: '#1565C0', color: '#fff', border: 'none', borderRadius: '9px', fontWeight: '600', fontSize: '14px', cursor: updateLoading ? 'not-allowed' : 'pointer', opacity: updateLoading ? 0.7 : 1 }}>
@@ -626,8 +486,7 @@ const StudentSectionDashboard = () => {
               )}
 
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <input type="text" placeholder="🔍 Search by name, email or phone..."
-                  value={searchText} onChange={e => setSearchText(e.target.value)}
+                <input type="text" placeholder="🔍 Search by name, email or phone..." value={searchText} onChange={e => setSearchText(e.target.value)}
                   style={{ flex: 1, minWidth: '200px', padding: '10px 14px', borderRadius: '9px', border: '1px solid #ddd', fontSize: '14px' }} />
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                   style={{ padding: '10px 14px', borderRadius: '9px', border: '1px solid #ddd', fontSize: '14px' }}>
@@ -638,9 +497,7 @@ const StudentSectionDashboard = () => {
                   <option value="converted">🎓 Converted</option>
                   <option value="rejected">❌ Rejected</option>
                 </select>
-                <button onClick={fetchEnquiries} style={{ padding: '10px 18px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: '9px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
-                  🔄 Refresh
-                </button>
+                <button onClick={fetchEnquiries} style={{ padding: '10px 18px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: '9px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>🔄 Refresh</button>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -669,16 +526,10 @@ const StudentSectionDashboard = () => {
                   {filteredEnquiries.map(enq => {
                     const s = getStatusStyle(enq.status);
                     return (
-                      <div key={enq._id}
-                        onClick={() => { setSelectedEnquiry(enq); setStatusUpdate({ status: enq.status, notes: enq.notes || '' }); setUpdateMsg(''); }}
-                        style={{
-                          background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px',
-                          padding: '16px 20px', cursor: 'pointer', transition: 'box-shadow 0.2s',
-                          display: 'flex', alignItems: 'center', gap: '16px', borderLeft: `4px solid ${s.color}`,
-                        }}
+                      <div key={enq._id} onClick={() => { setSelectedEnquiry(enq); setStatusUpdate({ status: enq.status, notes: enq.notes || '' }); setUpdateMsg(''); }}
+                        style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: `4px solid ${s.color}` }}
                         onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'}
-                        onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}
-                      >
+                        onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}>
                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
                           {enq.gender === 'female' ? '👩' : enq.gender === 'male' ? '👨' : '🧑'}
                         </div>
@@ -705,62 +556,32 @@ const StudentSectionDashboard = () => {
           {activeTab === 'admissions' && (
             <div>
               {selectedAdmission && (
-                <AdmissionModal
-                  adm={selectedAdmission}
-                  onClose={() => setSelectedAdmission(null)}
-                  onRefresh={fetchAdmissions}
-                />
+                <AdmissionModal adm={selectedAdmission} onClose={() => setSelectedAdmission(null)} onRefresh={fetchAdmissions} />
               )}
-
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ margin: 0 }}>🎓 Pending Admission Forms ({admissions.length})</h3>
-                <button onClick={fetchAdmissions} style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
-                  🔄 Refresh
-                </button>
+                <button onClick={fetchAdmissions} style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>🔄 Refresh</button>
               </div>
-
               {admissionsLoading ? (
                 <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading admissions...</h3></div>
               ) : admissions.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📭</div>
-                  <h3>No Pending Admissions</h3>
-                  <p>All admission forms have been processed.</p>
-                </div>
+                <div className="empty-state"><div className="empty-icon">📭</div><h3>No Pending Admissions</h3><p>All admission forms have been processed.</p></div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {admissions.map(adm => (
-                    <div key={adm._id}
-                      onClick={() => setSelectedAdmission(adm)}
-                      style={{
-                        background: '#fff', border: '1px solid #e0e0e0',
-                        borderRadius: '12px', padding: '16px 20px',
-                        cursor: 'pointer', transition: 'box-shadow 0.2s',
-                        display: 'flex', alignItems: 'center', gap: '16px',
-                        borderLeft: '4px solid #E65100',
-                      }}
+                    <div key={adm._id} onClick={() => setSelectedAdmission(adm)}
+                      style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #E65100' }}
                       onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'}
-                      onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}
-                    >
-                      <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff3e0', color: '#E65100', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                        🎓
-                      </div>
+                      onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}>
+                      <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff3e0', color: '#E65100', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🎓</div>
                       <div style={{ flex: 1 }}>
                         <h4 style={{ margin: 0, fontSize: '15px', color: '#222' }}>{adm.applicantName}</h4>
-                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
-                          📧 {adm.email} · 📱 {adm.phone}
-                        </p>
-                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#888' }}>
-                          🎓 {adm.preferredSubject || adm.course || 'Course not specified'}
-                        </p>
+                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>📧 {adm.email} · 📱 {adm.phone}</p>
+                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#888' }}>🎓 {adm.preferredSubject || adm.courseType || 'Course not specified'}</p>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <span style={{ background: '#fff3e0', color: '#E65100', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
-                          ⏳ Pending
-                        </span>
-                        <p style={{ fontSize: '11px', color: '#aaa', margin: '6px 0 0' }}>
-                          {new Date(adm.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </p>
+                        <span style={{ background: '#fff3e0', color: '#E65100', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>⏳ Pending</span>
+                        <p style={{ fontSize: '11px', color: '#aaa', margin: '6px 0 0' }}>{new Date(adm.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                         <p style={{ fontSize: '12px', color: '#1565C0', marginTop: '4px', fontWeight: '600' }}>View Details →</p>
                       </div>
                     </div>
@@ -769,108 +590,115 @@ const StudentSectionDashboard = () => {
               )}
             </div>
           )}
+
           {/* ── GENERATE CREDENTIALS ── */}
-{activeTab === 'credentials' && (
-  <div>
-    <h3 style={{ marginBottom: '8px', color: '#1565C0' }}>👥 Generate Student Login</h3>
-    <p style={{ color: '#666', marginBottom: '20px' }}>
-      Create login credentials for a new student. Password is auto-generated from name + date of birth.
-    </p>
+          {activeTab === 'credentials' && (
+            <div>
+              <h3 style={{ marginBottom: '8px', color: '#1565C0' }}>👥 Generate Student Login</h3>
+              <p style={{ color: '#666', marginBottom: '20px' }}>Create login credentials for a new student. Password is auto-generated from name + date of birth.</p>
+              {credMsg && (
+                <div style={{ padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', background: credMsg.includes('✅') ? '#e8f5e9' : '#ffebee', color: credMsg.includes('✅') ? '#2E7D32' : '#C62828', fontWeight: '500' }}>{credMsg}</div>
+              )}
+              {generatedCreds && (
+                <div style={{ background: '#e8f5e9', border: '2px solid #2E7D32', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+                  <h3 style={{ color: '#2E7D32', marginBottom: '14px' }}>✅ Student Account Created!</h3>
+                  <p style={{ color: '#555', marginBottom: '14px', fontSize: '14px' }}>Share these login details with the student:</p>
+                  <div style={{ background: 'white', padding: '16px', borderRadius: '8px', fontSize: '15px' }}>
+                    <p style={{ marginBottom: '8px' }}><strong>👤 Name:</strong> {generatedCreds.name}</p>
+                    <p style={{ marginBottom: '8px' }}><strong>📧 Email:</strong> {generatedCreds.email}</p>
+                    <p><strong>🔑 Password:</strong> <code style={{ background: '#fff3e0', padding: '4px 12px', borderRadius: '6px', fontFamily: 'monospace', fontSize: '16px', color: '#E65100', fontWeight: '700' }}>{generatedCreds.password}</code></p>
+                  </div>
+                  <div style={{ background: '#fff3cd', padding: '12px', borderRadius: '8px', marginTop: '14px', fontSize: '13px', color: '#856404' }}>
+                    ⚠️ Note this password! Student will use it to login at the student portal.
+                  </div>
+                  <button onClick={() => setGeneratedCreds(null)} style={{ marginTop: '14px', background: '#2E7D32', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>✓ Got It, Close</button>
+                </div>
+              )}
+              <div className="form-card">
+                <h3 style={{ marginBottom: '16px' }}>📝 New Student Details</h3>
+                <form onSubmit={handleCreateStudent}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                    <div className="form-group"><label>First Name *</label><input type="text" placeholder="e.g. Tejas" value={credForm.firstName} onChange={e => setCredForm({ ...credForm, firstName: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                    <div className="form-group"><label>Middle Name</label><input type="text" placeholder="e.g. Sanjay" value={credForm.middleName} onChange={e => setCredForm({ ...credForm, middleName: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                    <div className="form-group"><label>Last Name</label><input type="text" placeholder="e.g. Bargal" value={credForm.lastName} onChange={e => setCredForm({ ...credForm, lastName: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group"><label>Email Address *</label><input type="email" placeholder="student@gmail.com" value={credForm.email} onChange={e => setCredForm({ ...credForm, email: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                    <div className="form-group"><label>Phone Number</label><input type="text" placeholder="9876543210" maxLength="10" value={credForm.phone} onChange={e => { if (/^\d{0,10}$/.test(e.target.value)) setCredForm({ ...credForm, phone: e.target.value }); }} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                  </div>
+                  <div className="form-group">
+                    <label>Date of Birth *</label>
+                    <input type="date" value={credForm.dateOfBirth} onChange={e => setCredForm({ ...credForm, dateOfBirth: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                    <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>💡 Password will be auto-generated: first 4 letters of name + @ + DD + YY</small>
+                  </div>
+                  <button type="submit" disabled={credLoading} style={{ background: '#1565C0', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '8px', cursor: credLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: credLoading ? 0.6 : 1 }}>
+                    {credLoading ? '⏳ Creating...' : '➕ Create Student Account'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
 
-    {credMsg && (
-      <div style={{ padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', background: credMsg.includes('✅') ? '#e8f5e9' : '#ffebee', color: credMsg.includes('✅') ? '#2E7D32' : '#C62828', fontWeight: '500' }}>
-        {credMsg}
-      </div>
-    )}
+          {/* ✅ NEW: ALL STUDENTS TAB */}
+          {activeTab === 'students' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ color: '#1565C0', marginBottom: '4px' }}>👩‍🎓 All Students</h2>
+                  <p style={{ color: '#666', fontSize: '14px' }}>Total registered students: <strong>{allStudents.length}</strong></p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input type="text" placeholder="🔍 Search by name, email or roll no..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
+                    style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', width: '260px' }} />
+                  <button onClick={fetchAllStudents} style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>🔄 Refresh</button>
+                </div>
+              </div>
 
-    {/* Generated Credentials Popup */}
-    {generatedCreds && (
-      <div style={{ background: '#e8f5e9', border: '2px solid #2E7D32', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-        <h3 style={{ color: '#2E7D32', marginBottom: '14px' }}>✅ Student Account Created!</h3>
-        <p style={{ color: '#555', marginBottom: '14px', fontSize: '14px' }}>
-          Share these login details with the student:
-        </p>
-        <div style={{ background: 'white', padding: '16px', borderRadius: '8px', fontSize: '15px' }}>
-          <p style={{ marginBottom: '8px' }}><strong>👤 Name:</strong> {generatedCreds.name}</p>
-          <p style={{ marginBottom: '8px' }}><strong>📧 Email:</strong> {generatedCreds.email}</p>
-          <p><strong>🔑 Password:</strong> <code style={{ background: '#fff3e0', padding: '4px 12px', borderRadius: '6px', fontFamily: 'monospace', fontSize: '16px', color: '#E65100', fontWeight: '700' }}>{generatedCreds.password}</code></p>
-        </div>
-        <div style={{ background: '#fff3cd', padding: '12px', borderRadius: '8px', marginTop: '14px', fontSize: '13px', color: '#856404' }}>
-          ⚠️ Note this password! Student will use it to login at the student portal.
-        </div>
-        <button onClick={() => setGeneratedCreds(null)}
-          style={{ marginTop: '14px', background: '#2E7D32', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
-          ✓ Got It, Close
-        </button>
-      </div>
-    )}
+              {studentsLoading ? (
+                <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading students...</h3></div>
+              ) : allStudents.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">👩‍🎓</div>
+                  <h3>No Students Yet</h3>
+                  <p>Students will appear here after Principal approves their admission or credentials are generated.</p>
+                </div>
+              ) : (
+                <div style={{ background: 'white', borderRadius: '14px', overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1fr', background: '#1565C0', padding: '14px 20px', gap: '10px' }}>
+                    {['Student Name', 'Email', 'Roll No.', 'Year', 'Status'].map(h => (
+                      <span key={h} style={{ color: 'white', fontWeight: '700', fontSize: '13px' }}>{h}</span>
+                    ))}
+                  </div>
+                  {allStudents
+                    .filter(s => {
+                      if (!studentSearch) return true;
+                      const q = studentSearch.toLowerCase();
+                      return s.user?.name?.toLowerCase().includes(q) || s.user?.email?.toLowerCase().includes(q) || s.rollNumber?.toLowerCase().includes(q);
+                    })
+                    .map((s, idx) => (
+                      <div key={s._id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1fr', padding: '14px 20px', gap: '10px', alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : 'white' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1565C0', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', flexShrink: 0 }}>
+                            {s.user?.name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <span style={{ fontWeight: '600', color: '#1a1a2e', fontSize: '14px' }}>{s.user?.name || 'N/A'}</span>
+                        </div>
+                        <span style={{ fontSize: '13px', color: '#555' }}>{s.user?.email || 'N/A'}</span>
+                        <span style={{ fontSize: '13px', color: '#1565C0', fontWeight: '600', fontFamily: 'monospace' }}>{s.rollNumber || 'N/A'}</span>
+                        <span style={{ fontSize: '13px', color: '#555' }}>{s.admissionYear || 'N/A'}</span>
+                        <span style={{ fontSize: '12px', fontWeight: '600', padding: '4px 10px', borderRadius: '12px', background: s.isActive ? '#e8f5e9' : '#ffebee', color: s.isActive ? '#2E7D32' : '#C62828' }}>
+                          {s.isActive ? '✅ Active' : '❌ Inactive'}
+                        </span>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
+          )}
 
-    {/* Create Form */}
-    <div className="form-card">
-      <h3 style={{ marginBottom: '16px' }}>📝 New Student Details</h3>
-      <form onSubmit={handleCreateStudent}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-          <div className="form-group">
-            <label>First Name *</label>
-            <input type="text" placeholder="e.g. Tejas"
-              value={credForm.firstName}
-              onChange={e => setCredForm({ ...credForm, firstName: e.target.value })}
-              required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          </div>
-          <div className="form-group">
-            <label>Middle Name</label>
-            <input type="text" placeholder="e.g. Sanjay"
-              value={credForm.middleName}
-              onChange={e => setCredForm({ ...credForm, middleName: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          </div>
-          <div className="form-group">
-            <label>Last Name</label>
-            <input type="text" placeholder="e.g. Bargal"
-              value={credForm.lastName}
-              onChange={e => setCredForm({ ...credForm, lastName: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div className="form-group">
-            <label>Email Address *</label>
-            <input type="email" placeholder="student@gmail.com"
-              value={credForm.email}
-              onChange={e => setCredForm({ ...credForm, email: e.target.value })}
-              required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          </div>
-          <div className="form-group">
-            <label>Phone Number</label>
-            <input type="text" placeholder="9876543210" maxLength="10"
-              value={credForm.phone}
-              onChange={e => { if (/^\d{0,10}$/.test(e.target.value)) setCredForm({ ...credForm, phone: e.target.value }); }}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Date of Birth *</label>
-          <input type="date"
-            value={credForm.dateOfBirth}
-            onChange={e => setCredForm({ ...credForm, dateOfBirth: e.target.value })}
-            required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-          <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>
-            💡 Password will be auto-generated: first 4 letters of name + @ + DD + YY
-          </small>
-        </div>
-
-        <button type="submit" disabled={credLoading}
-          style={{ background: '#1565C0', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '8px', cursor: credLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: credLoading ? 0.6 : 1 }}>
-          {credLoading ? '⏳ Creating...' : '➕ Create Student Account'}
-        </button>
-      </form>
-    </div>
-  </div>
-)}
           {/* ── OTHER TABS ── */}
-          {!['home', 'enquiries', 'admissions', 'credentials'].includes(activeTab) && (
+          {!['home', 'enquiries', 'admissions', 'credentials', 'students'].includes(activeTab) && (
             <div className="empty-state">
               <div className="empty-icon">🚧</div>
               <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
