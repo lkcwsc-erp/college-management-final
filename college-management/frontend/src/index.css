@@ -72,25 +72,6 @@ ul { list-style: none; }
 .error { color: red; font-size: 14px; margin-top: 5px; }
 .success { color: green; font-size: 14px; margin-top: 5px; }
 
-/* ===== HEADER PROTECTION FIX ===== */
-.header {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 1000 !important;
-  display: block !important;
-  background: #ffffff !important;
-}
-
-.header-inner {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-}
-
-.header-nav {
-  display: flex !important;
-  flex-direction: row !important;
-}
 
 /* Prevent .btn from affecting header links */
 .header .btn {
