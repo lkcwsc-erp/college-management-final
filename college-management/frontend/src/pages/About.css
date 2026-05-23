@@ -13,8 +13,8 @@
 
 /* Hero Section Styles */
 .about-hero {
-  min-height: 35vh;
- background: linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%);
+  min-height: 45vh;
+  background: linear-gradient(135deg, #001f5c, #0055ff);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -390,4 +390,85 @@
   .highlight-box {
     padding: 25px;
   }
+}
+
+/* ── VNSS BANNER ── */
+.vnss-banner {
+  background: linear-gradient(135deg, #0D47A1, #1565C0);
+  padding: 24px 20px;
+}
+.vnss-banner-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.vnss-banner-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: white;
+  padding: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.vnss-banner-text { flex: 1; }
+.vnss-banner-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+.vnss-banner-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+.vnss-banner-sub {
+  font-size: 13px;
+  color: #FFD54F;
+  font-style: italic;
+}
+.vnss-banner-btn {
+  background: white;
+  color: #1565C0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.vnss-banner-btn:hover {
+  background: #FFD54F;
+  color: #111;
+}
+
+/* ── READ MORE BUTTON ── */
+.read-more-btn {
+  margin-top: 12px;
+  background: none;
+  border: 1.5px solid #1565C0;
+  color: #1565C0;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-block;
+}
+.read-more-btn:hover {
+  background: #1565C0;
+  color: white;
+}
+
+@media (max-width: 600px) {
+  .vnss-banner-inner { flex-direction: column; text-align: center; }
+  .vnss-banner-btn { width: 100%; text-align: center; }
 }
