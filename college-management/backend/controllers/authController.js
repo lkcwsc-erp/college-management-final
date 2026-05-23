@@ -24,15 +24,15 @@ const generateStudentPassword = (firstName, dob) => {
 // ===== STAFF/ADMIN: Register a New Student =====
 exports.registerStudent = async (req, res) => {
   try {
-    const { firstName, middleName, lastName, email, phone, dateOfBirth } = req.body;
- 
+    const { firstName, middleName, lastName, email, phone, dateOfBirth, aadharNumber } = req.body;
+
     if (!firstName || !email || !dateOfBirth) {
       return res.status(400).json({
         success: false,
         message: 'First name, email and date of birth are required'
       });
     }
- 
+
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({
@@ -40,10 +40,21 @@ exports.registerStudent = async (req, res) => {
         message: 'A user with this email already exists'
       });
     }
- 
+
+    // Aadhaar duplicate check
+    if (aadharNumber) {
+      const aadharExists = await User.findOne({ aadharNumber });
+      if (aadharExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'A student with this Aadhaar number already exists'
+        });
+      }
+    }
+
     const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
     const password = generateStudentPassword(firstName, dateOfBirth);
- 
+
     const user = await User.create({
       name,
       email,
@@ -53,9 +64,10 @@ exports.registerStudent = async (req, res) => {
       dateOfBirth,
       firstName,
       middleName: middleName || '',
-      lastName: lastName || ''
+      lastName: lastName || '',
+      aadharNumber: aadharNumber || ''
     });
- 
+
     res.status(201).json({
       success: true,
       message: 'Student registered successfully!',
@@ -72,7 +84,7 @@ exports.registerStudent = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
- 
+
 // ===== Register Staff/Admin =====
 exports.register = async (req, res) => {
   try {
