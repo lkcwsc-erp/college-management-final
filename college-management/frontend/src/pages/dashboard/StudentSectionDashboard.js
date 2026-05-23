@@ -272,7 +272,7 @@ const StudentSectionDashboard = () => {
   const [searchText, setSearchText] = useState('');
  // Generate Credentials states
   const [credForm, setCredForm] = useState({
-    firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: ''
+    firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '', aadharNumber: ''
   });
   const [credLoading, setCredLoading] = useState(false);
   const [credMsg, setCredMsg] = useState('');
@@ -360,7 +360,7 @@ const StudentSectionDashboard = () => {
           password: res.data.generatedPassword
         });
         setCredMsg('✅ Student account created successfully!');
-        setCredForm({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '' });
+      setCredForm({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '', aadharNumber: '' });
       }
     } catch (err) {
       setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account'));
@@ -855,6 +855,19 @@ const StudentSectionDashboard = () => {
             required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
           <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>
             💡 Password will be auto-generated: first 4 letters of name + @ + DD + YY
+          </small>
+        </div>
+
+        <div className="form-group">
+          <label>Aadhaar Number *</label>
+          <input type="text"
+            placeholder="12 digit Aadhaar number"
+            value={credForm.aadharNumber}
+            onChange={e => { if (/^\d{0,12}$/.test(e.target.value)) setCredForm({ ...credForm, aadharNumber: e.target.value }); }}
+            required maxLength="12"
+            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+          <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>
+            🪪 Aadhaar prevents duplicate student accounts
           </small>
         </div>
 
