@@ -26,6 +26,7 @@ const FILE_LIMITS = {
   incomeCertificate: 1024 * 1024,
   transferCertificate: 1024 * 1024,
   aparIdDocument: 1024 * 1024,
+  twelfthTC: 1024 * 1024,
 };
 
 
@@ -191,11 +192,15 @@ const [activeTab, setActiveTab] = useState('process');
 
     // APAR ID
     aparIdNumber: '',
-    dateOfBirth: '', gender: '', category: '',
+    dateOfBirth: '', placeOfBirth: '', gender: '', category: '',
+    caste: '', subCaste: '',
     bloodGroup: '', religion: '', nationality: 'Indian',
     isMarried: false,
+    isDisabled: '',
 
     husbandName: '',
+    husbandContactNumber: '',
+    guardianFullName: '',
     guardianName: '',
     // Aadhar
     aadharNumber: '', aadharName: '',
@@ -249,6 +254,7 @@ const [activeTab, setActiveTab] = useState('process');
     domicileCertificate: null, incomeCertificate: null, transferCertificate: null,
     gapyeardocument: null,
     aparIdDocument: null,
+    twelfthTC: null,
   });
 
   const [uploadPreviews, setUploadPreviews] = useState({
@@ -259,6 +265,7 @@ const [activeTab, setActiveTab] = useState('process');
     domicileCertificate: '', incomeCertificate: '', transferCertificate: '',
     gapyeardocument: '',
     aparIdDocument: '',
+    twelfthTC: '',
   });
 
   /* ============================================================
@@ -419,6 +426,10 @@ const [activeTab, setActiveTab] = useState('process');
     if (!formData.phone || formData.phone.length !== 10) { setError('Please enter a valid 10 digit mobile number.'); scrollTop(); return; }
     if (formData.guardianPhone && formData.guardianPhone.length !== 10) { setError('Please enter a valid 10 digit guardian mobile number.'); scrollTop(); return; }
     if (!formData.aadharNumber || formData.aadharNumber.length !== 12) { setError('Please enter a valid 12 digit Aadhar number.'); scrollTop(); return; }
+    if (!formData.placeOfBirth?.trim()) { setError('Please enter Place of Birth.'); scrollTop(); return; }
+    if (!formData.caste?.trim()) { setError('Please enter Caste.'); scrollTop(); return; }
+    if (!formData.isDisabled) { setError('Please indicate whether you are a specially disabled person.'); scrollTop(); return; }
+    if (!formData.guardianFullName?.trim()) { setError('Please enter Guardian Full Name.'); scrollTop(); return; }
 
     // New address field validations
     if (!formData.houseNumber.trim()) { setError('Please enter House Number.'); scrollTop(); return; }
@@ -458,7 +469,7 @@ const [activeTab, setActiveTab] = useState('process');
     }
     console.log('✅ All required documents uploaded');
 
-    if (formData.admissionYear === '2nd Year' || formData.admissionYear === '3rd Year') {
+    if (formData.admissionYear === 'Direct Second Year' || formData.admissionYear === 'Direct Third Year') {
       if (!uploadedFiles.prevYearMarksheet) {
         setError(`Please upload Previous Year Marksheet (required for ${formData.admissionYear}).`);
         scrollTop(); return;
@@ -524,7 +535,7 @@ const [activeTab, setActiveTab] = useState('process');
   };
 
   const yearOptions = Array.from({ length: 15 }, (_, i) => 2026 - i);
-  const isDirectAdmission = formData.admissionYear === '2nd Year' || formData.admissionYear === '3rd Year';
+  const isDirectAdmission = formData.admissionYear === 'Direct Second Year' || formData.admissionYear === 'Direct Third Year';
 
   // Enquiry form submit handler
   const handleEnquirySubmit = async (e) => {
@@ -771,6 +782,11 @@ const [activeTab, setActiveTab] = useState('process');
                     </div>
                     <div className="form-row">
                       <div className="form-group">
+                        <label>Place of Birth *</label>
+                        <input type="text" name="placeOfBirth" placeholder="City / Village of birth"
+                          value={formData.placeOfBirth} onChange={handleChange} required />
+                      </div>
+                      <div className="form-group">
                         <label>Gender *</label>
                         <select name="gender" value={formData.gender} onChange={handleChange} required>
                           <option value="">Select Gender</option>
@@ -779,6 +795,8 @@ const [activeTab, setActiveTab] = useState('process');
                           <option value="other">Other</option>
                         </select>
                       </div>
+                    </div>
+                    <div className="form-row">
                       <div className="form-group">
                         <label>Category *</label>
                         <select name="category" value={formData.category} onChange={handleChange} required>
@@ -790,6 +808,35 @@ const [activeTab, setActiveTab] = useState('process');
                           <option value="nt">NT</option>
                           <option value="vjnt">VJNT</option>
                         </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Caste *</label>
+                        <input type="text" name="caste" placeholder="Enter your caste"
+                          value={formData.caste} onChange={handleChange} required />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Sub Caste</label>
+                        <input type="text" name="subCaste" placeholder="Enter sub caste (if applicable)"
+                          value={formData.subCaste} onChange={handleChange} />
+                      </div>
+                      <div className="form-group">
+                        <label>Are you a specially disabled person? *</label>
+                        <div className="radio-group" style={{ display: 'flex', gap: '24px', paddingTop: '8px' }}>
+                          <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input type="radio" name="isDisabled" value="yes"
+                              checked={formData.isDisabled === 'yes'}
+                              onChange={handleChange} required />
+                            <span>Yes</span>
+                          </label>
+                          <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input type="radio" name="isDisabled" value="no"
+                              checked={formData.isDisabled === 'no'}
+                              onChange={handleChange} />
+                            <span>No</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
                     <div className="form-row form-row-3">
@@ -877,21 +924,23 @@ const [activeTab, setActiveTab] = useState('process');
   </div>
 )}
 
-{/* Guardian Full Name */}
-<div className="form-group">
-  <label>Guardian Full Name</label>
-  <input
-    type="text"
-    placeholder="Enter Guardian Full Name"
-    value={formData.guardianName || ''}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        guardianName: e.target.value
-      })
-    }
-  />
-</div>
+{formData.isMarried && (
+  <div className="form-group">
+    <label>Husband Contact Number</label>
+    <input
+      type="tel"
+      placeholder="10 digit mobile number"
+      value={formData.husbandContactNumber || ''}
+      onChange={(e) => {
+        const val = e.target.value.replace(/\D/g, '');
+        if (val.length <= 10) setFormData({ ...formData, husbandContactNumber: val });
+      }}
+    />
+    {formData.husbandContactNumber && formData.husbandContactNumber.length < 10 && (
+      <small className="inline-error">Enter 10 digit number</small>
+    )}
+  </div>
+)}
 
 </div>
                  {/* ===== GUARDIAN ===== */}
@@ -901,6 +950,17 @@ const [activeTab, setActiveTab] = useState('process');
   </h3>
 
   <div className="form-row">
+    <div className="form-group">
+      <label>Guardian Full Name *</label>
+      <input
+        type="text"
+        name="guardianFullName"
+        placeholder="Full name of guardian"
+        value={formData.guardianFullName}
+        onChange={handleChange}
+        required
+      />
+    </div>
     <div className="form-group">
       <label>Father's Name *</label>
       <input
@@ -912,7 +972,9 @@ const [activeTab, setActiveTab] = useState('process');
         required
       />
     </div>
+  </div>
 
+  <div className="form-row">
     <div className="form-group">
       <label>Mother's Name *</label>
       <input
@@ -924,6 +986,7 @@ const [activeTab, setActiveTab] = useState('process');
         required
       />
     </div>
+    <div className="form-group" />
   </div>
 
   <div className="form-row">
@@ -1420,9 +1483,9 @@ const [activeTab, setActiveTab] = useState('process');
                         <select name="admissionYear" value={formData.admissionYear}
                           onChange={handleChange} required>
                           <option value="">Select Year</option>
-                          <option value="1st Year">1st Year (Fresh)</option>
-                          <option value="2nd Year">2nd Year (Direct)</option>
-                          <option value="3rd Year">3rd Year (Direct)</option>
+                          <option value="1st Year">1st Year</option>
+                          <option value="Direct Second Year">Direct Second Year</option>
+                          <option value="Direct Third Year">Direct Third Year</option>
                         </select>
                       </div>
                     </div>
@@ -1603,13 +1666,13 @@ const [activeTab, setActiveTab] = useState('process');
                     <p className="section-subtitle">Required for scholarship and refund processing</p>
                     <div className="form-row">
                       <div className="form-group">
-                        <label>Account Holder Name *</label>
+                        <label>Account Holder Name</label>
                         <input type="text" name="bankAccountHolder"
                           placeholder="As per bank passbook"
                           value={formData.bankAccountHolder} onChange={handleChange} />
                       </div>
                       <div className="form-group">
-                        <label>Account Number *</label>
+                        <label>Account Number</label>
                         <input type="text" name="bankAccountNumber"
                           placeholder="Bank account number"
                           value={formData.bankAccountNumber}
@@ -1621,7 +1684,7 @@ const [activeTab, setActiveTab] = useState('process');
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label>IFSC Code *</label>
+                        <label>IFSC Code</label>
                         <input type="text" name="bankIFSC"
                           placeholder="e.g. SBIN0001234"
                           value={formData.bankIFSC}
@@ -1639,7 +1702,7 @@ const [activeTab, setActiveTab] = useState('process');
                         <small className="field-hint">11 chars: 4 letters + 0 + 6 alphanumeric</small>
                       </div>
                       <div className="form-group">
-                        <label>Bank Name *</label>
+                        <label>Bank Name</label>
                         <input type="text" name="bankName"
                           placeholder="e.g. State Bank of India"
                           value={formData.bankName} onChange={handleChange} />
@@ -1744,6 +1807,15 @@ const [activeTab, setActiveTab] = useState('process');
                       />
                       <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
                         accept="image/*,.pdf" 
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                    </div>
+                    <div className="upload-grid-two">
+                      <FileUploadBox fieldName="twelfthTC" label="📜 Upload 12th TC"
+                        accept="image/*,.pdf"
                         uploadedFiles={uploadedFiles}
                         uploadPreviews={uploadPreviews}
                         fileErrors={fileErrors}
