@@ -13,7 +13,7 @@
 
 /* Hero Section Styles */
 .about-hero {
-  min-height: 45vh;
+  min-height: 35vh;
  background: linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%);
   display: flex;
   justify-content: center;
