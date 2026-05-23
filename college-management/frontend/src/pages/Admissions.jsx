@@ -1484,6 +1484,8 @@ const [activeTab, setActiveTab] = useState('process');
                           onChange={handleChange} required>
                           <option value="">Select Year</option>
                           <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
                           <option value="Direct Second Year">Direct Second Year</option>
                           <option value="Direct Third Year">Direct Third Year</option>
                         </select>
