@@ -18,6 +18,7 @@ const StaffLogin = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [actualEmail, setActualEmail] = useState('');
   const { setAuthData } = useAuth();
   const navigate = useNavigate();
   const recaptchaRef = useRef();
@@ -54,6 +55,7 @@ const StaffLogin = () => {
         captchaToken
       });
       if (data.otpRequired) {
+        setActualEmail(data.email || formData.email);
         setStep('otp');
         setSuccess(data.message);
         startResendCooldown();
@@ -77,8 +79,7 @@ const StaffLogin = () => {
     if (otp.length !== 6) { setError('Please enter the 6-digit OTP'); return; }
     setLoading(true);
     try {
-      const loginId = formData.username || formData.email;
-      const { data } = await API.post('/auth/verify-otp', { email: loginId, otp });
+      const { data } = await API.post('/auth/verify-otp', { email: actualEmail, otp });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setAuthData(data.user, data.token);
@@ -93,8 +94,7 @@ const StaffLogin = () => {
     if (resendCooldown > 0) return;
     setError(''); setSuccess('');
     try {
-      const loginId = formData.username || formData.email;
-      const { data } = await API.post('/auth/resend-otp', { email: loginId });
+      const { data } = await API.post('/auth/resend-otp', { email: actualEmail });
       setSuccess(data.message); setOtp(''); startResendCooldown();
     } catch (err) { setError(err.response?.data?.message || 'Failed to resend OTP.'); }
   };
@@ -122,7 +122,8 @@ const StaffLogin = () => {
             <>
               <div className="auth-header">
                 <div className="auth-logo">👨‍💼</div>
-                <h2>Staff Login</h2>  
+                <h2>Staff Login</h2>
+                <p>Login with your staff credentials</p>
               </div>
 
               {error && <div className="auth-error">{error}</div>}
