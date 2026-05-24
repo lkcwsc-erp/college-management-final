@@ -296,7 +296,10 @@ const [activeTab, setActiveTab] = useState('process');
         dateOfBirth: user.dateOfBirth ? user.dateOfBirth.substring(0, 10) : '',
       }));
     }
+  }, [user]);
+
   /* Auto-calc gap years */
+  
   useEffect(() => {
     if (formData.hasGap && formData.gapFromYear && formData.gapToYear) {
       const from = parseInt(formData.gapFromYear);
