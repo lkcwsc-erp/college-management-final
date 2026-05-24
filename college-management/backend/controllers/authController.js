@@ -269,7 +269,18 @@ exports.verifyOTP = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
  
-    const otpRecord = await OTP.findOne({ email: email.toLowerCase() });
+    // Username ya email dono se user dhundho
+    const user = await User.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        { username: email.toLowerCase() }
+      ]
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const otpRecord = await OTP.findOne({ email: user.email.toLowerCase() });
     if (!otpRecord) {
       return res.status(400).json({
         success: false,
@@ -296,12 +307,7 @@ exports.verifyOTP = async (req, res) => {
     }
  
     await OTP.deleteOne({ _id: otpRecord._id });
- 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
- 
+
     res.status(200).json({
       success: true,
       message: 'OTP verified! Login successful.',
