@@ -33,14 +33,12 @@
   font-size: 48px;
   font-weight: 700;
   margin-bottom: 15px;
-  animation: fadeDown 0.8s ease-out;
 }
 
 .hero-subtitle {
   font-size: 20px;
   margin-bottom: 30px;
   opacity: 0.9;
-  animation: fadeUp 0.8s ease-out;
 }
 
 .hero-buttons {
@@ -246,16 +244,7 @@
   transform: translateY(-2px);
 }
 
-/* Animations Core definitions */
-@keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
 /* Clean Responsiveness Viewports */
 @media (max-width: 768px) {
