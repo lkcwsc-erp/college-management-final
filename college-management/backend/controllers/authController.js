@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Student = require('../models/Student');
 const OTP = require('../models/OTP');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
