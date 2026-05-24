@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const Student = require('../models/Student');
 const OTP = require('../models/OTP');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
@@ -25,29 +24,42 @@ const generateStudentPassword = (firstName, dob) => {
 // ===== STAFF/ADMIN: Register a New Student =====
 exports.registerStudent = async (req, res) => {
   try {
-    const { firstName, middleName, lastName, email, phone, dateOfBirth } = req.body;
- 
-    if (!firstName || !email || !dateOfBirth) {
+    const { firstName, middleName, lastName, aadharNumber, phone, dateOfBirth } = req.body;
+
+    if (!firstName || !aadharNumber || !dateOfBirth) {
       return res.status(400).json({
         success: false,
-        message: 'First name, email and date of birth are required'
+        message: 'First name, Aadhar number and date of birth are required'
       });
     }
- 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
+
+    // Aadhar 12 digits validation
+    if (!/^\d{12}$/.test(aadharNumber)) {
       return res.status(400).json({
         success: false,
-        message: 'A user with this email already exists'
+        message: 'Aadhar number must be exactly 12 digits'
       });
     }
- 
+
+    // Duplicate Aadhar check
+    const aadharExists = await User.findOne({ aadharNumber });
+    if (aadharExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'A student with this Aadhar number already exists'
+      });
+    }
+
     const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
     const password = generateStudentPassword(firstName, dateOfBirth);
- 
+
+    // Auto-generate email from aadhar
+    const email = `student${aadharNumber}@lkcwsc.ac.in`;
+
     const user = await User.create({
       name,
       email,
+      aadharNumber,
       password,
       phone,
       role: 'student',
@@ -57,14 +69,13 @@ exports.registerStudent = async (req, res) => {
       lastName: lastName || ''
     });
 
-    // Student collection mein bhi save karo taaki Staff dashboard mein dikhe
+    // Student collection mein bhi save karo
     const lastStudent = await Student.findOne().sort({ createdAt: -1 });
     let rollNumber = 'STU0001';
     if (lastStudent && lastStudent.rollNumber) {
-      const lastNum = parseInt(lastStudent.rollNumber.replace('STU', '')) + 1;
+      const lastNum = parseInt(lastStudent.rollNumber.replace(/\D/g, '')) + 1;
       rollNumber = 'STU' + String(lastNum).padStart(4, '0');
     }
-
     await Student.create({
       user: user._id,
       rollNumber,
@@ -72,7 +83,7 @@ exports.registerStudent = async (req, res) => {
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       isActive: true
     });
- 
+
     res.status(201).json({
       success: true,
       message: 'Student registered successfully!',
@@ -81,6 +92,7 @@ exports.registerStudent = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        aadharNumber: user.aadharNumber,
         phone: user.phone,
         role: user.role,
       }
@@ -526,4 +538,3 @@ exports.updateStaff = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
- 
