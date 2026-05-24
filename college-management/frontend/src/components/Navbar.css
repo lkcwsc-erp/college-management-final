@@ -2,30 +2,32 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 32px;
-  background: rgba(16, 54, 112, 0.95);
+  padding: 14px 32px;
+  background: rgba(16, 54, 112, 0.97);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
   z-index: 1000;
   box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  min-height: 80px;
 }
 
 /* Brand */
 .navbar-brand a {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   text-decoration: none;
 }
 
 .brand-logo-img {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   background: white;
   padding: 3px;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .brand-text {
@@ -35,32 +37,35 @@
 
 .brand-name {
   color: white;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .brand-sub {
   color: rgba(255,255,255,0.75);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
+  margin-top: 2px;
 }
 
 /* Links */
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
+  flex-wrap: nowrap;
 }
 
 .navbar-links a,
 .dropdown-title {
   color: white;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   transition: 0.25s ease;
   position: relative;
+  white-space: nowrap;
 }
 
 .navbar-links a:hover,
@@ -86,10 +91,31 @@
   width: 100%;
 }
 
-/* Dropdown */
-.dropdown {
+/* Notification link with dot */
+.nav-notification-link {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
+
+.nav-notif-dot {
+  width: 7px;
+  height: 7px;
+  background: #FF5252;
+  border-radius: 50%;
+  display: inline-block;
+  margin-top: -8px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+/* Dropdown */
+.dropdown { position: relative; }
 
 .dropdown-menu {
   position: absolute;
@@ -103,9 +129,7 @@
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
-.dropdown:hover .dropdown-menu {
-  display: block;
-}
+.dropdown:hover .dropdown-menu { display: block; }
 
 .dropdown-menu a {
   display: block;
@@ -114,9 +138,7 @@
   font-size: 14px;
 }
 
-.dropdown-menu a:hover {
-  background: #f5f8ff;
-}
+.dropdown-menu a:hover { background: #f5f8ff; }
 
 /* Buttons */
 .btn,
@@ -130,6 +152,7 @@
   border: none;
   cursor: pointer;
   transition: 0.25s ease;
+  white-space: nowrap;
 }
 
 .btn:hover,
@@ -140,15 +163,10 @@
 }
 
 /* Mobile */
-.hamburger {
-  display: none;
-}
+.hamburger { display: none; }
 
-@media (max-width: 950px) {
-
-  .navbar {
-    padding: 12px 18px;
-  }
+@media (max-width: 1100px) {
+  .navbar { padding: 14px 18px; }
 
   .hamburger {
     display: flex;
@@ -162,29 +180,30 @@
     height: 3px;
     background: white;
     border-radius: 2px;
+    transition: 0.3s;
   }
 
   .navbar-links {
     display: none;
     position: absolute;
-    top: 78px;
+    top: 80px;
     left: 0;
     right: 0;
-    background: #1565C0;
+    background: #103670;
     flex-direction: column;
     padding: 20px;
-    gap: 18px;
+    gap: 16px;
+    z-index: 999;
   }
 
-  .navbar-links.open {
-    display: flex;
-  }
+  .navbar-links.open { display: flex; }
 
-  .brand-name {
-    font-size: 0.9rem;
-  }
+  .brand-name { font-size: 0.95rem; }
+  .brand-sub { font-size: 0.68rem; }
+  .brand-logo-img { width: 50px; height: 50px; }
+}
 
-  .brand-sub {
-    font-size: 0.65rem;
-  }
+@media (max-width: 500px) {
+  .brand-name { font-size: 0.85rem; }
+  .brand-logo-img { width: 44px; height: 44px; }
 }
