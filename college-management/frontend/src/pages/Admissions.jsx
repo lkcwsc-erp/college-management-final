@@ -1797,49 +1797,44 @@ const [activeTab, setActiveTab] = useState('process');
                   {/* ===== UPLOAD DOCUMENTS ===== */}
                   <div className="form-section">
                     <h3 className="form-section-title">📄 Upload Documents</h3>
+
+                    {/* Row 1 — Identity Documents */}
                     <div className="upload-grid-two">
                       <FileUploadBox fieldName="aadharPhoto" label="🪪 Aadhaar Card Upload"
-                        accept="image/*,.pdf" required={true} 
+                        accept="image/*,.pdf" required={true}
                         uploadedFiles={uploadedFiles}
                         uploadPreviews={uploadPreviews}
                         fileErrors={fileErrors}
                         onFileChange={handleFileChange}
                       />
-                       <FileUploadBox
-    fieldName="aparIdDocument"
-    label="🪪 APAAR ID Document Upload"
-    accept="image/*,.pdf"
-    required={true}
-    uploadedFiles={uploadedFiles}
-    uploadPreviews={uploadPreviews}
-    fileErrors={fileErrors}
-    onFileChange={handleFileChange}
-  />
+                      <FileUploadBox fieldName="aparIdDocument" label="🪪 APAAR ID Document Upload"
+                        accept="image/*,.pdf" required={true}
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
+                    </div>
 
-                      <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
-                        accept="image/*,.pdf" required={true} 
-                        uploadedFiles={uploadedFiles}
-                        uploadPreviews={uploadPreviews}
-                        fileErrors={fileErrors}
-                        onFileChange={handleFileChange}
-                      />
-                    </div>
+                    {/* Row 2 — Academic Marksheets */}
                     <div className="upload-grid-two">
-                      <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet Upload"
-                        accept="image/*,.pdf" required={true} 
+                      <FileUploadBox fieldName="sscMarksheet" label="📄 SSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true}
                         uploadedFiles={uploadedFiles}
                         uploadPreviews={uploadPreviews}
                         fileErrors={fileErrors}
                         onFileChange={handleFileChange}
                       />
-                      <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
-                        accept="image/*,.pdf" 
+                      <FileUploadBox fieldName="hscMarksheet" label="📄 HSC Marksheet Upload"
+                        accept="image/*,.pdf" required={true}
                         uploadedFiles={uploadedFiles}
                         uploadPreviews={uploadPreviews}
                         fileErrors={fileErrors}
                         onFileChange={handleFileChange}
                       />
                     </div>
+
+                    {/* Row 3 — Transfer Certificate & Bank */}
                     <div className="upload-grid-two">
                       <FileUploadBox fieldName="twelfthTC" label="📜 Upload 12th TC"
                         accept="image/*,.pdf"
@@ -1848,17 +1843,26 @@ const [activeTab, setActiveTab] = useState('process');
                         fileErrors={fileErrors}
                         onFileChange={handleFileChange}
                       />
+                      <FileUploadBox fieldName="bankPassbook" label="🏦 Bank Passbook Upload"
+                        accept="image/*,.pdf"
+                        uploadedFiles={uploadedFiles}
+                        uploadPreviews={uploadPreviews}
+                        fileErrors={fileErrors}
+                        onFileChange={handleFileChange}
+                      />
                     </div>
+
+                    {/* Conditional — Gap Year Document */}
                     {formData.hasGap && (
                       <FileUploadBox fieldName="gapyeardocument" label="📅 Gap Year Document Upload"
-                        accept="image/*,.pdf" required={true} 
+                        accept="image/*,.pdf" required={true}
                         uploadedFiles={uploadedFiles}
                         uploadPreviews={uploadPreviews}
                         fileErrors={fileErrors}
                         onFileChange={handleFileChange}
                       />
                     )}
-                  </div> 
+                  </div>
                    {/* ===== ADDITIONAL INFO ===== */}
 <div className="form-section">
   <h3 className="form-section-title">📝 Additional Information</h3>
