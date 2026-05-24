@@ -25,7 +25,7 @@ const generateStudentPassword = (firstName, dob) => {
 // ===== STAFF/ADMIN: Register a New Student =====
 exports.registerStudent = async (req, res) => {
   try {
-    const { firstName, middleName, lastName, aadharNumber, phone, dateOfBirth } = req.body;
+    const { firstName, middleName, lastName, aadharNumber, email, phone, dateOfBirth } = req.body;
 
     if (!firstName || !aadharNumber || !dateOfBirth) {
       return res.status(400).json({
@@ -54,8 +54,21 @@ exports.registerStudent = async (req, res) => {
     const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
     const password = generateStudentPassword(firstName, dateOfBirth);
 
-    // Auto-generate email from aadhar
-    const email = `student${aadharNumber}@lkcwsc.ac.in`;
+   
+    // Email required + duplicate check
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+    const emailExists = await User.findOne({ email: email.toLowerCase() });
+    if (emailExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists'
+      });
+    }
 
   const user = await User.create({
       name,
