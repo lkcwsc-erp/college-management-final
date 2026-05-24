@@ -236,15 +236,24 @@ const StudentSectionDashboard = () => {
   };
 
   // ✅ NEW: Fetch All Students
-  const fetchAllStudents = async () => {
+ const fetchAllStudents = async () => {
     setStudentsLoading(true);
     try {
-      const res = await API.get('/students');
+      const res = await API.get('/auth/students');
       if (res.data.success) setAllStudents(res.data.students || []);
     } catch (err) { console.error('Failed to fetch students:', err); }
     finally { setStudentsLoading(false); }
   };
 
+  const handleDeleteStudent = async (id, name) => {
+    if (!window.confirm(`Delete student "${name}"? This cannot be undone.`)) return;
+    try {
+      await API.delete(`/auth/students/${id}`);
+      fetchAllStudents();
+    } catch (err) {
+      alert('Failed to delete student: ' + (err.response?.data?.message || 'Error'));
+    }
+  };
   useEffect(() => {
     if (['home', 'enquiries', 'admissions'].includes(activeTab)) {
       fetchEnquiries();
@@ -668,8 +677,8 @@ const StudentSectionDashboard = () => {
                 </div>
               ) : (
                 <div style={{ background: 'white', borderRadius: '14px', overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1fr', background: '#1565C0', padding: '14px 20px', gap: '10px' }}>
-                    {['Student Name', 'Email', 'Roll No.', 'Year', 'Status'].map(h => (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.8fr 1.3fr 1.1fr 0.8fr 0.7fr', background: '#1565C0', padding: '14px 16px', gap: '8px' }}>
+                    {['Name', 'Email', 'Aadhaar', 'Password', 'Status', 'Action'].map(h => (
                       <span key={h} style={{ color: 'white', fontWeight: '700', fontSize: '13px' }}>{h}</span>
                     ))}
                   </div>
@@ -677,22 +686,26 @@ const StudentSectionDashboard = () => {
                     .filter(s => {
                       if (!studentSearch) return true;
                       const q = studentSearch.toLowerCase();
-                      return s.user?.name?.toLowerCase().includes(q) || s.user?.email?.toLowerCase().includes(q) || s.rollNumber?.toLowerCase().includes(q);
+                      return s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || (s.aadharNumber || '').includes(q);
                     })
                     .map((s, idx) => (
-                      <div key={s._id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1fr', padding: '14px 20px', gap: '10px', alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : 'white' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1565C0', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', flexShrink: 0 }}>
-                            {s.user?.name?.charAt(0).toUpperCase() || '?'}
+                      <div key={s._id} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.8fr 1.3fr 1.1fr 0.8fr 0.7fr', padding: '12px 16px', gap: '8px', alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : 'white' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1565C0', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>
+                            {s.name?.charAt(0).toUpperCase() || '?'}
                           </div>
-                          <span style={{ fontWeight: '600', color: '#1a1a2e', fontSize: '14px' }}>{s.user?.name || 'N/A'}</span>
+                          <span style={{ fontWeight: '600', color: '#1a1a2e', fontSize: '13px' }}>{s.name || 'N/A'}</span>
                         </div>
-                        <span style={{ fontSize: '13px', color: '#555' }}>{s.user?.email || 'N/A'}</span>
-                        <span style={{ fontSize: '13px', color: '#1565C0', fontWeight: '600', fontFamily: 'monospace' }}>{s.rollNumber || 'N/A'}</span>
-                        <span style={{ fontSize: '13px', color: '#555' }}>{s.admissionYear || 'N/A'}</span>
-                        <span style={{ fontSize: '12px', fontWeight: '600', padding: '4px 10px', borderRadius: '12px', background: s.isActive ? '#e8f5e9' : '#ffebee', color: s.isActive ? '#2E7D32' : '#C62828' }}>
-                          {s.isActive ? '✅ Active' : '❌ Inactive'}
+                        <span style={{ fontSize: '12px', color: '#555', wordBreak: 'break-all' }}>{s.email || 'N/A'}</span>
+                        <span style={{ fontSize: '12px', color: '#555', fontFamily: 'monospace' }}>{s.aadharNumber || '—'}</span>
+                        <span style={{ fontSize: '12px', color: '#E65100', fontFamily: 'monospace', fontWeight: '600' }}>{s.plainPassword || '—'}</span>
+                        <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '12px', background: s.isActive ? '#e8f5e9' : '#ffebee', color: s.isActive ? '#2E7D32' : '#C62828', textAlign: 'center' }}>
+                          {s.isActive ? 'Active' : 'Inactive'}
                         </span>
+                        <button onClick={() => handleDeleteStudent(s._id, s.name)}
+                          style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: '6px', padding: '5px 8px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
+                          🗑️
+                        </button>
                       </div>
                     ))
                   }
