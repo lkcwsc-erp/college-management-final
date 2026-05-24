@@ -168,16 +168,15 @@ exports.deleteStudentUser = async (req, res) => {
 // ===== STEP 1: LOGIN =====
 exports.login = async (req, res) => {
   try {
-    const { email, password, captchaToken } = req.body;
- 
-    // Pehle user dhundho
-    const user = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { username: email.toLowerCase() }
-      ]
-    });
- 
+    const { email, username, password, captchaToken } = req.body;
+
+    // Staff → username se, Student → email se
+    let user;
+    if (username) {
+      user = await User.findOne({ username: username.toLowerCase() });
+    } else {
+      user = await User.findOne({ email: email.toLowerCase() });
+    }
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
     }
