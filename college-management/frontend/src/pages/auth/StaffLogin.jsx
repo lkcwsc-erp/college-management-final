@@ -55,7 +55,9 @@ const StaffLogin = () => {
         captchaToken
       });
       if (data.otpRequired) {
-        setActualEmail(data.email || formData.email);
+        // data.email = actual registered email (even if username was used to login)
+        const resolvedEmail = data.email;
+        setActualEmail(resolvedEmail);
         setStep('otp');
         setSuccess(data.message);
         startResendCooldown();
