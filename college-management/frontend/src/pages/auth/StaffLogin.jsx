@@ -122,8 +122,7 @@ const StaffLogin = () => {
             <>
               <div className="auth-header">
                 <div className="auth-logo">👨‍💼</div>
-                <h2>Staff Login</h2>
-                <p>Login with your staff credentials</p>
+                <h2>Staff Login</h2>  
               </div>
 
               {error && <div className="auth-error">{error}</div>}
