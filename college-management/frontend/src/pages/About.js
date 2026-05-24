@@ -31,35 +31,23 @@ const About = () => {
     principalMessage: '',
     principalPhoto: '',
   });
-  const [loading, setLoading] = useState(true);
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
+  // Fetch in background — page loads immediately without waiting
   useEffect(() => {
     API.get('/about')
       .then(res => {
-        if (res.data && res.data.about) {
-          setAboutData(res.data.about);
-        } else if (res.data) {
-          setAboutData(res.data);
-        }
-        setLoading(false);
+        if (res.data && res.data.about) setAboutData(res.data.about);
+        else if (res.data) setAboutData(res.data);
       })
-      .catch((err) => {
-        console.error("API Fetch Error: ", err);
-        setLoading(false);
-      });
+      .catch(err => console.error("API Fetch Error:", err));
   }, []);
 
-  const historyText = aboutData.history || '';
+  // History text — computed directly, not inside cards array
+  const historyText = aboutData.history
+    || (historyExpanded ? FULL_HISTORY : SHORT_HISTORY);
 
   const cards = [
-    {
-      icon: '🏛️',
-      title: 'Our History',
-      text: historyText || (historyExpanded ? FULL_HISTORY : SHORT_HISTORY),
-      photo: aboutData.historyPhoto,
-      hasReadMore: !historyText,
-    },
     {
       icon: '🎯',
       title: 'Our Vision',
@@ -80,23 +68,11 @@ const About = () => {
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="about-page-loading-wrapper">
-        <Navbar />
-        <div className="loading" style={{ padding: '100px', textAlign: 'center', fontSize: '20px' }}>
-          Loading College Profile...
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
     <div className="about-page-global-scope">
       <Navbar />
 
-      {/* HERO — same blue gradient as all other pages */}
+      {/* HERO */}
       <section className="about-hero">
         <div className="hero-overlay">
           <h1 className="hero-title">About Us</h1>
@@ -106,7 +82,6 @@ const About = () => {
               <button className="parent-org-btn">About Our Parent Organisation</button>
             </Link>
           </div>
-          {/* VNSS subtitle line — under the button */}
           <p className="vnss-hero-line">
             Under the aegis of &nbsp;<strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon
           </p>
@@ -115,49 +90,46 @@ const About = () => {
 
       <section className="about-section container">
         <div className="about-grid">
+
+          {/* Our History — separate card with working Read More */}
+          <div className="about-info-card">
+            <div className="about-icon">🏛️</div>
+            <h3>Our History</h3>
+            {aboutData.historyPhoto && (
+              <img src={aboutData.historyPhoto} alt="History" className="card-photo-preview" />
+            )}
+            <p>{historyText}</p>
+            {/* Show Read More only if API didn't return history */}
+            {!aboutData.history && (
+              <button
+                className="read-more-btn"
+                onClick={() => setHistoryExpanded(prev => !prev)}
+              >
+                {historyExpanded ? 'Show Less ▲' : 'Read More ▼'}
+              </button>
+            )}
+          </div>
+
+          {/* Other 3 cards */}
           {cards.map((card, i) => (
             <div className="about-info-card" key={i}>
               <div className="about-icon">{card.icon}</div>
               <h3>{card.title}</h3>
               {card.photo && (
-                <img
-                  src={card.photo}
-                  alt={card.title}
-                  className="card-photo-preview"
-                />
+                <img src={card.photo} alt={card.title} className="card-photo-preview" />
               )}
-              <p>
-                {card.hasReadMore
-                  ? (historyExpanded ? FULL_HISTORY : SHORT_HISTORY)
-                  : card.text}
-              </p>
-              {card.hasReadMore && (
-                <button
-                  className="read-more-btn"
-                  onClick={() => setHistoryExpanded(!historyExpanded)}
-                >
-                  {historyExpanded ? 'Show Less ▲' : 'Read More ▼'}
-                </button>
-              )}
+              <p>{card.text}</p>
             </div>
           ))}
+
         </div>
       </section>
 
       {/* STATS */}
       <section className="stats-section container">
-        <div className="stat-card">
-          <h2>20+</h2>
-          <p>Years of Excellence</p>
-        </div>
-        <div className="stat-card">
-          <h2>5000+</h2>
-          <p>Students</p>
-        </div>
-        <div className="stat-card">
-          <h2>20+</h2>
-          <p>Faculty Members</p>
-        </div>
+        <div className="stat-card"><h2>20+</h2><p>Years of Excellence</p></div>
+        <div className="stat-card"><h2>5000+</h2><p>Students</p></div>
+        <div className="stat-card"><h2>20+</h2><p>Faculty Members</p></div>
       </section>
 
       <section className="principal-section">
@@ -181,9 +153,7 @@ const About = () => {
                 Your "Current" is not your "Future." A single grade or a bad semester is a data point, not a destination. You are a work in progress, and the story isn't over yet.
               </p>
               <br />
-              <p className="principal-name">
-                — {aboutData.principalName || 'Principal'}
-              </p>
+              <p className="principal-name">— {aboutData.principalName || 'Principal'}</p>
               <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
                 Late Kalpana Chawla Mahila Senior Science & Arts College, Gangakhed
               </p>
@@ -195,16 +165,7 @@ const About = () => {
       <section className="values-section container">
         <h2 className="section-title text-center" style={{ fontSize: '2rem', color: '#003366', marginBottom: '10px' }}>Our Core Values</h2>
         <div className="values-grid">
-          {[
-            'Women Empowerment',
-            'Accessibility',
-            'Excellence & Quality',
-            'Inclusivity & Dignity',
-            'Social Justice',
-            'Human Values',
-            'Nation-Building',
-            'Continuous Improvement'
-          ].map((value, i) => (
+          {['Women Empowerment','Accessibility','Excellence & Quality','Inclusivity & Dignity','Social Justice','Human Values','Nation-Building','Continuous Improvement'].map((value, i) => (
             <div className="value-badge" key={i}>{value}</div>
           ))}
         </div>
