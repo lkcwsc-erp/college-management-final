@@ -131,15 +131,14 @@ const StaffLogin = () => {
               <form onSubmit={handleLogin}>
                 <div className="form-group">
                   <label>Username</label>
-                  <input type="text" name="username" placeholder="Enter your username"
+                  <input type="text" name="username" placeholder="Enter your username" required
                     value={formData.username} onChange={handleChange} />
                 </div>
 
-                <div style={{ textAlign: 'center', color: '#aaa', fontSize: '13px', margin: '4px 0' }}>— OR —</div>
 
                 <div className="form-group">
                   <label>Email Address</label>
-                  <input type="email" name="email" placeholder="Enter your email"
+                  <input type="email" name="email" placeholder="Enter your email" required
                     value={formData.email} onChange={handleChange} />
                 </div>
 
