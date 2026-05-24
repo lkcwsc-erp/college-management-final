@@ -286,16 +286,16 @@ const [activeTab, setActiveTab] = useState('process');
       }
     }).catch(() => {});
 
-    if (user) {
+   if (user) {
       setFormData(prev => ({
         ...prev,
         applicantName: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
+        aadharNumber: user.aadharNumber || '',
+        dateOfBirth: user.dateOfBirth ? user.dateOfBirth.substring(0, 10) : '',
       }));
     }
-  }, [user]);
-
   /* Auto-calc gap years */
   useEffect(() => {
     if (formData.hasGap && formData.gapFromYear && formData.gapToYear) {
