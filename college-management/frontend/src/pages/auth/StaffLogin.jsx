@@ -11,7 +11,7 @@ const RECAPTCHA_SITE_KEY = '6Lf_9ecsAAAAAIZ_AqaWxD8E-ORneMixV0DW6C_X';
 
 const StaffLogin = () => {
   const [step, setStep] = useState('login');
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [otp, setOtp] = useState('');
   const [captchaToken, setCaptchaToken] = useState(null);
   const [error, setError] = useState('');
@@ -41,9 +41,18 @@ const StaffLogin = () => {
     e.preventDefault();
     setError(''); setSuccess('');
     if (!captchaToken) { setError('Please complete the CAPTCHA verification.'); return; }
+    if (!formData.username && !formData.email) {
+      setError('Please enter username or email.'); return;
+    }
     setLoading(true);
     try {
-      const { data } = await API.post('/auth/login', { ...formData, captchaToken });
+      // Username ya email jo bhi bhara ho woh backend ko bhejo
+      const loginId = formData.username || formData.email;
+      const { data } = await API.post('/auth/login', {
+        email: loginId,
+        password: formData.password,
+        captchaToken
+      });
       if (data.otpRequired) {
         setStep('otp');
         setSuccess(data.message);
@@ -68,7 +77,8 @@ const StaffLogin = () => {
     if (otp.length !== 6) { setError('Please enter the 6-digit OTP'); return; }
     setLoading(true);
     try {
-      const { data } = await API.post('/auth/verify-otp', { email: formData.email, otp });
+      const loginId = formData.username || formData.email;
+      const { data } = await API.post('/auth/verify-otp', { email: loginId, otp });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setAuthData(data.user, data.token);
@@ -83,7 +93,8 @@ const StaffLogin = () => {
     if (resendCooldown > 0) return;
     setError(''); setSuccess('');
     try {
-      const { data } = await API.post('/auth/resend-otp', { email: formData.email });
+      const loginId = formData.username || formData.email;
+      const { data } = await API.post('/auth/resend-otp', { email: loginId });
       setSuccess(data.message); setOtp(''); startResendCooldown();
     } catch (err) { setError(err.response?.data?.message || 'Failed to resend OTP.'); }
   };
@@ -119,10 +130,19 @@ const StaffLogin = () => {
 
               <form onSubmit={handleLogin}>
                 <div className="form-group">
-                  <label>Email / Username</label>
-                  <input type="text" name="email" placeholder="Enter your email or username"
-                    value={formData.email} onChange={handleChange} required />
+                  <label>Username</label>
+                  <input type="text" name="username" placeholder="Enter your username"
+                    value={formData.username} onChange={handleChange} />
                 </div>
+
+                <div style={{ textAlign: 'center', color: '#aaa', fontSize: '13px', margin: '4px 0' }}>— OR —</div>
+
+                <div className="form-group">
+                  <label>Email Address</label>
+                  <input type="email" name="email" placeholder="Enter your email"
+                    value={formData.email} onChange={handleChange} />
+                </div>
+
                 <div className="form-group">
                   <label>Password</label>
                   <input type="password" name="password" placeholder="Enter your password"
@@ -130,12 +150,9 @@ const StaffLogin = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
-                  <ReCAPTCHA
-                    ref={recaptchaRef}
-                    sitekey={RECAPTCHA_SITE_KEY}
+                  <ReCAPTCHA ref={recaptchaRef} sitekey={RECAPTCHA_SITE_KEY}
                     onChange={(token) => setCaptchaToken(token)}
-                    onExpired={() => setCaptchaToken(null)}
-                  />
+                    onExpired={() => setCaptchaToken(null)} />
                 </div>
 
                 <button type="submit" className="btn btn-primary auth-btn" disabled={loading || !captchaToken}>
@@ -159,7 +176,7 @@ const StaffLogin = () => {
                 <div className="auth-logo">🔐</div>
                 <h2>Verify OTP</h2>
                 <p style={{ fontSize: '13px', color: '#666' }}>
-                  We sent a 6-digit code to<br /><strong>{formData.email}</strong>
+                  We sent a 6-digit code to your registered email
                 </p>
               </div>
 
