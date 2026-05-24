@@ -984,7 +984,7 @@ const [activeTab, setActiveTab] = useState('process');
       <input
         type="text"
         name="motherName"
-        placeholder="Mother's full name"
+        placeholder="Mother's name"
         value={formData.motherName}
         onChange={handleChange}
         required
