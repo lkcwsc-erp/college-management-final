@@ -57,17 +57,18 @@ exports.registerStudent = async (req, res) => {
     // Auto-generate email from aadhar
     const email = `student${aadharNumber}@lkcwsc.ac.in`;
 
-    const user = await User.create({
+  const user = await User.create({
       name,
       email,
-      aadharNumber,
       password,
+      plainPassword: password,
       phone,
       role: 'student',
       dateOfBirth,
       firstName,
       middleName: middleName || '',
-      lastName: lastName || ''
+      lastName: lastName || '',
+      aadharNumber: aadharNumber || ''
     });
 
     // Student collection mein bhi save karo
