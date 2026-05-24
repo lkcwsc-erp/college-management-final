@@ -5,38 +5,42 @@ const admissionSchema = new mongoose.Schema(
     /* ================================================================
        APPLICANT — BASIC CONTACT
     ================================================================ */
-    applicantName: { type: String, required: true, trim: true },
-    email:         { type: String, required: true, trim: true, lowercase: true },
-    phone:         { type: String, required: true, trim: true },
+    applicantName: { type: String, required: [true, 'Applicant name is required'], trim: true },
+    email:         { type: String, required: [true, 'Email is required'], trim: true, lowercase: true },
+    phone:         {
+      type:     String,
+      required: [true, 'Phone number is required'],
+      trim:     true,
+      validate: {
+        validator: (v) => /^\d{10}$/.test(v),
+        message:   'Phone number must be exactly 10 digits',
+      },
+    },
 
     /* ================================================================
        PERSONAL DETAILS
     ================================================================ */
     dateOfBirth: { type: Date },
 
+    // FIX: removed default:'' — required only fires when no value is provided,
+    // but a default '' would silently satisfy required and bypass validation.
     placeOfBirth: {
       type:     String,
       trim:     true,
       required: [true, 'Place of Birth is required'],
-      default:  '',
     },
 
-    gender:      { type: String, trim: true },
+    gender:   { type: String, trim: true, default: '' },
+    category: { type: String, trim: true, default: '' },
 
-    category:    { type: String, trim: true },
-
+    // FIX: same required+default conflict fixed for caste
     caste: {
       type:     String,
       trim:     true,
       required: [true, 'Caste is required'],
-      default:  '',
     },
 
-    subCaste: {
-      type:    String,
-      trim:    true,
-      default: '',
-    },
+    subCaste: { type: String, trim: true, default: '' },
 
     isDisabled: {
       type:    String,
@@ -44,84 +48,104 @@ const admissionSchema = new mongoose.Schema(
       default: '',
     },
 
-    bloodGroup:   { type: String, trim: true, default: '' },
-    religion:     { type: String, trim: true, default: '' },
-    nationality:  { type: String, trim: true, default: 'Indian' },
+    bloodGroup:  { type: String, trim: true, default: '' },
+    religion:    { type: String, trim: true, default: '' },
+    nationality: { type: String, trim: true, default: 'Indian' },
 
     /* ================================================================
        MARITAL STATUS & HUSBAND DETAILS
     ================================================================ */
     isMarried: { type: Boolean, default: false },
 
-    husbandName: {
-      type:    String,
-      trim:    true,
-      default: '',
-    },
+    husbandName: { type: String, trim: true, default: '' },
 
     husbandContactNumber: {
       type:    String,
       trim:    true,
       default: '',
       validate: {
-        validator: function (v) {
-          // Optional — if provided must be exactly 10 digits
-          return v === '' || /^\d{10}$/.test(v);
-        },
-        message: 'Husband Contact Number must be exactly 10 digits',
+        validator: (v) => v === '' || /^\d{10}$/.test(v),
+        message:   'Husband Contact Number must be exactly 10 digits',
       },
     },
 
     /* ================================================================
        GUARDIAN / PARENT DETAILS
     ================================================================ */
+    // FIX: same required+default conflict fixed for guardianFullName
     guardianFullName: {
       type:     String,
       trim:     true,
       required: [true, 'Guardian Full Name is required'],
-      default:  '',
     },
 
     guardianName:  { type: String, trim: true, default: '' },
     fatherName:    { type: String, trim: true, default: '' },
     motherName:    { type: String, trim: true, default: '' },
-    guardianPhone: { type: String, trim: true, default: '' },
-    familyIncome:  { type: String, trim: true, default: '' },
+    guardianPhone: {
+      type:    String,
+      trim:    true,
+      default: '',
+      validate: {
+        validator: (v) => v === '' || /^\d{10}$/.test(v),
+        message:   'Guardian phone must be exactly 10 digits',
+      },
+    },
+    familyIncome: { type: String, trim: true, default: '' },
 
     /* ================================================================
        ADDRESS
     ================================================================ */
-    address:          { type: String, trim: true, default: '' },
-    houseNumber:      { type: String, trim: true, default: '' },
-    streetArea:       { type: String, trim: true, default: '' },
-    subdistrict:      { type: String, trim: true, default: '' },
-    cityTownVillage:  { type: String, trim: true, default: '' },
-    district:         { type: String, trim: true, default: '' },
-    state:            { type: String, trim: true, default: '' },
-    pincode:          { type: String, trim: true, default: '' },
+    address:         { type: String, trim: true, default: '' },
+    houseNumber:     { type: String, trim: true, default: '' },
+    streetArea:      { type: String, trim: true, default: '' },
+    subdistrict:     { type: String, trim: true, default: '' },
+    cityTownVillage: { type: String, trim: true, default: '' },
+    district:        { type: String, trim: true, default: '' },
+    state:           { type: String, trim: true, default: '' },
+    pincode:         {
+      type:    String,
+      trim:    true,
+      default: '',
+      validate: {
+        validator: (v) => v === '' || /^\d{6}$/.test(v),
+        message:   'Pincode must be exactly 6 digits',
+      },
+    },
 
     /* ================================================================
        AADHAR VERIFICATION
     ================================================================ */
-    aadharNumber: { type: String, trim: true, default: '' },
-    aadharName:   { type: String, trim: true, default: '' },
-    aadharPhoto:  { type: String, default: '' },
+    // FIX: added 12-digit validator — was missing in previous version
+    aadharNumber: {
+      type:    String,
+      trim:    true,
+      default: '',
+      validate: {
+        validator: (v) => v === '' || /^\d{12}$/.test(v),
+        message:   'Aadhar number must be exactly 12 digits',
+      },
+    },
+    aadharName:  { type: String, trim: true, default: '' },
+    aadharPhoto: { type: String, default: '' },
 
     /* ================================================================
-       APAR ID
+       APAAR ID
     ================================================================ */
     aparIdNumber: {
       type:    String,
       trim:    true,
       default: '',
-      validate: {
-        validator: function (v) {
-          // Allow empty string (validated as required in controller);
-          // if provided, must be exactly 12 digits
-          return v === '' || /^\d{12}$/.test(v);
+      validate: [
+        {
+          validator: (v) => v === '' || /^\d+$/.test(v),
+          message:   'APAAR ID must contain digits only — no letters or special characters',
         },
-        message: 'APAR ID must be exactly 12 numeric digits',
-      },
+        {
+          validator: (v) => v === '' || v.length === 12,
+          message:   'APAAR ID must be exactly 12 digits',
+        },
+      ],
     },
 
     aparIdDocument: { type: String, default: '' },
@@ -142,17 +166,17 @@ const admissionSchema = new mongoose.Schema(
     /* ================================================================
        HSC (12th) DETAILS
     ================================================================ */
-    hscCollegeName:    { type: String, trim: true, default: '' },
-    hscBoard:          { type: String, trim: true, default: '' },
-    hscStream:         { type: String, trim: true, default: '' },
-    hscYOP:            { type: String, trim: true, default: '' },
-    hscRollNumber:     { type: String, trim: true, default: '' },
-    hscMedium:         { type: String, trim: true, default: '' },
-    hscObtainedMarks:  { type: Number, default: null },
-    hscTotalMarks:     { type: Number, default: null },
-    hscPercentage:     { type: Number, default: null },
-    hscGrade:          { type: String, trim: true, default: '' },
-    hscMarksheet:      { type: String, default: '' },
+    hscCollegeName:   { type: String, trim: true, default: '' },
+    hscBoard:         { type: String, trim: true, default: '' },
+    hscStream:        { type: String, trim: true, default: '' },
+    hscYOP:           { type: String, trim: true, default: '' },
+    hscRollNumber:    { type: String, trim: true, default: '' },
+    hscMedium:        { type: String, trim: true, default: '' },
+    hscObtainedMarks: { type: Number, default: null },
+    hscTotalMarks:    { type: Number, default: null },
+    hscPercentage:    { type: Number, default: null },
+    hscGrade:         { type: String, trim: true, default: '' },
+    hscMarksheet:     { type: String, default: '' },
 
     /* ================================================================
        GAP YEAR
@@ -161,7 +185,7 @@ const admissionSchema = new mongoose.Schema(
     gapFromYear:     { type: String, trim: true, default: '' },
     gapToYear:       { type: String, trim: true, default: '' },
     gapTotalYears:   { type: String, trim: true, default: '' },
-    gapYear:         { type: String, trim: true, default: '' },   // legacy field kept
+    gapYear:         { type: String, trim: true, default: '' }, // legacy — kept for old records
     gapReason:       { type: String, trim: true, default: '' },
     gapCertificate:  { type: String, default: '' },
     gapyeardocument: { type: String, default: '' },
@@ -203,24 +227,32 @@ const admissionSchema = new mongoose.Schema(
     transferCertificate:   { type: String, default: '' },
 
     /* ================================================================
-       BANK DETAILS  (all optional)
+       BANK DETAILS — all optional
     ================================================================ */
     bankAccountHolder: { type: String, trim: true, default: '' },
     bankAccountNumber: { type: String, trim: true, default: '' },
-    bankIFSC:          { type: String, trim: true, default: '' },
-    bankName:          { type: String, trim: true, default: '' },
-    bankBranch:        { type: String, trim: true, default: '' },
-    bankPassbook:      { type: String, default: '' },
+    bankIFSC:          {
+      type:    String,
+      trim:    true,
+      default: '',
+      validate: {
+        validator: (v) => v === '' || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v),
+        message:   'Invalid IFSC code format (e.g. SBIN0001234)',
+      },
+    },
+    bankName:     { type: String, trim: true, default: '' },
+    bankBranch:   { type: String, trim: true, default: '' },
+    bankPassbook: { type: String, default: '' },
 
     /* ================================================================
        DOCUMENT FILE PATHS
     ================================================================ */
-    studentPhoto:           { type: String, default: '' },
-    signaturePhoto:         { type: String, default: '' },
-    domicileCertificate:    { type: String, default: '' },
-    incomeCertificate:      { type: String, default: '' },
-    marriageCertificate:    { type: String, default: '' },
-    twelfthTC:              { type: String, default: '' },  // NEW — 12th TC upload
+    studentPhoto:            { type: String, default: '' },
+    signaturePhoto:          { type: String, default: '' },
+    domicileCertificate:     { type: String, default: '' },
+    incomeCertificate:       { type: String, default: '' },
+    marriageCertificate:     { type: String, default: '' },
+    twelfthTC:               { type: String, default: '' }, // 12th TC upload
 
     /* ================================================================
        ADDITIONAL INFO
@@ -233,8 +265,8 @@ const admissionSchema = new mongoose.Schema(
     /* ================================================================
        FEES
     ================================================================ */
-    fees:      { type: Number, default: 0 },
-    feesPaid:  { type: Boolean, default: false },
+    fees:     { type: Number, default: 0 },
+    feesPaid: { type: Boolean, default: false },
 
     /* ================================================================
        ADMIN WORKFLOW — STATUS & REMARKS
