@@ -445,6 +445,7 @@ const [activeTab, setActiveTab] = useState('process');
 
     // APAR ID validation
     if (!formData.aparIdNumber.trim()) { setError('Please enter APAR ID Number.'); scrollTop(); return; }
+    if (!/^\d{12}$/.test(formData.aparIdNumber.trim())) { setError('APAR ID must be exactly 12 numeric digits.'); scrollTop(); return; }
     if (!uploadedFiles.aparIdDocument) { setError('Please upload APAR ID Document.'); scrollTop(); return; }
 
     if (!formData.courseType || !formData.admissionYear) { setError('Please select Course and Admission Year.'); scrollTop(); return; }
@@ -1222,15 +1223,36 @@ const [activeTab, setActiveTab] = useState('process');
 
       <input
         type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
         name="aparIdNumber"
-        placeholder="Enter your APAAR ID number"
+        placeholder="Enter 12-digit APAAR ID number"
         value={formData.aparIdNumber}
-        onChange={handleChange}
+        maxLength={12}
+        onChange={e => {
+          // Strip every non-digit character
+          const val = e.target.value.replace(/\D/g, '');
+          // Hard-cap at 12 digits — 13th digit is silently blocked
+          if (val.length <= 12) {
+            setFormData({ ...formData, aparIdNumber: val });
+          }
+        }}
         required
       />
 
+      {/* Inline error — only shown after the user has started typing */}
+      {formData.aparIdNumber.length > 0 && formData.aparIdNumber.length < 12 && (
+        <small className="inline-error">
+          ❌ APAAR ID must be exactly 12 digits ({formData.aparIdNumber.length}/12 entered)
+        </small>
+      )}
+      {formData.aparIdNumber.length === 12 && (
+        <small className="success-hint">✅ Valid APAAR ID</small>
+      )}
+
       <small className="field-hint">
-        APAAR ID is issued by the government for academic records.
+        APAAR ID is a 12-digit numeric ID issued by the government for academic records.
+        Only digits are accepted — alphabets and special characters are not allowed.
       </small>
     </div>
   </div>
@@ -1251,7 +1273,7 @@ const [activeTab, setActiveTab] = useState('process');
                         <label>Board *</label>
                         <select name="sscBoard" value={formData.sscBoard} onChange={handleChange} required>
                           <option value="">Select Board</option>
-                          <option value="Maharashtra State Board">Maharashtra State Board</option>
+                          <option value="Maharashtra State Board of Secondary and Higher Secondary Education">Maharashtra State Board of Secondary and Higher Secondary Education</option>
                           <option value="CBSE">CBSE</option>
                           <option value="ICSE">ICSE</option>
                           <option value="Other">Other</option>
@@ -1321,7 +1343,7 @@ const [activeTab, setActiveTab] = useState('process');
                         <label>Board *</label>
                         <select name="hscBoard" value={formData.hscBoard} onChange={handleChange} required>
                           <option value="">Select Board</option>
-                          <option value="Maharashtra State Board">Maharashtra State Board</option>
+                          <option value="Maharashtra State Board of Secondary and Higher Secondary Education">Maharashtra State Board of Secondary and Higher Secondary Education</option>
                           <option value="CBSE">CBSE</option>
                           <option value="ICSE">ICSE</option>
                           <option value="Other">Other</option>
