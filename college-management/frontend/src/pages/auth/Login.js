@@ -6,10 +6,10 @@ import ReCAPTCHA from 'react-google-recaptcha';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import './Auth.css';
- 
+
 // Google reCAPTCHA Site Key
 const RECAPTCHA_SITE_KEY = '6Lf_9ecsAAAAAIZ_AqaWxD8E-ORneMixV0DW6C_X';
- 
+
 const Login = () => {
   const [step, setStep] = useState('login');
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -22,11 +22,11 @@ const Login = () => {
   const { setAuthData } = useAuth();
   const navigate = useNavigate();
   const recaptchaRef = useRef();
- 
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
- 
+
   const navigateByRole = (role) => {
     if (role === 'admin') navigate('/admin/dashboard');
     else if (role === 'staff_principal' || role === 'principal') navigate('/principal/dashboard');
@@ -37,25 +37,25 @@ const Login = () => {
     else if (role === 'staff') navigate('/staff/dashboard');
     else navigate('/student/dashboard');
   };
- 
+
   // Step 1: Login with email + password + CAPTCHA
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
- 
+
     if (!captchaToken) {
       setError('Please complete the CAPTCHA verification.');
       return;
     }
- 
+
     setLoading(true);
     try {
       const { data } = await API.post('/auth/login', {
         ...formData,
         captchaToken
       });
- 
+
       if (data.otpRequired) {
         setStep('otp');
         setSuccess(data.message);
@@ -73,7 +73,7 @@ const Login = () => {
     }
     setLoading(false);
   };
- 
+
   // Step 2: Verify OTP
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
@@ -89,7 +89,7 @@ const Login = () => {
         email: formData.email,
         otp
       });
- 
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setAuthData(data.user, data.token);
@@ -99,7 +99,7 @@ const Login = () => {
     }
     setLoading(false);
   };
- 
+
   // Resend OTP
   const handleResendOTP = async () => {
     if (resendCooldown > 0) return;
@@ -114,7 +114,7 @@ const Login = () => {
       setError(err.response?.data?.message || 'Failed to resend OTP.');
     }
   };
- 
+
   const startResendCooldown = () => {
     setResendCooldown(60);
     const timer = setInterval(() => {
@@ -127,7 +127,7 @@ const Login = () => {
       });
     }, 1000);
   };
- 
+
   const handleBackToLogin = () => {
     setStep('login');
     setOtp('');
@@ -136,13 +136,13 @@ const Login = () => {
     setCaptchaToken(null);
     if (recaptchaRef.current) recaptchaRef.current.reset();
   };
- 
+
   return (
     <div>
       <Navbar />
       <div className="auth-container">
         <div className="auth-card">
- 
+
           {step === 'login' && (
             <>
               <div className="auth-header">
@@ -150,9 +150,9 @@ const Login = () => {
                 <h2>Welcome Back</h2>
                 <p>Login to your account</p>
               </div>
- 
+
               {error && <div className="auth-error">{error}</div>}
- 
+
               <form onSubmit={handleLogin}>
                 <div className="form-group">
                   <label>Email Address</label>
@@ -176,7 +176,7 @@ const Login = () => {
                     required
                   />
                 </div>
- 
+
                 <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
                   <ReCAPTCHA
                     ref={recaptchaRef}
@@ -185,7 +185,7 @@ const Login = () => {
                     onExpired={() => setCaptchaToken(null)}
                   />
                 </div>
- 
+
                 <button
                   type="submit"
                   className="btn btn-primary auth-btn"
@@ -193,20 +193,23 @@ const Login = () => {
                   {loading ? 'Logging in...' : 'Login'}
                 </button>
               </form>
- 
+
               <p className="auth-link" style={{ fontSize: '13px', color: '#666', marginTop: '20px' }}>
                 🎓 New students must contact college staff for registration
               </p>
- 
+
               <p style={{ fontSize: '13px', color: '#666', marginTop: '12px', textAlign: 'center' }}>
                 Are you a staff member?{' '}
-                <a href="/staff-login" style={{ color: '#1565C0', textDecoration: 'underline', fontWeight: '500' }}>
+                <span
+                  onClick={() => navigate('/staff-login')}
+                  style={{ color: '#1565C0', textDecoration: 'underline', fontWeight: '500', cursor: 'pointer' }}
+                >
                   Staff Login →
-                </a>
+                </span>
               </p>
             </>
           )}
- 
+
           {step === 'otp' && (
             <>
               <div className="auth-header">
@@ -217,7 +220,7 @@ const Login = () => {
                   <strong>{formData.email}</strong>
                 </p>
               </div>
- 
+
               {error && <div className="auth-error">{error}</div>}
               {success && (
                 <div style={{
@@ -228,7 +231,7 @@ const Login = () => {
                   ✅ {success}
                 </div>
               )}
- 
+
               <form onSubmit={handleVerifyOTP}>
                 <div className="form-group">
                   <label>Enter 6-digit OTP</label>
@@ -247,7 +250,7 @@ const Login = () => {
                     }}
                   />
                 </div>
- 
+
                 <button
                   type="submit"
                   className="btn btn-primary auth-btn"
@@ -255,7 +258,7 @@ const Login = () => {
                   {loading ? 'Verifying...' : '✅ Verify OTP'}
                 </button>
               </form>
- 
+
               <div style={{ textAlign: 'center', marginTop: '20px' }}>
                 <p style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
                   Didn't get the code?
@@ -275,7 +278,7 @@ const Login = () => {
                   {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : '🔄 Resend OTP'}
                 </button>
               </div>
- 
+
               <div style={{ textAlign: 'center', marginTop: '12px' }}>
                 <button
                   type="button"
@@ -287,7 +290,7 @@ const Login = () => {
                   ← Back to Login
                 </button>
               </div>
- 
+
               <div style={{
                 background: '#fef3c7', padding: '12px', borderRadius: '8px',
                 marginTop: '20px', fontSize: '12px', color: '#92400e',
@@ -298,13 +301,12 @@ const Login = () => {
               </div>
             </>
           )}
- 
+
         </div>
       </div>
       <Footer />
     </div>
   );
 };
- 
+
 export default Login;
- 
