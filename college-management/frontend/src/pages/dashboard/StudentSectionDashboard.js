@@ -205,7 +205,7 @@ const StudentSectionDashboard = () => {
   const [searchText, setSearchText] = useState('');
 
   // Generate Credentials states
-  const [credForm, setCredForm] = useState({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '' });
+  const [credForm, setCredForm] = useState({ firstName: '', middleName: '', lastName: '', aadharNumber: '', phone: '', dateOfBirth: '' });
   const [credLoading, setCredLoading] = useState(false);
   const [credMsg, setCredMsg] = useState('');
   const [generatedCreds, setGeneratedCreds] = useState(null);
@@ -283,7 +283,7 @@ const StudentSectionDashboard = () => {
       if (res.data.success) {
         setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
         setCredMsg('✅ Student account created successfully!');
-        setCredForm({ firstName: '', middleName: '', lastName: '', email: '', phone: '', dateOfBirth: '' });
+        setCredForm({ firstName: '', middleName: '', lastName: '', aadharNumber: '', phone: '', dateOfBirth: '' });
       }
     } catch (err) { setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account')); }
     finally { setCredLoading(false); }
@@ -623,7 +623,7 @@ const StudentSectionDashboard = () => {
                     <div className="form-group"><label>Last Name</label><input type="text" placeholder="e.g. Bargal" value={credForm.lastName} onChange={e => setCredForm({ ...credForm, lastName: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div className="form-group"><label>Email Address *</label><input type="email" placeholder="student@gmail.com" value={credForm.email} onChange={e => setCredForm({ ...credForm, email: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                    <div className="form-group"><label>Aadhar Number *</label><input type="text" placeholder="123456789012" maxLength="12" value={credForm.aadharNumber} onChange={e => { if (/^\d{0,12}$/.test(e.target.value)) setCredForm({ ...credForm, aadharNumber: e.target.value }); }} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /><small style={{ color: '#666', display: 'block', marginTop: '4px' }}>12 digit Aadhar number</small></div>
                     <div className="form-group"><label>Phone Number</label><input type="text" placeholder="9876543210" maxLength="10" value={credForm.phone} onChange={e => { if (/^\d{0,10}$/.test(e.target.value)) setCredForm({ ...credForm, phone: e.target.value }); }} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
                   </div>
                   <div className="form-group">
