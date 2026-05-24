@@ -257,6 +257,8 @@ exports.login = async (req, res) => {
     // For STUDENTS — direct login
     res.status(200).json({
       success: true,
+      res.status(200).json({
+      success: true,
       otpRequired: false,
       message: 'Login successful',
       token: generateToken(user._id),
@@ -267,6 +269,8 @@ exports.login = async (req, res) => {
         role: user.role,
         phone: user.phone,
         photo: user.photo,
+        aadharNumber: user.aadharNumber,
+        dateOfBirth: user.dateOfBirth,
       }
     });
   } catch (error) {
@@ -333,6 +337,8 @@ exports.verifyOTP = async (req, res) => {
         role: user.role,
         phone: user.phone,
         photo: user.photo,
+        aadharNumber: user.aadharNumber,
+        dateOfBirth: user.dateOfBirth,
       }
     });
   } catch (error) {
