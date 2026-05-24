@@ -1836,7 +1836,7 @@ const [activeTab, setActiveTab] = useState('process');
 
                     {/* Row 3 — Transfer Certificate & Bank */}
                     <div className="upload-grid-two">
-                      <FileUploadBox fieldName="twelfthTC" label="📜 Upload 12th TC"
+                      <FileUploadBox fieldName="twelfthTC" label="📜 Upload 12th Transfer Certificate"
                         accept="image/*,.pdf"
                         uploadedFiles={uploadedFiles}
                         uploadPreviews={uploadPreviews}
