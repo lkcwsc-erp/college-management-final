@@ -45,6 +45,8 @@ const uploadFields = upload.fields([
   { name: 'incomeCertificate',      maxCount: 1 },
   { name: 'transferCertificate',    maxCount: 1 },
   { name: 'aparIdDocument',         maxCount: 1 },
+  { name: 'twelfthTC',              maxCount: 1 },
+  { name: 'gapyeardocument',        maxCount: 1 },
 ]);
 
 // ========== STUDENT: Submit Admission ==========
