@@ -416,12 +416,15 @@ exports.createStaff = async (req, res) => {
       });
     }
  
-    const emailExists = await User.findOne({ email });
-    if (emailExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'A user with this email already exists'
-      });
+    // Same email allowed agar username alag ho
+    if (!username) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already exists. Please provide a unique username to create another account with same email.'
+        });
+      }
     }
  
     if (username) {
