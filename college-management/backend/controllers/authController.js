@@ -185,13 +185,29 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
     }
- 
-    if (!user.isActive) {
+ if (!user.isActive) {
       return res.status(401).json({ success: false, message: 'Account is deactivated' });
     }
+   
+
+    // ── Wrong login page check ──
+    // Staff login page bhejta hai 'username'. Student login page nahi bhejta.
+    if (username && user.role === 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Students must use the Student Login page.'
+      });
+    }
+    if (!username && user.role !== 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Staff/Admin must use the Staff Login page.'
+      });
+    }
  
-    // 🔐 CAPTCHA sirf Staff aur Admin ke liye — Student ke liye nahi
-    if (STAFF_ROLES.includes(user.role) || user.role === 'admin') {
+    
+   // 🔐 CAPTCHA — sabke liye (student, staff, admin)
+    {
       if (!captchaToken) {
         return res.status(400).json({
           success: false,
