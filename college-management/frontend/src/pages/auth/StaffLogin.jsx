@@ -18,7 +18,8 @@ const StaffLogin = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [actualEmail, setActualEmail] = useState('');
+ const [actualEmail, setActualEmail] = useState('');
+  const [actualUsername, setActualUsername] = useState('');
   const { setAuthData } = useAuth();
   const navigate = useNavigate();
   const recaptchaRef = useRef();
@@ -54,10 +55,10 @@ const StaffLogin = () => {
         password: formData.password,
         captchaToken
       });
-      if (data.otpRequired) {
-        // data.email = actual registered email (even if username was used to login)
+     if (data.otpRequired) {
         const resolvedEmail = data.email;
         setActualEmail(resolvedEmail);
+        setActualUsername(data.username || '');
         setStep('otp');
         setSuccess(data.message);
         startResendCooldown();
@@ -81,7 +82,7 @@ const StaffLogin = () => {
     if (otp.length !== 6) { setError('Please enter the 6-digit OTP'); return; }
     setLoading(true);
     try {
-      const { data } = await API.post('/auth/verify-otp', { email: actualEmail, otp });
+      const { data } = await API.post('/auth/verify-otp', { email: actualEmail, username: actualUsername, otp });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setAuthData(data.user, data.token);
