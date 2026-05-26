@@ -48,6 +48,13 @@
   margin-top: 2px;
 }
 
+.brand-vnss {
+  color: #FFD54F;
+  font-size: 0.68rem;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
 /* Links */
 .navbar-links {
   display: flex;
