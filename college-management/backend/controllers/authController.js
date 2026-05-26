@@ -294,8 +294,7 @@ exports.login = async (req, res) => {
 // ===== STEP 2: VERIFY OTP =====
 exports.verifyOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body;
- 
+    
    const { email, username, otp } = req.body;
  
     if (!email || !otp) {
