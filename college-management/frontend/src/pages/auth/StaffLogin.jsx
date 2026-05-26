@@ -48,9 +48,9 @@ const StaffLogin = () => {
     setLoading(true);
     try {
       // Username ya email jo bhi bhara ho woh backend ko bhejo
-      const loginId = formData.username || formData.email;
       const { data } = await API.post('/auth/login', {
-        email: loginId,
+        username: formData.username,
+        email: formData.email,
         password: formData.password,
         captchaToken
       });
