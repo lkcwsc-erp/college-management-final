@@ -207,13 +207,7 @@ const ParentOrg = () => {
                       1. Save photo as public/sopan_sodgir.jpg
                       2. Replace the div below with:
                          <img src="/sopan_sodgir.jpg" alt="Late Shri Sopan Sodgir" /> */}
-                  <div className="po-photo-placeholder-large">
-                    <span>S</span>
-                    <p className="po-photo-hint">
-                      📷 Add photo as<br />
-                      <code>public/sopan_sodgir.jpg</code>
-                    </p>
-                  </div>
+                  <img src="/sopan_sodgir.jpg" alt="Late Shri Sopan Sodgir" />
                 </div>
                 <div className="po-founder-years">
                   <span>1940 – 2025</span>
