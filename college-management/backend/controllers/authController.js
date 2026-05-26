@@ -198,13 +198,12 @@ exports.login = async (req, res) => {
         message: 'Students must use the Student Login page.'
       });
     }
-    if (!username && user.role !== 'student') {
+   if (!username && STAFF_ROLES.includes(user.role)) {
       return res.status(403).json({
         success: false,
-        message: 'Staff/Admin must use the Staff Login page.'
+        message: 'Staff must use the Staff Login page.'
       });
     }
- 
     
    // 🔐 CAPTCHA — sabke liye (student, staff, admin)
     {
