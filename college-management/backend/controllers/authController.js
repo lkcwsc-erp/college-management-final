@@ -261,14 +261,15 @@ exports.login = async (req, res) => {
         });
       }
  
-     return res.status(200).json({
+    return res.status(200).json({
         success: true,
         otpRequired: true,
         message: `OTP has been sent to ${user.email}. Please check your inbox.`,
         email: user.email,
         username: user.username || ''
       });
- 
+    }
+
     // For STUDENTS — direct login
       res.status(200).json({
       success: true,
