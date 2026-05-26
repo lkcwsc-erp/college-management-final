@@ -261,13 +261,13 @@ exports.login = async (req, res) => {
         });
       }
  
-      return res.status(200).json({
+     return res.status(200).json({
         success: true,
         otpRequired: true,
         message: `OTP has been sent to ${user.email}. Please check your inbox.`,
-        email: user.email
+        email: user.email,
+        username: user.username || ''
       });
-    }
  
     // For STUDENTS — direct login
       res.status(200).json({
@@ -296,17 +296,19 @@ exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
  
+   const { email, username, otp } = req.body;
+ 
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
  
-    // Username ya email dono se user dhundho
-    const user = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { username: email.toLowerCase() }
-      ]
-    });
+    // Username ho to username se (sahi user), warna email se
+    let user;
+    if (username) {
+      user = await User.findOne({ username: username.toLowerCase() });
+    } else {
+      user = await User.findOne({ email: email.toLowerCase() });
+    }
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
