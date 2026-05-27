@@ -777,3 +777,26 @@
     font-size: 70px;
   }
 }
+
+.hero-location {
+  font-size: 15px;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 6px;
+}
+
+.hero-vnss-line {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  font-style: italic;
+  margin-bottom: 20px;
+}
+
+.hero-vnss-line strong {
+  color: #FFD54F;
+  font-style: normal;
+}
+
+.highlight-uni {
+  color: #1565C0;
+  font-weight: 700;
+}
