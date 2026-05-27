@@ -22,12 +22,12 @@ const Home = () => {
           <img src="/sndt-logo.png" alt="SNDT Logo" className="affiliation-logo" />
            <span className="hero-badge">✨ Affiliated to SNDT Women's University</span>
           </div>
+          <p className="hero-vnss-line">
+        Under the aegis of &nbsp;<strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon
+        </p>
          <h1>Late Kalpana Chawala Women's<br /><span className="hero-highlight">Senior College</span></h1>
          <h2>Empowering Women Through Excellence in Education</h2>
           <p className="hero-location">Senior Science & Arts College, Gangakhed, Parbhani</p>
-         <p className="hero-vnss-line">
-        Under the aegis of &nbsp;<strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon
-        </p>
           <div className="hero-buttons">
             <Link to="/admissions" className="btn btn-hero-primary">Apply for Admission →</Link>
             <Link to="/about" className="btn btn-hero-primary">Discover More</Link>
