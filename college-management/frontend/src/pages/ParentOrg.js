@@ -113,7 +113,7 @@ const ParentOrg = () => {
                     <span className="po-contact-icon">📍</span>
                     <div>
                       <strong>Address</strong>
-                      <p>Gangakhed, Marathwada<br />Maharashtra — 431514</p>
+                      <p>Dongargaon Gangakhed, Marathwada<br />Maharashtra — 431514</p>
                     </div>
                   </div>
                   <div className="po-contact-item">
