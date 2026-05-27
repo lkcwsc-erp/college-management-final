@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import StudentsReport from '../../components/StudentsReport';
 
 // ── Default fee structure (persisted in localStorage) ──────────────────────
 const DEFAULT_FEES = {
@@ -244,6 +245,10 @@ const AccountsSectionDashboard = () => {
           <button>🧾 Generate Receipts</button>
           <button>📊 Outstanding Dues</button>
           <button>💳 Payment History</button>
+          <button className={activeTab === 'students_report' ? 'active' : ''}
+            onClick={() => setActiveTab('students_report')}>
+            👩‍🎓 Students Report
+          </button>
         </nav>
         <button className="sidebar-logout" onClick={handleLogout}>🚪 Logout</button>
       </aside>
