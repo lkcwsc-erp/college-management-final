@@ -126,6 +126,8 @@ const ParentOrg = () => {
         <div>
            <strong>Email</strong>
           <p>info@lkcwsc.edu.in</p> 
+                </div>
+                </div>
               </div>
             </div>
           </div>
