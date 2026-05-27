@@ -18,8 +18,8 @@ const Home = () => {
       }}>
         <div className="hero-content">
           {/* SNDT Logo + Badge in one line */}
-          <d<div className="hero-affiliation">
-           <img src="/sndt-logo.png" alt="SNDT Logo" className="affiliation-logo" />
+         <div className="hero-affiliation">
+          <img src="/sndt-logo.png" alt="SNDT Logo" className="affiliation-logo" />
            <span className="hero-badge">✨ Affiliated to SNDT Women's University</span>
           </div>
          <h1>Late Kalpana Chawala Women's<br /><span className="hero-highlight">Senior College</span></h1>
