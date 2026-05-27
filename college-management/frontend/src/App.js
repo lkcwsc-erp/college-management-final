@@ -8,6 +8,8 @@ import Contact from './pages/Contact';
 import Courses from './pages/Courses';
 import Faculty from './pages/Faculty';
 import Events from './pages/Events';
+import Achievements from './pages/Achievements';
+import Notifications from './pages/Notifications';
 import Gallery from './pages/Gallery';
 import Admissions from './pages/Admissions';
 import Login from './pages/auth/Login';
@@ -43,6 +45,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/examination" element={<Examination />} />
+         <Route path="/achievements" element={<Achievements />} />  
+         <Route path="/notifications" element={<Notifications />} />
           <Route path="/staff-login" element={<StaffLogin />} />
 
           <Route path="/student/dashboard" element={
