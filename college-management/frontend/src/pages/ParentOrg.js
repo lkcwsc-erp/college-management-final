@@ -205,7 +205,7 @@ const ParentOrg = () => {
 
               <div className="po-founder-left">
                 <div className="po-founder-photo-large">
-                  <img src="/sopan_sodgir.jpg" alt="Late Shri Sopan Sodgir" />
+                  <img src="/photo.png" alt="Late Shri Sopan Sodgir" />
                 </div>
                 <div className="po-founder-years">
                   <span>1940 – 2025</span>
