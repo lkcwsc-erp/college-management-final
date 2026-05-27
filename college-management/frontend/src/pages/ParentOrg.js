@@ -107,28 +107,25 @@ const ParentOrg = () => {
               <div className="po-about-logo-box">
                 <img src="/Sanshta_logo.jpeg" alt="VNSS" className="po-about-logo" />
                 <div className="po-about-contact">
-                  <div className="po-contact-item">
-                    <span className="po-contact-icon">📍</span>
-                    <div>
-                      <strong>Address</strong>
-                      <p>Vidyaniketan Sevabhavi Sanstha,<br />Dongargaon, Dist. Chandrapur,<br />Maharashtra — 441207</p>
-                    </div>
-                  </div>
-                  <div className="po-contact-item">
-                    <span className="po-contact-icon">📞</span>
-                    <div>
-                      <strong>Phone</strong>
-                      <p>+91 XXXXX XXXXX</p>
-                    </div>
-                  </div>
-                  <div className="po-contact-item">
-                    <span className="po-contact-icon">✉️</span>
-                    <div>
-                      <strong>Email</strong>
-                      <p>info@vnss.org</p>
-                    </div>
-                  </div>
-                </div>
+              <div className="po-contact-item">
+              <span className="po-contact-icon">📍</span>
+              <div>
+            <strong>Address</strong>
+            <p>Gangakhed, Marathwada<br />Maharashtra — 431514</p>
+           </div>
+          </div>
+          <div className="po-contact-item">
+       <span className="po-contact-icon">📞</span>
+         <div>
+        <strong>Phone</strong>
+       <p>+91 9307162914</p>
+       </div>
+       </div>
+     <div className="po-contact-item">
+    <span className="po-contact-icon">✉️</span>
+        <div>
+           <strong>Email</strong>
+          <p>info@lkcwsc.edu.in</p> 
               </div>
             </div>
           </div>
