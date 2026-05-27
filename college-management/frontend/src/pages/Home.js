@@ -20,7 +20,7 @@ const Home = () => {
           {/* SNDT Logo + Badge in one line */}
           <div className="hero-affiliation">
             <img src="/sndt-logo.png" alt="SNDT Logo" className="affiliation-logo" />
-            <span className="hero-badge"<p>Affiliated to <strong className="highlight-uni">SNDT Women's University</strong> and run by <strong className="highlight-uni">Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon, we offer undergraduate programs in Science and Arts with experienced faculty and a supportive learning environment.</p>
+            <span className="hero-badge"><p>Affiliated to <strong className="highlight-uni">SNDT Women's University</strong> and run by <strong className="highlight-uni">Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon, we offer undergraduate programs in Science and Arts with experienced faculty and a supportive learning environment.</p></span>
           </div>
          <h1>Late Kalpana Chawala Women's<br /><span className="hero-highlight">Senior College</span></h1>
          <h2>Empowering Women Through Excellence in Education</h2>
