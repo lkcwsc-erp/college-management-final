@@ -44,9 +44,10 @@ const About = () => {
   }, []);
 
   // History text — computed directly, not inside cards array
- const historyText = historyExpanded
-  ? (aboutData.history?.trim() || FULL_HISTORY)
-  : (aboutData.history?.trim()?.substring(0, 300) + '...' || SHORT_HISTORY);
+ const apiHistory = aboutData.history?.trim();
+const historyText = historyExpanded
+  ? (apiHistory && apiHistory.length > 300 ? apiHistory : FULL_HISTORY)
+  : SHORT_HISTORY;
   const cards = [
     {
       icon: '🎯',
