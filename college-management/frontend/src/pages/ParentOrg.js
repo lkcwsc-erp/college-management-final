@@ -108,35 +108,37 @@ const ParentOrg = () => {
                 <img src="/Sanshta_logo.jpeg" alt="VNSS" className="po-about-logo" />
               <div className="po-contact-item">
 
-  <span className="po-contact-icon">📍</span>
-  <div>
-    <strong>Address</strong>
-    <p>
-      Gangakhed, Marathwada
-      <br />
-      Maharashtra – 431514
-    </p>
+              <span className="po-contact-icon">📍</span>
+                <div>
+                 <strong>Address</strong>
+                 <p>
+                   Gangakhed, Marathwada
+                <br />
+                 Maharashtra – 431514
+                </p>
 
-  </div>
-  </div>
+               </div>
+                </div>
 
-  <div className="po-contact-item">
-  <span className="po-contact-icon">📞</span>
-  <div>
-    <strong>Phone</strong>
-    <p>+91 9307162914</p>
-  </div>
+                 <div className="po-contact-item">
+                 <span className="po-contact-icon">📞</span>
+                 <div>
+                  <strong>Phone</strong>
+                  <p>+91 9307162914</p>
+                 </div>
 
-  </div>
+                 </div>
 
-   <div className="po-contact-item">
-  <span className="po-contact-icon">📧</span>
-    <div>
-       <strong>Email</strong>
-        <p>info@lkcwsc.edu.in</p>
-       </div>
-       </div>   
-        </section>
+               <div className="po-contact-item">
+               <span className="po-contact-icon">📧</span>
+              <div>
+                <strong>Email</strong>
+               <p>info@lkcwsc.edu.in</p>
+          </div>
+         </div>   
+        </div>
+       </div>        
+    </section>
 
         {/* MISSION VISION VALUES */}
         <section className="po-section po-mv">
