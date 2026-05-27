@@ -79,6 +79,7 @@ const ParentOrg = () => {
             <div className="po-section-label">Who We Are</div>
             <h2 className="po-section-title">About VNSS</h2>
             <div className="po-about-grid">
+
               <div className="po-about-text">
                 <p>
                   <strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong> is a
@@ -103,42 +104,44 @@ const ParentOrg = () => {
                 </p>
               </div>
 
-              {/* Logo + Contact + Address */}
+              {/* Logo + Reg + Contact */}
               <div className="po-about-logo-box">
                 <img src="/Sanshta_logo.jpeg" alt="VNSS" className="po-about-logo" />
-              <div className="po-contact-item">
 
-              <span className="po-contact-icon">📍</span>
-                <div>
-                 <strong>Address</strong>
-                 <p>
-                   Gangakhed, Marathwada
-                <br />
-                 Maharashtra – 431514
-                </p>
-
-               </div>
+                <div className="po-about-reg">
+                  <span>📌 Registered under Maharashtra Societies Act</span>
+                  <span>📍 Headquartered in Dongargaon, Maharashtra</span>
+                  <span>🏛️ Recognised by State Government of Maharashtra</span>
                 </div>
 
-                 <div className="po-contact-item">
-                 <span className="po-contact-icon">📞</span>
-                 <div>
-                  <strong>Phone</strong>
-                  <p>+91 9307162914</p>
-                 </div>
+                <div className="po-about-contact">
+                  <div className="po-contact-item">
+                    <span className="po-contact-icon">📍</span>
+                    <div>
+                      <strong>Address</strong>
+                      <p>Gangakhed, Marathwada<br />Maharashtra — 431514</p>
+                    </div>
+                  </div>
+                  <div className="po-contact-item">
+                    <span className="po-contact-icon">📞</span>
+                    <div>
+                      <strong>Phone</strong>
+                      <p>+91 9307162914</p>
+                    </div>
+                  </div>
+                  <div className="po-contact-item">
+                    <span className="po-contact-icon">✉️</span>
+                    <div>
+                      <strong>Email</strong>
+                      <p>info@lkcwsc.edu.in</p>
+                    </div>
+                  </div>
+                </div>
 
-                 </div>
-
-               <div className="po-contact-item">
-               <span className="po-contact-icon">📧</span>
-              <div>
-                <strong>Email</strong>
-               <p>info@lkcwsc.edu.in</p>
+              </div>
+            </div>
           </div>
-         </div>   
-        </div>
-       </div>        
-    </section>
+        </section>
 
         {/* MISSION VISION VALUES */}
         <section className="po-section po-mv">
@@ -194,7 +197,7 @@ const ParentOrg = () => {
           </div>
         </section>
 
-        {/* VISIONARY LEADER — renamed from Our Founder */}
+        {/* VISIONARY LEADER */}
         <section className="po-section po-founders">
           <div className="po-section-inner">
             <div className="po-section-label">In Loving Memory</div>
@@ -206,13 +209,8 @@ const ParentOrg = () => {
 
             <div className="po-founder-card">
 
-              {/* LEFT — Photo + Years */}
               <div className="po-founder-left">
                 <div className="po-founder-photo-large">
-                  {/* To add photo later:
-                      1. Save photo as public/sopan_sodgir.jpg
-                      2. Replace the div below with:
-                         <img src="/sopan_sodgir.jpg" alt="Late Shri Sopan Sodgir" /> */}
                   <img src="/sopan_sodgir.jpg" alt="Late Shri Sopan Sodgir" />
                 </div>
                 <div className="po-founder-years">
@@ -221,11 +219,9 @@ const ParentOrg = () => {
                 </div>
               </div>
 
-              {/* RIGHT — Info */}
               <div className="po-founder-info">
                 <h3>Late Shri Sopan Sodgir</h3>
                 <span className="po-founder-badge">Founder & President, VNSS</span>
-
                 <p>
                   Late Shri Sopan Sodgir was a visionary educationist, dedicated social
                   worker, and the founding force behind Vidyaniketan Sevabhavi Sanstha.
@@ -240,13 +236,11 @@ const ParentOrg = () => {
                   generations to come. His leadership, humility, and compassion
                   inspired all who had the privilege of working alongside him.
                 </p>
-
                 <div className="po-founder-quote">
                   <span>"</span> Education is not just about knowledge — it is about
                   building character, nurturing compassion, and empowering every individual
                   to contribute meaningfully to society. <span>"</span>
                 </div>
-
                 <div className="po-founder-rip">
                   🕊️ &nbsp;
                   <span>
