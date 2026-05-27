@@ -77,7 +77,13 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
         <Section title="📞 Contact Information">
           <Field label="Email" value={adm.email} />
           <Field label="Phone" value={adm.phone} />
-          <Field label="Address" value={adm.address} />
+          <Field label="House No." value={adm.houseNumber} />
+          <Field label="Street / Area" value={adm.streetArea} />
+          <Field label="Subdistrict" value={adm.subdistrict} />
+          <Field label="City / Town / Village" value={adm.cityTownVillage} />
+          <Field label="District" value={adm.district} />
+          <Field label="State" value={adm.state} />
+          <Field label="Pincode" value={adm.pincode} />
         </Section>
 
         <Section title="🎓 Academic Information">
