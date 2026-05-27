@@ -44,9 +44,9 @@ const About = () => {
   }, []);
 
   // History text — computed directly, not inside cards array
-  const historyText = aboutData.history?.trim()
-    || (historyExpanded ? FULL_HISTORY : SHORT_HISTORY);
-
+ const historyText = historyExpanded
+  ? (aboutData.history?.trim() || FULL_HISTORY)
+  : (aboutData.history?.trim()?.substring(0, 300) + '...' || SHORT_HISTORY);
   const cards = [
     {
       icon: '🎯',
@@ -100,14 +100,14 @@ const About = () => {
             )}
             <p>{historyText}</p>
             {/* Show Read More only if API didn't return history */}
-            {!aboutData.history?.trim() && (
+          
               <button
                 className="read-more-btn"
                 onClick={() => setHistoryExpanded(prev => !prev)}
               >
                 {historyExpanded ? 'Show Less ▲' : 'Read More ▼'}
               </button>
-            )}
+          
           </div>
 
           {/* Other 3 cards */}
