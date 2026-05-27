@@ -68,7 +68,6 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
           <Field label="Sub-Caste" value={adm.subCaste} />
           <Field label="Religion" value={adm.religion} />
           <Field label="Nationality" value={adm.nationality} />
-          <Field label="Mother Tongue" value={adm.motherTongue} />
           <Field label="Aadhar No." value={adm.aadharNumber} />
           <Field label="APAR / ABC ID" value={adm.aparIdNumber} />
           <Field label="Is Married" value={adm.isMarried ? 'Yes' : 'No'} />
@@ -99,11 +98,10 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
 
         <Section title="👨‍👩‍👧 Parents Information">
           <Field label="Father's Name" value={adm.fatherName} />
-          <Field label="Father's Phone" value={adm.fatherPhone} />
-          <Field label="Father's Occupation" value={adm.fatherOccupation} />
           <Field label="Mother's Name" value={adm.motherName} />
-          <Field label="Mother's Phone" value={adm.motherPhone} />
-          <Field label="Annual Income" value={adm.annualIncome ? `₹ ${adm.annualIncome}` : null} />
+          <Field label="Guardian Name" value={adm.guardianFullName} />
+          <Field label="Guardian Phone" value={adm.guardianPhone} />
+          <Field label="Annual Income" value={adm.familyIncome} />
         </Section>
 
         <Section title="📄 Uploaded Documents">
