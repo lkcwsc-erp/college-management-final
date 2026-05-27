@@ -376,6 +376,7 @@ const AccountsSectionDashboard = () => {
                 Collect fees and issue receipts, or reject with reason.
               </p>
 
+
               {/* PENDING */}
               <h3 style={{ color: '#E65100', marginBottom: '14px' }}>⏳ Pending Requests ({pendingRequests.length})</h3>
 
@@ -408,6 +409,7 @@ const AccountsSectionDashboard = () => {
                           </div>
                           <span style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', background: '#fff3e0', color: '#E65100' }}>⏳ Pending</span>
                         </div>
+
 
                         {/* Student Details */}
                         <div style={{ background: '#f0f9ff', padding: '14px 18px', borderRadius: '10px', marginBottom: '14px', border: '1px solid #bae6fd', fontSize: '13px' }}>
@@ -483,9 +485,16 @@ const AccountsSectionDashboard = () => {
               )}
             </div>
           )}
+            {/* ── STUDENTS REPORT TAB ─────────────────────────── */}
+{activeTab === 'students_report' && (
+  <div>
+    <StudentsReport />
+  </div>
+)}
 
         </div>
       </main>
+
 
       {/* ── COLLECT FEES MODAL ───────────────────────────────────── */}
       {selectedReq && actionType === 'collect_fees' && (
