@@ -65,3 +65,33 @@ const ScholarshipSectionDashboard = () => {
                   <p>View all registered students</p>
                 </div>
                 <div className="event-card" style={{ cursor: 'pointer' }}>
+                  <span className="notice-tag">Approve</span>
+                  <h4>✅ Pending Approvals</h4>
+                  <p>Process pending requests</p>
+                </div>
+                <div className="event-card" style={{ cursor: 'pointer' }}>
+                  <span className="notice-tag">Distribute</span>
+                  <h4>💰 Disbursement</h4>
+                  <p>Release scholarship funds</p>
+                </div>
+                <div className="event-card" style={{ cursor: 'pointer' }}>
+                  <span className="notice-tag">Report</span>
+                  <h4>📊 View Reports</h4>
+                  <p>Generate distribution reports</p>
+                </div>
+              </div>
+
+              <div style={{ background: '#fff3cd', padding: '20px', borderRadius: '12px', marginTop: '30px', borderLeft: '5px solid #f59e0b' }}>
+                <h4 style={{ color: '#92400e', marginBottom: '8px' }}>⚠️ Coming Soon</h4>
+                <p style={{ color: '#92400e' }}>Full functionality for scholarship management is under development.</p>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default ScholarshipSectionDashboard;
