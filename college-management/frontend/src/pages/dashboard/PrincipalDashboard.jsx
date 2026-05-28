@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import StudentsReport from '../../components/StudentsReport';
 
 // ─── Admission Detail Modal ───────────────────────────────────────────────────
 const AdmissionModal = ({ adm, onClose, onRefresh, showMsg }) => {
@@ -574,9 +575,11 @@ const PrincipalDashboard = () => {
             </div>
           )}
 
+          {/* ── COLLEGE REPORTS (Students) ── */}
+          {activeTab === 'reports' && <StudentsReport themeColor="#C62828" />}
+
           {/* ── OTHER TABS ── */}
-          {!['home', 'admissions', 'tc'].includes(activeTab) && (
-            <div className="empty-state">
+          {!['home', 'admissions', 'tc', 'reports'].includes(activeTab) && (
               <div className="empty-icon">🚧</div>
               <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
               <p>This feature is under development. Coming soon!</p>
