@@ -579,13 +579,13 @@ const PrincipalDashboard = () => {
           {activeTab === 'reports' && <StudentsReport themeColor="#C62828" />}
 
           {/* ── OTHER TABS ── */}
-          {!['home', 'admissions', 'tc', 'reports'].includes(activeTab) && (
+{!['home', 'admissions', 'tc', 'reports'].includes(activeTab) && (
+            <div className="empty-state">
               <div className="empty-icon">🚧</div>
               <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
               <p>This feature is under development. Coming soon!</p>
             </div>
           )}
-
         </div>
       </main>
 
