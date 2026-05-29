@@ -4,6 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
 
+// Official fee structure 2025-26
+const OFFICIAL_FEES = {
+  'B.Sc.': {
+    label: 'B.Sc. (Un-aided)',
+    semesters: { 'Sem I': 29927, 'Sem II': 750, 'Sem III': 28207, 'Sem IV': 750, 'Sem V': 27842, 'Sem VI': 2850 },
+  },
+  'B.A.': {
+    label: 'B.A. (Un-aided)',
+    semesters: { '1st Sem': 13877, '2nd Sem': 750, '3rd Sem': 11957, '4th Sem': 750, '5th Sem': 12092, '6th Sem': 2450 },
+  },
+};
+
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -18,6 +30,11 @@ const StudentDashboard = () => {
   });
   const [docMessage, setDocMessage] = useState('');
   const [docLoading, setDocLoading] = useState(false);
+
+  const [results, setResults] = useState([]);
+  const [resultsLoading] = useState(false);
+  const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false });
+  const [examSubmitted, setExamSubmitted] = useState({ regular: false, backlog: false });
 
   useEffect(() => {
     API.get('/notices').then(res => setNotices(res.data.notices || []));
@@ -34,6 +51,14 @@ const StudentDashboard = () => {
     } else {
       setAdmissionLoading(false);
     }
+    // Fetch results
+    API.get('/results/my')
+      .then(res => setResults(res.data.results || []))
+      .catch(() => {});
+    // Fetch exam form settings
+    API.get('/results/exam-settings')
+      .then(res => setExamSettings(res.data.settings || {}))
+      .catch(() => {});
   }, [user]);
 
   const handleLogout = () => { logout(); navigate('/'); };
@@ -80,8 +105,10 @@ const StudentDashboard = () => {
     { id: 'profile', label: '👤 My Profile' },
     { id: 'fees', label: '💰 My Fees' },
     { id: 'documents', label: '📄 Request Documents' },
-    { id: 'attendance', label: '📊 Attendance' },
     { id: 'results', label: '🎓 Results' },
+    { id: 'examform', label: '📝 Exam Form' },
+    { id: 'scholarship', label: '🏅 Scholarship' },
+    { id: 'attendance', label: '📊 Attendance' },
     { id: 'notices', label: '📢 Notices' },
   ];
 
@@ -443,37 +470,163 @@ const StudentDashboard = () => {
           {/* ============ FEES TAB ============ */}
           {activeTab === 'fees' && (
             <div>
-              <h3 style={{ marginBottom: '20px', color: '#1565C0' }}>My Fees Details</h3>
-              {myAdmission ? (
-                <div className="fees-card">
-                  <h3>Fee Information</h3>
-                  <div className="fees-info-row"><span className="fees-info-label">Student Name</span><span className="fees-info-value">{user?.name}</span></div>
-                  <div className="fees-info-row"><span className="fees-info-label">Course</span><span className="fees-info-value">{myAdmission.course?.name || myAdmission.courseType || 'N/A'}</span></div>
-                  <div className="fees-info-row">
-                    <span className="fees-info-label">Total Fees</span>
-                    <span className="fees-info-value" style={{ fontSize: '1.3rem', color: '#1565C0', fontWeight: '700' }}>
-                      {myAdmission.fees ? `₹${myAdmission.fees}` : 'Not set by college yet'}
-                    </span>
-                  </div>
-                  <div className="fees-info-row">
-                    <span className="fees-info-label">Payment Status</span>
-                    <span className={`status-badge ${myAdmission.feesPaid ? 'approved' : 'pending'}`}>
-                      {myAdmission.feesPaid ? '✅ Paid' : '⏳ Pending'}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: '24px', padding: '16px', background: '#e3f2fd', borderRadius: '8px' }}>
-                    <p style={{ fontSize: '14px', color: '#1565C0', fontWeight: '500' }}>💡 Payment Instructions</p>
-                    <p style={{ fontSize: '13px', color: '#555', marginTop: '8px' }}>
-                      Please visit the college office to pay your fees. Office Hours: Monday to Saturday, 9:00 AM to 5:00 PM.
-                    </p>
-                  </div>
-                </div>
-              ) : (
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>💰 My Fees</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View your fee payment status and download official receipts.</p>
+
+              {!myAdmission ? (
                 <div className="empty-state">
                   <div className="empty-icon">💰</div>
                   <h3>No Fee Information</h3>
                   <p>Please apply for admission first.</p>
                 </div>
+              ) : (
+                <>
+                  {/* Summary cards */}
+                  <div className="dash-cards" style={{ marginBottom: 24 }}>
+                    <div className="dash-card blue">
+                      <div className="dash-card-icon">💰</div>
+                      <div>
+                        <h3>{myAdmission.fees ? `₹${myAdmission.fees.toLocaleString('en-IN')}` : '—'}</h3>
+                        <p>Amount Paid</p>
+                      </div>
+                    </div>
+                    <div className={`dash-card ${myAdmission.feesPaid ? 'green' : 'orange'}`}>
+                      <div className="dash-card-icon">{myAdmission.feesPaid ? '✅' : '⏳'}</div>
+                      <div>
+                        <h3>{myAdmission.feesPaid ? 'Paid' : 'Pending'}</h3>
+                        <p>Payment Status</p>
+                      </div>
+                    </div>
+                    <div className="dash-card blue">
+                      <div className="dash-card-icon">🎓</div>
+                      <div>
+                        <h3>{myAdmission.courseType || '—'}</h3>
+                        <p>Course</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Receipt card */}
+                  {myAdmission.feesPaid && myAdmission.lastFeePayment?.paidAt ? (
+                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.06)', marginBottom: 20 }}>
+                      <div style={{ background: 'linear-gradient(135deg,#1b5e20,#2E7D32)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h4 style={{ color: '#fff', margin: 0 }}>🧾 Fee Receipt</h4>
+                          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>Receipt No: {myAdmission.lastFeePayment.receiptNo || '—'}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const d = myAdmission.lastFeePayment;
+                            const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;padding:30px;display:flex;justify-content:center}
+  .receipt{background:white;max-width:460px;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+  .header{background:linear-gradient(135deg,#0D47A1,#1565C0);color:white;padding:24px;text-align:center}
+  .header h2{font-size:16px;font-weight:700;margin-bottom:4px}
+  .header p{font-size:11px;opacity:0.8;margin-bottom:10px}
+  .badge{display:inline-block;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:1px}
+  .receipt-no{font-size:11px;opacity:0.7;margin-top:8px}
+  .body{padding:20px}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+  .row:last-child{border-bottom:none}
+  .lbl{color:#888;font-weight:500}
+  .val{color:#222;font-weight:600;text-align:right}
+  .divider{border-top:2px dashed #e0e0e0;margin:14px 0}
+  .amt-box{background:#e8f5e9;border-radius:8px;padding:14px;text-align:center;margin:14px 0}
+  .amt-box .amt{font-size:28px;font-weight:800;color:#1b5e20}
+  .paid-stamp{text-align:center;margin:16px 0}
+  .paid-stamp span{display:inline-block;border:3px solid #2E7D32;color:#2E7D32;font-size:20px;font-weight:800;padding:5px 20px;border-radius:6px;transform:rotate(-8deg);letter-spacing:4px}
+  .footer{background:#f8faff;padding:14px;text-align:center;font-size:11px;color:#888;border-top:1px solid #eee}
+  @media print{body{background:white;padding:0}.receipt{box-shadow:none}}
+</style></head><body>
+<div class="receipt">
+  <div class="header">
+    <h2>Late Kalpana Chawla Mahila College</h2>
+    <p>Senior Science & Arts College, Gangakhed</p>
+    <span class="badge">🧾 OFFICIAL FEE RECEIPT</span>
+    <div class="receipt-no">Receipt No: ${myAdmission.lastFeePayment?.receiptNo || '—'}</div>
+  </div>
+  <div class="body">
+    <div class="row"><span class="lbl">Date</span><span class="val">${new Date(d.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>
+    <div class="row"><span class="lbl">Student Name</span><span class="val">${myAdmission.applicantName}</span></div>
+    <div class="row"><span class="lbl">Student ID</span><span class="val">${myAdmission.studentId || '—'}</span></div>
+    <div class="row"><span class="lbl">PRN</span><span class="val">${myAdmission.prnNumber || '—'}</span></div>
+    <div class="row"><span class="lbl">Course</span><span class="val">${myAdmission.courseType || '—'}</span></div>
+    <div class="row"><span class="lbl">Year</span><span class="val">${myAdmission.admissionYear || '—'}</span></div>
+    <div class="divider"></div>
+    <div class="row"><span class="lbl">Payment Mode</span><span class="val">${d.paymentMode === 'online' ? '🌐 Online / UPI' : '💵 Cash'}</span></div>
+    ${d.transactionId ? `<div class="row"><span class="lbl">Txn ID / UTR</span><span class="val">${d.transactionId}</span></div>` : ''}
+    <div class="divider"></div>
+    <div class="amt-box"><div class="amt">₹ ${myAdmission.fees?.toLocaleString('en-IN')}/-</div><div style="font-size:11px;color:#555;margin-top:2px">Amount Paid</div></div>
+    <div class="paid-stamp"><span>PAID</span></div>
+  </div>
+  <div class="footer">Collected by: <strong>${d.collectedBy || 'Accounts Staff'}</strong><br/>This is a computer-generated receipt.</div>
+</div>
+<scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
+</body></html>`;
+                            const w = window.open('', '_blank', 'width=520,height=750');
+                            w.document.write(html);
+                            w.document.close();
+                          }}
+                          style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', padding: '8px 18px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                          🖨️ Download / Print
+                        </button>
+                      </div>
+
+                      <div style={{ padding: 20, fontSize: 13 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          {[
+                            { label: 'Paid On', value: new Date(myAdmission.lastFeePayment.paidAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
+                            { label: 'Amount', value: `₹${myAdmission.fees?.toLocaleString('en-IN')}` },
+                            { label: 'Payment Mode', value: myAdmission.lastFeePayment.paymentMode === 'online' ? '🌐 Online / UPI' : '💵 Cash' },
+                            { label: 'Transaction ID', value: myAdmission.lastFeePayment.transactionId || '—' },
+                            { label: 'Collected By', value: myAdmission.lastFeePayment.collectedBy || '—' },
+                            { label: 'Receipt No', value: myAdmission.lastFeePayment.receiptNo || '—' },
+                          ].map((item, i) => (
+                            <div key={i} style={{ background: '#f8faff', borderRadius: 8, padding: '8px 12px', border: '1px solid #e3f2fd' }}>
+                              <p style={{ fontSize: 11, color: '#888', margin: '0 0 2px', fontWeight: 600 }}>{item.label}</p>
+                              <p style={{ fontSize: 13, color: '#222', fontWeight: 600, margin: 0 }}>{item.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : !myAdmission.feesPaid ? (
+                    <div style={{ background: '#fff3e0', border: '2px solid #ffb74d', borderRadius: 14, padding: 24, marginBottom: 20, textAlign: 'center' }}>
+                      <p style={{ fontSize: '2.5rem', margin: 0 }}>⏳</p>
+                      <h3 style={{ color: '#E65100', margin: '10px 0 6px' }}>Fees Pending</h3>
+                      <p style={{ color: '#555', fontSize: 14 }}>Please visit the college Accounts Section to pay your fees.</p>
+                      <p style={{ color: '#777', fontSize: 13, marginTop: 8 }}>Office Hours: Monday to Saturday, 9:00 AM to 5:00 PM</p>
+                    </div>
+                  ) : null}
+
+                  {/* Official fee structure reference */}
+                  {(() => {
+                    const courseKey = (myAdmission.courseType || '').toLowerCase().includes('b.sc') || (myAdmission.courseType || '').toLowerCase().includes('science') ? 'B.Sc.' :
+                      (myAdmission.courseType || '').toLowerCase().includes('b.a') || (myAdmission.courseType || '').toLowerCase().includes('arts') ? 'B.A.' : null;
+                    const course = courseKey ? OFFICIAL_FEES[courseKey] : null;
+                    return course ? (
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                        <div style={{ background: '#1565C0', padding: '14px 20px' }}>
+                          <h4 style={{ color: '#fff', margin: 0, fontSize: 14 }}>📋 Official Fee Structure 2025-26 — {course.label}</h4>
+                          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, margin: '4px 0 0' }}>As per SNDT Women's University circular</p>
+                        </div>
+                        <div style={{ padding: 16 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
+                            {Object.entries(course.semesters).map(([sem, amt]) => (
+                              <div key={sem} style={{ background: '#f8faff', borderRadius: 8, padding: '10px 14px', border: '1px solid #e3f2fd', textAlign: 'center' }}>
+                                <p style={{ fontSize: 12, color: '#888', margin: '0 0 4px', fontWeight: 600 }}>{sem}</p>
+                                <p style={{ fontSize: 16, color: '#1565C0', fontWeight: 800, margin: 0 }}>₹{amt.toLocaleString('en-IN')}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ fontSize: 11, color: '#aaa', marginTop: 10, textAlign: 'center' }}>* University approved fee structure. Contact Accounts Section for details.</p>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </>
               )}
             </div>
           )}
@@ -637,21 +790,241 @@ const StudentDashboard = () => {
             </div>
           )}
 
-          {/* ============ ATTENDANCE TAB ============ */}
-          {activeTab === 'attendance' && (
-            <div className="empty-state">
-              <div className="empty-icon">📊</div>
-              <h3>Attendance Records</h3>
-              <p>Your attendance will be displayed here once uploaded by staff.</p>
+          {/* ============ RESULTS TAB ============ */}
+          {activeTab === 'results' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>🎓 My Exam Results</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>All semester results published by the Examination Section.</p>
+
+              {resultsLoading ? (
+                <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading results...</h3></div>
+              ) : results.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🎓</div>
+                  <h3>No Results Yet</h3>
+                  <p>Your results will appear here once published by the Examination Section.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {results.map(r => (
+                    <div key={r._id} style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+                      {/* Result header */}
+                      <div style={{ background: r.result === 'pass' || r.result === 'distinction' ? 'linear-gradient(135deg,#1b5e20,#2E7D32)' : 'linear-gradient(135deg,#b71c1c,#C62828)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                        <div>
+                          <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>
+                            {r.course?.name || 'Course'} — Semester {r.semester} ({r.year})
+                          </h4>
+                          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
+                            Published: {new Date(r.createdAt).toLocaleDateString('en-IN')}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>{r.percentage ? `${r.percentage}%` : '—'}</div>
+                          <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+                            {r.result === 'distinction' ? '🏅 Distinction' : r.result === 'pass' ? '✅ Pass' : '❌ Fail'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      <div style={{ padding: '14px 20px', background: '#f8faff', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}>
+                        <span><strong>Total Marks:</strong> {r.obtainedMarks}/{r.totalMarks}</span>
+                        <span><strong>Percentage:</strong> {r.percentage ? `${r.percentage}%` : '—'}</span>
+                        <span><strong>Semester:</strong> {r.semester}</span>
+                        <span><strong>Year:</strong> {r.year}</span>
+                      </div>
+
+                      {/* Subject-wise marks */}
+                      {r.subjects && r.subjects.length > 0 && (
+                        <div style={{ padding: '14px 20px' }}>
+                          <p style={{ fontWeight: 700, color: '#1565C0', marginBottom: 10, fontSize: 13 }}>Subject-wise Marks:</p>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+                            {r.subjects.map((sub, i) => (
+                              <div key={i} style={{ background: '#f0f9ff', borderRadius: 8, padding: '10px 14px', border: '1px solid #bae6fd' }}>
+                                <p style={{ fontWeight: 600, color: '#0c4a6e', fontSize: 13, margin: '0 0 4px' }}>{sub.name}</p>
+                                <p style={{ fontSize: 14, color: '#1565C0', fontWeight: 700, margin: 0 }}>
+                                  {sub.obtainedMarks}/{sub.maxMarks}
+                                  {sub.grade && <span style={{ marginLeft: 8, background: '#e3f2fd', padding: '1px 8px', borderRadius: 10, fontSize: 11 }}>{sub.grade}</span>}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* ============ RESULTS TAB ============ */}
-          {activeTab === 'results' && (
-            <div className="empty-state">
-              <div className="empty-icon">🎓</div>
-              <h3>Exam Results</h3>
-              <p>Your results will appear here once published by the college.</p>
+          {/* ============ EXAM FORM TAB ============ */}
+          {activeTab === 'examform' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📝 Exam Form</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+                Fill your examination form when enabled by the Examination Section.
+              </p>
+
+              {/* Regular Exam */}
+              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                <div style={{ background: examSettings.regularEnabled ? 'linear-gradient(135deg,#0D47A1,#1565C0)' : '#9e9e9e', padding: '16px 20px' }}>
+                  <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>📋 Regular Examination Form</h4>
+                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
+                    {examSettings.regularEnabled ? '✅ Currently Open' : '🔒 Not yet opened by Examination Section'}
+                  </p>
+                </div>
+                <div style={{ padding: 20 }}>
+                  {!examSettings.regularEnabled ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>
+                      <p style={{ fontSize: '2.5rem', margin: 0 }}>🔒</p>
+                      <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Form Not Open Yet</p>
+                      <p style={{ fontSize: 13 }}>The Examination Section will open this form when the time comes. Check back later.</p>
+                    </div>
+                  ) : examSubmitted.regular ? (
+                    <div style={{ background: '#e8f5e9', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #2E7D32' }}>
+                      <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
+                      <h4 style={{ color: '#2E7D32', margin: '8px 0 4px' }}>Regular Exam Form Submitted!</h4>
+                      <p style={{ fontSize: 13, color: '#555' }}>Your form has been submitted. The Examination Section will process it.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ background: '#e3f2fd', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#0c4a6e' }}>
+                        <strong>ℹ️ Student Details (auto-attached):</strong><br />
+                        Name: {myAdmission?.applicantName || user?.name} | Course: {myAdmission?.courseType || 'N/A'} | Year: {myAdmission?.admissionYear || 'N/A'}
+                      </div>
+                      <p style={{ fontSize: 13, color: '#555', marginBottom: 16 }}>
+                        By submitting this form, you confirm that your fees are paid and you wish to appear for the regular examination.
+                      </p>
+                      <button
+                        onClick={() => setExamSubmitted(prev => ({ ...prev, regular: true }))}
+                        style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                        📝 Submit Regular Exam Form
+                      </button>
+                      <p style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>* Ensure fees are paid before submitting.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Backlog Exam */}
+              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                <div style={{ background: examSettings.backlogEnabled ? 'linear-gradient(135deg,#e65100,#f57c00)' : '#9e9e9e', padding: '16px 20px' }}>
+                  <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>📋 Backlog / KT Examination Form</h4>
+                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
+                    {examSettings.backlogEnabled ? '✅ Currently Open' : '🔒 Not yet opened by Examination Section'}
+                  </p>
+                </div>
+                <div style={{ padding: 20 }}>
+                  {!examSettings.backlogEnabled ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>
+                      <p style={{ fontSize: '2.5rem', margin: 0 }}>🔒</p>
+                      <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Backlog Form Not Open</p>
+                      <p style={{ fontSize: 13 }}>The Examination Section will open the KT/backlog form when required.</p>
+                    </div>
+                  ) : examSubmitted.backlog ? (
+                    <div style={{ background: '#fff3e0', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #E65100' }}>
+                      <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
+                      <h4 style={{ color: '#E65100', margin: '8px 0 4px' }}>Backlog Form Submitted!</h4>
+                      <p style={{ fontSize: 13, color: '#555' }}>Your backlog form has been submitted successfully.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ background: '#fff3e0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#7c3d00' }}>
+                        <strong>⚠️ Backlog/KT Form:</strong> Only for students who have failed subjects in previous semesters. Ensure your KT exam fees are paid.
+                      </div>
+                      <button
+                        onClick={() => setExamSubmitted(prev => ({ ...prev, backlog: true }))}
+                        style={{ background: '#E65100', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                        📝 Submit Backlog Exam Form
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============ SCHOLARSHIP TAB ============ */}
+          {activeTab === 'scholarship' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>🏅 Scholarship Status</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+                Track your scholarship application status on the MahaDBT portal.
+              </p>
+
+              {!myAdmission ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🏅</div>
+                  <h3>Application Required</h3>
+                  <p>Please complete your admission application first.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Status card */}
+                  {(() => {
+                    const statusMap = {
+                      not_filled: { bg: '#fff3e0', color: '#E65100', icon: '📝', label: 'Not Filled', desc: 'You have not yet filled the scholarship form on MahaDBT portal.' },
+                      filled:     { bg: '#e3f2fd', color: '#1565C0', icon: '📋', label: 'Form Filled', desc: 'Your scholarship form has been submitted on MahaDBT portal.' },
+                      approved:   { bg: '#e8f5e9', color: '#2E7D32', icon: '✅', label: 'Approved', desc: 'Your scholarship has been approved! Disbursement is pending.' },
+                      rejected:   { bg: '#ffebee', color: '#C62828', icon: '❌', label: 'Rejected', desc: 'Your scholarship was rejected. Please contact the Scholarship Section.' },
+                      disbursed:  { bg: '#e8f5e9', color: '#1b5e20', icon: '💰', label: 'Disbursed', desc: 'Scholarship amount has been credited to your bank account.' },
+                    };
+                    const s = statusMap[myAdmission.scholarshipStatus || 'not_filled'];
+                    return (
+                      <div style={{ background: s.bg, border: `2px solid ${s.color}`, borderRadius: 14, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: '3rem' }}>{s.icon}</div>
+                        <div>
+                          <h3 style={{ color: s.color, margin: '0 0 6px', fontSize: 20 }}>Scholarship Status: {s.label}</h3>
+                          <p style={{ color: '#555', fontSize: 14, margin: 0 }}>{s.desc}</p>
+                          {myAdmission.scholarshipNote && (
+                            <p style={{ color: '#777', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>Note: {myAdmission.scholarshipNote}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Student eligibility info */}
+                  <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                    <h4 style={{ color: '#1565C0', marginBottom: 14, fontSize: 15 }}>📋 Your Details for Scholarship</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13 }}>
+                      {[
+                        { label: 'Name', value: myAdmission.applicantName },
+                        { label: 'Category', value: myAdmission.category ? myAdmission.category.toUpperCase() : '—' },
+                        { label: 'Caste', value: myAdmission.caste || '—' },
+                        { label: 'Annual Income', value: myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—' },
+                        { label: 'Course', value: myAdmission.courseType || '—' },
+                        { label: 'Year', value: myAdmission.admissionYear || '—' },
+                        { label: 'PRN Number', value: myAdmission.prnNumber || '⚠️ Not assigned yet' },
+                        { label: 'ABC / APAR ID', value: myAdmission.aparIdNumber || '⚠️ Not assigned yet' },
+                      ].map((item, i) => (
+                        <div key={i} style={{ background: '#f8faff', borderRadius: 8, padding: '8px 12px', border: '1px solid #e3f2fd' }}>
+                          <p style={{ fontSize: 11, color: '#888', margin: '0 0 2px', fontWeight: 600 }}>{item.label}</p>
+                          <p style={{ fontSize: 13, color: '#222', fontWeight: 600, margin: 0 }}>{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* MahaDBT instructions */}
+                  <div style={{ background: '#f3e5f5', border: '1px solid #ce93d8', borderRadius: 14, padding: 20, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                    <h4 style={{ color: '#6A1B9A', marginBottom: 12, fontSize: 15 }}>🌐 How to Fill Scholarship on MahaDBT</h4>
+                    <ol style={{ paddingLeft: 20, fontSize: 13, color: '#444', lineHeight: 2 }}>
+                      <li>Visit <a href="https://mahadbt.maharashtra.gov.in" target="_blank" rel="noreferrer" style={{ color: '#6A1B9A', fontWeight: 600 }}>mahadbt.maharashtra.gov.in</a></li>
+                      <li>Login with your registered mobile number and Aadhar</li>
+                      <li>Select your scholarship scheme (e.g. GOI, State, EBC, OBC, SBC etc.)</li>
+                      <li>Fill all required details — ensure PRN and ABC ID are correct</li>
+                      <li>Upload required documents (caste certificate, income certificate, marksheet)</li>
+                      <li>Submit the form and note down your application number</li>
+                      <li>Inform the <strong>Scholarship Section</strong> of your college after submitting</li>
+                    </ol>
+                    <div style={{ background: '#fff', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#6A1B9A', fontWeight: 500 }}>
+                      ⚠️ Make sure your <strong>PRN Number</strong> and <strong>ABC ID</strong> are updated before filling the form. Contact the Student Section if they are missing.
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
