@@ -386,19 +386,6 @@ router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', '
   }
 });
 
-// ========== UPDATE (Admin) ==========
-router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
-  try {
-    const admission = await Admission.findByIdAndUpdate(req.params.id, req.body, { new: true })
-      .populate('course', 'name type');
-    if (!admission)
-      return res.status(404).json({ success: false, message: 'Not found' });
-    res.json({ success: true, admission });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
 // ========== MARK ADMISSION FEES PAID ==========
 router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
   try {
@@ -489,6 +476,19 @@ router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
   try {
     await Admission.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Application deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== UPDATE (Admin) — must be LAST to avoid catching named routes ==========
+router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const admission = await Admission.findByIdAndUpdate(req.params.id, req.body, { new: true })
+      .populate('course', 'name type');
+    if (!admission)
+      return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, admission });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
