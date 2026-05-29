@@ -389,24 +389,64 @@ router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', '
 // ========== MARK ADMISSION FEES PAID ==========
 router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
   try {
-    const { fees, paymentMode, transactionId, receiptNo, collectedBy } = req.body;
+    const { fees, paymentMode, transactionId, receiptNo, collectedBy, feeType, feeTypeLabel, semester, totalFees, scholarshipAmount } = req.body;
+    const admission = await Admission.findById(req.params.id);
+    if (!admission) return res.status(404).json({ success: false, message: 'Admission not found' });
+
+    // Add entry to ledger
+    admission.feeLedger.push({
+      receiptNo: receiptNo || '',
+      feeType: feeType || 'admission',
+      feeTypeLabel: feeTypeLabel || '',
+      amount: fees || 0,
+      paymentMode: paymentMode || 'cash',
+      transactionId: transactionId || '',
+      collectedBy: collectedBy || '',
+      paidAt: new Date(),
+      semester: semester || '',
+    });
+
+    // Update totals
+    admission.fees = (admission.fees || 0) + (fees || 0);
+    if (totalFees !== undefined) admission.totalFees = totalFees;
+    if (scholarshipAmount !== undefined) admission.scholarshipAmount = scholarshipAmount;
+
+    // Mark as paid if fully paid
+    const netPayable = (admission.totalFees || 0) - (admission.scholarshipAmount || 0);
+    if (netPayable > 0 && admission.fees >= netPayable) admission.feesPaid = true;
+    else if (netPayable === 0) admission.feesPaid = true;
+
+    // Update lastFeePayment for backward compat
+    admission.lastFeePayment = {
+      paidAt: new Date(),
+      paymentMode: paymentMode || 'cash',
+      transactionId: transactionId || '',
+      receiptNo: receiptNo || '',
+      collectedBy: collectedBy || '',
+    };
+
+    await admission.save();
+    res.json({ success: true, message: 'Fee recorded successfully', admission });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== UPDATE SCHOLARSHIP AMOUNT ==========
+router.put('/update-scholarship/:id', protect, authorizeRoles('staff_accounts', 'staff_scholarship', 'admin'), async (req, res) => {
+  try {
+    const { scholarshipAmount, scholarshipStatus, scholarshipNote } = req.body;
     const admission = await Admission.findByIdAndUpdate(
       req.params.id,
       {
-        feesPaid: true,
-        fees: fees || 0,
-        lastFeePayment: {
-          paidAt: new Date(),
-          paymentMode: paymentMode || 'cash',
-          transactionId: transactionId || '',
-          receiptNo: receiptNo || '',
-          collectedBy: collectedBy || ''
-        }
+        ...(scholarshipAmount !== undefined && { scholarshipAmount }),
+        ...(scholarshipStatus  && { scholarshipStatus }),
+        ...(scholarshipNote    && { scholarshipNote }),
       },
       { new: true }
     );
-    if (!admission) return res.status(404).json({ success: false, message: 'Admission not found' });
-    res.json({ success: true, message: 'Admission fees marked as paid', admission });
+    if (!admission) return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, message: 'Scholarship updated', admission });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
