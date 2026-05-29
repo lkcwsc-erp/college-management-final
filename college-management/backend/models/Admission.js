@@ -267,11 +267,19 @@ const admissionSchema = new mongoose.Schema(
     ================================================================ */
     fees:     { type: Number, default: 0 },
     feesPaid: { type: Boolean, default: false },
+    lastFeePayment: {
+      paidAt:        { type: Date },
+      paymentMode:   { type: String, default: '' },
+      transactionId: { type: String, default: '' },
+      receiptNo:     { type: String, default: '' },
+      collectedBy:   { type: String, default: '' },
+    },
 
     /* ================================================================
        ADMIN WORKFLOW — STATUS & REMARKS
     ================================================================ */
-    studentId: { type: String, default: '' },
+    studentId:  { type: String, default: '' },
+    prnNumber:  { type: String, default: '' },
 
     studentSectionRemark: { type: String, default: '' },
     principalRemark:      { type: String, default: '' },
