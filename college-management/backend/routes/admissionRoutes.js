@@ -399,6 +399,91 @@ router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
   }
 });
 
+// ========== MARK ADMISSION FEES PAID ==========
+router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+  try {
+    const { fees, paymentMode, transactionId, receiptNo, collectedBy } = req.body;
+    const admission = await Admission.findByIdAndUpdate(
+      req.params.id,
+      {
+        feesPaid: true,
+        fees: fees || 0,
+        lastFeePayment: {
+          paidAt: new Date(),
+          paymentMode: paymentMode || 'cash',
+          transactionId: transactionId || '',
+          receiptNo: receiptNo || '',
+          collectedBy: collectedBy || ''
+        }
+      },
+      { new: true }
+    );
+    if (!admission) return res.status(404).json({ success: false, message: 'Admission not found' });
+    res.json({ success: true, message: 'Admission fees marked as paid', admission });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== GET ALL APPROVED ADMISSIONS (for Accounts) ==========
+router.get('/accounts-section/all', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+  try {
+    const admissions = await Admission.find({ status: 'approved' })
+      .populate('course', 'name type code fees')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, admissions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== UPDATE PRN / ABC ID ==========
+router.put('/update-prn/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+  try {
+    const { prnNumber, aparIdNumber } = req.body;
+    const admission = await Admission.findByIdAndUpdate(
+      req.params.id,
+      { ...(prnNumber !== undefined && { prnNumber }), ...(aparIdNumber !== undefined && { aparIdNumber }) },
+      { new: true }
+    );
+    if (!admission) return res.status(404).json({ success: false, message: 'Student not found' });
+    res.json({ success: true, message: 'PRN/ABC ID updated successfully', admission });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== CARRY FORWARD (SY / TY) ==========
+router.put('/carry-forward/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+  try {
+    const { newYear } = req.body; // '2nd Year' or '3rd Year'
+    const validYears = ['2nd Year', '3rd Year'];
+    if (!validYears.includes(newYear))
+      return res.status(400).json({ success: false, message: 'Invalid year. Must be 2nd Year or 3rd Year.' });
+    const admission = await Admission.findByIdAndUpdate(
+      req.params.id,
+      { admissionYear: newYear },
+      { new: true }
+    );
+    if (!admission) return res.status(404).json({ success: false, message: 'Student not found' });
+    res.json({ success: true, message: `Student promoted to ${newYear}`, admission });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== GET APPROVED STUDENTS (for Student Section) ==========
+router.get('/student-section/approved', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+  try {
+    const admissions = await Admission.find({ status: 'approved' })
+      .populate('course', 'name type')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, admissions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ========== DELETE ==========
 router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
   try {
