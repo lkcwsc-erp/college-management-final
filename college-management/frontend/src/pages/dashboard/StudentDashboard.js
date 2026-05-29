@@ -483,28 +483,84 @@ const StudentDashboard = () => {
                 <>
                   {/* Summary cards */}
                   <div className="dash-cards" style={{ marginBottom: 24 }}>
-                    <div className="dash-card blue">
-                      <div className="dash-card-icon">💰</div>
-                      <div>
-                        <h3>{myAdmission.fees ? `₹${myAdmission.fees.toLocaleString('en-IN')}` : '—'}</h3>
-                        <p>Amount Paid</p>
-                      </div>
-                    </div>
-                    <div className={`dash-card ${myAdmission.feesPaid ? 'green' : 'orange'}`}>
-                      <div className="dash-card-icon">{myAdmission.feesPaid ? '✅' : '⏳'}</div>
-                      <div>
-                        <h3>{myAdmission.feesPaid ? 'Paid' : 'Pending'}</h3>
-                        <p>Payment Status</p>
-                      </div>
-                    </div>
-                    <div className="dash-card blue">
-                      <div className="dash-card-icon">🎓</div>
-                      <div>
-                        <h3>{myAdmission.courseType || '—'}</h3>
-                        <p>Course</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const gross = myAdmission.totalFees || 0;
+                      const schol = myAdmission.scholarshipAmount || 0;
+                      const netPayable = Math.max(0, gross - schol);
+                      const paid = myAdmission.fees || 0;
+                      const pending = Math.max(0, netPayable - paid);
+                      return (
+                        <>
+                          <div className="dash-card blue">
+                            <div className="dash-card-icon">💰</div>
+                            <div><h3>{gross > 0 ? `₹${gross.toLocaleString('en-IN')}` : '—'}</h3><p>Gross Semester Fee</p></div>
+                          </div>
+                          <div className="dash-card" style={{ background: 'linear-gradient(135deg,#e1bee7,#ce93d8)', borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'center' }}>
+                            <div className="dash-card-icon">🏅</div>
+                            <div><h3>{schol > 0 ? `−₹${schol.toLocaleString('en-IN')}` : '—'}</h3><p>Scholarship Deduction</p></div>
+                          </div>
+                          <div className="dash-card green">
+                            <div className="dash-card-icon">✅</div>
+                            <div><h3>{paid > 0 ? `₹${paid.toLocaleString('en-IN')}` : '₹0'}</h3><p>Amount Paid</p></div>
+                          </div>
+                          <div className={`dash-card ${pending > 0 ? 'orange' : 'green'}`}>
+                            <div className="dash-card-icon">{pending > 0 ? '⏳' : '✅'}</div>
+                            <div><h3>{pending > 0 ? `₹${pending.toLocaleString('en-IN')}` : '₹0'}</h3><p>{pending > 0 ? 'Balance Pending' : 'Fully Paid'}</p></div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
+
+                  {/* Fee calculation breakdown */}
+                  {(myAdmission.totalFees > 0 || myAdmission.fees > 0) && (
+                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                      <div style={{ background: '#1565C0', padding: '14px 20px' }}>
+                        <h4 style={{ color: '#fff', margin: 0, fontSize: 14 }}>💰 Fee Statement</h4>
+                      </div>
+                      <div style={{ padding: '14px 20px', fontSize: 14 }}>
+                        {[
+                          { label: 'Gross Semester Fee', value: myAdmission.totalFees || 0, color: '#222' },
+                          { label: '− Scholarship Deduction', value: myAdmission.scholarshipAmount || 0, color: '#6A1B9A', prefix: '−' },
+                          { label: '= Net Payable', value: Math.max(0, (myAdmission.totalFees || 0) - (myAdmission.scholarshipAmount || 0)), color: '#1565C0', bold: true },
+                          { label: '− Amount Paid', value: myAdmission.fees || 0, color: '#2E7D32', prefix: '−' },
+                          { label: '= Balance Pending', value: Math.max(0, Math.max(0, (myAdmission.totalFees || 0) - (myAdmission.scholarshipAmount || 0)) - (myAdmission.fees || 0)), color: Math.max(0, (myAdmission.totalFees || 0) - (myAdmission.scholarshipAmount || 0) - (myAdmission.fees || 0)) > 0 ? '#C62828' : '#2E7D32', bold: true },
+                        ].map((row, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: i < 4 ? '1px solid #f0f0f0' : 'none' }}>
+                            <span style={{ color: row.color, fontWeight: row.bold ? 700 : 500 }}>{row.label}</span>
+                            <span style={{ color: row.color, fontWeight: row.bold ? 800 : 600, fontSize: row.bold ? 16 : 14 }}>
+                              {row.prefix === '−' ? '−' : ''}₹{row.value.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Payment ledger */}
+                  {myAdmission.feeLedger && myAdmission.feeLedger.length > 0 && (
+                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                      <div style={{ background: '#2E7D32', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ color: '#fff', margin: 0, fontSize: 14 }}>🧾 Payment Receipts</h4>
+                        <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{myAdmission.feeLedger.length} payment(s)</span>
+                      </div>
+                      {myAdmission.feeLedger.map((p, i) => (
+                        <div key={i} style={{ padding: '14px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                          <div>
+                            <p style={{ fontWeight: 600, fontSize: 13, color: '#222', margin: '0 0 3px' }}>
+                              {p.feeTypeLabel || p.feeType}{p.semester ? ` — ${p.semester}` : ''}
+                            </p>
+                            <p style={{ fontSize: 11, color: '#888', margin: 0 }}>
+                              {p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                              {' · '}{p.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'}
+                              {p.receiptNo ? ` · Receipt: ${p.receiptNo}` : ''}
+                            </p>
+                          </div>
+                          <span style={{ fontWeight: 800, fontSize: 15, color: '#1565C0' }}>₹{(p.amount || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Receipt card */}
                   {myAdmission.feesPaid && myAdmission.lastFeePayment?.paidAt ? (
