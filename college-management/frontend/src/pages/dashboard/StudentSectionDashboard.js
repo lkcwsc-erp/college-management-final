@@ -1090,7 +1090,7 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
     finally { setAdmLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [docType]);
+  useEffect(() => { fetchData(); }, [docType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePrint = (req) => {
     const adm = admMap[req.studentEmail] || {};
