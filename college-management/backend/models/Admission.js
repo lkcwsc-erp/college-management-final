@@ -265,8 +265,22 @@ const admissionSchema = new mongoose.Schema(
     /* ================================================================
        FEES
     ================================================================ */
-    fees:     { type: Number, default: 0 },
-    feesPaid: { type: Boolean, default: false },
+    totalFees:          { type: Number, default: 0 },   // Official semester total
+    scholarshipAmount:  { type: Number, default: 0 },   // Scholarship deduction
+    fees:               { type: Number, default: 0 },   // Total amount paid so far
+    feesPaid:           { type: Boolean, default: false },
+    // Full ledger of every payment
+    feeLedger: [{
+      receiptNo:     { type: String, default: '' },
+      feeType:       { type: String, default: 'admission' },
+      feeTypeLabel:  { type: String, default: '' },
+      amount:        { type: Number, default: 0 },
+      paymentMode:   { type: String, default: 'cash' },
+      transactionId: { type: String, default: '' },
+      collectedBy:   { type: String, default: '' },
+      paidAt:        { type: Date, default: Date.now },
+      semester:      { type: String, default: '' },
+    }],
     lastFeePayment: {
       paidAt:        { type: Date },
       paymentMode:   { type: String, default: '' },
@@ -280,6 +294,12 @@ const admissionSchema = new mongoose.Schema(
     ================================================================ */
     studentId:  { type: String, default: '' },
     prnNumber:  { type: String, default: '' },
+    scholarshipStatus: {
+      type: String,
+      enum: ['not_filled', 'filled', 'approved', 'rejected', 'disbursed'],
+      default: 'not_filled',
+    },
+    scholarshipNote: { type: String, default: '' },
 
     studentSectionRemark: { type: String, default: '' },
     principalRemark:      { type: String, default: '' },
