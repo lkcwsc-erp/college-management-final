@@ -170,12 +170,7 @@ const AccountsSectionDashboard = () => {
   const [admFeeType, setAdmFeeType]         = useState('admission');
   const [admLoading2, setAdmLoading2]       = useState(false);
 
-  // ── Yearly fee structure ───────────────────────────────────────────────────
-  const [yearlyFees, setYearlyFees]         = useState(() => {
-    try { return JSON.parse(localStorage.getItem('lkcwsc_yearly_fees') || 'null') || {}; } catch { return {}; }
-  });
-  const [editYearlyFee, setEditYearlyFee]   = useState(null); // { course, year }
-  const [yearlyFeeVal, setYearlyFeeVal]     = useState('');
+
 
   // ── College expenses ───────────────────────────────────────────────────────
   const [expenses, setExpenses]             = useState(() => {
