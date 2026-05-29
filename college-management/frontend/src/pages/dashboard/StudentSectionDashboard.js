@@ -718,17 +718,758 @@ const StudentSectionDashboard = () => {
             </div>
           )}
 
-          {/* ── OTHER TABS ── */}
-          {!['home', 'enquiries', 'admissions', 'credentials', 'students'].includes(activeTab) && (
-            <div className="empty-state">
-              <div className="empty-icon">🚧</div>
-              <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
-              <p>This feature is under development. Coming soon!</p>
-            </div>
-          )}
+          {/* ══════════════ DOCUMENT VERIFICATION (TC / Bonafide / ID Card / Marksheet) ══════════════ */}
+          {activeTab === 'documents' && <DocumentVerificationTab user={user} />}
+
+          {/* ══════════════ GENERATE TC ══════════════ */}
+          {activeTab === 'tc' && <GenerateDocTab user={user} docType="TC" label="Transfer Certificate (TC)" icon="📄" />}
+
+          {/* ══════════════ GENERATE BONAFIDE ══════════════ */}
+          {activeTab === 'bonafide' && <GenerateDocTab user={user} docType="BONAFIDE" label="Bonafide Certificate" icon="📜" />}
+
+          {/* ══════════════ GENERATE ID CARD ══════════════ */}
+          {activeTab === 'idcard' && <GenerateDocTab user={user} docType="ID_CARD" label="ID Card" icon="🪪" />}
+
+          {/* ══════════════ UPDATE PRN / ABC ID ══════════════ */}
+          {activeTab === 'prn' && <UpdatePrnTab />}
+
+          {/* ══════════════ CARRY FORWARD ══════════════ */}
+          {activeTab === 'carryforward' && <CarryForwardTab />}
 
         </div>
       </main>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCUMENT VERIFICATION TAB
+// Shows all doc requests that are pending_generation → student section marks complete
+// ─────────────────────────────────────────────────────────────────────────────
+const DocumentVerificationTab = ({ user }) => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [filter, setFilter] = useState('pending_generation');
+  const [search, setSearch] = useState('');
+
+  const fetchRequests = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/document-requests/student-section/all');
+      setRequests(res.data.requests || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchRequests(); }, []);
+
+  const handleComplete = async () => {
+    setSaving(true);
+    try {
+      await API.put(`/document-requests/student-section/complete/${selected._id}`, { notes });
+      setMsg('✅ Marked as completed!');
+      setTimeout(() => { setSelected(null); setNotes(''); setMsg(''); fetchRequests(); }, 1500);
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSaving(false); }
+  };
+
+  const statusStyle = (s) => ({
+    pending_generation: { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Generation' },
+    completed:          { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Completed' },
+  }[s] || { bg: '#f5f5f5', color: '#666', label: s });
+
+  const filtered = requests.filter(r => {
+    const mf = filter === 'all' || r.status === filter;
+    const q = search.toLowerCase();
+    const ms = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
+    return mf && ms;
+  });
+
+  const pending = requests.filter(r => r.status === 'pending_generation').length;
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📋 Document Verification & Generation</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+        These requests are fee-verified and approved. Generate & issue the documents.
+      </p>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by student name or email..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <select value={filter} onChange={e => setFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Requests</option>
+          <option value="pending_generation">⏳ Pending Generation</option>
+          <option value="completed">✅ Completed</option>
+        </select>
+        <button onClick={fetchRequests}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Total', count: requests.length, color: '#1565C0', bg: '#e3f2fd' },
+          { label: 'Pending', count: pending, color: '#E65100', bg: '#fff3e0' },
+          { label: 'Completed', count: requests.filter(r => r.status === 'completed').length, color: '#2E7D32', bg: '#e8f5e9' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>
+            {p.label}: {p.count}
+          </div>
+        ))}
+      </div>
+
+      {/* Completion modal */}
+      {selected && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 500, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color: '#1565C0', marginBottom: 4 }}>✅ Mark Document as Generated</h3>
+            <p style={{ color: '#666', fontSize: 13, marginBottom: 18 }}>Confirm you have issued this document to the student.</p>
+            <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Student</span><span>{selected.studentName}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Document</span><span>{selected.documentTypeLabel}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Branch</span><span>{selected.branch || 'N/A'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}><span style={{ color: '#888', fontWeight: 600 }}>Year</span><span>{selected.admissionYear || 'N/A'}</span></div>
+            </div>
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>Notes (optional)</label>
+              <textarea rows="2" placeholder="e.g. Issued physically at counter..." value={notes} onChange={e => setNotes(e.target.value)}
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+            </div>
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleComplete} disabled={saving}
+                style={{ flex: 1, background: '#2E7D32', color: '#fff', padding: '11px', borderRadius: 9, border: 'none', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? '⏳ Saving...' : '✅ Mark as Completed'}
+              </button>
+              <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }}
+                style={{ padding: '11px 20px', background: '#eee', color: '#333', borderRadius: 9, border: 'none', fontSize: 14, cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">📭</div><h3>No requests found</h3><p>Document requests approved by Accounts will appear here.</p></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map(req => {
+            const ss = statusStyle(req.status);
+            const isPending = req.status === 'pending_generation';
+            return (
+              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e0e0'}`, borderRadius: 12, padding: 18, borderLeft: `4px solid ${ss.color}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <h4 style={{ color: '#1565C0', fontSize: 16, margin: 0 }}>{req.documentTypeLabel || req.documentType}</h4>
+                      {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 12, padding: '2px 10px', borderRadius: 12, fontWeight: 600 }}>⚡ Urgent</span>}
+                    </div>
+                    <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Requested: {new Date(req.createdAt).toLocaleString('en-IN')}</p>
+                  </div>
+                  <span style={{ padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: ss.bg, color: ss.color }}>{ss.label}</span>
+                </div>
+                <div style={{ background: '#f8faff', padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <span><strong>Name:</strong> {req.studentName}</span>
+                  <span><strong>Email:</strong> {req.studentEmail}</span>
+                  <span><strong>Branch:</strong> {req.branch || 'N/A'}</span>
+                  <span><strong>Year:</strong> {req.admissionYear || 'N/A'}</span>
+                  {req.rollNumber && <span><strong>Roll No:</strong> {req.rollNumber}</span>}
+                  {req.studentPhone && <span><strong>Phone:</strong> {req.studentPhone}</span>}
+                </div>
+                {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
+                {req.accountsNotes && <p style={{ fontSize: 12, color: '#777', marginBottom: 10, fontStyle: 'italic' }}>Accounts Note: {req.accountsNotes}</p>}
+                {req.principalNotes && <p style={{ fontSize: 12, color: '#777', marginBottom: 10, fontStyle: 'italic' }}>Principal Note: {req.principalNotes}</p>}
+                {isPending && (
+                  <button onClick={() => { setSelected(req); setNotes(''); setMsg(''); }}
+                    style={{ background: '#2E7D32', color: '#fff', padding: '9px 22px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                    ✅ Mark as Generated / Issued
+                  </button>
+                )}
+                {req.status === 'completed' && (
+                  <p style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERATE DOC TAB  (TC / Bonafide / ID Card)
+// Prints the actual document using browser print
+// ─────────────────────────────────────────────────────────────────────────────
+const COLLEGE_NAME = 'Late Kalpana Chawla Mahila College';
+const COLLEGE_SUBTITLE = 'Senior Science & Arts College, Gangakhed';
+const COLLEGE_ADDRESS = 'Gangakhed, Dist. Parbhani, Maharashtra - 431514';
+
+const printTC = (adm) => {
+  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate</title>
+  <style>
+    body{font-family:'Times New Roman',serif;margin:0;padding:30px;color:#000}
+    .page{max-width:720px;margin:auto;border:3px double #000;padding:30px}
+    .header{text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:20px}
+    .college{font-size:22px;font-weight:bold;letter-spacing:1px}
+    .subtitle{font-size:14px;margin:4px 0}
+    .doc-title{font-size:18px;font-weight:bold;text-decoration:underline;margin:12px 0 0;letter-spacing:2px}
+    table{width:100%;border-collapse:collapse;margin:16px 0}
+    td{padding:8px 12px;border:1px solid #555;font-size:14px;vertical-align:top}
+    td:first-child{width:40%;font-weight:bold;background:#f9f9f9}
+    .serial{text-align:right;font-size:13px;margin-bottom:8px}
+    .sign-row{display:flex;justify-content:space-between;margin-top:40px;font-size:13px}
+    .sign-box{text-align:center;width:180px}
+    .sign-line{border-top:1px solid #000;padding-top:6px;margin-top:30px}
+    .footer{text-align:center;font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px}
+    @media print{body{padding:0}}
+  </style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="college">${COLLEGE_NAME}</div>
+      <div class="subtitle">${COLLEGE_SUBTITLE}</div>
+      <div class="subtitle">${COLLEGE_ADDRESS}</div>
+      <div class="doc-title">TRANSFER CERTIFICATE</div>
+    </div>
+    <div class="serial">TC No.: TC-${Date.now().toString().slice(-6)} &nbsp;&nbsp; Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+    <table>
+      <tr><td>Student Name</td><td>${adm.applicantName || '—'}</td></tr>
+      <tr><td>Student ID</td><td>${adm.studentId || '—'}</td></tr>
+      <tr><td>PRN Number</td><td>${adm.prnNumber || '—'}</td></tr>
+      <tr><td>ABC / APAR ID</td><td>${adm.aparIdNumber || '—'}</td></tr>
+      <tr><td>Date of Birth</td><td>${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : '—'}</td></tr>
+      <tr><td>Gender</td><td>${adm.gender || '—'}</td></tr>
+      <tr><td>Category / Caste</td><td>${adm.category ? adm.category.toUpperCase() : '—'} / ${adm.caste || '—'}</td></tr>
+      <tr><td>Course / Subject</td><td>${adm.courseType || '—'} — ${adm.preferredSubject || '—'}</td></tr>
+      <tr><td>Admission Year</td><td>${adm.admissionYear || '—'}</td></tr>
+      <tr><td>Reason for Leaving</td><td>&nbsp;</td></tr>
+      <tr><td>Conduct & Character</td><td>Good</td></tr>
+      <tr><td>Date of Issue</td><td>${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</td></tr>
+    </table>
+    <div class="sign-row">
+      <div class="sign-box"><div class="sign-line">Class Teacher</div></div>
+      <div class="sign-box"><div class="sign-line">Student Section Staff</div></div>
+      <div class="sign-box"><div class="sign-line">Principal</div></div>
+    </div>
+    <div class="footer">This is a computer-generated Transfer Certificate. Valid with official stamp and signature.</div>
+  </div>
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
+  </body></html>`;
+  const w = window.open('', '_blank', 'width=800,height=900'); w.document.write(html); w.document.close();
+};
+
+const printBonafide = (adm) => {
+  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
+  <style>
+    body{font-family:'Times New Roman',serif;margin:0;padding:40px;color:#000}
+    .page{max-width:680px;margin:auto;border:3px double #000;padding:36px}
+    .header{text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:24px}
+    .college{font-size:22px;font-weight:bold;letter-spacing:1px}
+    .subtitle{font-size:14px;margin:4px 0}
+    .doc-title{font-size:18px;font-weight:bold;text-decoration:underline;margin:14px 0 0;letter-spacing:2px}
+    .cert-no{text-align:right;font-size:13px;margin-bottom:16px}
+    .body{font-size:15px;line-height:2;text-align:justify}
+    .highlight{font-weight:bold;text-decoration:underline}
+    .sign-row{display:flex;justify-content:space-between;margin-top:50px;font-size:13px}
+    .sign-box{text-align:center;width:180px}
+    .sign-line{border-top:1px solid #000;padding-top:6px;margin-top:30px}
+    .footer{text-align:center;font-size:11px;color:#555;margin-top:24px;border-top:1px solid #ccc;padding-top:10px}
+    @media print{body{padding:0}}
+  </style></head><body>
+  <div class="page">
+    <div class="header">
+      <div class="college">${COLLEGE_NAME}</div>
+      <div class="subtitle">${COLLEGE_SUBTITLE}</div>
+      <div class="subtitle">${COLLEGE_ADDRESS}</div>
+      <div class="doc-title">BONAFIDE CERTIFICATE</div>
+    </div>
+    <div class="cert-no">Cert. No.: BON-${Date.now().toString().slice(-6)} &nbsp;&nbsp; Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+    <div class="body">
+      <p>This is to certify that <span class="highlight">${adm.applicantName || '________'}</span>,
+      ${adm.gender === 'Female' ? 'D/o' : 'S/o'} <span class="highlight">${adm.fatherName || '________'}</span>,
+      is a <em>bona fide</em> student of this college.</p>
+      <p>She is currently enrolled in <span class="highlight">${adm.courseType || '________'}</span>
+      (Subject: <span class="highlight">${adm.preferredSubject || '________'}</span>)
+      for the academic year <span class="highlight">${adm.admissionYear || '________'}</span>.</p>
+      <p>Her Student ID is <span class="highlight">${adm.studentId || '________'}</span>
+      and PRN is <span class="highlight">${adm.prnNumber || '________'}</span>.</p>
+      <p>This certificate is issued for the purpose of <span class="highlight">_________________________</span>
+      as requested by the student.</p>
+    </div>
+    <div class="sign-row">
+      <div class="sign-box"><div class="sign-line">Student Section Staff</div></div>
+      <div class="sign-box"><div class="sign-line">Principal</div></div>
+    </div>
+    <div class="footer">This is a computer-generated Bonafide Certificate. Valid with official stamp and signature.</div>
+  </div>
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
+  </body></html>`;
+  const w = window.open('', '_blank', 'width=750,height=850'); w.document.write(html); w.document.close();
+};
+
+const printIDCard = (adm) => {
+  const html = `<!DOCTYPE html><html><head><title>ID Card</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;padding:40px;background:#f0f4f8;display:flex;justify-content:center}
+    .card{width:340px;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.15)}
+    .card-header{background:linear-gradient(135deg,#0D47A1,#1565C0);color:white;padding:16px;text-align:center}
+    .card-header h3{margin:0;font-size:14px;font-weight:800;letter-spacing:0.5px}
+    .card-header p{margin:3px 0 0;font-size:10px;opacity:0.85}
+    .card-body{background:white;padding:16px}
+    .photo-row{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+    .photo{width:72px;height:90px;border:2px solid #1565C0;border-radius:6px;background:#e3f2fd;display:flex;align-items:center;justify-content:center;font-size:32px;color:#1565C0;flex-shrink:0}
+    .info h2{font-size:15px;color:#0D47A1;margin:0 0 6px;font-weight:800}
+    .info p{font-size:11px;color:#444;margin:3px 0;line-height:1.4}
+    .info .id{font-size:13px;font-weight:800;color:#1565C0;background:#e3f2fd;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:4px}
+    .card-footer{background:#0D47A1;color:white;padding:10px 16px;font-size:10px;display:flex;justify-content:space-between}
+    @media print{body{background:white;padding:0}.card{box-shadow:none}}
+  </style></head><body>
+  <div class="card">
+    <div class="card-header">
+      <h3>${COLLEGE_NAME}</h3>
+      <p>${COLLEGE_SUBTITLE}</p>
+    </div>
+    <div class="card-body">
+      <div class="photo-row">
+        <div class="photo">👩</div>
+        <div class="info">
+          <h2>${adm.applicantName || '—'}</h2>
+          <p>Course: ${adm.courseType || '—'}</p>
+          <p>Subject: ${adm.preferredSubject || '—'}</p>
+          <p>Year: ${adm.admissionYear || '—'}</p>
+          <p>DOB: ${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : '—'}</p>
+          <span class="id">${adm.studentId || 'ID Pending'}</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>PRN: ${adm.prnNumber || '—'}</span>
+      <span>Valid: ${new Date().getFullYear()}-${new Date().getFullYear() + 1}</span>
+    </div>
+  </div>
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
+  </body></html>`;
+  const w = window.open('', '_blank', 'width=420,height=420'); w.document.write(html); w.document.close();
+};
+
+const GenerateDocTab = ({ user, docType, label, icon }) => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [admMap, setAdmMap] = useState({});
+  const [admLoading, setAdmLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [completing, setCompleting] = useState('');
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/document-requests/student-section/all');
+      const all = (res.data.requests || []).filter(r => r.documentType === docType);
+      setRequests(all);
+    } catch { }
+    finally { setLoading(false); }
+
+    setAdmLoading(true);
+    try {
+      const res2 = await API.get('/admissions/student-section/approved');
+      const map = {};
+      (res2.data.admissions || []).forEach(a => { map[a.email] = a; });
+      setAdmMap(map);
+    } catch { }
+    finally { setAdmLoading(false); }
+  };
+
+  useEffect(() => { fetchData(); }, [docType]);
+
+  const handlePrint = (req) => {
+    const adm = admMap[req.studentEmail] || {};
+    const merged = {
+      applicantName: req.studentName,
+      email: req.studentEmail,
+      studentId: adm.studentId || '',
+      prnNumber: adm.prnNumber || '',
+      aparIdNumber: adm.aparIdNumber || '',
+      dateOfBirth: adm.dateOfBirth || '',
+      gender: adm.gender || 'Female',
+      fatherName: adm.fatherName || '',
+      category: adm.category || '',
+      caste: adm.caste || '',
+      courseType: req.branch || adm.courseType || '',
+      preferredSubject: adm.preferredSubject || '',
+      admissionYear: req.admissionYear || adm.admissionYear || '',
+    };
+    if (docType === 'TC') printTC(merged);
+    else if (docType === 'BONAFIDE') printBonafide(merged);
+    else printIDCard(merged);
+  };
+
+  const handleComplete = async (req) => {
+    setCompleting(req._id);
+    try {
+      await API.put(`/document-requests/student-section/complete/${req._id}`, { notes: `${label} generated and issued.` });
+      setMsg('✅ Marked as completed!');
+      setTimeout(() => setMsg(''), 3000);
+      fetchData();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setCompleting(''); }
+  };
+
+  const pending = requests.filter(r => r.status === 'pending_generation');
+  const completed = requests.filter(r => r.status === 'completed');
+  const filtered = requests.filter(r => !search || r.studentName?.toLowerCase().includes(search.toLowerCase()) || r.studentEmail?.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>{icon} Generate {label}</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Print and issue {label.toLowerCase()} for approved requests.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <button onClick={fetchData}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending.length}</div>
+        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Completed: {completed.length}</div>
+      </div>
+
+      {loading || admLoading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">{icon}</div>
+          <h3>No {label} Requests</h3>
+          <p>Approved {label.toLowerCase()} requests from Accounts section will appear here.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map(req => {
+            const isPending = req.status === 'pending_generation';
+            return (
+              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e0e0'}`, borderRadius: 12, padding: 18, borderLeft: `4px solid ${isPending ? '#E65100' : '#2E7D32'}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                  <div>
+                    <h4 style={{ color: '#1565C0', fontSize: 15, margin: 0 }}>{req.studentName}</h4>
+                    <p style={{ fontSize: 12, color: '#888', margin: '3px 0 0' }}>{req.studentEmail} · {req.branch || 'N/A'} · {req.admissionYear || 'N/A'}</p>
+                    {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600, display: 'inline-block', marginTop: 4 }}>⚡ Urgent</span>}
+                  </div>
+                  <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: isPending ? '#fff3e0' : '#e8f5e9', color: isPending ? '#E65100' : '#2E7D32' }}>
+                    {isPending ? '⏳ Pending' : '✅ Completed'}
+                  </span>
+                </div>
+
+                {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
+
+                {/* Show student data fetched from admissions */}
+                {admMap[req.studentEmail] && (
+                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 14px', marginBottom: 12, fontSize: 12, color: '#0c4a6e' }}>
+                    Student ID: <strong>{admMap[req.studentEmail].studentId || '—'}</strong> &nbsp;·&nbsp;
+                    PRN: <strong>{admMap[req.studentEmail].prnNumber || '—'}</strong> &nbsp;·&nbsp;
+                    ABC ID: <strong>{admMap[req.studentEmail].aparIdNumber || '—'}</strong>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button onClick={() => handlePrint(req)}
+                    style={{ background: '#1565C0', color: '#fff', padding: '9px 20px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                    🖨️ Print {label}
+                  </button>
+                  {isPending && (
+                    <button onClick={() => handleComplete(req)} disabled={completing === req._id}
+                      style={{ background: '#2E7D32', color: '#fff', padding: '9px 20px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: completing === req._id ? 'not-allowed' : 'pointer', opacity: completing === req._id ? 0.7 : 1 }}>
+                      {completing === req._id ? '⏳...' : '✅ Mark Issued'}
+                    </button>
+                  )}
+                </div>
+                {req.status === 'completed' && req.generatedBy && (
+                  <p style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600, marginTop: 8 }}>
+                    ✅ Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE PRN / ABC ID TAB
+// ─────────────────────────────────────────────────────────────────────────────
+const UpdatePrnTab = () => {
+  const [admissions, setAdmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState(null); // { _id, prnNumber, aparIdNumber }
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const fetchAdmissions = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/admissions/student-section/approved');
+      setAdmissions(res.data.admissions || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchAdmissions(); }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await API.put(`/admissions/update-prn/${editing._id}`, {
+        prnNumber: editing.prnNumber,
+        aparIdNumber: editing.aparIdNumber,
+      });
+      setMsg('✅ PRN / ABC ID updated successfully!');
+      setTimeout(() => setMsg(''), 3000);
+      setEditing(null);
+      fetchAdmissions();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to update')); }
+    finally { setSaving(false); }
+  };
+
+  const filtered = admissions.filter(a => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
+  });
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🔢 Update PRN / ABC ID</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Add or update the PRN Number and ABC (APAR) ID for enrolled students.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by name, student ID or email..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <button onClick={fetchAdmissions}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* Edit modal */}
+      {editing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color: '#1565C0', marginBottom: 4 }}>🔢 Update PRN / ABC ID</h3>
+            <p style={{ color: '#666', fontSize: 13, marginBottom: 18 }}>Student: <strong>{editing.applicantName}</strong> ({editing.studentId || 'No ID'})</p>
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>PRN Number</label>
+              <input type="text" placeholder="Enter PRN Number" value={editing.prnNumber}
+                onChange={e => setEditing({ ...editing, prnNumber: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #1565C0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>ABC ID (APAR ID)</label>
+              <input type="text" placeholder="Enter ABC / APAR ID" value={editing.aparIdNumber}
+                onChange={e => setEditing({ ...editing, aparIdNumber: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #1565C0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+            </div>
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleSave} disabled={saving}
+                style={{ flex: 1, background: '#1565C0', color: '#fff', padding: 12, borderRadius: 9, border: 'none', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? '⏳ Saving...' : '💾 Save Changes'}
+              </button>
+              <button onClick={() => { setEditing(null); setMsg(''); }}
+                style={{ padding: '12px 20px', background: '#eee', color: '#333', borderRadius: 9, border: 'none', fontSize: 14, cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading students...</h3></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🔢</div><h3>No students found</h3><p>Approved students will appear here.</p></div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.3fr 1.4fr 0.8fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
+            {['Student', 'Student ID', 'PRN Number', 'ABC / APAR ID', 'Action'].map(h => (
+              <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((adm, idx) => (
+            <div key={adm._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.3fr 1.4fr 0.8fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{adm.applicantName}</p>
+                <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.courseType} · {adm.admissionYear}</p>
+              </div>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#1565C0', fontWeight: 600 }}>{adm.studentId || '—'}</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.prnNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>
+                {adm.prnNumber || '⚠️ Not set'}
+              </span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.aparIdNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>
+                {adm.aparIdNumber || '⚠️ Not set'}
+              </span>
+              <button onClick={() => setEditing({ _id: adm._id, applicantName: adm.applicantName, studentId: adm.studentId, prnNumber: adm.prnNumber || '', aparIdNumber: adm.aparIdNumber || '' })}
+                style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                ✏️ Edit
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CARRY FORWARD TAB
+// ─────────────────────────────────────────────────────────────────────────────
+const CarryForwardTab = () => {
+  const [admissions, setAdmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [yearFilter, setYearFilter] = useState('all');
+  const [promoting, setPromoting] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const fetchAdmissions = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/admissions/student-section/approved');
+      setAdmissions(res.data.admissions || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchAdmissions(); }, []);
+
+  const handlePromote = async (adm, newYear) => {
+    if (!window.confirm(`Promote ${adm.applicantName} to ${newYear}?`)) return;
+    setPromoting(adm._id);
+    try {
+      await API.put(`/admissions/carry-forward/${adm._id}`, { newYear });
+      setMsg(`✅ ${adm.applicantName} promoted to ${newYear}!`);
+      setTimeout(() => setMsg(''), 4000);
+      fetchAdmissions();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setPromoting(''); }
+  };
+
+  const nextYear = (current) => {
+    if (current === '1st Year') return '2nd Year';
+    if (current === '2nd Year') return '3rd Year';
+    return null;
+  };
+
+  const filtered = admissions.filter(a => {
+    const mf = yearFilter === 'all' || a.admissionYear === yearFilter;
+    const q = search.toLowerCase();
+    const ms = !q || a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q);
+    return mf && ms;
+  });
+
+  const firstYear  = admissions.filter(a => a.admissionYear === '1st Year').length;
+  const secondYear = admissions.filter(a => a.admissionYear === '2nd Year').length;
+  const thirdYear  = admissions.filter(a => a.admissionYear === '3rd Year').length;
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 SY / TY Carry Forward</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Promote students from 1st Year → 2nd Year or 2nd Year → 3rd Year.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          { label: '1st Year', count: firstYear, color: '#1565C0', bg: '#e3f2fd' },
+          { label: '2nd Year', count: secondYear, color: '#7B1FA2', bg: '#f3e5f5' },
+          { label: '3rd Year', count: thirdYear, color: '#2E7D32', bg: '#e8f5e9' },
+          { label: 'Total', count: admissions.length, color: '#555', bg: '#f5f5f5' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600 }}>
+            {p.label}: {p.count}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#7c5e00' }}>
+        ⚠️ <strong>Important:</strong> Carry forward only at the end of the academic year. This action updates the student's year permanently and cannot be undone without manual correction.
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by name or student ID..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Years</option>
+          <option value="1st Year">1st Year (→ SY)</option>
+          <option value="2nd Year">2nd Year (→ TY)</option>
+          <option value="3rd Year">3rd Year (Completed)</option>
+        </select>
+        <button onClick={fetchAdmissions}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading students...</h3></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🎓</div><h3>No students found</h3></div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.4fr 1.2fr 1.2fr 1fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
+            {['Student', 'Course', 'Current Year', 'Student ID', 'Action'].map(h => (
+              <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((adm, idx) => {
+            const ny = nextYear(adm.admissionYear);
+            return (
+              <div key={adm._id} style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.4fr 1.2fr 1.2fr 1fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{adm.applicantName}</p>
+                  <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.email}</p>
+                </div>
+                <span style={{ fontSize: 12, color: '#333' }}>{adm.courseType || '—'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#1565C0' }}>{adm.admissionYear || '—'}</span>
+                <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#555' }}>{adm.studentId || '—'}</span>
+                <div>
+                  {ny ? (
+                    <button
+                      onClick={() => handlePromote(adm, ny)}
+                      disabled={promoting === adm._id}
+                      style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: promoting === adm._id ? 'not-allowed' : 'pointer', opacity: promoting === adm._id ? 0.7 : 1, whiteSpace: 'nowrap' }}>
+                      {promoting === adm._id ? '⏳...' : `→ ${ny}`}
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: 11, color: '#2E7D32', fontWeight: 600 }}>✅ Completed</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
