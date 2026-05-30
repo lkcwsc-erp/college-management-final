@@ -573,55 +573,80 @@ const StudentDashboard = () => {
                         <button
                           onClick={() => {
                             const d = myAdmission.lastFeePayment;
+                            const acadYear = (() => { const y = new Date(d.paidAt).getFullYear(); const m = new Date(d.paidAt).getMonth()+1; return m>=6?`${y}-${y+1}`:`${y-1}-${y}`; })();
+                            const dateStr = new Date(d.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+                            const vNo = 'ERP' + (d.receiptNo||Date.now().toString()).replace(/\D/g,'').slice(-8);
                             const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;padding:30px;display:flex;justify-content:center}
-  .receipt{background:white;max-width:460px;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
-  .header{background:linear-gradient(135deg,#0D47A1,#1565C0);color:white;padding:24px;text-align:center}
-  .header h2{font-size:16px;font-weight:700;margin-bottom:4px}
-  .header p{font-size:11px;opacity:0.8;margin-bottom:10px}
-  .badge{display:inline-block;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:1px}
-  .receipt-no{font-size:11px;opacity:0.7;margin-top:8px}
-  .body{padding:20px}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
-  .row:last-child{border-bottom:none}
-  .lbl{color:#888;font-weight:500}
-  .val{color:#222;font-weight:600;text-align:right}
-  .divider{border-top:2px dashed #e0e0e0;margin:14px 0}
-  .amt-box{background:#e8f5e9;border-radius:8px;padding:14px;text-align:center;margin:14px 0}
-  .amt-box .amt{font-size:28px;font-weight:800;color:#1b5e20}
-  .paid-stamp{text-align:center;margin:16px 0}
-  .paid-stamp span{display:inline-block;border:3px solid #2E7D32;color:#2E7D32;font-size:20px;font-weight:800;padding:5px 20px;border-radius:6px;transform:rotate(-8deg);letter-spacing:4px}
-  .footer{background:#f8faff;padding:14px;text-align:center;font-size:11px;color:#888;border-top:1px solid #eee}
-  @media print{body{background:white;padding:0}.receipt{box-shadow:none}}
+  body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center}
+  .page{background:white;max-width:520px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.15)}
+  .letterhead{border-bottom:4px double #1a237e;padding:18px 24px 12px;text-align:center}
+  .trust{font-size:11px;color:#555;letter-spacing:0.5px;margin-bottom:2px}
+  .college{font-size:18px;font-weight:bold;color:#1a237e;line-height:1.2;margin-bottom:3px}
+  .affil{font-size:10.5px;color:#333;margin-bottom:2px}
+  .contact{font-size:10px;color:#555}
+  .title-bar{background:#1a237e;color:white;text-align:center;padding:8px;font-size:14px;font-weight:bold;letter-spacing:2px}
+  .body{padding:18px 24px}
+  .section-title{font-size:10.5px;font-weight:bold;color:#1a237e;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1a237e;padding-bottom:3px;margin:14px 0 8px}
+  table{width:100%;border-collapse:collapse;margin-bottom:4px}
+  td{padding:5px 8px;font-size:12px;border:1px solid #c5cae9}
+  td:first-child{background:#e8eaf6;font-weight:600;color:#283593;width:42%}
+  td:last-child{color:#111}
+  .amount-section{background:#e8f5e9;border:2px solid #2E7D32;border-radius:4px;padding:12px 16px;margin:14px 0;display:flex;justify-content:space-between;align-items:center}
+  .paid-wrap{text-align:right;margin-top:4px}
+  .paid-stamp{display:inline-block;border:3px solid #2E7D32;color:#2E7D32;font-size:16px;font-weight:bold;padding:4px 16px;transform:rotate(-6deg);letter-spacing:5px;opacity:0.85}
+  .verify{background:#fafafa;border:1px dashed #9fa8da;border-radius:3px;padding:8px 12px;margin-top:12px;font-size:9.5px;color:#555;text-align:center}
+  .verify code{font-family:monospace;font-size:10px;color:#1a237e;font-weight:bold}
+  .footer{border-top:2px solid #e8eaf6;padding:10px 24px;display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;color:#555;margin-top:8px}
+  .sig{text-align:center}.sig-line{border-top:1px solid #555;width:120px;margin:18px auto 4px}
+  @media print{body{background:white;padding:0}.page{box-shadow:none;max-width:100%}}
 </style></head><body>
-<div class="receipt">
-  <div class="header">
-    <h2>Late Kalpana Chawla Mahila College</h2>
-    <p>Senior Science & Arts College, Gangakhed</p>
-    <span class="badge">🧾 OFFICIAL FEE RECEIPT</span>
-    <div class="receipt-no">Receipt No: ${myAdmission.lastFeePayment?.receiptNo || '—'}</div>
+<div class="page">
+  <div class="letterhead">
+    <div class="trust">Vidya-Niketan Sevabhavi Sanstha's</div>
+    <div class="college">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+    <div class="affil">Affiliated to SNDT Women's University, Mumbai</div>
+    <div class="contact">Gangakhed, Maharashtra | +91 9307162914 | lkcwsc.vnssorg.com</div>
   </div>
+  <div class="title-bar">✦ FEE RECEIPT ✦</div>
   <div class="body">
-    <div class="row"><span class="lbl">Date</span><span class="val">${new Date(d.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>
-    <div class="row"><span class="lbl">Student Name</span><span class="val">${myAdmission.applicantName}</span></div>
-    <div class="row"><span class="lbl">Student ID</span><span class="val">${myAdmission.studentId || '—'}</span></div>
-    <div class="row"><span class="lbl">PRN</span><span class="val">${myAdmission.prnNumber || '—'}</span></div>
-    <div class="row"><span class="lbl">Course</span><span class="val">${myAdmission.courseType || '—'}</span></div>
-    <div class="row"><span class="lbl">Year</span><span class="val">${myAdmission.admissionYear || '—'}</span></div>
-    <div class="divider"></div>
-    <div class="row"><span class="lbl">Payment Mode</span><span class="val">${d.paymentMode === 'online' ? '🌐 Online / UPI' : '💵 Cash'}</span></div>
-    ${d.transactionId ? `<div class="row"><span class="lbl">Txn ID / UTR</span><span class="val">${d.transactionId}</span></div>` : ''}
-    <div class="divider"></div>
-    <div class="amt-box"><div class="amt">₹ ${myAdmission.fees?.toLocaleString('en-IN')}/-</div><div style="font-size:11px;color:#555;margin-top:2px">Amount Paid</div></div>
-    <div class="paid-stamp"><span>PAID</span></div>
+    <div class="section-title">Receipt Details</div>
+    <table>
+      <tr><td>Receipt No</td><td><strong>${myAdmission.lastFeePayment?.receiptNo || '—'}</strong></td></tr>
+      <tr><td>Date</td><td>${dateStr}</td></tr>
+      <tr><td>Academic Year</td><td>${acadYear}</td></tr>
+    </table>
+    <div class="section-title">Student Details</div>
+    <table>
+      <tr><td>Student Name</td><td>${myAdmission.applicantName}</td></tr>
+      ${myAdmission.prnNumber ? `<tr><td>PRN Number</td><td>${myAdmission.prnNumber}</td></tr>` : ''}
+      ${myAdmission.studentId ? `<tr><td>Student ID</td><td>${myAdmission.studentId}</td></tr>` : ''}
+      ${myAdmission.courseType ? `<tr><td>Course &amp; Year</td><td>${myAdmission.courseType} — ${myAdmission.admissionYear||''}</td></tr>` : ''}
+    </table>
+    <div class="section-title">Payment Details</div>
+    <table>
+      <tr><td>Fee Type</td><td>Admission Fee</td></tr>
+      <tr><td>Payment Mode</td><td>${d.paymentMode === 'online' ? 'Online / UPI' : 'Cash'}</td></tr>
+      ${d.transactionId ? `<tr><td>Transaction ID / UTR</td><td>${d.transactionId}</td></tr>` : ''}
+      ${myAdmission.scholarshipAmount > 0 ? `<tr><td>Scholarship Deduction</td><td>− ₹${myAdmission.scholarshipAmount.toLocaleString('en-IN')}</td></tr>` : ''}
+      <tr><td>Payment Status</td><td><strong style="color:#2E7D32">PAID ✓</strong></td></tr>
+    </table>
+    <div class="amount-section">
+      <div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#1b5e20">Amount Paid</div></div>
+      <div style="font-size:26px;font-weight:bold;color:#1b5e20">₹${myAdmission.fees?.toLocaleString('en-IN')}/-</div>
+    </div>
+    <div class="paid-wrap"><span class="paid-stamp">PAID</span></div>
+    <div class="verify">ERP Verification No: <code>${vNo}</code> &nbsp;|&nbsp; Collected by: <strong>${d.collectedBy||'Accounts Staff'}</strong></div>
   </div>
-  <div class="footer">Collected by: <strong>${d.collectedBy || 'Accounts Staff'}</strong><br/>This is a computer-generated receipt.</div>
+  <div class="footer">
+    <div style="font-size:9px;color:#888">*Computer-generated receipt. Valid without signature.<br/>Generated through LKCWSC ERP System</div>
+    <div class="sig"><div class="sig-line"></div><div>Accounts Section</div><div style="font-size:9px;color:#888">LKCWSC</div></div>
+  </div>
 </div>
 <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
 </body></html>`;
-                            const w = window.open('', '_blank', 'width=520,height=750');
+                            const w = window.open('', '_blank', 'width=580,height=820');
                             w.document.write(html);
                             w.document.close();
                           }}
