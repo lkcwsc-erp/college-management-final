@@ -911,155 +911,228 @@ const DocumentVerificationTab = ({ user }) => {
 // GENERATE DOC TAB  (TC / Bonafide / ID Card)
 // Prints the actual document using browser print
 // ─────────────────────────────────────────────────────────────────────────────
-const COLLEGE_NAME = 'Late Kalpana Chawla Mahila College';
-const COLLEGE_SUBTITLE = 'Senior Science & Arts College, Gangakhed';
-const COLLEGE_ADDRESS = 'Gangakhed, Dist. Parbhani, Maharashtra - 431514';
+const COLLEGE_NAME    = 'Late Kalpana Chawla Women\'s Senior College (LKCWSC)';
+const COLLEGE_TRUST   = 'Vidya-Niketan Sevabhavi Sanstha\'s';
+const COLLEGE_SUBTITLE = 'Affiliated to SNDT Women\'s University, Mumbai';
+const COLLEGE_ADDRESS  = 'Gangakhed, Dist. Parbhani, Maharashtra - 431514';
+const COLLEGE_CONTACT  = '+91 9307162914  |  lkcwsc.vnssorg.com';
 
+// ─── Shared letterhead HTML ──────────────────────────────────────────────────
+const letterheadHTML = () => `
+  <div style="text-align:center;border-bottom:3px double #1a237e;padding-bottom:14px;margin-bottom:16px">
+    <div style="font-size:11px;color:#555;letter-spacing:0.5px">${COLLEGE_TRUST}</div>
+    <div style="font-size:20px;font-weight:bold;color:#1a237e;margin:3px 0">${COLLEGE_NAME}</div>
+    <div style="font-size:11px;color:#333;margin-bottom:2px">${COLLEGE_SUBTITLE}</div>
+    <div style="font-size:10px;color:#555">${COLLEGE_ADDRESS}</div>
+    <div style="font-size:10px;color:#555">${COLLEGE_CONTACT}</div>
+  </div>`;
+
+// ─── Print TC ────────────────────────────────────────────────────────────────
 const printTC = (adm) => {
-  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate</title>
+  const tcNo = 'TC' + new Date().getFullYear() + '-' + Date.now().toString().slice(-5);
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate — ${tcNo}</title>
   <style>
-    body{font-family:'Times New Roman',serif;margin:0;padding:30px;color:#000}
-    .page{max-width:720px;margin:auto;border:3px double #000;padding:30px}
-    .header{text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:20px}
-    .college{font-size:22px;font-weight:bold;letter-spacing:1px}
-    .subtitle{font-size:14px;margin:4px 0}
-    .doc-title{font-size:18px;font-weight:bold;text-decoration:underline;margin:12px 0 0;letter-spacing:2px}
-    table{width:100%;border-collapse:collapse;margin:16px 0}
-    td{padding:8px 12px;border:1px solid #555;font-size:14px;vertical-align:top}
-    td:first-child{width:40%;font-weight:bold;background:#f9f9f9}
-    .serial{text-align:right;font-size:13px;margin-bottom:8px}
-    .sign-row{display:flex;justify-content:space-between;margin-top:40px;font-size:13px}
-    .sign-box{text-align:center;width:180px}
-    .sign-line{border-top:1px solid #000;padding-top:6px;margin-top:30px}
-    .footer{text-align:center;font-size:11px;color:#555;margin-top:20px;border-top:1px solid #ccc;padding-top:10px}
-    @media print{body{padding:0}}
-  </style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="college">${COLLEGE_NAME}</div>
-      <div class="subtitle">${COLLEGE_SUBTITLE}</div>
-      <div class="subtitle">${COLLEGE_ADDRESS}</div>
-      <div class="doc-title">TRANSFER CERTIFICATE</div>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center}
+    .page{background:white;max-width:700px;width:100%;border:2px solid #1a237e;padding:32px;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+    .doc-title{text-align:center;font-size:17px;font-weight:bold;letter-spacing:3px;text-decoration:underline;color:#1a237e;margin:0 0 14px}
+    .meta{display:flex;justify-content:space-between;font-size:12px;color:#333;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    tr:nth-child(even){background:#f3f4f6}
+    td{padding:9px 12px;border:1px solid #9fa8da;font-size:13px;vertical-align:top}
+    td:first-child{width:38%;font-weight:bold;color:#283593;background:#e8eaf6}
+    td:last-child{color:#111}
+    .notice{background:#fff9c4;border:1px solid #f9a825;border-radius:4px;padding:10px 14px;font-size:11.5px;color:#5d4037;margin-bottom:20px}
+    .sign-row{display:flex;justify-content:space-between;margin-top:44px}
+    .sign-box{text-align:center;width:160px}
+    .sign-line{border-top:1px solid #333;padding-top:6px;margin-top:36px;font-size:12px;font-weight:bold}
+    .sign-sub{font-size:10px;color:#666}
+    .footer{text-align:center;font-size:10px;color:#777;margin-top:20px;border-top:1px dashed #9fa8da;padding-top:10px}
+    @media print{body{background:white;padding:0}.page{box-shadow:none;border:2px solid #1a237e}}
+  </style></head>
+  <body><div class="page">
+    ${letterheadHTML()}
+    <div class="doc-title">TRANSFER CERTIFICATE</div>
+    <div class="meta">
+      <span><strong>TC No.:</strong> ${tcNo}</span>
+      <span><strong>Date:</strong> ${dateStr}</span>
     </div>
-    <div class="serial">TC No.: TC-${Date.now().toString().slice(-6)} &nbsp;&nbsp; Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
     <table>
-      <tr><td>Student Name</td><td>${adm.applicantName || '—'}</td></tr>
-      <tr><td>Student ID</td><td>${adm.studentId || '—'}</td></tr>
+      <tr><td>Full Name of Student</td><td><strong>${adm.applicantName || '—'}</strong></td></tr>
+      <tr><td>Mother's Name</td><td>${adm.motherName || '—'}</td></tr>
+      <tr><td>Father's / Guardian's Name</td><td>${adm.fatherName || '—'}</td></tr>
+      <tr><td>Date of Birth</td><td>${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—'}</td></tr>
+      <tr><td>Gender</td><td>${adm.gender || '—'}</td></tr>
+      <tr><td>Category / Caste / Sub-Caste</td><td>${adm.category ? adm.category.toUpperCase() : '—'} / ${adm.caste || '—'}</td></tr>
+      <tr><td>Nationality / Religion</td><td>Indian / ${adm.religion || '—'}</td></tr>
+      <tr><td>Student ID (ERP)</td><td>${adm.studentId || '—'}</td></tr>
       <tr><td>PRN Number</td><td>${adm.prnNumber || '—'}</td></tr>
       <tr><td>ABC / APAR ID</td><td>${adm.aparIdNumber || '—'}</td></tr>
-      <tr><td>Date of Birth</td><td>${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : '—'}</td></tr>
-      <tr><td>Gender</td><td>${adm.gender || '—'}</td></tr>
-      <tr><td>Category / Caste</td><td>${adm.category ? adm.category.toUpperCase() : '—'} / ${adm.caste || '—'}</td></tr>
-      <tr><td>Course / Subject</td><td>${adm.courseType || '—'} — ${adm.preferredSubject || '—'}</td></tr>
-      <tr><td>Admission Year</td><td>${adm.admissionYear || '—'}</td></tr>
-      <tr><td>Reason for Leaving</td><td>&nbsp;</td></tr>
-      <tr><td>Conduct & Character</td><td>Good</td></tr>
-      <tr><td>Date of Issue</td><td>${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</td></tr>
+      <tr><td>Course</td><td>${adm.courseType || '—'}</td></tr>
+      <tr><td>Subject / Stream</td><td>${adm.preferredSubject || '—'}</td></tr>
+      <tr><td>Year of Admission</td><td>${adm.admissionYear || '—'}</td></tr>
+      <tr><td>Last Exam Appeared</td><td>—</td></tr>
+      <tr><td>Result of Last Exam</td><td>—</td></tr>
+      <tr><td>Fees Paid Up To</td><td>—</td></tr>
+      <tr><td>Reason for Leaving</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+      <tr><td>Conduct &amp; Character</td><td>Good</td></tr>
+      <tr><td>Remarks</td><td>&nbsp;</td></tr>
+      <tr><td>Date of Issue</td><td>${dateStr}</td></tr>
     </table>
+    <div class="notice">⚠️ This Transfer Certificate should be submitted to the institution to which the student seeks admission. Once issued, it cannot be duplicated without formal application.</div>
     <div class="sign-row">
-      <div class="sign-box"><div class="sign-line">Class Teacher</div></div>
-      <div class="sign-box"><div class="sign-line">Student Section Staff</div></div>
-      <div class="sign-box"><div class="sign-line">Principal</div></div>
+      <div class="sign-box">
+        <div class="sign-line">Class Teacher</div>
+        <div class="sign-sub">LKCWSC</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-line">Student Section</div>
+        <div class="sign-sub">LKCWSC</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-line">Principal</div>
+        <div class="sign-sub">LKCWSC, Gangakhed</div>
+      </div>
     </div>
-    <div class="footer">This is a computer-generated Transfer Certificate. Valid with official stamp and signature.</div>
+    <div class="footer">
+      Generated through LKCWSC ERP System &nbsp;|&nbsp; Valid only with official stamp and signature &nbsp;|&nbsp; TC No.: ${tcNo}
+    </div>
   </div>
   <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
   </body></html>`;
-  const w = window.open('', '_blank', 'width=800,height=900'); w.document.write(html); w.document.close();
+  const w = window.open('', '_blank', 'width=800,height=960'); w.document.write(html); w.document.close();
 };
 
+// ─── Print Bonafide ──────────────────────────────────────────────────────────
 const printBonafide = (adm) => {
-  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
+  const certNo = 'BON' + new Date().getFullYear() + '-' + Date.now().toString().slice(-5);
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const acadYear = (() => { const y = new Date().getFullYear(); const m = new Date().getMonth()+1; return m>=6?`${y}-${y+1}`:`${y-1}-${y}`; })();
+  const dOrS = adm.gender === 'Male' ? 'S/o' : 'D/o';
+  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate — ${certNo}</title>
   <style>
-    body{font-family:'Times New Roman',serif;margin:0;padding:40px;color:#000}
-    .page{max-width:680px;margin:auto;border:3px double #000;padding:36px}
-    .header{text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:24px}
-    .college{font-size:22px;font-weight:bold;letter-spacing:1px}
-    .subtitle{font-size:14px;margin:4px 0}
-    .doc-title{font-size:18px;font-weight:bold;text-decoration:underline;margin:14px 0 0;letter-spacing:2px}
-    .cert-no{text-align:right;font-size:13px;margin-bottom:16px}
-    .body{font-size:15px;line-height:2;text-align:justify}
-    .highlight{font-weight:bold;text-decoration:underline}
-    .sign-row{display:flex;justify-content:space-between;margin-top:50px;font-size:13px}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center}
+    .page{background:white;max-width:660px;width:100%;border:2px solid #1a237e;padding:36px;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+    .doc-title{text-align:center;font-size:17px;font-weight:bold;letter-spacing:3px;text-decoration:underline;color:#1a237e;margin:0 0 16px}
+    .meta{display:flex;justify-content:space-between;font-size:12px;color:#333;margin-bottom:20px}
+    .cert-body{font-size:14px;line-height:2.1;text-align:justify;color:#111}
+    .cert-body p{margin-bottom:14px}
+    .hl{font-weight:bold;border-bottom:1px solid #333}
+    .purpose-box{border:1px solid #9fa8da;border-radius:4px;padding:12px 16px;margin:20px 0;font-size:13px;color:#555;background:#f8f9ff}
+    .sign-row{display:flex;justify-content:space-between;margin-top:50px}
     .sign-box{text-align:center;width:180px}
-    .sign-line{border-top:1px solid #000;padding-top:6px;margin-top:30px}
-    .footer{text-align:center;font-size:11px;color:#555;margin-top:24px;border-top:1px solid #ccc;padding-top:10px}
-    @media print{body{padding:0}}
-  </style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="college">${COLLEGE_NAME}</div>
-      <div class="subtitle">${COLLEGE_SUBTITLE}</div>
-      <div class="subtitle">${COLLEGE_ADDRESS}</div>
-      <div class="doc-title">BONAFIDE CERTIFICATE</div>
+    .sign-line{border-top:1px solid #333;padding-top:6px;margin-top:40px;font-size:12px;font-weight:bold}
+    .sign-sub{font-size:10px;color:#666}
+    .footer{text-align:center;font-size:10px;color:#777;margin-top:20px;border-top:1px dashed #9fa8da;padding-top:10px}
+    @media print{body{background:white;padding:0}.page{box-shadow:none}}
+  </style></head>
+  <body><div class="page">
+    ${letterheadHTML()}
+    <div class="doc-title">BONAFIDE CERTIFICATE</div>
+    <div class="meta">
+      <span><strong>Cert. No.:</strong> ${certNo}</span>
+      <span><strong>Date:</strong> ${dateStr}</span>
     </div>
-    <div class="cert-no">Cert. No.: BON-${Date.now().toString().slice(-6)} &nbsp;&nbsp; Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-    <div class="body">
-      <p>This is to certify that <span class="highlight">${adm.applicantName || '________'}</span>,
-      ${adm.gender === 'Female' ? 'D/o' : 'S/o'} <span class="highlight">${adm.fatherName || '________'}</span>,
-      is a <em>bona fide</em> student of this college.</p>
-      <p>She is currently enrolled in <span class="highlight">${adm.courseType || '________'}</span>
-      (Subject: <span class="highlight">${adm.preferredSubject || '________'}</span>)
-      for the academic year <span class="highlight">${adm.admissionYear || '________'}</span>.</p>
-      <p>Her Student ID is <span class="highlight">${adm.studentId || '________'}</span>
-      and PRN is <span class="highlight">${adm.prnNumber || '________'}</span>.</p>
-      <p>This certificate is issued for the purpose of <span class="highlight">_________________________</span>
-      as requested by the student.</p>
+    <div class="cert-body">
+      <p>This is to certify that <span class="hl">${adm.applicantName || '____________________'}</span>,
+      <em>${dOrS}</em> <span class="hl">${adm.fatherName || '____________________'}</span>,
+      resident of <span class="hl">${adm.address || '____________________'}</span>,
+      is a <em>bona fide</em> student of this college for the academic year
+      <span class="hl">${acadYear}</span>.</p>
+
+      <p>She is currently enrolled in <span class="hl">${adm.courseType || '________'}</span>
+      (Subject: <span class="hl">${adm.preferredSubject || '________'}</span>),
+      <span class="hl">${adm.admissionYear || '________'}</span>.</p>
+
+      <p>Her Student ID (ERP) is <span class="hl">${adm.studentId || '________'}</span>,
+      PRN Number is <span class="hl">${adm.prnNumber || '________'}</span>
+      and ABC / APAR ID is <span class="hl">${adm.aparIdNumber || '________'}</span>.</p>
+
+      <p>Her conduct and character are <span class="hl">Good</span>.</p>
+
+      <p>This certificate is issued on her request for the purpose of
+      <span class="hl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>.</p>
+    </div>
+    <div class="purpose-box">
+      📌 <strong>Note:</strong> This certificate is valid for a period of six months from the date of issue. For duplicate certificate, a fresh application with fees must be submitted.
     </div>
     <div class="sign-row">
-      <div class="sign-box"><div class="sign-line">Student Section Staff</div></div>
-      <div class="sign-box"><div class="sign-line">Principal</div></div>
+      <div class="sign-box">
+        <div class="sign-line">Student Section</div>
+        <div class="sign-sub">LKCWSC</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-line">Principal</div>
+        <div class="sign-sub">LKCWSC, Gangakhed</div>
+      </div>
     </div>
-    <div class="footer">This is a computer-generated Bonafide Certificate. Valid with official stamp and signature.</div>
+    <div class="footer">
+      Generated through LKCWSC ERP System &nbsp;|&nbsp; Valid with official stamp and signature &nbsp;|&nbsp; Cert. No.: ${certNo}
+    </div>
   </div>
   <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
   </body></html>`;
-  const w = window.open('', '_blank', 'width=750,height=850'); w.document.write(html); w.document.close();
+  const w = window.open('', '_blank', 'width=740,height=900'); w.document.write(html); w.document.close();
 };
 
+// ─── Print ID Card ───────────────────────────────────────────────────────────
 const printIDCard = (adm) => {
-  const html = `<!DOCTYPE html><html><head><title>ID Card</title>
+  const validYear = new Date().getFullYear();
+  const html = `<!DOCTYPE html><html><head><title>ID Card — ${adm.applicantName}</title>
   <style>
-    body{font-family:Arial,sans-serif;margin:0;padding:40px;background:#f0f4f8;display:flex;justify-content:center}
-    .card{width:340px;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.15)}
-    .card-header{background:linear-gradient(135deg,#0D47A1,#1565C0);color:white;padding:16px;text-align:center}
-    .card-header h3{margin:0;font-size:14px;font-weight:800;letter-spacing:0.5px}
-    .card-header p{margin:3px 0 0;font-size:10px;opacity:0.85}
-    .card-body{background:white;padding:16px}
-    .photo-row{display:flex;gap:14px;align-items:center;margin-bottom:14px}
-    .photo{width:72px;height:90px;border:2px solid #1565C0;border-radius:6px;background:#e3f2fd;display:flex;align-items:center;justify-content:center;font-size:32px;color:#1565C0;flex-shrink:0}
-    .info h2{font-size:15px;color:#0D47A1;margin:0 0 6px;font-weight:800}
-    .info p{font-size:11px;color:#444;margin:3px 0;line-height:1.4}
-    .info .id{font-size:13px;font-weight:800;color:#1565C0;background:#e3f2fd;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:4px}
-    .card-footer{background:#0D47A1;color:white;padding:10px 16px;font-size:10px;display:flex;justify-content:space-between}
-    @media print{body{background:white;padding:0}.card{box-shadow:none}}
-  </style></head><body>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#e8eaf6;padding:40px;display:flex;justify-content:center;align-items:flex-start;gap:20px;flex-wrap:wrap}
+    .card{width:320px;border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.2);font-family:Arial,sans-serif}
+    .card-top{background:linear-gradient(135deg,#1a237e,#283593);color:white;padding:14px 16px;text-align:center}
+    .trust-name{font-size:8.5px;opacity:0.8;letter-spacing:0.5px;margin-bottom:2px}
+    .college-name{font-size:11.5px;font-weight:bold;letter-spacing:0.3px;line-height:1.3;margin-bottom:1px}
+    .affil{font-size:8px;opacity:0.75}
+    .id-label{background:#ffd54f;color:#1a237e;font-size:11px;font-weight:bold;letter-spacing:2px;text-align:center;padding:4px}
+    .card-body{background:white;padding:14px}
+    .row{display:flex;gap:12px;align-items:flex-start}
+    .photo{width:70px;height:85px;border:2px solid #1a237e;border-radius:4px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;color:#1a237e}
+    .info{flex:1}
+    .name{font-size:13px;font-weight:bold;color:#1a237e;margin-bottom:5px;line-height:1.2}
+    .field{font-size:10px;color:#444;margin:2px 0;line-height:1.4}
+    .field span{font-weight:600;color:#1a237e}
+    .id-chip{background:#1a237e;color:white;font-size:10px;font-weight:bold;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:5px;letter-spacing:0.5px}
+    .card-bottom{background:#1a237e;color:white;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;font-size:9px}
+    .barcode{font-family:monospace;font-size:7px;letter-spacing:2px;opacity:0.6}
+    @media print{body{background:white;padding:20px}.card{box-shadow:none}}
+  </style></head>
+  <body>
   <div class="card">
-    <div class="card-header">
-      <h3>${COLLEGE_NAME}</h3>
-      <p>${COLLEGE_SUBTITLE}</p>
+    <div class="card-top">
+      <div class="trust-name">${COLLEGE_TRUST}</div>
+      <div class="college-name">Late Kalpana Chawla Women's Senior College</div>
+      <div class="affil">Affiliated to SNDT Women's University | Gangakhed</div>
     </div>
+    <div class="id-label">STUDENT IDENTITY CARD</div>
     <div class="card-body">
-      <div class="photo-row">
+      <div class="row">
         <div class="photo">👩</div>
         <div class="info">
-          <h2>${adm.applicantName || '—'}</h2>
-          <p>Course: ${adm.courseType || '—'}</p>
-          <p>Subject: ${adm.preferredSubject || '—'}</p>
-          <p>Year: ${adm.admissionYear || '—'}</p>
-          <p>DOB: ${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : '—'}</p>
-          <span class="id">${adm.studentId || 'ID Pending'}</span>
+          <div class="name">${adm.applicantName || '—'}</div>
+          <div class="field"><span>Course:</span> ${adm.courseType || '—'}</div>
+          <div class="field"><span>Subject:</span> ${adm.preferredSubject || '—'}</div>
+          <div class="field"><span>Year:</span> ${adm.admissionYear || '—'}</div>
+          <div class="field"><span>DOB:</span> ${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : '—'}</div>
+          <div class="field"><span>PRN:</span> ${adm.prnNumber || '—'}</div>
+          <div class="id-chip">${adm.studentId || 'ID PENDING'}</div>
         </div>
       </div>
     </div>
-    <div class="card-footer">
-      <span>PRN: ${adm.prnNumber || '—'}</span>
-      <span>Valid: ${new Date().getFullYear()}-${new Date().getFullYear() + 1}</span>
+    <div class="card-bottom">
+      <div>Valid: ${validYear}–${validYear+1}</div>
+      <div class="barcode">||| ${adm.studentId || '0000'} |||</div>
+      <div>lkcwsc.vnssorg.com</div>
     </div>
   </div>
   <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
   </body></html>`;
-  const w = window.open('', '_blank', 'width=420,height=420'); w.document.write(html); w.document.close();
+  const w = window.open('', '_blank', 'width=400,height=380'); w.document.write(html); w.document.close();
 };
 
 const GenerateDocTab = ({ user, docType, label, icon }) => {
@@ -1103,11 +1176,14 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
       dateOfBirth: adm.dateOfBirth || '',
       gender: adm.gender || 'Female',
       fatherName: adm.fatherName || '',
+      motherName: adm.motherName || '',
       category: adm.category || '',
       caste: adm.caste || '',
       courseType: req.branch || adm.courseType || '',
       preferredSubject: adm.preferredSubject || '',
       admissionYear: req.admissionYear || adm.admissionYear || '',
+      address: adm.address || '',
+      religion: adm.religion || '',
     };
     if (docType === 'TC') printTC(merged);
     else if (docType === 'BONAFIDE') printBonafide(merged);
@@ -1174,10 +1250,7 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
                     {isPending ? '⏳ Pending' : '✅ Completed'}
                   </span>
                 </div>
-
                 {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
-
-                {/* Show student data fetched from admissions */}
                 {admMap[req.studentEmail] && (
                   <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 14px', marginBottom: 12, fontSize: 12, color: '#0c4a6e' }}>
                     Student ID: <strong>{admMap[req.studentEmail].studentId || '—'}</strong> &nbsp;·&nbsp;
@@ -1185,7 +1258,6 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
                     ABC ID: <strong>{admMap[req.studentEmail].aparIdNumber || '—'}</strong>
                   </div>
                 )}
-
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <button onClick={() => handlePrint(req)}
                     style={{ background: '#1565C0', color: '#fff', padding: '9px 20px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
@@ -1212,9 +1284,6 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UPDATE PRN / ABC ID TAB
-// ─────────────────────────────────────────────────────────────────────────────
 const UpdatePrnTab = () => {
   const [admissions, setAdmissions] = useState([]);
   const [loading, setLoading] = useState(false);
