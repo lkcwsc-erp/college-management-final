@@ -499,8 +499,42 @@ router.put('/carry-forward/:id', protect, authorizeRoles('staff_student', 'admin
   }
 });
 
-// ========== GET APPROVED STUDENTS (for Student Section) ==========
-router.get('/student-section/approved', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+// ========== UPDATE STUDENT DOCUMENTS (Student Section) ==========
+router.put('/update-documents/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+  try {
+    const allowed = [
+      'aadharNumber','aadharName','aadharPhoto','aparIdNumber','aparIdDocument',
+      'sscMarksheet','hscMarksheet','casteCertificate','casteValidityCertificate',
+      'incomeCertificate','domicileCertificate','gapCertificate','gapyeardocument',
+      'transferCertificate','prevYearMarksheet','bankPassbook','studentPhoto',
+      'signaturePhoto','marriageCertificate',
+    ];
+    const update = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    const admission = await Admission.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!admission) return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, message: 'Documents updated', admission });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== GET RESULTS BY EMAIL (for carry forward check) ==========
+router.get('/results-by-email/:email', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+  try {
+    const Result = require('../models/Result');
+    const Student = require('../models/Student');
+    const User = require('../models/User');
+    const userDoc = await User.findOne({ email: req.params.email });
+    if (!userDoc) return res.json({ success: true, results: [] });
+    const student = await Student.findOne({ user: userDoc._id });
+    if (!student) return res.json({ success: true, results: [] });
+    const results = await Result.find({ student: student._id }).sort({ year: -1, semester: -1 });
+    res.json({ success: true, results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
   try {
     const admissions = await Admission.find({ status: 'approved' })
       .populate('course', 'name type')
