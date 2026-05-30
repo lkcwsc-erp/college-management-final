@@ -143,6 +143,29 @@ router.get('/student-section/all', protect, authorizeRoles('staff_student', 'adm
     res.status(500).json({ success: false, message: error.message });
   }
 });
+// ========== STUDENT SECTION: Approved Students ==========
+router.get(
+  '/student-section/approved',
+  protect,
+  authorizeRoles('staff_student', 'admin'),
+  async (req, res) => {
+    try {
+      const admissions = await Admission.find({ status: 'approved' })
+        .populate('course', 'name type code')
+        .sort({ createdAt: -1 });
+
+      res.json({
+        success: true,
+        admissions
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+);
 
 // ========== STUDENT SECTION: Approve & Forward to Principal ==========
 router.put('/staff-approve/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
