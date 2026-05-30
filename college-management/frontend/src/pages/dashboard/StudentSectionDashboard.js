@@ -334,6 +334,7 @@ const StudentSectionDashboard = () => {
     { id: 'bonafide',     label: '📜 Generate Bonafide' },
     { id: 'idcard',       label: '🪪 Generate ID Card' },
     { id: 'prn',          label: '🔢 Update PRN/ABC ID' },
+    { id: 'doc_replace',  label: '📝 Correct Documents' },
     { id: 'students',     label: '👩‍🎓 All Students' },
   ];
 
@@ -732,6 +733,9 @@ const StudentSectionDashboard = () => {
 
           {/* ══════════════ UPDATE PRN / ABC ID ══════════════ */}
           {activeTab === 'prn' && <UpdatePrnTab />}
+
+          {/* ══════════════ CORRECT DOCUMENTS ══════════════ */}
+          {activeTab === 'doc_replace' && <DocumentReplaceTab />}
 
           {/* ══════════════ CARRY FORWARD ══════════════ */}
           {activeTab === 'carryforward' && <CarryForwardTab />}
@@ -1412,13 +1416,18 @@ const UpdatePrnTab = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // CARRY FORWARD TAB
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CARRY FORWARD TAB — with result check
+// ─────────────────────────────────────────────────────────────────────────────
 const CarryForwardTab = () => {
   const [admissions, setAdmissions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
+  const [loading, setLoading]       = useState(false);
+  const [search, setSearch]         = useState('');
   const [yearFilter, setYearFilter] = useState('all');
-  const [promoting, setPromoting] = useState('');
-  const [msg, setMsg] = useState('');
+  const [promoting, setPromoting]   = useState('');
+  const [msg, setMsg]               = useState('');
+  const [results, setResults]       = useState({}); // { admissionId: { status, percentage, atktSubjects } }
+  const [loadingResult, setLoadingResult] = useState('');
 
   const fetchAdmissions = async () => {
     setLoading(true);
@@ -1431,8 +1440,48 @@ const CarryForwardTab = () => {
 
   useEffect(() => { fetchAdmissions(); }, []);
 
+  const fetchResult = async (adm) => {
+    if (results[adm._id]) return; // already fetched
+    setLoadingResult(adm._id);
+    try {
+      const res = await API.get(`/admissions/results-by-email/${encodeURIComponent(adm.email)}`);
+      const allResults = res.data.results || [];
+      if (allResults.length === 0) {
+        setResults(prev => ({ ...prev, [adm._id]: { status: 'no_result', percentage: null, atktSubjects: [] } }));
+        return;
+      }
+      // Take the most recent result
+      const latest = allResults[0];
+      const atkt = (latest.subjects || []).filter(s => s.obtainedMarks < (s.maxMarks * 0.35));
+      let status = 'pass';
+      if (atkt.length === (latest.subjects || []).length && atkt.length > 0) status = 'fail';
+      else if (atkt.length > 0) status = 'atkt';
+      setResults(prev => ({
+        ...prev,
+        [adm._id]: {
+          status,
+          percentage: latest.percentage || null,
+          semester: latest.semester,
+          year: latest.year,
+          atktSubjects: atkt.map(s => s.name),
+          totalSubjects: (latest.subjects || []).length,
+        }
+      }));
+    } catch {
+      setResults(prev => ({ ...prev, [adm._id]: { status: 'error' } }));
+    }
+    finally { setLoadingResult(''); }
+  };
+
   const handlePromote = async (adm, newYear) => {
-    if (!window.confirm(`Promote ${adm.applicantName} to ${newYear}?`)) return;
+    const r = results[adm._id];
+    if (r && r.status === 'fail') {
+      if (!window.confirm(`⚠️ ${adm.applicantName} has FAILED all subjects. Are you sure you want to promote to ${newYear}?`)) return;
+    } else if (r && r.status === 'atkt') {
+      if (!window.confirm(`⚠️ ${adm.applicantName} has ATKT in ${r.atktSubjects.length} subject(s). Promote to ${newYear} with ATKT?`)) return;
+    } else {
+      if (!window.confirm(`Promote ${adm.applicantName} to ${newYear}?`)) return;
+    }
     setPromoting(adm._id);
     try {
       await API.put(`/admissions/carry-forward/${adm._id}`, { newYear });
@@ -1446,6 +1495,16 @@ const CarryForwardTab = () => {
   const nextYear = (current) => {
     if (current === '1st Year') return '2nd Year';
     if (current === '2nd Year') return '3rd Year';
+    return null;
+  };
+
+  const resultBadge = (r) => {
+    if (!r) return null;
+    if (r.status === 'no_result') return <span style={{ fontSize: 11, background: '#f5f5f5', color: '#888', padding: '2px 8px', borderRadius: 10 }}>No Result</span>;
+    if (r.status === 'error')     return <span style={{ fontSize: 11, background: '#ffebee', color: '#C62828', padding: '2px 8px', borderRadius: 10 }}>Error</span>;
+    if (r.status === 'pass')      return <span style={{ fontSize: 11, background: '#e8f5e9', color: '#2E7D32', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>✅ Pass {r.percentage ? `${r.percentage}%` : ''}</span>;
+    if (r.status === 'fail')      return <span style={{ fontSize: 11, background: '#ffebee', color: '#C62828', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>❌ Fail — All ATKT</span>;
+    if (r.status === 'atkt')      return <span style={{ fontSize: 11, background: '#fff3e0', color: '#E65100', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>⚠️ ATKT ({r.atktSubjects.length}/{r.totalSubjects} sub)</span>;
     return null;
   };
 
@@ -1463,16 +1522,15 @@ const CarryForwardTab = () => {
   return (
     <div>
       <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 SY / TY Carry Forward</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Promote students from 1st Year → 2nd Year or 2nd Year → 3rd Year.</p>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Promote students to next year. Check last semester result before promoting.</p>
 
       {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[
-          { label: '1st Year', count: firstYear, color: '#1565C0', bg: '#e3f2fd' },
-          { label: '2nd Year', count: secondYear, color: '#7B1FA2', bg: '#f3e5f5' },
-          { label: '3rd Year', count: thirdYear, color: '#2E7D32', bg: '#e8f5e9' },
-          { label: 'Total', count: admissions.length, color: '#555', bg: '#f5f5f5' },
+        {[ { label: '1st Year', count: firstYear, color: '#1565C0', bg: '#e3f2fd' },
+           { label: '2nd Year', count: secondYear, color: '#7B1FA2', bg: '#f3e5f5' },
+           { label: '3rd Year', count: thirdYear, color: '#2E7D32', bg: '#e8f5e9' },
+           { label: 'Total', count: admissions.length, color: '#555', bg: '#f5f5f5' },
         ].map((p, i) => (
           <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600 }}>
             {p.label}: {p.count}
@@ -1481,7 +1539,8 @@ const CarryForwardTab = () => {
       </div>
 
       <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#7c5e00' }}>
-        ⚠️ <strong>Important:</strong> Carry forward only at the end of the academic year. This action updates the student's year permanently and cannot be undone without manual correction.
+        ⚠️ <strong>Important:</strong> Click <strong>Check Result</strong> before promoting a student. Carry forward is permanent.
+        <br/>Pass = All subjects cleared. ATKT = Some subjects failed. Fail = All subjects failed.
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1501,37 +1560,64 @@ const CarryForwardTab = () => {
       </div>
 
       {loading ? (
-        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading students...</h3></div>
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
       ) : filtered.length === 0 ? (
         <div className="empty-state"><div className="empty-icon">🎓</div><h3>No students found</h3></div>
       ) : (
-        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.4fr 1.2fr 1.2fr 1fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
-            {['Student', 'Course', 'Current Year', 'Student ID', 'Action'].map(h => (
-              <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
-            ))}
-          </div>
-          {filtered.map((adm, idx) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map((adm) => {
             const ny = nextYear(adm.admissionYear);
+            const r = results[adm._id];
             return (
-              <div key={adm._id} style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.4fr 1.2fr 1.2fr 1fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-                <div>
-                  <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{adm.applicantName}</p>
-                  <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.email}</p>
+              <div key={adm._id} style={{ background: '#fff', borderRadius: 12, border: `1px solid ${r?.status === 'fail' ? '#ffcdd2' : r?.status === 'atkt' ? '#ffe0b2' : '#e0e7ef'}`, padding: '16px 20px', borderLeft: `4px solid ${r?.status === 'fail' ? '#C62828' : r?.status === 'atkt' ? '#E65100' : r?.status === 'pass' ? '#2E7D32' : '#9e9e9e'}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <h4 style={{ color: '#1565C0', fontSize: 15, margin: '0 0 3px' }}>{adm.applicantName}</h4>
+                    <p style={{ fontSize: 12, color: '#888', margin: 0 }}>{adm.email} · {adm.courseType} · Student ID: {adm.studentId || '—'}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1565C0', background: '#e3f2fd', padding: '3px 10px', borderRadius: 10 }}>{adm.admissionYear}</span>
+                    {resultBadge(r)}
+                  </div>
                 </div>
-                <span style={{ fontSize: 12, color: '#333' }}>{adm.courseType || '—'}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#1565C0' }}>{adm.admissionYear || '—'}</span>
-                <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#555' }}>{adm.studentId || '—'}</span>
-                <div>
+
+                {/* Result details */}
+                {r && r.status === 'atkt' && r.atktSubjects.length > 0 && (
+                  <div style={{ background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12 }}>
+                    <strong style={{ color: '#E65100' }}>⚠️ ATKT Subjects:</strong>
+                    <span style={{ color: '#555', marginLeft: 6 }}>{r.atktSubjects.join(', ')}</span>
+                    {r.percentage && <span style={{ marginLeft: 10, color: '#888' }}>| Overall: {r.percentage}%</span>}
+                    {r.semester && <span style={{ marginLeft: 6, color: '#888' }}>| Sem {r.semester} ({r.year})</span>}
+                  </div>
+                )}
+                {r && r.status === 'fail' && (
+                  <div style={{ background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#C62828' }}>
+                    ❌ <strong>Failed all subjects</strong> in Sem {r.semester} ({r.year}). Promotion not recommended.
+                  </div>
+                )}
+                {r && r.status === 'pass' && (
+                  <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#2E7D32' }}>
+                    ✅ <strong>Passed</strong> Sem {r.semester} ({r.year}) with {r.percentage}%. Eligible for promotion.
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+                  {!r && (
+                    <button onClick={() => fetchResult(adm)} disabled={loadingResult === adm._id}
+                      style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 7, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: loadingResult === adm._id ? 'not-allowed' : 'pointer', opacity: loadingResult === adm._id ? 0.7 : 1 }}>
+                      {loadingResult === adm._id ? '⏳ Checking...' : '📊 Check Result'}
+                    </button>
+                  )}
                   {ny ? (
-                    <button
-                      onClick={() => handlePromote(adm, ny)}
-                      disabled={promoting === adm._id}
-                      style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: promoting === adm._id ? 'not-allowed' : 'pointer', opacity: promoting === adm._id ? 0.7 : 1, whiteSpace: 'nowrap' }}>
-                      {promoting === adm._id ? '⏳...' : `→ ${ny}`}
+                    <button onClick={() => handlePromote(adm, ny)} disabled={promoting === adm._id}
+                      style={{ background: r?.status === 'fail' ? '#ffebee' : r?.status === 'atkt' ? '#fff3e0' : '#1565C0',
+                        color: r?.status === 'fail' ? '#C62828' : r?.status === 'atkt' ? '#E65100' : '#fff',
+                        border: `1px solid ${r?.status === 'fail' ? '#ef9a9a' : r?.status === 'atkt' ? '#ffb74d' : '#1565C0'}`,
+                        borderRadius: 7, padding: '7px 16px', fontSize: 13, fontWeight: 700, cursor: promoting === adm._id ? 'not-allowed' : 'pointer', opacity: promoting === adm._id ? 0.7 : 1 }}>
+                      {promoting === adm._id ? '⏳...' : `→ Promote to ${ny}`}
                     </button>
                   ) : (
-                    <span style={{ fontSize: 11, color: '#2E7D32', fontWeight: 600 }}>✅ Completed</span>
+                    <span style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600, padding: '7px 0' }}>✅ Course Completed</span>
                   )}
                 </div>
               </div>
@@ -1542,5 +1628,203 @@ const CarryForwardTab = () => {
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCUMENT REPLACE TAB
+// Student Section staff can fix wrong/incorrect documents
+// ─────────────────────────────────────────────────────────────────────────────
+const DOCUMENT_FIELDS = [
+  { key: 'aadharNumber',              label: '🪪 Aadhar Number',             type: 'text',   note: 'Must be 12 digits' },
+  { key: 'aadharName',                label: '🪪 Name on Aadhar',            type: 'text',   note: '' },
+  { key: 'aparIdNumber',              label: '🎓 ABC / APAR ID',             type: 'text',   note: '' },
+  { key: 'casteCertificateNo',        label: '📜 Caste Certificate No.',      type: 'text',   note: '' },
+  { key: 'casteCertificateAuthority', label: '📜 Caste Authority',           type: 'text',   note: '' },
+  { key: 'sscObtainedMarks',          label: '📝 SSC Obtained Marks',        type: 'number', note: '' },
+  { key: 'sscTotalMarks',             label: '📝 SSC Total Marks',           type: 'number', note: '' },
+  { key: 'sscPercentage',             label: '📝 SSC Percentage (%)',        type: 'number', note: '' },
+  { key: 'hscObtainedMarks',          label: '📝 HSC Obtained Marks',        type: 'number', note: '' },
+  { key: 'hscTotalMarks',             label: '📝 HSC Total Marks',           type: 'number', note: '' },
+  { key: 'hscPercentage',             label: '📝 HSC Percentage (%)',        type: 'number', note: '' },
+  { key: 'prevYearObtainedMarks',     label: '📊 Prev Year Obtained Marks',  type: 'number', note: '' },
+  { key: 'prevYearTotalMarks',        label: '📊 Prev Year Total Marks',     type: 'number', note: '' },
+  { key: 'prevYearPercentage',        label: '📊 Prev Year Percentage (%)',  type: 'number', note: '' },
+];
+
+const DocumentReplaceTab = () => {
+  const [admissions, setAdmissions]   = useState([]);
+  const [loading, setLoading]         = useState(false);
+  const [search, setSearch]           = useState('');
+  const [selected, setSelected]       = useState(null);
+  const [editFields, setEditFields]   = useState({});
+  const [saving, setSaving]           = useState(false);
+  const [msg, setMsg]                 = useState('');
+  const [activeField, setActiveField] = useState(null);
+
+  const fetchAdmissions = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/admissions/student-section/approved');
+      setAdmissions(res.data.admissions || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchAdmissions(); }, []);
+
+  const openStudent = (adm) => {
+    setSelected(adm);
+    setEditFields({});
+    setMsg('');
+    setActiveField(null);
+  };
+
+  const handleSave = async () => {
+    if (Object.keys(editFields).length === 0) {
+      setMsg('❌ No changes made.'); return;
+    }
+    setSaving(true);
+    try {
+      await API.put(`/admissions/update-documents/${selected._id}`, editFields);
+      setMsg('✅ Documents updated successfully!');
+      setEditFields({});
+      fetchAdmissions();
+      // Refresh selected
+      const res = await API.get('/admissions/student-section/approved');
+      const updated = (res.data.admissions || []).find(a => a._id === selected._id);
+      if (updated) setSelected(updated);
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to update')); }
+    finally { setSaving(false); }
+  };
+
+  const filtered = admissions.filter(a => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
+  });
+
+  const changedCount = Object.keys(editFields).length;
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📝 Correct Student Documents</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Fix incorrect or wrongly submitted document details for enrolled students.</p>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by name, student ID or email..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <button onClick={fetchAdmissions}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* Edit Modal */}
+      {selected && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 640, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ color: '#1565C0', margin: 0 }}>📝 Edit Documents</h3>
+                <p style={{ color: '#888', fontSize: 13, margin: '4px 0 0' }}>{selected.applicantName} — {selected.studentId || 'No ID'}</p>
+              </div>
+              <button onClick={() => setSelected(null)}
+                style={{ background: '#eee', border: 'none', borderRadius: '50%', width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>✕</button>
+            </div>
+
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+            <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#7c5e00' }}>
+              ⚠️ Only change fields that have wrong/incorrect data submitted by student. All changes are logged.
+            </div>
+
+            {/* Fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+              {DOCUMENT_FIELDS.map(field => {
+                const current = editFields[field.key] !== undefined ? editFields[field.key] : (selected[field.key] || '');
+                const isChanged = editFields[field.key] !== undefined && editFields[field.key] !== (selected[field.key] || '');
+                const isActive = activeField === field.key;
+                return (
+                  <div key={field.key} style={{ border: `1px solid ${isChanged ? '#fbbf24' : '#e0e7ef'}`, borderRadius: 8, padding: 10, background: isChanged ? '#fffbeb' : '#fafbff' }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#1565C0', marginBottom: 5 }}>
+                      {field.label}
+                      {isChanged && <span style={{ marginLeft: 6, color: '#E65100', fontSize: 10 }}>● Changed</span>}
+                    </label>
+                    <div style={{ fontSize: 11, color: '#aaa', marginBottom: 4 }}>
+                      Current: <strong style={{ color: '#555' }}>{selected[field.key] || '—'}</strong>
+                    </div>
+                    <input
+                      type={field.type}
+                      placeholder={`Enter new ${field.label}`}
+                      value={current}
+                      onFocus={() => setActiveField(field.key)}
+                      onBlur={() => setActiveField(null)}
+                      onChange={e => setEditFields(prev => ({ ...prev, [field.key]: field.type === 'number' ? Number(e.target.value) || '' : e.target.value }))}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: `2px solid ${isActive ? '#1565C0' : isChanged ? '#fbbf24' : '#e0e7ef'}`, fontSize: 13, boxSizing: 'border-box', outline: 'none', background: 'white' }}
+                    />
+                    {field.note && <p style={{ fontSize: 10, color: '#aaa', margin: '3px 0 0' }}>{field.note}</p>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {changedCount > 0 && (
+              <div style={{ background: '#fff3e0', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#E65100' }}>
+                ⚠️ <strong>{changedCount} field{changedCount > 1 ? 's' : ''} changed.</strong> Review carefully before saving.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleSave} disabled={saving || changedCount === 0}
+                style={{ flex: 1, background: saving || changedCount === 0 ? '#aaa' : '#1565C0', color: '#fff', padding: 12, borderRadius: 9, border: 'none', fontWeight: 700, fontSize: 14, cursor: saving || changedCount === 0 ? 'not-allowed' : 'pointer', opacity: changedCount === 0 ? 0.5 : 1 }}>
+                {saving ? '⏳ Saving...' : `💾 Save ${changedCount > 0 ? `(${changedCount} change${changedCount > 1 ? 's' : ''})` : 'Changes'}`}
+              </button>
+              <button onClick={() => { setSelected(null); setMsg(''); setEditFields({}); }}
+                style={{ padding: '12px 22px', background: '#eee', color: '#333', borderRadius: 9, border: 'none', fontSize: 14, cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading students...</h3></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">📝</div><h3>No students found</h3></div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.2fr 1.2fr 0.8fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
+            {['Student', 'Course / Year', 'Aadhar No.', 'ABC / APAR ID', 'Action'].map(h => (
+              <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((adm, idx) => (
+            <div key={adm._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.2fr 1.2fr 0.8fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{adm.applicantName}</p>
+                <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.email}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: 12, margin: 0 }}>{adm.courseType || '—'}</p>
+                <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.admissionYear}</p>
+              </div>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.aadharNumber ? '#222' : '#E65100', fontWeight: 600 }}>
+                {adm.aadharNumber ? adm.aadharNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3') : '⚠️ Missing'}
+              </span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.aparIdNumber ? '#222' : '#aaa', fontWeight: 600 }}>
+                {adm.aparIdNumber || '—'}
+              </span>
+              <button onClick={() => openStudent(adm)}
+                style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                ✏️ Edit
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 export default StudentSectionDashboard;
