@@ -216,69 +216,142 @@ const loadDocFees = () => {
 const saveDocFees = (fees) => localStorage.setItem('lkcwsc_doc_fees', JSON.stringify(fees));
 
 // ─── Receipt printer ──────────────────────────────────────────────────────────
+// ─── Academic year helper ─────────────────────────────────────────────────────
+const getAcademicYear = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  return month >= 6 ? `${year}-${String(year + 1).slice(2)}` : `${year - 1}-${String(year).slice(2)}`;
+};
+
+// ─── ERP Verification number ──────────────────────────────────────────────────
+const genVerificationNo = () => 'ERP' + Date.now().toString(36).toUpperCase().slice(-8);
+
+// ─── Receipt printer (official format per LKCWSC document) ───────────────────
 const printReceipt = (data) => {
-  const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
+  const vNo = genVerificationNo();
+  const acadYear = data.academicYear || getAcademicYear();
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${data.receiptNo}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;padding:30px;display:flex;justify-content:center}
-    .receipt{background:white;max-width:420px;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
-    .header{background:linear-gradient(135deg,#0D47A1,#1565C0);color:white;padding:24px;text-align:center}
-    .header h2{font-size:16px;font-weight:700;margin-bottom:4px}
-    .header p{font-size:11px;opacity:0.8;margin-bottom:10px}
-    .badge{display:inline-block;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:1px}
-    .receipt-no{font-size:11px;opacity:0.7;margin-top:8px}
-    .body{padding:20px}
-    .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
-    .row:last-child{border-bottom:none}
-    .label{color:#888;font-weight:500}
-    .value{color:#222;font-weight:600;text-align:right;max-width:60%}
-    .divider{border-top:2px dashed #e0e0e0;margin:14px 0}
-    .amount-box{background:#e8f5e9;border-radius:8px;padding:14px;text-align:center;margin:14px 0}
-    .amount-box .amt{font-size:28px;font-weight:800;color:#1b5e20}
-    .amount-box .label2{font-size:11px;color:#555;margin-top:2px}
-    .paid-stamp{text-align:center;margin:16px 0}
-    .paid-stamp span{display:inline-block;border:3px solid #2E7D32;color:#2E7D32;font-size:20px;font-weight:800;padding:5px 20px;border-radius:6px;transform:rotate(-8deg);letter-spacing:4px}
-    .footer{background:#f8faff;padding:14px;text-align:center;font-size:11px;color:#888;border-top:1px solid #eee}
-    @media print{body{background:white;padding:0}.receipt{box-shadow:none}}
+    body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center;align-items:flex-start}
+    .page{background:white;max-width:520px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.15)}
+    /* Letterhead */
+    .letterhead{border-bottom:4px double #1a237e;padding:18px 24px 12px;text-align:center}
+    .trust{font-size:11px;color:#555;letter-spacing:0.5px;margin-bottom:2px}
+    .college{font-size:18px;font-weight:bold;color:#1a237e;letter-spacing:0.5px;line-height:1.2;margin-bottom:3px}
+    .affil{font-size:10.5px;color:#333;margin-bottom:2px}
+    .contact{font-size:10px;color:#555}
+    /* Title bar */
+    .title-bar{background:#1a237e;color:white;text-align:center;padding:8px;font-size:14px;font-weight:bold;letter-spacing:2px}
+    /* Body */
+    .body{padding:18px 24px}
+    /* Sections */
+    .section-title{font-size:10.5px;font-weight:bold;color:#1a237e;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1a237e;padding-bottom:3px;margin:14px 0 8px}
+    table{width:100%;border-collapse:collapse;margin-bottom:4px}
+    td{padding:5px 8px;font-size:12px;border:1px solid #c5cae9}
+    td:first-child{background:#e8eaf6;font-weight:600;color:#283593;width:42%}
+    td:last-child{color:#111}
+    /* Amount box */
+    .amount-section{background:#e8f5e9;border:2px solid #2E7D32;border-radius:4px;padding:12px 16px;margin:14px 0;display:flex;justify-content:space-between;align-items:center}
+    .amount-label{font-size:11px;color:#1b5e20;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+    .amount-value{font-size:26px;font-weight:bold;color:#1b5e20}
+    /* PAID stamp */
+    .paid-wrap{text-align:right;margin-top:4px}
+    .paid-stamp{display:inline-block;border:3px solid #2E7D32;color:#2E7D32;font-size:16px;font-weight:bold;padding:4px 16px;transform:rotate(-6deg);letter-spacing:5px;opacity:0.85}
+    /* Verification */
+    .verify{background:#fafafa;border:1px dashed #9fa8da;border-radius:3px;padding:8px 12px;margin-top:12px;font-size:9.5px;color:#555;text-align:center}
+    .verify code{font-family:monospace;font-size:10px;color:#1a237e;font-weight:bold}
+    /* Footer */
+    .footer{border-top:2px solid #e8eaf6;padding:10px 24px;display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;color:#555;margin-top:8px}
+    .footer .sig{text-align:center}
+    .footer .sig-line{border-top:1px solid #555;width:120px;margin:18px auto 4px}
+    @media print{
+      body{background:white;padding:0}
+      .page{box-shadow:none;max-width:100%}
+    }
   </style></head>
-  <body><div class="receipt">
-    <div class="header">
-      <h2>${COLLEGE_NAME}</h2>
-      <p>${COLLEGE_SUBTITLE}</p>
-      <span class="badge">🧾 OFFICIAL FEE RECEIPT</span>
-      <div class="receipt-no">Receipt No: ${data.receiptNo}</div>
+  <body><div class="page">
+    <div class="letterhead">
+      <div class="trust">Vidya-Niketan Sevabhavi Sanstha's</div>
+      <div class="college">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+      <div class="affil">Affiliated to SNDT Women's University, Mumbai</div>
+      <div class="contact">Gangakhed, Maharashtra &nbsp;|&nbsp; Contact: +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
     </div>
+    <div class="title-bar">✦ FEE RECEIPT ✦</div>
     <div class="body">
-      <div class="row"><span class="label">Date</span><span class="value">${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>
-      <div class="row"><span class="label">Student Name</span><span class="value">${data.studentName}</span></div>
-      ${data.studentId ? `<div class="row"><span class="label">Student ID</span><span class="value">${data.studentId}</span></div>` : ''}
-      ${data.rollNumber ? `<div class="row"><span class="label">Roll No</span><span class="value">${data.rollNumber}</span></div>` : ''}
-      ${data.branch ? `<div class="row"><span class="label">Course</span><span class="value">${data.branch}</span></div>` : ''}
-      ${data.year ? `<div class="row"><span class="label">Year</span><span class="value">${data.year}</span></div>` : ''}
-      <div class="divider"></div>
-      <div class="row"><span class="label">Fee Type</span><span class="value">${data.feeLabel}</span></div>
-      <div class="row"><span class="label">Payment Mode</span><span class="value">${data.paymentMode === 'online' ? '🌐 Online / UPI' : '💵 Cash'}</span></div>
-      ${data.transactionId ? `<div class="row"><span class="label">Txn ID / UTR</span><span class="value">${data.transactionId}</span></div>` : ''}
-      <div class="divider"></div>
-      <div class="amount-box">
-        <div class="amt">₹ ${data.amount}/-</div>
-        <div class="label2">Amount Paid</div>
+      <div class="section-title">Receipt Details</div>
+      <table>
+        <tr><td>Receipt No</td><td><strong>${data.receiptNo}</strong></td></tr>
+        <tr><td>Date</td><td>${dateStr}</td></tr>
+        <tr><td>Academic Year</td><td>${acadYear}</td></tr>
+      </table>
+      <div class="section-title">Student Details</div>
+      <table>
+        <tr><td>Student Name</td><td>${data.studentName}</td></tr>
+        ${data.prnNumber ? `<tr><td>PRN Number</td><td>${data.prnNumber}</td></tr>` : ''}
+        ${data.studentId  ? `<tr><td>Student ID</td><td>${data.studentId}</td></tr>` : ''}
+        ${data.branch     ? `<tr><td>Course &amp; Year</td><td>${data.branch}${data.year ? ' — ' + data.year : ''}</td></tr>` : ''}
+      </table>
+      <div class="section-title">Payment Details</div>
+      <table>
+        <tr><td>Fee Type</td><td>${data.feeLabel}</td></tr>
+        ${data.semester   ? `<tr><td>Semester</td><td>${data.semester}</td></tr>` : ''}
+        <tr><td>Payment Mode</td><td>${data.paymentMode === 'online' ? 'Online / UPI' : 'Cash'}</td></tr>
+        ${data.transactionId ? `<tr><td>Transaction ID / UTR</td><td>${data.transactionId}</td></tr>` : ''}
+        ${data.scholarshipDeduction > 0 ? `<tr><td>Scholarship Deduction</td><td>− ₹${Number(data.scholarshipDeduction).toLocaleString('en-IN')}</td></tr>` : ''}
+        <tr><td>Payment Status</td><td><strong style="color:#2E7D32">PAID ✓</strong></td></tr>
+      </table>
+      <div class="amount-section">
+        <div><div class="amount-label">Amount Paid</div><div style="font-size:10px;color:#388e3c;margin-top:2px">Rupees ${amountInWords(data.amount)} Only</div></div>
+        <div class="amount-value">₹${Number(data.amount).toLocaleString('en-IN')}/-</div>
       </div>
-      <div class="paid-stamp"><span>PAID</span></div>
+      <div class="paid-wrap"><span class="paid-stamp">PAID</span></div>
+      <div class="verify">
+        ERP Verification No: <code>${vNo}</code> &nbsp;|&nbsp; Collected by: <strong>${data.collectedBy}</strong>
+      </div>
     </div>
     <div class="footer">
-      Collected by: <strong>${data.collectedBy}</strong><br/>
-      This is a computer-generated receipt. No signature required.
+      <div style="font-size:9px;color:#888">*This is a computer-generated receipt. Valid without signature.<br/>Generated through LKCWSC ERP System</div>
+      <div class="sig">
+        <div class="sig-line"></div>
+        <div>Accounts Section</div>
+        <div style="font-size:9px;color:#888">LKCWSC</div>
+      </div>
     </div>
   </div>
-  <scri${'pt'}>window.onload=()=>{window.print();}</scri${'pt'}>
+  <scri${'pt'}>
+    function amtWords(n){return n;} // placeholder
+    window.onload=()=>{window.print();}
+  </scri${'pt'}>
   </body></html>`;
-  const w = window.open('', '_blank', 'width=500,height=750');
+  const w = window.open('', '_blank', 'width=580,height=820');
   w.document.write(html);
   w.document.close();
 };
 
-const genReceiptNo = () => 'REC' + Date.now().toString().slice(-9);
+// ─── Amount in words (simple Indian system) ───────────────────────────────────
+const amountInWords = (num) => {
+  const a = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const b = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const inWords = (n) => {
+    if (n === 0) return '';
+    if (n < 20) return a[n] + ' ';
+    if (n < 100) return b[Math.floor(n/10)] + (n%10 ? ' ' + a[n%10] : '') + ' ';
+    if (n < 1000) return a[Math.floor(n/100)] + ' Hundred ' + inWords(n%100);
+    if (n < 100000) return inWords(Math.floor(n/1000)) + 'Thousand ' + inWords(n%1000);
+    if (n < 10000000) return inWords(Math.floor(n/100000)) + 'Lakh ' + inWords(n%100000);
+    return inWords(Math.floor(n/10000000)) + 'Crore ' + inWords(n%10000000);
+  };
+  return inWords(Math.floor(num)).trim() || 'Zero';
+};
+
+const genReceiptNo = () => {
+  const y = new Date().getFullYear();
+  const seq = Date.now().toString().slice(-4);
+  return `REC${y}-${seq}`;
+};
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 const docStatusStyle = (status) => {
