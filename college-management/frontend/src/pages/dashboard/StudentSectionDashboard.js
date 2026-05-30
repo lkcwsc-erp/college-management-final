@@ -1420,14 +1420,15 @@ const UpdatePrnTab = () => {
 // CARRY FORWARD TAB — with result check
 // ─────────────────────────────────────────────────────────────────────────────
 const CarryForwardTab = () => {
-  const [admissions, setAdmissions] = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [search, setSearch]         = useState('');
-  const [yearFilter, setYearFilter] = useState('all');
-  const [promoting, setPromoting]   = useState('');
-  const [msg, setMsg]               = useState('');
-  const [results, setResults]       = useState({}); // { admissionId: { status, percentage, atktSubjects } }
+  const [admissions, setAdmissions]       = useState([]);
+  const [loading, setLoading]             = useState(false);
+  const [search, setSearch]               = useState('');
+  const [yearFilter, setYearFilter]       = useState('all');
+  const [promoting, setPromoting]         = useState('');
+  const [msg, setMsg]                     = useState('');
+  const [results, setResults]             = useState({});
   const [loadingResult, setLoadingResult] = useState('');
+  const [expandedResult, setExpandedResult] = useState(null); // admissionId to show full marksheet
 
   const fetchAdmissions = async () => {
     setLoading(true);
@@ -1441,46 +1442,55 @@ const CarryForwardTab = () => {
   useEffect(() => { fetchAdmissions(); }, []);
 
   const fetchResult = async (adm) => {
-    if (results[adm._id]) return; // already fetched
     setLoadingResult(adm._id);
     try {
-      const res = await API.get(`/admissions/results-by-email/${encodeURIComponent(adm.email)}`);
+      const res = await API.get(`/results/by-email/${encodeURIComponent(adm.email)}`);
       const allResults = res.data.results || [];
       if (allResults.length === 0) {
-        setResults(prev => ({ ...prev, [adm._id]: { status: 'no_result', percentage: null, atktSubjects: [] } }));
+        setResults(prev => ({ ...prev, [adm._id]: { status: 'no_result', allResults: [] } }));
         return;
       }
-      // Take the most recent result
+      // Sort by year desc, semester desc → latest first
+      allResults.sort((a, b) => b.year - a.year || b.semester - a.semester);
       const latest = allResults[0];
-      const atkt = (latest.subjects || []).filter(s => s.obtainedMarks < (s.maxMarks * 0.35));
-      let status = 'pass';
-      if (atkt.length === (latest.subjects || []).length && atkt.length > 0) status = 'fail';
-      else if (atkt.length > 0) status = 'atkt';
+      const subjects = latest.subjects || [];
+      const atktSubs = subjects.filter(s => Number(s.obtainedMarks) < Number(s.maxMarks) * 0.35);
+      const status = latest.result ||
+        (atktSubs.length === subjects.length && subjects.length > 0 ? 'fail' :
+         atktSubs.length > 0 ? 'atkt' :
+         (latest.percentage >= 75 ? 'distinction' : 'pass'));
       setResults(prev => ({
         ...prev,
         [adm._id]: {
           status,
-          percentage: latest.percentage || null,
+          percentage: latest.percentage,
           semester: latest.semester,
           year: latest.year,
-          atktSubjects: atkt.map(s => s.name),
-          totalSubjects: (latest.subjects || []).length,
+          subjects,
+          atktSubjects: atktSubs.map(s => s.name),
+          totalSubjects: subjects.length,
+          allResults,
         }
       }));
     } catch {
-      setResults(prev => ({ ...prev, [adm._id]: { status: 'error' } }));
+      setResults(prev => ({ ...prev, [adm._id]: { status: 'error', allResults: [] } }));
     }
     finally { setLoadingResult(''); }
   };
 
   const handlePromote = async (adm, newYear) => {
     const r = results[adm._id];
-    if (r && r.status === 'fail') {
-      if (!window.confirm(`⚠️ ${adm.applicantName} has FAILED all subjects. Are you sure you want to promote to ${newYear}?`)) return;
-    } else if (r && r.status === 'atkt') {
-      if (!window.confirm(`⚠️ ${adm.applicantName} has ATKT in ${r.atktSubjects.length} subject(s). Promote to ${newYear} with ATKT?`)) return;
+    if (!r || r.status === 'no_result') {
+      alert('⚠️ Please check the result first before promoting.'); return;
+    }
+    if (r.status === 'fail') {
+      if (!window.confirm(`⚠️ ${adm.applicantName} has FAILED all subjects (${r.percentage}%).
+Are you sure you want to promote?`)) return;
+    } else if (r.status === 'atkt') {
+      if (!window.confirm(`⚠️ ${adm.applicantName} has ATKT in: ${r.atktSubjects.join(', ')}.
+Promote to ${newYear} with ATKT?`)) return;
     } else {
-      if (!window.confirm(`Promote ${adm.applicantName} to ${newYear}?`)) return;
+      if (!window.confirm(`Promote ${adm.applicantName} (${r.percentage}%) to ${newYear}?`)) return;
     }
     setPromoting(adm._id);
     try {
@@ -1498,14 +1508,41 @@ const CarryForwardTab = () => {
     return null;
   };
 
-  const resultBadge = (r) => {
+  const statusColor = (s) => ({
+    pass:        { bg: '#e8f5e9', color: '#2E7D32', border: '#a5d6a7' },
+    distinction: { bg: '#e8f5e9', color: '#1b5e20', border: '#66bb6a' },
+    atkt:        { bg: '#fff3e0', color: '#E65100', border: '#ffb74d' },
+    fail:        { bg: '#ffebee', color: '#C62828', border: '#ef9a9a' },
+    no_result:   { bg: '#f5f5f5', color: '#888',    border: '#e0e0e0' },
+    error:       { bg: '#ffebee', color: '#C62828', border: '#ef9a9a' },
+  }[s] || { bg: '#f5f5f5', color: '#888', border: '#e0e0e0' });
+
+  const statusLabel = (r) => {
     if (!r) return null;
-    if (r.status === 'no_result') return <span style={{ fontSize: 11, background: '#f5f5f5', color: '#888', padding: '2px 8px', borderRadius: 10 }}>No Result</span>;
-    if (r.status === 'error')     return <span style={{ fontSize: 11, background: '#ffebee', color: '#C62828', padding: '2px 8px', borderRadius: 10 }}>Error</span>;
-    if (r.status === 'pass')      return <span style={{ fontSize: 11, background: '#e8f5e9', color: '#2E7D32', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>✅ Pass {r.percentage ? `${r.percentage}%` : ''}</span>;
-    if (r.status === 'fail')      return <span style={{ fontSize: 11, background: '#ffebee', color: '#C62828', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>❌ Fail — All ATKT</span>;
-    if (r.status === 'atkt')      return <span style={{ fontSize: 11, background: '#fff3e0', color: '#E65100', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>⚠️ ATKT ({r.atktSubjects.length}/{r.totalSubjects} sub)</span>;
-    return null;
+    const sc = statusColor(r.status);
+    const labels = {
+      no_result:   'No Result Uploaded',
+      error:       'Fetch Error',
+      pass:        `✅ PASS — ${r.percentage}%`,
+      distinction: `🏅 DISTINCTION — ${r.percentage}%`,
+      atkt:        `⚠️ ATKT — ${r.atktSubjects?.length} subject(s) failed`,
+      fail:        `❌ FAIL — All subjects failed`,
+    };
+    return (
+      <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+        {labels[r.status] || r.status}
+      </span>
+    );
+  };
+
+  const gradeColor = (obtained, max) => {
+    const pct = max > 0 ? (obtained / max) * 100 : 0;
+    if (pct < 35) return { bg: '#ffebee', color: '#C62828', label: 'F' };
+    if (pct < 45) return { bg: '#fff3e0', color: '#E65100', label: 'B' };
+    if (pct < 55) return { bg: '#fff8e1', color: '#F57F17', label: 'B+' };
+    if (pct < 65) return { bg: '#f3e5f5', color: '#7B1FA2', label: 'A' };
+    if (pct < 75) return { bg: '#e3f2fd', color: '#1565C0', label: 'A+' };
+    return { bg: '#e8f5e9', color: '#2E7D32', label: 'O' };
   };
 
   const filtered = admissions.filter(a => {
@@ -1515,22 +1552,34 @@ const CarryForwardTab = () => {
     return mf && ms;
   });
 
-  const firstYear  = admissions.filter(a => a.admissionYear === '1st Year').length;
-  const secondYear = admissions.filter(a => a.admissionYear === '2nd Year').length;
-  const thirdYear  = admissions.filter(a => a.admissionYear === '3rd Year').length;
+  const counts = {
+    first:  admissions.filter(a => a.admissionYear === '1st Year').length,
+    second: admissions.filter(a => a.admissionYear === '2nd Year').length,
+    third:  admissions.filter(a => a.admissionYear === '3rd Year').length,
+  };
 
   return (
     <div>
       <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 SY / TY Carry Forward</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Promote students to next year. Check last semester result before promoting.</p>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+        Check last semester marksheet first, then promote student to next year.
+      </p>
 
-      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+      {msg && (
+        <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14,
+          background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee',
+          color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>
+          {msg}
+        </div>
+      )}
 
+      {/* Stats */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[ { label: '1st Year', count: firstYear, color: '#1565C0', bg: '#e3f2fd' },
-           { label: '2nd Year', count: secondYear, color: '#7B1FA2', bg: '#f3e5f5' },
-           { label: '3rd Year', count: thirdYear, color: '#2E7D32', bg: '#e8f5e9' },
-           { label: 'Total', count: admissions.length, color: '#555', bg: '#f5f5f5' },
+        {[
+          { label: '1st Year', count: counts.first,  color: '#1565C0', bg: '#e3f2fd' },
+          { label: '2nd Year', count: counts.second, color: '#7B1FA2', bg: '#f3e5f5' },
+          { label: '3rd Year', count: counts.third,  color: '#2E7D32', bg: '#e8f5e9' },
+          { label: 'Total',    count: admissions.length, color: '#555', bg: '#f5f5f5' },
         ].map((p, i) => (
           <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600 }}>
             {p.label}: {p.count}
@@ -1538,19 +1587,22 @@ const CarryForwardTab = () => {
         ))}
       </div>
 
+      {/* Warning */}
       <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#7c5e00' }}>
-        ⚠️ <strong>Important:</strong> Click <strong>Check Result</strong> before promoting a student. Carry forward is permanent.
-        <br/>Pass = All subjects cleared. ATKT = Some subjects failed. Fail = All subjects failed.
+        📌 <strong>Step 1:</strong> Click <strong>📊 Check Marksheet</strong> to view last semester result.
+        &nbsp;&nbsp;<strong>Step 2:</strong> Review marks/status. &nbsp;&nbsp;<strong>Step 3:</strong> Click promote if eligible.
+        <br/>Result must be checked before promoting. Pass / ATKT / Fail determines eligibility.
       </div>
 
+      {/* Search + Filter */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input type="text" placeholder="🔍 Search by name or student ID..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
         <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
           style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
           <option value="all">All Years</option>
-          <option value="1st Year">1st Year (→ SY)</option>
-          <option value="2nd Year">2nd Year (→ TY)</option>
+          <option value="1st Year">1st Year (→ 2nd Year)</option>
+          <option value="2nd Year">2nd Year (→ 3rd Year)</option>
           <option value="3rd Year">3rd Year (Completed)</option>
         </select>
         <button onClick={fetchAdmissions}
@@ -1564,62 +1616,159 @@ const CarryForwardTab = () => {
       ) : filtered.length === 0 ? (
         <div className="empty-state"><div className="empty-icon">🎓</div><h3>No students found</h3></div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {filtered.map((adm) => {
             const ny = nextYear(adm.admissionYear);
-            const r = results[adm._id];
+            const r  = results[adm._id];
+            const sc = r ? statusColor(r.status) : { bg: '#fff', color: '#888', border: '#e0e7ef' };
+            const isExpanded = expandedResult === adm._id;
+
             return (
-              <div key={adm._id} style={{ background: '#fff', borderRadius: 12, border: `1px solid ${r?.status === 'fail' ? '#ffcdd2' : r?.status === 'atkt' ? '#ffe0b2' : '#e0e7ef'}`, padding: '16px 20px', borderLeft: `4px solid ${r?.status === 'fail' ? '#C62828' : r?.status === 'atkt' ? '#E65100' : r?.status === 'pass' ? '#2E7D32' : '#9e9e9e'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+              <div key={adm._id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${r ? sc.border : '#e0e7ef'}`, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${r ? sc.color : '#bbb'}` }}>
+
+                {/* Student header row */}
+                <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                   <div>
-                    <h4 style={{ color: '#1565C0', fontSize: 15, margin: '0 0 3px' }}>{adm.applicantName}</h4>
-                    <p style={{ fontSize: 12, color: '#888', margin: 0 }}>{adm.email} · {adm.courseType} · Student ID: {adm.studentId || '—'}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <h4 style={{ color: '#1565C0', fontSize: 15, margin: 0 }}>{adm.applicantName}</h4>
+                      <span style={{ fontSize: 11, background: '#e3f2fd', color: '#1565C0', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>{adm.admissionYear}</span>
+                      {statusLabel(r)}
+                    </div>
+                    <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>
+                      {adm.email} · {adm.courseType || '—'} · ID: {adm.studentId || '—'}
+                    </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1565C0', background: '#e3f2fd', padding: '3px 10px', borderRadius: 10 }}>{adm.admissionYear}</span>
-                    {resultBadge(r)}
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button
+                      onClick={() => { fetchResult(adm); setExpandedResult(adm._id); }}
+                      disabled={loadingResult === adm._id}
+                      style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: loadingResult === adm._id ? 'not-allowed' : 'pointer', opacity: loadingResult === adm._id ? 0.7 : 1 }}>
+                      {loadingResult === adm._id ? '⏳ Loading...' : '📊 Check Marksheet'}
+                    </button>
+                    {r && (
+                      <button
+                        onClick={() => setExpandedResult(isExpanded ? null : adm._id)}
+                        style={{ background: '#f0f4ff', color: '#1565C0', border: '1px solid #c7d7f9', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        {isExpanded ? '▲ Hide' : '▼ View Details'}
+                      </button>
+                    )}
+                    {ny && r && r.status !== 'no_result' && r.status !== 'error' && (
+                      <button
+                        onClick={() => handlePromote(adm, ny)}
+                        disabled={promoting === adm._id}
+                        style={{
+                          background: r.status === 'fail' ? '#ffebee' : r.status === 'atkt' ? '#fff3e0' : '#2E7D32',
+                          color: r.status === 'fail' ? '#C62828' : r.status === 'atkt' ? '#E65100' : '#fff',
+                          border: `2px solid ${r.status === 'fail' ? '#ef9a9a' : r.status === 'atkt' ? '#ffb74d' : '#2E7D32'}`,
+                          borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700,
+                          cursor: promoting === adm._id ? 'not-allowed' : 'pointer',
+                          opacity: promoting === adm._id ? 0.7 : 1,
+                        }}>
+                        {promoting === adm._id ? '⏳...' : `→ Promote to ${ny}`}
+                      </button>
+                    )}
+                    {!ny && <span style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ Course Completed</span>}
                   </div>
                 </div>
 
-                {/* Result details */}
-                {r && r.status === 'atkt' && r.atktSubjects.length > 0 && (
-                  <div style={{ background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12 }}>
-                    <strong style={{ color: '#E65100' }}>⚠️ ATKT Subjects:</strong>
-                    <span style={{ color: '#555', marginLeft: 6 }}>{r.atktSubjects.join(', ')}</span>
-                    {r.percentage && <span style={{ marginLeft: 10, color: '#888' }}>| Overall: {r.percentage}%</span>}
-                    {r.semester && <span style={{ marginLeft: 6, color: '#888' }}>| Sem {r.semester} ({r.year})</span>}
-                  </div>
-                )}
-                {r && r.status === 'fail' && (
-                  <div style={{ background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#C62828' }}>
-                    ❌ <strong>Failed all subjects</strong> in Sem {r.semester} ({r.year}). Promotion not recommended.
-                  </div>
-                )}
-                {r && r.status === 'pass' && (
-                  <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#2E7D32' }}>
-                    ✅ <strong>Passed</strong> Sem {r.semester} ({r.year}) with {r.percentage}%. Eligible for promotion.
+                {/* Expanded marksheet */}
+                {isExpanded && r && r.status !== 'no_result' && r.status !== 'error' && r.subjects?.length > 0 && (
+                  <div style={{ borderTop: `1px solid ${sc.border}`, background: r.status === 'fail' ? '#fff8f8' : r.status === 'atkt' ? '#fffaf5' : '#f8fff8' }}>
+                    {/* Result summary bar */}
+                    <div style={{ padding: '10px 20px', background: sc.bg, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${sc.border}` }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: sc.color }}>
+                        📋 Sem {r.semester} — {r.year} Result
+                      </span>
+                      <span style={{ fontSize: 13, color: '#555' }}>
+                        Total: <strong>{r.subjects.reduce((s, sub) => s + (sub.obtainedMarks || 0), 0)}</strong>
+                        /{r.subjects.reduce((s, sub) => s + (sub.maxMarks || 0), 0)}
+                      </span>
+                      <span style={{ fontSize: 13, color: '#555' }}>
+                        Percentage: <strong style={{ color: sc.color }}>{r.percentage}%</strong>
+                      </span>
+                      {r.status === 'atkt' && (
+                        <span style={{ fontSize: 13, color: '#E65100', fontWeight: 600 }}>
+                          ATKT: {r.atktSubjects.length} subject(s)
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Subject-wise table */}
+                    <div style={{ padding: '14px 20px' }}>
+                      <div style={{ background: '#1565C0', display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '8px 14px', borderRadius: '8px 8px 0 0', gap: 8 }}>
+                        {['Subject', 'Max Marks', 'Obtained', 'Grade', 'Status'].map(h => (
+                          <span key={h} style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{h}</span>
+                        ))}
+                      </div>
+                      {r.subjects.map((sub, i) => {
+                        const gc = gradeColor(sub.obtainedMarks, sub.maxMarks);
+                        const pct = sub.maxMarks > 0 ? Math.round((sub.obtainedMarks / sub.maxMarks) * 100) : 0;
+                        const isFail = sub.obtainedMarks < sub.maxMarks * 0.35;
+                        return (
+                          <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '9px 14px', gap: 8, alignItems: 'center', background: isFail ? '#fff5f5' : i % 2 === 0 ? '#fafbff' : '#fff', borderBottom: '1px solid #f0f4f8' }}>
+                            <span style={{ fontSize: 13, fontWeight: isFail ? 700 : 500, color: isFail ? '#C62828' : '#222' }}>
+                              {isFail ? '⚠️ ' : ''}{sub.name || `Subject ${i + 1}`}
+                            </span>
+                            <span style={{ fontSize: 13, color: '#555' }}>{sub.maxMarks}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: isFail ? '#C62828' : '#1565C0' }}>
+                              {sub.obtainedMarks} <span style={{ fontSize: 10, color: '#888' }}>({pct}%)</span>
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: gc.bg, color: gc.color, textAlign: 'center' }}>
+                              {sub.grade || gc.label}
+                            </span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: isFail ? '#C62828' : '#2E7D32' }}>
+                              {isFail ? '❌ ATKT' : '✅ Pass'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {/* Summary row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '10px 14px', gap: 8, alignItems: 'center', background: sc.bg, borderRadius: '0 0 8px 8px', borderTop: `2px solid ${sc.color}` }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: sc.color }}>TOTAL</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{r.subjects.reduce((s, sub) => s + (sub.maxMarks || 0), 0)}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: sc.color }}>{r.subjects.reduce((s, sub) => s + (sub.obtainedMarks || 0), 0)} <span style={{ fontSize: 10 }}>({r.percentage}%)</span></span>
+                        <span></span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: sc.color }}>{r.status.toUpperCase()}</span>
+                      </div>
+                    </div>
+
+                    {/* ATKT summary */}
+                    {r.status === 'atkt' && (
+                      <div style={{ margin: '0 20px 14px', background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
+                        <strong style={{ color: '#E65100' }}>⚠️ ATKT in {r.atktSubjects.length} Subject(s):</strong>
+                        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {r.atktSubjects.map((s, i) => (
+                            <span key={i} style={{ background: '#ffebee', color: '#C62828', padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600 }}>{s}</span>
+                          ))}
+                        </div>
+                        <p style={{ fontSize: 12, color: '#555', marginTop: 8, marginBottom: 0 }}>
+                          Student must clear these subjects. Can be promoted with ATKT pending.
+                        </p>
+                      </div>
+                    )}
+
+                    {r.status === 'fail' && (
+                      <div style={{ margin: '0 20px 14px', background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C62828' }}>
+                        ❌ <strong>All subjects failed.</strong> Promotion is not recommended. Staff must approve manually if promoting.
+                      </div>
+                    )}
+
+                    {(r.status === 'pass' || r.status === 'distinction') && (
+                      <div style={{ margin: '0 20px 14px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#2E7D32' }}>
+                        ✅ <strong>All subjects cleared.</strong> Student is eligible for promotion to {ny || 'next year'}.
+                      </div>
+                    )}
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-                  {!r && (
-                    <button onClick={() => fetchResult(adm)} disabled={loadingResult === adm._id}
-                      style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 7, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: loadingResult === adm._id ? 'not-allowed' : 'pointer', opacity: loadingResult === adm._id ? 0.7 : 1 }}>
-                      {loadingResult === adm._id ? '⏳ Checking...' : '📊 Check Result'}
-                    </button>
-                  )}
-                  {ny ? (
-                    <button onClick={() => handlePromote(adm, ny)} disabled={promoting === adm._id}
-                      style={{ background: r?.status === 'fail' ? '#ffebee' : r?.status === 'atkt' ? '#fff3e0' : '#1565C0',
-                        color: r?.status === 'fail' ? '#C62828' : r?.status === 'atkt' ? '#E65100' : '#fff',
-                        border: `1px solid ${r?.status === 'fail' ? '#ef9a9a' : r?.status === 'atkt' ? '#ffb74d' : '#1565C0'}`,
-                        borderRadius: 7, padding: '7px 16px', fontSize: 13, fontWeight: 700, cursor: promoting === adm._id ? 'not-allowed' : 'pointer', opacity: promoting === adm._id ? 0.7 : 1 }}>
-                      {promoting === adm._id ? '⏳...' : `→ Promote to ${ny}`}
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600, padding: '7px 0' }}>✅ Course Completed</span>
-                  )}
-                </div>
+                {/* No result message */}
+                {isExpanded && r && r.status === 'no_result' && (
+                  <div style={{ padding: '16px 20px', background: '#f9f9f9', borderTop: '1px solid #eee', fontSize: 13, color: '#888', textAlign: 'center' }}>
+                    📭 No marksheet found for this student. Ask the Examination Section to upload the result first.
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1629,10 +1778,7 @@ const CarryForwardTab = () => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DOCUMENT REPLACE TAB
-// Student Section staff can fix wrong/incorrect documents
-// ─────────────────────────────────────────────────────────────────────────────
+
 const DOCUMENT_FIELDS = [
   { key: 'aadharNumber',              label: '🪪 Aadhar Number',             type: 'text',   note: 'Must be 12 digits' },
   { key: 'aadharName',                label: '🪪 Name on Aadhar',            type: 'text',   note: '' },
