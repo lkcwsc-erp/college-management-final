@@ -535,16 +535,7 @@ router.get('/results-by-email/:email', protect, authorizeRoles('staff_student', 
     res.status(500).json({ success: false, message: error.message });
   }
 });
-  try {
-    const admissions = await Admission.find({ status: 'approved' })
-      .populate('course', 'name type')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, admissions });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
+  
 // ========== DELETE ==========
 router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
   try {
