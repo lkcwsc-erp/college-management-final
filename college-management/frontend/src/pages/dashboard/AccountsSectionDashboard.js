@@ -5,7 +5,9 @@ import API from '../../api/axios';
 import './Dashboard.css';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const COLLEGE_NAME = 'Late Kalpana Chawla Mahila College';
+// eslint-disable-next-line no-unused-vars
+const COLLEGE_NAME = 'Late Kalpana Chawla Women\'s Senior College (LKCWSC)';
+// eslint-disable-next-line no-unused-vars
 const COLLEGE_SUBTITLE = 'Senior Science & Arts College, Gangakhed';
 const COLLEGE_UPI = 'lkcwsc@upi';
 
