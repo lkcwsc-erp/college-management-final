@@ -7,7 +7,7 @@ const User = require('./models/User');
 
 const ADMIN = {
   name:     'Admin',
-  email:    'admin@lkcwsc.edu.in',
+  email:    'vyawharevaidehi@gmail.com',
   username: 'admin',
   password: 'Admin@1234',   // ← Change this to your desired password
   role:     'admin',
