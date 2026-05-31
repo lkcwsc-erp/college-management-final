@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
-import StudentViewFull from '../../components/StudentViewFull';
+import StudentViewFull from './StudentViewFull';
 
 const STATUS_CONFIG = {
   not_filled: { label: '📝 Not Filled',  bg: '#fff3e0', color: '#E65100' },
