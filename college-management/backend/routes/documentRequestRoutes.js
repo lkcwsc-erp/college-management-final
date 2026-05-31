@@ -1,98 +1,82 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const DocumentRequest = require('../models/DocumentRequest');
-const Admission = require('../models/Admission');
+const Admission       = require('../models/Admission');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
-// ============ STUDENT: Submit New Document Request ============
+const DOC_LABELS = {
+  ID_CARD:   '🪪 ID Card',
+  MARKSHEET: '📄 Marksheet',
+  MIGRATION: '📜 Migration Certificate',
+  TC:        '🎓 Transfer Certificate (TC)',
+  BONAFIDE:  '📋 Bonafide Certificate',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STUDENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Submit request
 router.post('/', protect, async (req, res) => {
   try {
     const { documentType, reason, urgency } = req.body;
-
-    // Validate document type
-    const validTypes = ['ID_CARD', 'MARKSHEET', 'MIGRATION', 'TC', 'BONAFIDE'];
-    if (!validTypes.includes(documentType)) {
+    if (!Object.keys(DOC_LABELS).includes(documentType))
       return res.status(400).json({ success: false, message: 'Invalid document type' });
-    }
 
-    // Auto-fetch student details from their admission
     const admission = await Admission.findOne({ email: req.user.email });
 
-    const labels = {
-      'ID_CARD': '🪪 ID Card',
-      'MARKSHEET': '📄 Marksheet',
-      'MIGRATION': '📜 Migration Certificate',
-      'TC': '🎓 Transfer Certificate (TC)',
-      'BONAFIDE': '📋 Bonafide Certificate'
-    };
+    // Marksheet goes directly to Exam Section (no accounts fee needed)
+    const initialStatus = documentType === 'MARKSHEET' ? 'pending_exam' : 'pending_accounts';
 
     const data = {
-      student: req.user._id,
-      studentName: req.user.name,
-      studentEmail: req.user.email,
-      studentPhone: req.user.phone || '',
+      student:           req.user._id,
+      studentName:       req.user.name,
+      studentEmail:      req.user.email,
+      studentPhone:      req.user.phone || '',
       documentType,
-      documentTypeLabel: labels[documentType] || documentType,
-      reason: reason || '',
-      urgency: urgency || 'normal',
-      status: 'pending_accounts'
+      documentTypeLabel: DOC_LABELS[documentType],
+      reason:            reason || '',
+      urgency:           urgency || 'normal',
+      status:            initialStatus,
     };
 
-    // Auto-fill from admission
     if (admission) {
-      data.branch = admission.courseType || '';
+      data.branch       = admission.courseType || '';
       data.admissionYear = admission.admissionYear || '';
-      data.rollNumber = admission.rollNumber || '';
-      // Calculate batch (e.g., 2026-2027)
-      if (admission.admissionYear) {
-        const currentYear = new Date().getFullYear();
-        data.batch = `${currentYear}-${currentYear + 1}`;
-      }
+      data.rollNumber   = admission.rollNumber || '';
+      const y = new Date().getFullYear();
+      data.batch = `${y}-${y + 1}`;
     }
 
     const request = await DocumentRequest.create(data);
+    const msg = documentType === 'MARKSHEET'
+      ? 'Marksheet request submitted! Waiting for Examination Section.'
+      : 'Request submitted! Waiting for Accounts Section to verify fees.';
 
-    res.status(201).json({
-      success: true,
-      message: 'Document request submitted! Waiting for Accounts Section review.',
-      request
-    });
+    res.status(201).json({ success: true, message: msg, request });
   } catch (error) {
-    console.error('❌ Document request error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ============ STUDENT: View My Requests ============
+// My requests
 router.get('/my', protect, async (req, res) => {
   try {
-    const requests = await DocumentRequest.find({ studentEmail: req.user.email })
-      .sort({ createdAt: -1 });
+    const requests = await DocumentRequest.find({ studentEmail: req.user.email }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, requests });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ============ ACCOUNTS SECTION: View Pending Requests ============
-router.get('/accounts/pending', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
-  try {
-    const requests = await DocumentRequest.find({ status: 'pending_accounts' })
-      .sort({ createdAt: -1 });
-    res.status(200).json({ success: true, requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// ACCOUNTS SECTION
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ============ ACCOUNTS SECTION: View All My Processed ============
 router.get('/accounts/all', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
-      $or: [
-        { status: 'pending_accounts' },
-        { accountsApprovedBy: { $ne: '' } }
-      ]
+      $or: [{ status: 'pending_accounts' }, { accountsApprovedBy: { $ne: '' } }]
     }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, requests });
   } catch (error) {
@@ -100,36 +84,27 @@ router.get('/accounts/all', protect, authorizeRoles('staff_accounts', 'admin'), 
   }
 });
 
-// ============ ACCOUNTS APPROVES ============
+// Accounts approves — TC→pending_exam, others→pending_generation
 router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
   try {
     const { notes } = req.body;
     const request = await DocumentRequest.findById(req.params.id);
-    if (!request) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
+    if (!request) return res.status(404).json({ success: false, message: 'Not found' });
+    if (request.status !== 'pending_accounts')
+      return res.status(400).json({ success: false, message: 'Not pending in Accounts' });
 
-    if (request.status !== 'pending_accounts') {
-      return res.status(400).json({ success: false, message: 'This request is no longer pending in Accounts.' });
-    }
-
-    // Decide next stage
-    // TC → goes to Principal
-    // Other docs → goes directly to Student Section for generation
     const isTC = request.documentType === 'TC';
-    const newStatus = isTC ? 'pending_principal' : 'pending_generation';
-
-    request.status = newStatus;
-    request.accountsApprovedBy = req.user.name || req.user.email;
+    request.status            = isTC ? 'pending_exam' : 'pending_generation';
+    request.accountsApprovedBy   = req.user.name || req.user.email;
     request.accountsApprovedDate = new Date();
-    request.accountsNotes = notes || '';
+    request.accountsNotes        = notes || '';
     await request.save();
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: isTC
-        ? '✅ TC approved! Forwarded to Principal for final approval.'
-        : '✅ Approved! Forwarded to Student Section for document generation.',
+        ? '✅ TC fees verified! Forwarded to Examination Section for result check.'
+        : '✅ Fees verified! Forwarded to Student Section.',
       request
     });
   } catch (error) {
@@ -137,51 +112,35 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
   }
 });
 
-// ============ ACCOUNTS REJECTS ============
 router.put('/accounts/reject/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
   try {
     const { reason } = req.body;
-    const request = await DocumentRequest.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: 'rejected_by_accounts',
-        rejectionReason: reason || 'Rejected by Accounts',
-        rejectedBy: req.user.name || req.user.email,
-        rejectedAt: 'accounts',
-        accountsApprovedBy: req.user.name || req.user.email,
-        accountsApprovedDate: new Date(),
-        accountsNotes: reason || ''
-      },
-      { new: true }
-    );
-
-    res.status(200).json({ success: true, message: 'Request rejected.', request });
+    const request = await DocumentRequest.findByIdAndUpdate(req.params.id, {
+      status:              'rejected_by_accounts',
+      rejectionReason:     reason || 'Rejected by Accounts',
+      rejectedBy:          req.user.name || req.user.email,
+      rejectedAt:          'accounts',
+      accountsApprovedBy:  req.user.name || req.user.email,
+      accountsApprovedDate: new Date(),
+      accountsNotes:       reason || '',
+    }, { new: true });
+    res.json({ success: true, message: 'Request rejected.', request });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ============ PRINCIPAL: View TC Requests Pending ============
-router.get('/principal/pending', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
-  try {
-    const requests = await DocumentRequest.find({
-      status: 'pending_principal',
-      documentType: 'TC'
-    }).sort({ createdAt: -1 });
-    res.status(200).json({ success: true, requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// EXAM SECTION
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ============ PRINCIPAL: View All My Processed ============
-router.get('/principal/all', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
+// All requests for Exam Section (TC pending_exam + Marksheet pending_exam)
+router.get('/exam/all', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
-      documentType: 'TC',
       $or: [
-        { status: 'pending_principal' },
-        { principalApprovedBy: { $ne: '' } }
+        { status: 'pending_exam' },
+        { examVerifiedBy: { $ne: '' } },
       ]
     }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, requests });
@@ -190,81 +149,126 @@ router.get('/principal/all', protect, authorizeRoles('staff_principal', 'admin')
   }
 });
 
-// ============ PRINCIPAL APPROVES TC ============
+// Exam Section approves
+// TC → pending_principal
+// Marksheet → pending_generation
+router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+  try {
+    const { notes, resultStatus } = req.body;
+    const request = await DocumentRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ success: false, message: 'Not found' });
+    if (request.status !== 'pending_exam')
+      return res.status(400).json({ success: false, message: 'Not pending in Exam Section' });
+
+    const isTC = request.documentType === 'TC';
+    request.status           = isTC ? 'pending_principal' : 'pending_generation';
+    request.examVerifiedBy   = req.user.name || req.user.email;
+    request.examVerifiedDate = new Date();
+    request.examNotes        = notes || '';
+    request.examResultStatus = resultStatus || '';
+    await request.save();
+
+    res.json({
+      success: true,
+      message: isTC
+        ? '✅ Result verified! TC forwarded to Principal for approval.'
+        : '✅ Marksheet approved! Forwarded to Student Section.',
+      request
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/exam/reject/:id', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const request = await DocumentRequest.findByIdAndUpdate(req.params.id, {
+      status:          'rejected_by_exam',
+      rejectionReason: reason || 'Rejected by Examination Section',
+      rejectedBy:      req.user.name || req.user.email,
+      rejectedAt:      'exam',
+      examVerifiedBy:  req.user.name || req.user.email,
+      examVerifiedDate: new Date(),
+      examNotes:       reason || '',
+    }, { new: true });
+    res.json({ success: true, message: 'Request rejected.', request });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRINCIPAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/principal/pending', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
+  try {
+    const requests = await DocumentRequest.find({ status: 'pending_principal' }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, requests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/principal/all', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
+  try {
+    const requests = await DocumentRequest.find({
+      $or: [{ status: 'pending_principal' }, { principalApprovedBy: { $ne: '' } }]
+    }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, requests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Principal approves → pending_generation
 router.put('/principal/approve/:id', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
   try {
     const { notes } = req.body;
     const request = await DocumentRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ success: false, message: 'Not found' });
+    if (request.status !== 'pending_principal')
+      return res.status(400).json({ success: false, message: 'Not pending in Principal' });
 
-    if (!request) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    if (request.documentType !== 'TC') {
-      return res.status(400).json({ success: false, message: 'Only TC requests need Principal approval' });
-    }
-    if (request.status !== 'pending_principal') {
-      return res.status(400).json({ success: false, message: 'This request is no longer pending in Principal.' });
-    }
-
-    request.status = 'pending_generation';
-    request.principalApprovedBy = req.user.name || req.user.email;
+    request.status              = 'pending_generation';
+    request.principalApprovedBy   = req.user.name || req.user.email;
     request.principalApprovedDate = new Date();
-    request.principalNotes = notes || '';
+    request.principalNotes        = notes || '';
     await request.save();
 
-    res.status(200).json({
-      success: true,
-      message: '✅ TC approved by Principal! Forwarded to Student Section.',
-      request
-    });
+    res.json({ success: true, message: '✅ Approved! Forwarded to Student Section.', request });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ============ PRINCIPAL REJECTS TC ============
 router.put('/principal/reject/:id', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
   try {
     const { reason } = req.body;
-    const request = await DocumentRequest.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: 'rejected_by_principal',
-        rejectionReason: reason || 'Rejected by Principal',
-        rejectedBy: req.user.name || req.user.email,
-        rejectedAt: 'principal',
-        principalApprovedBy: req.user.name || req.user.email,
-        principalApprovedDate: new Date(),
-        principalNotes: reason || ''
-      },
-      { new: true }
-    );
-
-    res.status(200).json({ success: true, message: 'Request rejected.', request });
+    const request = await DocumentRequest.findByIdAndUpdate(req.params.id, {
+      status:               'rejected_by_principal',
+      rejectionReason:      reason || 'Rejected by Principal',
+      rejectedBy:           req.user.name || req.user.email,
+      rejectedAt:           'principal',
+      principalApprovedBy:  req.user.name || req.user.email,
+      principalApprovedDate: new Date(),
+      principalNotes:       reason || '',
+    }, { new: true });
+    res.json({ success: true, message: 'Request rejected.', request });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ============ STUDENT SECTION: View Ready-to-Generate Requests ============
-router.get('/student-section/pending', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
-  try {
-    const requests = await DocumentRequest.find({ status: 'pending_generation' })
-      .sort({ createdAt: -1 });
-    res.status(200).json({ success: true, requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// STUDENT SECTION
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ============ STUDENT SECTION: View All Processed ============
 router.get('/student-section/all', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
-      $or: [
-        { status: 'pending_generation' },
-        { status: 'completed' }
-      ]
+      $or: [{ status: 'pending_generation' }, { status: 'completed' }]
     }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, requests });
   } catch (error) {
@@ -272,33 +276,24 @@ router.get('/student-section/all', protect, authorizeRoles('staff_student', 'adm
   }
 });
 
-// ============ STUDENT SECTION: Mark As Generated/Completed ============
 router.put('/student-section/complete/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
   try {
-    const { notes, documentFile } = req.body;
-    const request = await DocumentRequest.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: 'completed',
-        generatedBy: req.user.name || req.user.email,
-        generatedDate: new Date(),
-        generationNotes: notes || '',
-        generatedDocumentFile: documentFile || ''
-      },
-      { new: true }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: '✅ Document generated! Student notified.',
-      request
-    });
+    const { notes } = req.body;
+    const request = await DocumentRequest.findByIdAndUpdate(req.params.id, {
+      status:        'completed',
+      generatedBy:   req.user.name || req.user.email,
+      generatedDate: new Date(),
+      generationNotes: notes || '',
+    }, { new: true });
+    res.json({ success: true, message: '✅ Document issued to student!', request });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ============ ADMIN: View All ============
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────────────────────────────────────────
 router.get('/', protect, authorizeRoles('admin'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find().sort({ createdAt: -1 });
@@ -308,11 +303,10 @@ router.get('/', protect, authorizeRoles('admin'), async (req, res) => {
   }
 });
 
-// ============ DELETE ============
 router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
   try {
     await DocumentRequest.findByIdAndDelete(req.params.id);
-    res.status(200).json({ success: true, message: 'Request deleted' });
+    res.json({ success: true, message: 'Deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
