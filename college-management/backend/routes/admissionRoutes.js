@@ -455,7 +455,47 @@ router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'adm
   }
 });
 
-// ========== UPDATE SCHOLARSHIP AMOUNT ==========
+// ========== SCHOLARSHIP SECTION — all approved students =====================
+router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarship', 'admin'), async (req, res) => {
+  try {
+    const admissions = await Admission.find({ status: 'approved' })
+      .populate('course', 'name type')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, admissions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== UPDATE MAHADBT CREDENTIALS ==================================
+router.put('/update-mahadbt/:id', protect, authorizeRoles('staff_scholarship', 'admin'), async (req, res) => {
+  try {
+    const { mahaDBTUsername, mahaDBTPassword, mahaDBTAppNo, scholarshipStatus, scholarshipNote } = req.body;
+    const update = {};
+    if (mahaDBTUsername !== undefined) update.mahaDBTUsername = mahaDBTUsername;
+    if (mahaDBTPassword !== undefined) update.mahaDBTPassword = mahaDBTPassword;
+    if (mahaDBTAppNo    !== undefined) update.mahaDBTAppNo    = mahaDBTAppNo;
+    if (scholarshipStatus)             update.scholarshipStatus = scholarshipStatus;
+    if (scholarshipNote !== undefined) update.scholarshipNote  = scholarshipNote;
+    const admission = await Admission.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!admission) return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, message: 'MahaDBT data updated', admission });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== READ-ONLY STUDENT VIEW (all staff except student_section & principal already have) =
+router.get('/staff-view/all', protect, authorizeRoles('staff_exam', 'staff_scholarship', 'staff_accounts', 'staff_student', 'staff_principal', 'admin'), async (req, res) => {
+  try {
+    const admissions = await Admission.find({ status: 'approved' })
+      .populate('course', 'name type')
+      .sort({ applicantName: 1 });
+    res.json({ success: true, admissions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 router.put('/update-scholarship/:id', protect, authorizeRoles('staff_accounts', 'staff_scholarship', 'admin'), async (req, res) => {
   try {
     const { scholarshipAmount, scholarshipStatus, scholarshipNote } = req.body;
