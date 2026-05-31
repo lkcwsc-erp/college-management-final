@@ -598,7 +598,22 @@ const StudentSectionDashboard = () => {
                   <div style={{ background: '#fff3cd', padding: '12px', borderRadius: '8px', marginTop: '14px', fontSize: '13px', color: '#856404' }}>
                     ⚠️ Note this password! Student will use it to login at the student portal.
                   </div>
-                  <button onClick={() => setGeneratedCreds(null)} style={{ marginTop: '14px', background: '#2E7D32', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>✓ Got It, Close</button>
+                  <div style={{ display: 'flex', gap: 10, marginTop: '14px', flexWrap: 'wrap' }}>
+                    <button onClick={async () => {
+                      try {
+                        await API.post('/auth/send-credentials', {
+                          studentEmail: generatedCreds.email,
+                          studentName: generatedCreds.name,
+                          username: generatedCreds.username || generatedCreds.email,
+                          password: generatedCreds.password,
+                        });
+                        alert('✅ Credentials sent to ' + generatedCreds.email);
+                      } catch (e) { alert('❌ Failed: ' + (e.response?.data?.message || 'Error')); }
+                    }} style={{ background: '#1565C0', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                      📧 Send Credentials via Email
+                    </button>
+                    <button onClick={() => setGeneratedCreds(null)} style={{ background: '#2E7D32', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>✓ Got It, Close</button>
+                  </div>
                 </div>
               )}
               <div className="form-card">
