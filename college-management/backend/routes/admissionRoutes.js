@@ -528,7 +528,7 @@ router.get('/accounts-section/all', protect, authorizeRoles('staff_accounts', 'a
 });
 
 // ========== UPDATE PRN / ABC ID ==========
-router.put('/update-prn/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.put('/update-prn/:id', protect, authorizeRoles('staff_student', 'staff_principal', 'admin'), async (req, res) => {
   try {
     const { prnNumber, aparIdNumber } = req.body;
     const admission = await Admission.findByIdAndUpdate(
@@ -563,7 +563,7 @@ router.put('/carry-forward/:id', protect, authorizeRoles('staff_student', 'admin
 });
 
 // ========== UPDATE STUDENT DOCUMENTS (Student Section) ==========
-router.put('/update-documents/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.put('/update-documents/:id', protect, authorizeRoles('staff_student', 'staff_principal', 'admin'), async (req, res) => {
   try {
     const allowed = [
       'aadharNumber','aadharName','aadharPhoto','aparIdNumber','aparIdDocument',
