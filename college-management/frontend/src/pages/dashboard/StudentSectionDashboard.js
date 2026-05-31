@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
-import StudentViewFull from '../../components/StudentViewFull';
+import StudentViewFull from './StudentViewFull';
 
 // ─── Admission Detail Modal ───────────────────────────────────────────────────
 const AdmissionModal = ({ adm, onClose, onRefresh }) => {
