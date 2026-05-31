@@ -328,11 +328,8 @@ const StudentSectionDashboard = () => {
     { id: 'enquiries',    label: '📝 Admission Enquiries' },
     { id: 'admissions',   label: '🎓 Pending Admissions' },
     { id: 'credentials',  label: '👥 Generate Credentials' },
-    { id: 'documents',    label: '📋 Document Verification' },
+    { id: 'generate_docs', label: '📄 Documents & Certificates' },
     { id: 'carryforward', label: '🎓 SY/TY Carry Forward' },
-    { id: 'tc',           label: '📄 Generate TC' },
-    { id: 'bonafide',     label: '📜 Generate Bonafide' },
-    { id: 'idcard',       label: '🪪 Generate ID Card' },
     { id: 'prn',          label: '🔢 Update PRN/ABC ID' },
     { id: 'doc_replace',  label: '📝 Correct Documents' },
     { id: 'students',     label: '👩‍🎓 All Students' },
@@ -719,17 +716,8 @@ const StudentSectionDashboard = () => {
             </div>
           )}
 
-          {/* ══════════════ DOCUMENT VERIFICATION (TC / Bonafide / ID Card / Marksheet) ══════════════ */}
-          {activeTab === 'documents' && <DocumentVerificationTab user={user} />}
-
-          {/* ══════════════ GENERATE TC ══════════════ */}
-          {activeTab === 'tc' && <GenerateDocTab user={user} docType="TC" label="Transfer Certificate (TC)" icon="📄" />}
-
-          {/* ══════════════ GENERATE BONAFIDE ══════════════ */}
-          {activeTab === 'bonafide' && <GenerateDocTab user={user} docType="BONAFIDE" label="Bonafide Certificate" icon="📜" />}
-
-          {/* ══════════════ GENERATE ID CARD ══════════════ */}
-          {activeTab === 'idcard' && <GenerateDocTab user={user} docType="ID_CARD" label="ID Card" icon="🪪" />}
+          {/* ══════════════ DOCUMENTS & CERTIFICATES ══════════════ */}
+          {activeTab === 'generate_docs' && <AllDocumentsTab user={user} />}
 
           {/* ══════════════ UPDATE PRN / ABC ID ══════════════ */}
           {activeTab === 'prn' && <UpdatePrnTab />}
@@ -750,192 +738,29 @@ const StudentSectionDashboard = () => {
 // DOCUMENT VERIFICATION TAB
 // Shows all doc requests that are pending_generation → student section marks complete
 // ─────────────────────────────────────────────────────────────────────────────
-const DocumentVerificationTab = ({ user }) => {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [filter, setFilter] = useState('pending_generation');
-  const [search, setSearch] = useState('');
-
-  const fetchRequests = async () => {
-    setLoading(true);
-    try {
-      const res = await API.get('/document-requests/student-section/all');
-      setRequests(res.data.requests || []);
-    } catch { }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchRequests(); }, []);
-
-  const handleComplete = async () => {
-    setSaving(true);
-    try {
-      await API.put(`/document-requests/student-section/complete/${selected._id}`, { notes });
-      setMsg('✅ Marked as completed!');
-      setTimeout(() => { setSelected(null); setNotes(''); setMsg(''); fetchRequests(); }, 1500);
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-    finally { setSaving(false); }
-  };
-
-  const statusStyle = (s) => ({
-    pending_generation: { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Generation' },
-    completed:          { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Completed' },
-  }[s] || { bg: '#f5f5f5', color: '#666', label: s });
-
-  const filtered = requests.filter(r => {
-    const mf = filter === 'all' || r.status === filter;
-    const q = search.toLowerCase();
-    const ms = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
-    return mf && ms;
-  });
-
-  const pending = requests.filter(r => r.status === 'pending_generation').length;
-
-  return (
-    <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📋 Document Verification & Generation</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-        These requests are fee-verified and approved. Generate & issue the documents.
-      </p>
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input type="text" placeholder="🔍 Search by student name or email..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
-        <select value={filter} onChange={e => setFilter(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-          <option value="all">All Requests</option>
-          <option value="pending_generation">⏳ Pending Generation</option>
-          <option value="completed">✅ Completed</option>
-        </select>
-        <button onClick={fetchRequests}
-          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[
-          { label: 'Total', count: requests.length, color: '#1565C0', bg: '#e3f2fd' },
-          { label: 'Pending', count: pending, color: '#E65100', bg: '#fff3e0' },
-          { label: 'Completed', count: requests.filter(r => r.status === 'completed').length, color: '#2E7D32', bg: '#e8f5e9' },
-        ].map((p, i) => (
-          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>
-            {p.label}: {p.count}
-          </div>
-        ))}
-      </div>
-
-      {/* Completion modal */}
-      {selected && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 500, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ color: '#1565C0', marginBottom: 4 }}>✅ Mark Document as Generated</h3>
-            <p style={{ color: '#666', fontSize: 13, marginBottom: 18 }}>Confirm you have issued this document to the student.</p>
-            <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Student</span><span>{selected.studentName}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Document</span><span>{selected.documentTypeLabel}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Branch</span><span>{selected.branch || 'N/A'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}><span style={{ color: '#888', fontWeight: 600 }}>Year</span><span>{selected.admissionYear || 'N/A'}</span></div>
-            </div>
-            <div className="form-group" style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>Notes (optional)</label>
-              <textarea rows="2" placeholder="e.g. Issued physically at counter..." value={notes} onChange={e => setNotes(e.target.value)}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
-            </div>
-            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={handleComplete} disabled={saving}
-                style={{ flex: 1, background: '#2E7D32', color: '#fff', padding: '11px', borderRadius: 9, border: 'none', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? '⏳ Saving...' : '✅ Mark as Completed'}
-              </button>
-              <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }}
-                style={{ padding: '11px 20px', background: '#eee', color: '#333', borderRadius: 9, border: 'none', fontSize: 14, cursor: 'pointer' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">📭</div><h3>No requests found</h3><p>Document requests approved by Accounts will appear here.</p></div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filtered.map(req => {
-            const ss = statusStyle(req.status);
-            const isPending = req.status === 'pending_generation';
-            return (
-              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e0e0'}`, borderRadius: 12, padding: 18, borderLeft: `4px solid ${ss.color}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <h4 style={{ color: '#1565C0', fontSize: 16, margin: 0 }}>{req.documentTypeLabel || req.documentType}</h4>
-                      {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 12, padding: '2px 10px', borderRadius: 12, fontWeight: 600 }}>⚡ Urgent</span>}
-                    </div>
-                    <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Requested: {new Date(req.createdAt).toLocaleString('en-IN')}</p>
-                  </div>
-                  <span style={{ padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: ss.bg, color: ss.color }}>{ss.label}</span>
-                </div>
-                <div style={{ background: '#f8faff', padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <span><strong>Name:</strong> {req.studentName}</span>
-                  <span><strong>Email:</strong> {req.studentEmail}</span>
-                  <span><strong>Branch:</strong> {req.branch || 'N/A'}</span>
-                  <span><strong>Year:</strong> {req.admissionYear || 'N/A'}</span>
-                  {req.rollNumber && <span><strong>Roll No:</strong> {req.rollNumber}</span>}
-                  {req.studentPhone && <span><strong>Phone:</strong> {req.studentPhone}</span>}
-                </div>
-                {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
-                {req.accountsNotes && <p style={{ fontSize: 12, color: '#777', marginBottom: 10, fontStyle: 'italic' }}>Accounts Note: {req.accountsNotes}</p>}
-                {req.principalNotes && <p style={{ fontSize: 12, color: '#777', marginBottom: 10, fontStyle: 'italic' }}>Principal Note: {req.principalNotes}</p>}
-                {isPending && (
-                  <button onClick={() => { setSelected(req); setNotes(''); setMsg(''); }}
-                    style={{ background: '#2E7D32', color: '#fff', padding: '9px 22px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                    ✅ Mark as Generated / Issued
-                  </button>
-                )}
-                {req.status === 'completed' && (
-                  <p style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
-// GENERATE DOC TAB  (TC / Bonafide / ID Card)
-// Prints the actual document using browser print
+// ALL DOCUMENTS TAB — combined TC / Bonafide / ID Card / Marksheet / All types
 // ─────────────────────────────────────────────────────────────────────────────
-const COLLEGE_NAME    = 'Late Kalpana Chawla Women\'s Senior College (LKCWSC)';
-const COLLEGE_TRUST   = 'Vidya-Niketan Sevabhavi Sanstha\'s';
-const COLLEGE_SUBTITLE = 'Affiliated to SNDT Women\'s University, Mumbai';
-const COLLEGE_ADDRESS  = 'Gangakhed, Dist. Parbhani, Maharashtra - 431514';
-const COLLEGE_CONTACT  = '+91 9307162914  |  lkcwsc.vnssorg.com';
+const COLLEGE_NAME_DOC  = 'Late Kalpana Chawla Women\'s Senior College (LKCWSC)';
+const COLLEGE_TRUST_DOC = 'Vidya-Niketan Sevabhavi Sanstha\'s';
+const COLLEGE_SUBTITLE_DOC = 'Affiliated to SNDT Women\'s University, Mumbai';
+const COLLEGE_ADDRESS_DOC  = 'Gangakhed, Dist. Parbhani, Maharashtra - 431514';
+const COLLEGE_CONTACT_DOC  = '+91 9307162914  |  lkcwsc.vnssorg.com';
 
-// ─── Shared letterhead HTML ──────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 const letterheadHTML = () => `
   <div style="text-align:center;border-bottom:3px double #1a237e;padding-bottom:14px;margin-bottom:16px">
-    <div style="font-size:11px;color:#555;letter-spacing:0.5px">${COLLEGE_TRUST}</div>
-    <div style="font-size:20px;font-weight:bold;color:#1a237e;margin:3px 0">${COLLEGE_NAME}</div>
-    <div style="font-size:11px;color:#333;margin-bottom:2px">${COLLEGE_SUBTITLE}</div>
-    <div style="font-size:10px;color:#555">${COLLEGE_ADDRESS}</div>
-    <div style="font-size:10px;color:#555">${COLLEGE_CONTACT}</div>
+    <div style="font-size:11px;color:#555;letter-spacing:0.5px">${COLLEGE_TRUST_DOC}</div>
+    <div style="font-size:20px;font-weight:bold;color:#1a237e;margin:3px 0">${COLLEGE_NAME_DOC}</div>
+    <div style="font-size:11px;color:#333;margin-bottom:2px">${COLLEGE_SUBTITLE_DOC}</div>
+    <div style="font-size:10px;color:#555">${COLLEGE_ADDRESS_DOC}</div>
+    <div style="font-size:10px;color:#555">${COLLEGE_CONTACT_DOC}</div>
   </div>`;
 
-// ─── Print TC ────────────────────────────────────────────────────────────────
 const printTC = (adm) => {
   const tcNo = 'TC' + new Date().getFullYear() + '-' + Date.now().toString().slice(-5);
   const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate — ${tcNo}</title>
+  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center}
@@ -944,172 +769,128 @@ const printTC = (adm) => {
     .meta{display:flex;justify-content:space-between;font-size:12px;color:#333;margin-bottom:16px}
     table{width:100%;border-collapse:collapse;margin-bottom:20px}
     tr:nth-child(even){background:#f3f4f6}
-    td{padding:9px 12px;border:1px solid #9fa8da;font-size:13px;vertical-align:top}
+    td{padding:9px 12px;border:1px solid #9fa8da;font-size:13px}
     td:first-child{width:38%;font-weight:bold;color:#283593;background:#e8eaf6}
-    td:last-child{color:#111}
-    .notice{background:#fff9c4;border:1px solid #f9a825;border-radius:4px;padding:10px 14px;font-size:11.5px;color:#5d4037;margin-bottom:20px}
     .sign-row{display:flex;justify-content:space-between;margin-top:44px}
     .sign-box{text-align:center;width:160px}
     .sign-line{border-top:1px solid #333;padding-top:6px;margin-top:36px;font-size:12px;font-weight:bold}
-    .sign-sub{font-size:10px;color:#666}
     .footer{text-align:center;font-size:10px;color:#777;margin-top:20px;border-top:1px dashed #9fa8da;padding-top:10px}
-    @media print{body{background:white;padding:0}.page{box-shadow:none;border:2px solid #1a237e}}
-  </style></head>
-  <body><div class="page">
-    ${letterheadHTML()}
-    <div class="doc-title">TRANSFER CERTIFICATE</div>
-    <div class="meta">
-      <span><strong>TC No.:</strong> ${tcNo}</span>
-      <span><strong>Date:</strong> ${dateStr}</span>
+    @media print{body{background:white;padding:0}.page{box-shadow:none}}
+  </style></head><body><div class="page">
+    <div style="text-align:center;border-bottom:3px double #1a237e;padding-bottom:14px;margin-bottom:16px">
+      <div style="font-size:11px;color:#555">${COLLEGE_TRUST_DOC}</div>
+      <div style="font-size:20px;font-weight:bold;color:#1a237e;margin:3px 0">${COLLEGE_NAME_DOC}</div>
+      <div style="font-size:11px;color:#333">${COLLEGE_SUBTITLE_DOC}</div>
+      <div style="font-size:10px;color:#555">${COLLEGE_ADDRESS_DOC} | ${COLLEGE_CONTACT_DOC}</div>
     </div>
+    <div class="doc-title">TRANSFER CERTIFICATE</div>
+    <div class="meta"><span><strong>TC No.:</strong> ${tcNo}</span><span><strong>Date:</strong> ${dateStr}</span></div>
     <table>
-      <tr><td>Full Name of Student</td><td><strong>${adm.applicantName || '—'}</strong></td></tr>
-      <tr><td>Mother's Name</td><td>${adm.motherName || '—'}</td></tr>
-      <tr><td>Father's / Guardian's Name</td><td>${adm.fatherName || '—'}</td></tr>
-      <tr><td>Date of Birth</td><td>${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—'}</td></tr>
-      <tr><td>Gender</td><td>${adm.gender || '—'}</td></tr>
-      <tr><td>Category / Caste / Sub-Caste</td><td>${adm.category ? adm.category.toUpperCase() : '—'} / ${adm.caste || '—'}</td></tr>
-      <tr><td>Nationality / Religion</td><td>Indian / ${adm.religion || '—'}</td></tr>
-      <tr><td>Student ID (ERP)</td><td>${adm.studentId || '—'}</td></tr>
-      <tr><td>PRN Number</td><td>${adm.prnNumber || '—'}</td></tr>
-      <tr><td>ABC / APAR ID</td><td>${adm.aparIdNumber || '—'}</td></tr>
-      <tr><td>Course</td><td>${adm.courseType || '—'}</td></tr>
-      <tr><td>Subject / Stream</td><td>${adm.preferredSubject || '—'}</td></tr>
-      <tr><td>Year of Admission</td><td>${adm.admissionYear || '—'}</td></tr>
-      <tr><td>Last Exam Appeared</td><td>—</td></tr>
-      <tr><td>Result of Last Exam</td><td>—</td></tr>
-      <tr><td>Fees Paid Up To</td><td>—</td></tr>
-      <tr><td>Reason for Leaving</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+      <tr><td>Full Name</td><td><strong>${adm.applicantName||'—'}</strong></td></tr>
+      <tr><td>Mother's Name</td><td>${adm.motherName||'—'}</td></tr>
+      <tr><td>Father's / Guardian's Name</td><td>${adm.fatherName||'—'}</td></tr>
+      <tr><td>Date of Birth</td><td>${adm.dateOfBirth?new Date(adm.dateOfBirth).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}):'—'}</td></tr>
+      <tr><td>Gender</td><td>${adm.gender||'—'}</td></tr>
+      <tr><td>Category / Caste</td><td>${adm.category?adm.category.toUpperCase():'—'} / ${adm.caste||'—'}</td></tr>
+      <tr><td>Nationality / Religion</td><td>Indian / ${adm.religion||'—'}</td></tr>
+      <tr><td>Student ID (ERP)</td><td>${adm.studentId||'—'}</td></tr>
+      <tr><td>PRN Number</td><td>${adm.prnNumber||'—'}</td></tr>
+      <tr><td>ABC / APAR ID</td><td>${adm.aparIdNumber||'—'}</td></tr>
+      <tr><td>Course</td><td>${adm.courseType||'—'}</td></tr>
+      <tr><td>Subject / Stream</td><td>${adm.preferredSubject||'—'}</td></tr>
+      <tr><td>Year of Admission</td><td>${adm.admissionYear||'—'}</td></tr>
+      <tr><td>Reason for Leaving</td><td>&nbsp;</td></tr>
       <tr><td>Conduct &amp; Character</td><td>Good</td></tr>
-      <tr><td>Remarks</td><td>&nbsp;</td></tr>
       <tr><td>Date of Issue</td><td>${dateStr}</td></tr>
     </table>
-    <div class="notice">⚠️ This Transfer Certificate should be submitted to the institution to which the student seeks admission. Once issued, it cannot be duplicated without formal application.</div>
     <div class="sign-row">
-      <div class="sign-box">
-        <div class="sign-line">Class Teacher</div>
-        <div class="sign-sub">LKCWSC</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line">Student Section</div>
-        <div class="sign-sub">LKCWSC</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line">Principal</div>
-        <div class="sign-sub">LKCWSC, Gangakhed</div>
-      </div>
+      <div class="sign-box"><div class="sign-line">Class Teacher</div></div>
+      <div class="sign-box"><div class="sign-line">Student Section</div></div>
+      <div class="sign-box"><div class="sign-line">Principal</div></div>
     </div>
-    <div class="footer">
-      Generated through LKCWSC ERP System &nbsp;|&nbsp; Valid only with official stamp and signature &nbsp;|&nbsp; TC No.: ${tcNo}
-    </div>
-  </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
-  </body></html>`;
-  const w = window.open('', '_blank', 'width=800,height=960'); w.document.write(html); w.document.close();
+    <div class="footer">Generated through LKCWSC ERP System | TC No.: ${tcNo}</div>
+  </div><scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=800,height=960'); w.document.write(html); w.document.close();
 };
 
-// ─── Print Bonafide ──────────────────────────────────────────────────────────
 const printBonafide = (adm) => {
   const certNo = 'BON' + new Date().getFullYear() + '-' + Date.now().toString().slice(-5);
-  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-  const acadYear = (() => { const y = new Date().getFullYear(); const m = new Date().getMonth()+1; return m>=6?`${y}-${y+1}`:`${y-1}-${y}`; })();
-  const dOrS = adm.gender === 'Male' ? 'S/o' : 'D/o';
-  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate — ${certNo}</title>
+  const dateStr = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  const acadYear = (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${y+1}`:`${y-1}-${y}`; })();
+  const dOrS = adm.gender==='Male'?'S/o':'D/o';
+  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center}
     .page{background:white;max-width:660px;width:100%;border:2px solid #1a237e;padding:36px;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
     .doc-title{text-align:center;font-size:17px;font-weight:bold;letter-spacing:3px;text-decoration:underline;color:#1a237e;margin:0 0 16px}
     .meta{display:flex;justify-content:space-between;font-size:12px;color:#333;margin-bottom:20px}
-    .cert-body{font-size:14px;line-height:2.1;text-align:justify;color:#111}
-    .cert-body p{margin-bottom:14px}
+    .body{font-size:14px;line-height:2.1;text-align:justify}
     .hl{font-weight:bold;border-bottom:1px solid #333}
-    .purpose-box{border:1px solid #9fa8da;border-radius:4px;padding:12px 16px;margin:20px 0;font-size:13px;color:#555;background:#f8f9ff}
     .sign-row{display:flex;justify-content:space-between;margin-top:50px}
     .sign-box{text-align:center;width:180px}
     .sign-line{border-top:1px solid #333;padding-top:6px;margin-top:40px;font-size:12px;font-weight:bold}
-    .sign-sub{font-size:10px;color:#666}
     .footer{text-align:center;font-size:10px;color:#777;margin-top:20px;border-top:1px dashed #9fa8da;padding-top:10px}
     @media print{body{background:white;padding:0}.page{box-shadow:none}}
-  </style></head>
-  <body><div class="page">
-    ${letterheadHTML()}
+  </style></head><body><div class="page">
+    <div style="text-align:center;border-bottom:3px double #1a237e;padding-bottom:14px;margin-bottom:16px">
+      <div style="font-size:11px;color:#555">${COLLEGE_TRUST_DOC}</div>
+      <div style="font-size:20px;font-weight:bold;color:#1a237e;margin:3px 0">${COLLEGE_NAME_DOC}</div>
+      <div style="font-size:11px;color:#333">${COLLEGE_SUBTITLE_DOC}</div>
+      <div style="font-size:10px;color:#555">${COLLEGE_ADDRESS_DOC} | ${COLLEGE_CONTACT_DOC}</div>
+    </div>
     <div class="doc-title">BONAFIDE CERTIFICATE</div>
-    <div class="meta">
-      <span><strong>Cert. No.:</strong> ${certNo}</span>
-      <span><strong>Date:</strong> ${dateStr}</span>
-    </div>
-    <div class="cert-body">
-      <p>This is to certify that <span class="hl">${adm.applicantName || '____________________'}</span>,
-      <em>${dOrS}</em> <span class="hl">${adm.fatherName || '____________________'}</span>,
-      resident of <span class="hl">${adm.address || '____________________'}</span>,
-      is a <em>bona fide</em> student of this college for the academic year
-      <span class="hl">${acadYear}</span>.</p>
-
-      <p>She is currently enrolled in <span class="hl">${adm.courseType || '________'}</span>
-      (Subject: <span class="hl">${adm.preferredSubject || '________'}</span>),
-      <span class="hl">${adm.admissionYear || '________'}</span>.</p>
-
-      <p>Her Student ID (ERP) is <span class="hl">${adm.studentId || '________'}</span>,
-      PRN Number is <span class="hl">${adm.prnNumber || '________'}</span>
-      and ABC / APAR ID is <span class="hl">${adm.aparIdNumber || '________'}</span>.</p>
-
+    <div class="meta"><span><strong>Cert. No.:</strong> ${certNo}</span><span><strong>Date:</strong> ${dateStr}</span></div>
+    <div class="body">
+      <p>This is to certify that <span class="hl">${adm.applicantName||'____________________'}</span>,
+      <em>${dOrS}</em> <span class="hl">${adm.fatherName||'____________________'}</span>,
+      is a <em>bona fide</em> student of this college for the academic year <span class="hl">${acadYear}</span>.</p>
+      <p>She is currently enrolled in <span class="hl">${adm.courseType||'________'}</span>
+      (Subject: <span class="hl">${adm.preferredSubject||'________'}</span>), <span class="hl">${adm.admissionYear||'________'}</span>.</p>
+      <p>Student ID: <span class="hl">${adm.studentId||'________'}</span> &nbsp;|&nbsp;
+      PRN: <span class="hl">${adm.prnNumber||'________'}</span> &nbsp;|&nbsp;
+      ABC ID: <span class="hl">${adm.aparIdNumber||'________'}</span>.</p>
       <p>Her conduct and character are <span class="hl">Good</span>.</p>
-
-      <p>This certificate is issued on her request for the purpose of
-      <span class="hl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>.</p>
+      <p>This certificate is issued on her request for the purpose of <span class="hl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>.</p>
     </div>
-    <div class="purpose-box">
-      📌 <strong>Note:</strong> This certificate is valid for a period of six months from the date of issue. For duplicate certificate, a fresh application with fees must be submitted.
+    <div style="border:1px solid #9fa8da;border-radius:4px;padding:10px 14px;margin:18px 0;font-size:12px;color:#555;background:#f8f9ff">
+      📌 Valid for 6 months from date of issue. Duplicate requires fresh application with fee.
     </div>
     <div class="sign-row">
-      <div class="sign-box">
-        <div class="sign-line">Student Section</div>
-        <div class="sign-sub">LKCWSC</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line">Principal</div>
-        <div class="sign-sub">LKCWSC, Gangakhed</div>
-      </div>
+      <div class="sign-box"><div class="sign-line">Student Section</div></div>
+      <div class="sign-box"><div class="sign-line">Principal</div></div>
     </div>
-    <div class="footer">
-      Generated through LKCWSC ERP System &nbsp;|&nbsp; Valid with official stamp and signature &nbsp;|&nbsp; Cert. No.: ${certNo}
-    </div>
-  </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
-  </body></html>`;
-  const w = window.open('', '_blank', 'width=740,height=900'); w.document.write(html); w.document.close();
+    <div class="footer">Generated through LKCWSC ERP System | Cert. No.: ${certNo}</div>
+  </div><scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=740,height=900'); w.document.write(html); w.document.close();
 };
 
-// ─── Print ID Card ───────────────────────────────────────────────────────────
 const printIDCard = (adm) => {
   const validYear = new Date().getFullYear();
-  const html = `<!DOCTYPE html><html><head><title>ID Card — ${adm.applicantName}</title>
+  const html = `<!DOCTYPE html><html><head><title>ID Card</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Arial,sans-serif;background:#e8eaf6;padding:40px;display:flex;justify-content:center;align-items:flex-start;gap:20px;flex-wrap:wrap}
-    .card{width:320px;border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.2);font-family:Arial,sans-serif}
+    body{font-family:Arial,sans-serif;background:#e8eaf6;padding:40px;display:flex;justify-content:center}
+    .card{width:320px;border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.2)}
     .card-top{background:linear-gradient(135deg,#1a237e,#283593);color:white;padding:14px 16px;text-align:center}
-    .trust-name{font-size:8.5px;opacity:0.8;letter-spacing:0.5px;margin-bottom:2px}
-    .college-name{font-size:11.5px;font-weight:bold;letter-spacing:0.3px;line-height:1.3;margin-bottom:1px}
+    .trust-name{font-size:8.5px;opacity:0.8;margin-bottom:2px}
+    .college-name{font-size:11.5px;font-weight:bold;line-height:1.3;margin-bottom:1px}
     .affil{font-size:8px;opacity:0.75}
     .id-label{background:#ffd54f;color:#1a237e;font-size:11px;font-weight:bold;letter-spacing:2px;text-align:center;padding:4px}
     .card-body{background:white;padding:14px}
-    .row{display:flex;gap:12px;align-items:flex-start}
-    .photo{width:70px;height:85px;border:2px solid #1a237e;border-radius:4px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;color:#1a237e}
+    .row{display:flex;gap:12px}
+    .photo{width:70px;height:85px;border:2px solid #1a237e;border-radius:4px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
     .info{flex:1}
-    .name{font-size:13px;font-weight:bold;color:#1a237e;margin-bottom:5px;line-height:1.2}
-    .field{font-size:10px;color:#444;margin:2px 0;line-height:1.4}
+    .name{font-size:13px;font-weight:bold;color:#1a237e;margin-bottom:5px}
+    .field{font-size:10px;color:#444;margin:2px 0}
     .field span{font-weight:600;color:#1a237e}
-    .id-chip{background:#1a237e;color:white;font-size:10px;font-weight:bold;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:5px;letter-spacing:0.5px}
-    .card-bottom{background:#1a237e;color:white;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;font-size:9px}
-    .barcode{font-family:monospace;font-size:7px;letter-spacing:2px;opacity:0.6}
-    @media print{body{background:white;padding:20px}.card{box-shadow:none}}
-  </style></head>
-  <body>
+    .id-chip{background:#1a237e;color:white;font-size:10px;font-weight:bold;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:5px}
+    .card-bottom{background:#1a237e;color:white;padding:7px 14px;display:flex;justify-content:space-between;font-size:9px}
+    @media print{body{background:white;padding:0}.card{box-shadow:none}}
+  </style></head><body>
   <div class="card">
     <div class="card-top">
-      <div class="trust-name">${COLLEGE_TRUST}</div>
+      <div class="trust-name">${COLLEGE_TRUST_DOC}</div>
       <div class="college-name">Late Kalpana Chawla Women's Senior College</div>
       <div class="affil">Affiliated to SNDT Women's University | Gangakhed</div>
     </div>
@@ -1118,56 +899,62 @@ const printIDCard = (adm) => {
       <div class="row">
         <div class="photo">👩</div>
         <div class="info">
-          <div class="name">${adm.applicantName || '—'}</div>
-          <div class="field"><span>Course:</span> ${adm.courseType || '—'}</div>
-          <div class="field"><span>Subject:</span> ${adm.preferredSubject || '—'}</div>
-          <div class="field"><span>Year:</span> ${adm.admissionYear || '—'}</div>
-          <div class="field"><span>DOB:</span> ${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : '—'}</div>
-          <div class="field"><span>PRN:</span> ${adm.prnNumber || '—'}</div>
-          <div class="id-chip">${adm.studentId || 'ID PENDING'}</div>
+          <div class="name">${adm.applicantName||'—'}</div>
+          <div class="field"><span>Course:</span> ${adm.courseType||'—'}</div>
+          <div class="field"><span>Subject:</span> ${adm.preferredSubject||'—'}</div>
+          <div class="field"><span>Year:</span> ${adm.admissionYear||'—'}</div>
+          <div class="field"><span>DOB:</span> ${adm.dateOfBirth?new Date(adm.dateOfBirth).toLocaleDateString('en-IN'):'—'}</div>
+          <div class="field"><span>PRN:</span> ${adm.prnNumber||'—'}</div>
+          <div class="id-chip">${adm.studentId||'ID PENDING'}</div>
         </div>
       </div>
     </div>
     <div class="card-bottom">
       <div>Valid: ${validYear}–${validYear+1}</div>
-      <div class="barcode">||| ${adm.studentId || '0000'} |||</div>
       <div>lkcwsc.vnssorg.com</div>
     </div>
   </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
-  </body></html>`;
-  const w = window.open('', '_blank', 'width=400,height=380'); w.document.write(html); w.document.close();
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=400,height=380'); w.document.write(html); w.document.close();
 };
 
-const GenerateDocTab = ({ user, docType, label, icon }) => {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [admMap, setAdmMap] = useState({});
-  const [admLoading, setAdmLoading] = useState(false);
-  const [msg, setMsg] = useState('');
+const DOC_CONFIG = {
+  TC:        { label: 'Transfer Certificate', icon: '📄', color: '#1565C0', bg: '#e3f2fd' },
+  BONAFIDE:  { label: 'Bonafide Certificate',  icon: '📜', color: '#7B1FA2', bg: '#f3e5f5' },
+  ID_CARD:   { label: 'ID Card',               icon: '🪪', color: '#2E7D32', bg: '#e8f5e9' },
+  MARKSHEET: { label: 'Marksheet',             icon: '📋', color: '#E65100', bg: '#fff3e0' },
+  MIGRATION: { label: 'Migration Certificate', icon: '📜', color: '#795548', bg: '#efebe9' },
+};
+
+const AllDocumentsTab = ({ user }) => {
+  const [requests, setRequests]   = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [admMap, setAdmMap]       = useState({});
+  const [search, setSearch]       = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [completing, setCompleting] = useState('');
+  const [rejecting, setRejecting]   = useState('');
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectNote, setRejectNote]   = useState('');
+  const [msg, setMsg]               = useState('');
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/document-requests/student-section/all');
-      const all = (res.data.requests || []).filter(r => r.documentType === docType);
-      setRequests(all);
-    } catch { }
-    finally { setLoading(false); }
-
-    setAdmLoading(true);
-    try {
-      const res2 = await API.get('/admissions/student-section/approved');
+      const [reqRes, admRes] = await Promise.all([
+        API.get('/document-requests/student-section/all'),
+        API.get('/admissions/student-section/approved'),
+      ]);
+      setRequests(reqRes.data.requests || []);
       const map = {};
-      (res2.data.admissions || []).forEach(a => { map[a.email] = a; });
+      (admRes.data.admissions || []).forEach(a => { map[a.email] = a; });
       setAdmMap(map);
     } catch { }
-    finally { setAdmLoading(false); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [docType]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData(); }, []);
 
   const handlePrint = (req) => {
     const adm = admMap[req.studentEmail] || {};
@@ -1189,95 +976,196 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
       address: adm.address || '',
       religion: adm.religion || '',
     };
-    if (docType === 'TC') printTC(merged);
-    else if (docType === 'BONAFIDE') printBonafide(merged);
-    else printIDCard(merged);
+    if (req.documentType === 'TC') printTC(merged);
+    else if (req.documentType === 'BONAFIDE') printBonafide(merged);
+    else if (req.documentType === 'ID_CARD') printIDCard(merged);
   };
 
   const handleComplete = async (req) => {
     setCompleting(req._id);
     try {
-      await API.put(`/document-requests/student-section/complete/${req._id}`, { notes: `${label} generated and issued.` });
-      setMsg('✅ Marked as completed!');
+      await API.put(`/document-requests/student-section/complete/${req._id}`, {
+        notes: `${DOC_CONFIG[req.documentType]?.label || req.documentType} generated and issued.`
+      });
+      setMsg('✅ Marked as issued!');
       setTimeout(() => setMsg(''), 3000);
       fetchData();
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
     finally { setCompleting(''); }
   };
 
-  const pending = requests.filter(r => r.status === 'pending_generation');
-  const completed = requests.filter(r => r.status === 'completed');
-  const filtered = requests.filter(r => !search || r.studentName?.toLowerCase().includes(search.toLowerCase()) || r.studentEmail?.toLowerCase().includes(search.toLowerCase()));
+  const handleReject = async () => {
+    if (!rejectNote.trim()) return;
+    setRejecting(rejectModal._id);
+    try {
+      await API.put(`/document-requests/accounts/reject/${rejectModal._id}`, { reason: rejectNote });
+      setMsg('✅ Request rejected.');
+      setRejectModal(null); setRejectNote('');
+      setTimeout(() => setMsg(''), 3000);
+      fetchData();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setRejecting(''); }
+  };
+
+  const filtered = requests.filter(r => {
+    const mt = typeFilter === 'all' || r.documentType === typeFilter;
+    const ms = statusFilter === 'all' || r.status === statusFilter;
+    const q  = search.toLowerCase();
+    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
+    return mt && ms && mq;
+  });
+
+  const pending   = requests.filter(r => r.status === 'pending_generation').length;
+  const completed = requests.filter(r => r.status === 'completed').length;
+  const byType    = Object.keys(DOC_CONFIG).reduce((acc, k) => {
+    acc[k] = requests.filter(r => r.documentType === k).length;
+    return acc;
+  }, {});
+
+  const statusStyle = (s) => ({
+    pending_accounts:     { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Accounts' },
+    rejected_by_accounts: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' },
+    pending_principal:    { bg: '#e3f2fd', color: '#1565C0', label: '🔄 At Principal' },
+    pending_generation:   { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Issue' },
+    completed:            { bg: '#f3e5f5', color: '#7B1FA2', label: '🏁 Issued' },
+  }[s] || { bg: '#f5f5f5', color: '#888', label: s });
 
   return (
     <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>{icon} Generate {label}</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Print and issue {label.toLowerCase()} for approved requests.</p>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📄 Documents & Certificates</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+        View all document requests. Print TC, Bonafide, ID Card — and mark as issued.
+      </p>
 
-      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
 
+      {/* Summary pills */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending}</div>
+        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Issued: {completed}</div>
+        {Object.entries(byType).filter(([, c]) => c > 0).map(([k, c]) => (
+          <div key={k} style={{ background: DOC_CONFIG[k]?.bg, color: DOC_CONFIG[k]?.color, borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: 600 }}>
+            {DOC_CONFIG[k]?.icon} {DOC_CONFIG[k]?.label}: {c}
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Types</option>
+          {Object.entries(DOC_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Status</option>
+          <option value="pending_generation">✅ Ready to Issue</option>
+          <option value="completed">🏁 Issued</option>
+          <option value="pending_accounts">⏳ At Accounts</option>
+          <option value="pending_principal">🔄 At Principal</option>
+          <option value="rejected_by_accounts">❌ Rejected</option>
+        </select>
         <button onClick={fetchData}
           style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
           🔄 Refresh
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending.length}</div>
-        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Completed: {completed.length}</div>
-      </div>
+      {/* Reject modal */}
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 26, maxWidth: 440, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color: '#C62828', marginBottom: 12 }}>❌ Reject Request</h3>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 14 }}>Student: <strong>{rejectModal.studentName}</strong> — {DOC_CONFIG[rejectModal.documentType]?.label}</p>
+            <textarea rows="3" placeholder="Reason for rejection..." value={rejectNote} onChange={e => setRejectNote(e.target.value)}
+              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={handleReject} disabled={!rejectNote.trim() || rejecting === rejectModal._id}
+                style={{ background: '#C62828', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                {rejecting === rejectModal._id ? '⏳...' : '❌ Confirm Reject'}
+              </button>
+              <button onClick={() => { setRejectModal(null); setRejectNote(''); }}
+                style={{ background: '#eee', color: '#333', padding: '10px 18px', borderRadius: 8, border: 'none', fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {loading || admLoading ? (
+      {loading ? (
         <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">{icon}</div>
-          <h3>No {label} Requests</h3>
-          <p>Approved {label.toLowerCase()} requests from Accounts section will appear here.</p>
-        </div>
+        <div className="empty-state"><div className="empty-icon">📭</div><h3>No requests found</h3><p>Document requests from students will appear here after Accounts section approves them.</p></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map(req => {
-            const isPending = req.status === 'pending_generation';
+            const cfg = DOC_CONFIG[req.documentType] || { label: req.documentType, icon: '📄', color: '#555', bg: '#f5f5f5' };
+            const ss  = statusStyle(req.status);
+            const isReady     = req.status === 'pending_generation';
+            const isCompleted = req.status === 'completed';
+            const canPrint    = ['TC', 'BONAFIDE', 'ID_CARD'].includes(req.documentType);
+            const adm         = admMap[req.studentEmail] || {};
+
             return (
-              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e0e0'}`, borderRadius: 12, padding: 18, borderLeft: `4px solid ${isPending ? '#E65100' : '#2E7D32'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                  <div>
-                    <h4 style={{ color: '#1565C0', fontSize: 15, margin: 0 }}>{req.studentName}</h4>
-                    <p style={{ fontSize: 12, color: '#888', margin: '3px 0 0' }}>{req.studentEmail} · {req.branch || 'N/A'} · {req.admissionYear || 'N/A'}</p>
-                    {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600, display: 'inline-block', marginTop: 4 }}>⚡ Urgent</span>}
+              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isReady ? cfg.color + '55' : '#e0e7ef'}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${cfg.color}` }}>
+                {/* Header row */}
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: isReady ? cfg.bg + 'aa' : '#fafbff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 22 }}>{cfg.icon}</span>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <h4 style={{ color: cfg.color, fontSize: 15, margin: 0 }}>{cfg.label}</h4>
+                        {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600 }}>⚡ Urgent</span>}
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 12, background: ss.bg, color: ss.color }}>{ss.label}</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>
+                        {new Date(req.createdAt).toLocaleString('en-IN')}
+                      </p>
+                    </div>
                   </div>
-                  <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: isPending ? '#fff3e0' : '#e8f5e9', color: isPending ? '#E65100' : '#2E7D32' }}>
-                    {isPending ? '⏳ Pending' : '✅ Completed'}
-                  </span>
-                </div>
-                {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
-                {admMap[req.studentEmail] && (
-                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 14px', marginBottom: 12, fontSize: 12, color: '#0c4a6e' }}>
-                    Student ID: <strong>{admMap[req.studentEmail].studentId || '—'}</strong> &nbsp;·&nbsp;
-                    PRN: <strong>{admMap[req.studentEmail].prnNumber || '—'}</strong> &nbsp;·&nbsp;
-                    ABC ID: <strong>{admMap[req.studentEmail].aparIdNumber || '—'}</strong>
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {canPrint && (
+                      <button onClick={() => handlePrint(req)}
+                        style={{ background: cfg.color, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        🖨️ Print {cfg.label}
+                      </button>
+                    )}
+                    {isReady && (
+                      <button onClick={() => handleComplete(req)} disabled={completing === req._id}
+                        style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: completing === req._id ? 'not-allowed' : 'pointer', opacity: completing === req._id ? 0.7 : 1 }}>
+                        {completing === req._id ? '⏳...' : '✅ Mark Issued'}
+                      </button>
+                    )}
+                    {isReady && (
+                      <button onClick={() => { setRejectModal(req); setRejectNote(''); }}
+                        style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        ❌ Reject
+                      </button>
+                    )}
                   </div>
-                )}
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => handlePrint(req)}
-                    style={{ background: '#1565C0', color: '#fff', padding: '9px 20px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                    🖨️ Print {label}
-                  </button>
-                  {isPending && (
-                    <button onClick={() => handleComplete(req)} disabled={completing === req._id}
-                      style={{ background: '#2E7D32', color: '#fff', padding: '9px 20px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: completing === req._id ? 'not-allowed' : 'pointer', opacity: completing === req._id ? 0.7 : 1 }}>
-                      {completing === req._id ? '⏳...' : '✅ Mark Issued'}
-                    </button>
-                  )}
                 </div>
-                {req.status === 'completed' && req.generatedBy && (
-                  <p style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600, marginTop: 8 }}>
-                    ✅ Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}
-                  </p>
+
+                {/* Student details */}
+                <div style={{ padding: '10px 18px 14px', fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, borderTop: '1px solid #f0f4f8' }}>
+                  <span><strong>Student:</strong> {req.studentName}</span>
+                  <span><strong>Email:</strong> {req.studentEmail}</span>
+                  <span><strong>Branch:</strong> {req.branch || '—'}</span>
+                  <span><strong>Year:</strong> {req.admissionYear || '—'}</span>
+                  {adm.studentId && <span><strong>Student ID:</strong> {adm.studentId}</span>}
+                  {adm.prnNumber && <span><strong>PRN:</strong> {adm.prnNumber}</span>}
+                  {req.reason && <span style={{ gridColumn: '1/-1' }}><strong>Reason:</strong> {req.reason}</span>}
+                  {req.accountsNotes && <span style={{ gridColumn: '1/-1', color: '#777', fontStyle: 'italic' }}>Accounts: {req.accountsNotes}</span>}
+                  {req.principalNotes && <span style={{ gridColumn: '1/-1', color: '#777', fontStyle: 'italic' }}>Principal: {req.principalNotes}</span>}
+                </div>
+
+                {isCompleted && req.generatedBy && (
+                  <div style={{ padding: '6px 18px 10px', fontSize: 12, color: '#7B1FA2', fontWeight: 600, borderTop: '1px solid #f0f4f8' }}>
+                    🏁 Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}
+                  </div>
                 )}
               </div>
             );
@@ -1287,6 +1175,7 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
     </div>
   );
 };
+
 
 const UpdatePrnTab = () => {
   const [admissions, setAdmissions] = useState([]);
