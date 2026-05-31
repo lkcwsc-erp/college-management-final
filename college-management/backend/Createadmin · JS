@@ -1,0 +1,45 @@
+// Run once: node createAdmin.js
+// Creates admin account in database
+
+require('dotenv').config();
+const mongoose = require('mongoose');
+const User = require('./models/User');
+
+const ADMIN = {
+  name:     'Admin',
+  email:    'admin@lkcwsc.edu.in',
+  username: 'admin',
+  password: 'Admin@1234',   // ← Change this to your desired password
+  role:     'admin',
+};
+
+async function main() {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('Connected to MongoDB');
+
+    const existing = await User.findOne({ $or: [{ email: ADMIN.email }, { username: ADMIN.username }] });
+    if (existing) {
+      // Update password instead
+      existing.password = ADMIN.password;
+      existing.role = 'admin';
+      await existing.save();
+      console.log('✅ Admin account updated!');
+      console.log('Email:', ADMIN.email);
+      console.log('Username:', ADMIN.username);
+      console.log('Password:', ADMIN.password);
+    } else {
+      await User.create(ADMIN);
+      console.log('✅ Admin account created!');
+      console.log('Email:', ADMIN.email);
+      console.log('Username:', ADMIN.username);
+      console.log('Password:', ADMIN.password);
+    }
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+    process.exit(1);
+  }
+}
+
+main();
