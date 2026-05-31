@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import API from '../api/axios';
+import API from '../../api/axios';
 
 // canEdit = true only for staff_student and staff_principal
 const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0' }) => {
