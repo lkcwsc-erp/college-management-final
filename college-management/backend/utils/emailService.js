@@ -47,3 +47,70 @@ exports.sendOTPEmail = async (toEmail, otp, userName = 'User') => {
 exports.generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+// Send student login credentials
+exports.sendCredentialsEmail = async (toEmail, studentName, username, password) => {
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'LKCWSC College <noreply@vnssorg.com>',
+      to: toEmail,
+      subject: 'Your LKCWSC College Portal Login Credentials',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#ffffff;">
+          <div style="background:#1a237e;color:white;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+            <h1 style="margin:0;font-size:22px;">Late Kalpana Chawla Women's Senior College</h1>
+            <p style="margin:5px 0 0;font-size:13px;">Gangakhed, Dist. Parbhani</p>
+          </div>
+          <div style="background:#f9f9f9;padding:30px;border-radius:0 0 8px 8px;border:1px solid #ddd;">
+            <h2 style="color:#333;margin-top:0;">Dear ${studentName},</h2>
+            <p style="color:#555;font-size:15px;line-height:1.6;">Welcome to LKCWSC College! Your login credentials for the student portal are:</p>
+            <div style="background:#e8eaf6;border:1px solid #9fa8da;border-radius:8px;padding:20px;margin:20px 0;">
+              <p style="margin:8px 0;font-size:15px;"><strong>Portal URL:</strong> <a href="https://college-management-nnve.onrender.com">college-management-nnve.onrender.com</a></p>
+              <p style="margin:8px 0;font-size:15px;"><strong>Username:</strong> <code style="background:white;padding:3px 8px;border-radius:4px;">${username}</code></p>
+              <p style="margin:8px 0;font-size:15px;"><strong>Password:</strong> <code style="background:white;padding:3px 8px;border-radius:4px;">${password}</code></p>
+            </div>
+            <p style="color:#C62828;font-size:13px;">⚠️ Please change your password after first login for security.</p>
+            <p style="color:#555;font-size:13px;">If you have any issues, contact the Student Section.</p>
+            <hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">
+            <p style="color:#999;font-size:12px;">Thank you,<br><strong>Student Section</strong><br>LKCWSC College, Gangakhed</p>
+          </div>
+        </div>
+      `
+    });
+    return { success: true };
+  } catch (e) {
+    console.error('Credentials email error:', e.message);
+    return { success: false, error: e.message };
+  }
+};
+
+// Send admin message/notice
+exports.sendMessageEmail = async (toEmail, toName, subject, messageBody, fromName) => {
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'LKCWSC College <noreply@vnssorg.com>',
+      to: toEmail,
+      subject: `[LKCWSC] ${subject}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <div style="background:#1a237e;color:white;padding:16px 20px;border-radius:8px 8px 0 0;">
+            <h2 style="margin:0;font-size:18px;">LKCWSC College — Message</h2>
+          </div>
+          <div style="background:#f9f9f9;padding:24px;border-radius:0 0 8px 8px;border:1px solid #ddd;">
+            <p style="color:#333;font-size:15px;">Dear ${toName},</p>
+            <div style="background:white;border-left:4px solid #1a237e;padding:16px;border-radius:0 8px 8px 0;margin:16px 0;">
+              <p style="color:#333;font-size:15px;line-height:1.7;white-space:pre-wrap;">${messageBody}</p>
+            </div>
+            <p style="color:#888;font-size:12px;margin-top:20px;">Sent by: ${fromName} | LKCWSC College, Gangakhed</p>
+          </div>
+        </div>
+      `
+    });
+    return { success: true };
+  } catch (e) {
+    console.error('Message email error:', e.message);
+    return { success: false, error: e.message };
+  }
+};
