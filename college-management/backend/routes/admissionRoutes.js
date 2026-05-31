@@ -455,7 +455,43 @@ router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'adm
   }
 });
 
-// ========== SCHOLARSHIP SECTION — all approved students =====================
+// ========== ALL STAFF — View Payment Receipts ==========
+router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_student','staff_exam','staff_scholarship','staff_principal','admin'), async (req, res) => {
+  try {
+    const admissions = await Admission.find({
+      'feeLedger.0': { $exists: true }
+    }).select('applicantName email studentId courseType admissionYear feeLedger fees feesPaid')
+      .sort({ updatedAt: -1 });
+
+    // Flatten ledger into receipt list
+    const receipts = [];
+    admissions.forEach(adm => {
+      (adm.feeLedger || []).forEach(p => {
+        receipts.push({
+          receiptNo:     p.receiptNo,
+          studentName:   adm.applicantName,
+          studentEmail:  adm.email,
+          studentId:     adm.studentId,
+          courseType:    adm.courseType,
+          admissionYear: adm.admissionYear,
+          feeType:       p.feeType,
+          feeTypeLabel:  p.feeTypeLabel,
+          amount:        p.amount,
+          paymentMode:   p.paymentMode,
+          transactionId: p.transactionId,
+          collectedBy:   p.collectedBy,
+          paidAt:        p.paidAt,
+          semester:      p.semester,
+        });
+      });
+    });
+
+    receipts.sort((a, b) => new Date(b.paidAt) - new Date(a.paidAt));
+    res.json({ success: true, receipts, total: receipts.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarship', 'admin'), async (req, res) => {
   try {
     const admissions = await Admission.find({ status: 'approved' })
