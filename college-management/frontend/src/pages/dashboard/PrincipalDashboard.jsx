@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import StudentViewFull from '../../components/StudentViewFull';
 import StudentsReport from '../../components/StudentsReport';
 
 // ─── Admission Detail Modal ───────────────────────────────────────────────────
@@ -335,6 +336,7 @@ const PrincipalDashboard = () => {
     { id: 'reports',    label: '📊 College Reports' },
     { id: 'staff',      label: '👥 Staff Overview' },
     { id: 'notices',    label: '📢 Important Notices' },
+    { id: 'all_students', label: '👩‍🎓 All Students' },
   ];
 
   return (
@@ -584,6 +586,15 @@ const PrincipalDashboard = () => {
               <div className="empty-icon">🚧</div>
               <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
               <p>This feature is under development. Coming soon!</p>
+            </div>
+          )}
+
+          {/* ══ ALL STUDENTS ══ */}
+          {activeTab === 'all_students' && (
+            <div>
+              <h2 style={{ color: '#C62828', marginBottom: 4 }}>👩‍🎓 All Students</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Principal has full access — view, edit, and delete student records.</p>
+              <StudentViewFull canEdit={true} themeColor="#C62828" />
             </div>
           )}
         </div>
