@@ -293,6 +293,182 @@ const ResultUploadTab = () => {
   );
 };
 
+// ─── Exam Doc Tab (TC Verification + Marksheet) ──────────────────────────────
+const ExamDocTab = ({ type, title, desc, color }) => {
+  const [requests, setRequests]   = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [selected, setSelected]   = useState(null);
+  const [notes, setNotes]         = useState('');
+  const [resultStatus, setResultStatus] = useState('pass');
+  const [saving, setSaving]       = useState(false);
+  const [msg, setMsg]             = useState('');
+
+  const fetch = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/document-requests/exam/all');
+      setRequests((res.data.requests || []).filter(r => r.documentType === type));
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetch(); }, [type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleApprove = async () => {
+    setSaving(true);
+    try {
+      await API.put(`/document-requests/exam/approve/${selected._id}`, {
+        notes, resultStatus: type === 'TC' ? resultStatus : undefined
+      });
+      setMsg(type === 'TC'
+        ? '✅ Result verified! TC forwarded to Principal.'
+        : '✅ Marksheet approved! Forwarded to Student Section.');
+      setSelected(null); setNotes('');
+      setTimeout(() => setMsg(''), 3000);
+      fetch();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSaving(false); }
+  };
+
+  const handleReject = async () => {
+    if (!notes.trim()) { setMsg('❌ Enter rejection reason.'); return; }
+    setSaving(true);
+    try {
+      await API.put(`/document-requests/exam/reject/${selected._id}`, { reason: notes });
+      setMsg('✅ Request rejected.');
+      setSelected(null); setNotes('');
+      setTimeout(() => setMsg(''), 3000);
+      fetch();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSaving(false); }
+  };
+
+  const statusStyle = (s) => ({
+    pending_exam:     { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Review' },
+    rejected_by_exam: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected' },
+    pending_principal:{ bg: '#e8f5e9', color: '#2E7D32', label: '✅ Sent to Principal' },
+    pending_generation:{ bg: '#e3f2fd', color: '#1565C0', label: '✅ Sent to Student Section' },
+    completed:        { bg: '#f3e5f5', color: '#7B1FA2', label: '🏁 Completed' },
+  }[s] || { bg: '#f5f5f5', color: '#888', label: s });
+
+  const pending = requests.filter(r => r.status === 'pending_exam').length;
+
+  return (
+    <div>
+      <h2 style={{ color, marginBottom: 4 }}>{title}</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>{desc}</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending}</div>
+        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Total: {requests.length}</div>
+        <button onClick={fetch} style={{ padding: '5px 14px', background: '#e3f2fd', color, border: `1px solid ${color}44`, borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🔄 Refresh</button>
+      </div>
+
+      {/* Action Modal */}
+      {selected && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 520, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color, marginBottom: 14 }}>
+              {type === 'TC' ? '📄 Verify Result for TC' : '📋 Process Marksheet Request'}
+            </h3>
+            <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
+              {[
+                ['Student', selected.studentName],
+                ['Email', selected.studentEmail],
+                ['Branch', selected.branch || '—'],
+                ['Year', selected.admissionYear || '—'],
+                ['Reason', selected.reason || '—'],
+              ].map(([l, v]) => (
+                <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <span style={{ color: '#888', fontWeight: 600 }}>{l}</span>
+                  <span style={{ color: '#222' }}>{v}</span>
+                </div>
+              ))}
+              {selected.accountsNotes && <div style={{ marginTop: 8, fontSize: 12, color: '#777', fontStyle: 'italic' }}>Accounts: {selected.accountsNotes}</div>}
+            </div>
+
+            {type === 'TC' && (
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontWeight: 700, color, marginBottom: 6, fontSize: 13 }}>Student Result Status *</label>
+                <select value={resultStatus} onChange={e => setResultStatus(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `2px solid ${color}55`, fontSize: 14 }}>
+                  <option value="pass">✅ Pass — All subjects cleared</option>
+                  <option value="atkt">⚠️ ATKT — Some subjects pending</option>
+                  <option value="fail">❌ Fail — All subjects failed</option>
+                </select>
+                <p style={{ fontSize: 11, color: '#888', marginTop: 4 }}>This will be visible to Principal for decision.</p>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>Notes (optional)</label>
+              <textarea rows="2" placeholder="Add any notes..." value={notes} onChange={e => setNotes(e.target.value)}
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+            </div>
+
+            {msg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: '#ffebee', color: '#C62828' }}>{msg}</div>}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleApprove} disabled={saving}
+                style={{ flex: 1, background: saving ? '#aaa' : color, color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                {saving ? '⏳...' : type === 'TC' ? '✅ Verify & Forward to Principal' : '✅ Approve & Send to Student Section'}
+              </button>
+              <button onClick={handleReject} disabled={saving}
+                style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '12px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                ❌ Reject
+              </button>
+            </div>
+            <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }}
+              style={{ width: '100%', marginTop: 10, background: '#f3f4f6', color: '#555', border: 'none', borderRadius: 8, padding: 10, fontSize: 14, cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
+      ) : requests.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">{type === 'TC' ? '📄' : '📋'}</div>
+          <h3>No {type === 'TC' ? 'TC' : 'Marksheet'} Requests</h3>
+          <p>{type === 'TC' ? 'TC requests after Accounts fee verification will appear here.' : 'Student marksheet requests will appear here.'}</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {requests.map(req => {
+            const ss = statusStyle(req.status);
+            const isPending = req.status === 'pending_exam';
+            return (
+              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e7ef'}`, borderRadius: 12, padding: 18, borderLeft: `4px solid ${ss.color}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <h4 style={{ color, fontSize: 15, margin: 0 }}>{req.studentName}</h4>
+                    <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>{req.studentEmail} · {req.branch || '—'} · {req.admissionYear || '—'}</p>
+                    {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600 }}>⚡ Urgent</span>}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 12px', borderRadius: 20, background: ss.bg, color: ss.color }}>{ss.label}</span>
+                </div>
+                {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 8 }}><strong>Reason:</strong> {req.reason}</p>}
+                {req.accountsNotes && <p style={{ fontSize: 12, color: '#777', marginBottom: 8, fontStyle: 'italic' }}>Accounts Note: {req.accountsNotes}</p>}
+                {req.examResultStatus && <p style={{ fontSize: 12, color: '#555', marginBottom: 8 }}><strong>Result Status:</strong> {req.examResultStatus}</p>}
+                {isPending && (
+                  <button onClick={() => { setSelected(req); setNotes(''); setMsg(''); setResultStatus('pass'); }}
+                    style={{ background: color, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    {type === 'TC' ? '🔍 Verify Result' : '📋 Process Request'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main ExamSectionDashboard ────────────────────────────────────────────────
 const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
@@ -303,6 +479,8 @@ const ExamSectionDashboard = () => {
   const tabs = [
     { id: 'home',          label: '🏠 Dashboard' },
     { id: 'upload_result', label: '📊 Upload Result' },
+    { id: 'tc_verify',     label: '📄 TC Verification' },
+    { id: 'marksheet',     label: '📋 Marksheet Requests' },
     { id: 'students',      label: '👩‍🎓 View Students' },
   ];
 
@@ -349,6 +527,8 @@ const ExamSectionDashboard = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
                 {[
                   { label: '📊 Upload Result', sub: 'Enter subject-wise marks for students', tab: 'upload_result' },
+                  { label: '📄 TC Verification', sub: 'Verify student result for TC requests', tab: 'tc_verify' },
+                  { label: '📋 Marksheet Requests', sub: 'Process marksheet requests', tab: 'marksheet' },
                   { label: '👩‍🎓 View Students', sub: 'Browse all enrolled students', tab: 'students' },
                 ].map((item, i) => (
                   <div key={i} className="event-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab(item.tab)}>
@@ -360,6 +540,8 @@ const ExamSectionDashboard = () => {
           )}
 
           {activeTab === 'upload_result' && <ResultUploadTab />}
+          {activeTab === 'tc_verify'     && <ExamDocTab type="TC" title="📄 TC Verification" desc="Verify student result status before TC is sent to Principal." color="#1565C0" />}
+          {activeTab === 'marksheet'     && <ExamDocTab type="MARKSHEET" title="📋 Marksheet Requests" desc="Process marksheet requests from students." color="#f57c00" />}
           {activeTab === 'students'      && (
             <div>
               <h2 style={{ color: '#f57c00', marginBottom: 4 }}>👩‍🎓 View Students</h2>
