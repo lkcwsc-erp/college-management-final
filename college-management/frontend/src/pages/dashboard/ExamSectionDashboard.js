@@ -474,10 +474,36 @@ const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
+  const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false, lastUpdatedBy: '', lastUpdatedAt: null });
+  const [settingMsg, setSettingMsg] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  useEffect(() => {
+    API.get('/results/exam-settings')
+      .then(res => setExamSettings(res.data.settings || {}))
+      .catch(() => {});
+  }, []);
+
   const handleLogout = () => { logout(); navigate('/'); };
+
+  const toggleExamForm = async (type, value) => {
+    setSavingSettings(true);
+    try {
+      const updated = { ...examSettings, [type]: value };
+      const res = await API.put('/results/exam-settings', {
+        regularEnabled: updated.regularEnabled,
+        backlogEnabled: updated.backlogEnabled,
+      });
+      setExamSettings(res.data.settings || updated);
+      setSettingMsg(`✅ ${type === 'regularEnabled' ? 'Regular' : 'Backlog'} exam form ${value ? 'OPENED' : 'CLOSED'} for students!`);
+      setTimeout(() => setSettingMsg(''), 4000);
+    } catch (e) { setSettingMsg('❌ Failed to update settings.'); }
+    finally { setSavingSettings(false); }
+  };
 
   const tabs = [
     { id: 'home',          label: '🏠 Dashboard' },
+    { id: 'exam_toggle',   label: '🔛 Exam Form Toggle' },
     { id: 'upload_result', label: '📊 Upload Result' },
     { id: 'tc_verify',     label: '📄 TC Verification' },
     { id: 'marksheet',     label: '📋 Marksheet Requests' },
@@ -513,28 +539,123 @@ const ExamSectionDashboard = () => {
             <div>
               <div style={{ background: '#fff3e0', padding: 20, borderRadius: 12, marginBottom: 20, borderLeft: '5px solid #f57c00' }}>
                 <h3 style={{ color: '#f57c00', marginBottom: 6 }}>📝 Welcome, {user?.name}!</h3>
-                <p style={{ color: '#555' }}>Upload student results, view enrolled students, and manage exam forms.</p>
+                <p style={{ color: '#555' }}>Manage exam forms, upload results, verify TC requests, and process marksheets.</p>
               </div>
+
+              {/* Exam form status cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                <div style={{ background: examSettings.regularEnabled ? 'linear-gradient(135deg,#e8f5e9,#f0fff4)' : '#f5f5f5', border: `2px solid ${examSettings.regularEnabled ? '#2E7D32' : '#e0e0e0'}`, borderRadius: 14, padding: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ color: examSettings.regularEnabled ? '#2E7D32' : '#888', margin: '0 0 4px' }}>📋 Regular Exam Form</h4>
+                      <p style={{ fontSize: 13, color: '#666', margin: 0 }}>{examSettings.regularEnabled ? '✅ Open for students' : '🔒 Closed'}</p>
+                    </div>
+                    <div style={{ fontSize: 28 }}>{examSettings.regularEnabled ? '🟢' : '🔴'}</div>
+                  </div>
+                </div>
+                <div style={{ background: examSettings.backlogEnabled ? 'linear-gradient(135deg,#fff3e0,#fffbf0)' : '#f5f5f5', border: `2px solid ${examSettings.backlogEnabled ? '#E65100' : '#e0e0e0'}`, borderRadius: 14, padding: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ color: examSettings.backlogEnabled ? '#E65100' : '#888', margin: '0 0 4px' }}>📋 Backlog / KT Form</h4>
+                      <p style={{ fontSize: 13, color: '#666', margin: 0 }}>{examSettings.backlogEnabled ? '✅ Open for students' : '🔒 Closed'}</p>
+                    </div>
+                    <div style={{ fontSize: 28 }}>{examSettings.backlogEnabled ? '🟢' : '🔴'}</div>
+                  </div>
+                </div>
+              </div>
+
               <div className="dash-cards">
-                <div className="dash-card blue" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('upload_result')}>
+                <div className="dash-card blue" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('exam_toggle')}>
+                  <div className="dash-card-icon">🔛</div><div><h3>Toggle</h3><p>Exam Forms</p></div>
+                </div>
+                <div className="dash-card orange" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('upload_result')}>
                   <div className="dash-card-icon">📊</div><div><h3>Upload</h3><p>Results</p></div>
+                </div>
+                <div className="dash-card blue" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tc_verify')}>
+                  <div className="dash-card-icon">📄</div><div><h3>TC</h3><p>Verification</p></div>
                 </div>
                 <div className="dash-card green" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('students')}>
                   <div className="dash-card-icon">👩‍🎓</div><div><h3>View</h3><p>Students</p></div>
                 </div>
               </div>
-              <h3 style={{ margin: '24px 0 14px' }}>🚀 Quick Actions</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
-                {[
-                  { label: '📊 Upload Result', sub: 'Enter subject-wise marks for students', tab: 'upload_result' },
-                  { label: '📄 TC Verification', sub: 'Verify student result for TC requests', tab: 'tc_verify' },
-                  { label: '📋 Marksheet Requests', sub: 'Process marksheet requests', tab: 'marksheet' },
-                  { label: '👩‍🎓 View Students', sub: 'Browse all enrolled students', tab: 'students' },
-                ].map((item, i) => (
-                  <div key={i} className="event-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab(item.tab)}>
-                    <h4>{item.label}</h4><p>{item.sub}</p>
+            </div>
+          )}
+
+          {/* ══ EXAM FORM TOGGLE ══ */}
+          {activeTab === 'exam_toggle' && (
+            <div>
+              <h2 style={{ color: '#f57c00', marginBottom: 4 }}>🔛 Exam Form Toggle</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Enable or disable exam forms for students. Students can only fill forms when you open them.</p>
+
+              {settingMsg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: settingMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: settingMsg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{settingMsg}</div>}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {/* Regular Exam */}
+                <div style={{ background: '#fff', borderRadius: 16, border: `2px solid ${examSettings.regularEnabled ? '#2E7D32' : '#e0e0e0'}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+                  <div style={{ background: examSettings.regularEnabled ? 'linear-gradient(135deg,#1b5e20,#2E7D32)' : '#9e9e9e', padding: '20px 24px' }}>
+                    <h3 style={{ color: '#fff', margin: '0 0 4px', fontSize: 16 }}>📋 Regular Examination Form</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0 }}>
+                      {examSettings.regularEnabled ? '✅ Currently OPEN — Students can fill this form' : '🔒 Currently CLOSED — Students cannot fill this form'}
+                    </p>
                   </div>
-                ))}
+                  <div style={{ padding: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                      <div style={{ fontSize: 40 }}>{examSettings.regularEnabled ? '🟢' : '🔴'}</div>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 4px', color: examSettings.regularEnabled ? '#2E7D32' : '#C62828' }}>
+                          {examSettings.regularEnabled ? 'OPEN' : 'CLOSED'}
+                        </p>
+                        {examSettings.lastUpdatedBy && <p style={{ fontSize: 12, color: '#888', margin: 0 }}>Last updated by: {examSettings.lastUpdatedBy}</p>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => toggleExamForm('regularEnabled', true)} disabled={savingSettings || examSettings.regularEnabled}
+                        style={{ flex: 1, background: examSettings.regularEnabled ? '#eee' : '#2E7D32', color: examSettings.regularEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: examSettings.regularEnabled ? 'not-allowed' : 'pointer' }}>
+                        🟢 Open Form
+                      </button>
+                      <button onClick={() => toggleExamForm('regularEnabled', false)} disabled={savingSettings || !examSettings.regularEnabled}
+                        style={{ flex: 1, background: !examSettings.regularEnabled ? '#eee' : '#C62828', color: !examSettings.regularEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: !examSettings.regularEnabled ? 'not-allowed' : 'pointer' }}>
+                        🔴 Close Form
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Backlog Exam */}
+                <div style={{ background: '#fff', borderRadius: 16, border: `2px solid ${examSettings.backlogEnabled ? '#E65100' : '#e0e0e0'}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+                  <div style={{ background: examSettings.backlogEnabled ? 'linear-gradient(135deg,#bf360c,#E65100)' : '#9e9e9e', padding: '20px 24px' }}>
+                    <h3 style={{ color: '#fff', margin: '0 0 4px', fontSize: 16 }}>📋 Backlog / KT Examination Form</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0 }}>
+                      {examSettings.backlogEnabled ? '✅ Currently OPEN — Students can fill KT form' : '🔒 Currently CLOSED — Students cannot fill KT form'}
+                    </p>
+                  </div>
+                  <div style={{ padding: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                      <div style={{ fontSize: 40 }}>{examSettings.backlogEnabled ? '🟢' : '🔴'}</div>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 4px', color: examSettings.backlogEnabled ? '#E65100' : '#C62828' }}>
+                          {examSettings.backlogEnabled ? 'OPEN' : 'CLOSED'}
+                        </p>
+                        {examSettings.lastUpdatedBy && <p style={{ fontSize: 12, color: '#888', margin: 0 }}>Last updated by: {examSettings.lastUpdatedBy}</p>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => toggleExamForm('backlogEnabled', true)} disabled={savingSettings || examSettings.backlogEnabled}
+                        style={{ flex: 1, background: examSettings.backlogEnabled ? '#eee' : '#E65100', color: examSettings.backlogEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: examSettings.backlogEnabled ? 'not-allowed' : 'pointer' }}>
+                        🟢 Open Form
+                      </button>
+                      <button onClick={() => toggleExamForm('backlogEnabled', false)} disabled={savingSettings || !examSettings.backlogEnabled}
+                        style={{ flex: 1, background: !examSettings.backlogEnabled ? '#eee' : '#C62828', color: !examSettings.backlogEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: !examSettings.backlogEnabled ? 'not-allowed' : 'pointer' }}>
+                        🔴 Close Form
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 20, background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 12, padding: '14px 18px', fontSize: 13, color: '#7c5e00' }}>
+                ⚠️ <strong>Important:</strong> When you open a form, all students can immediately see and fill it in their dashboard.
+                When you close it, the form becomes locked and students cannot submit. Use this at the start and end of exam season.
               </div>
             </div>
           )}
