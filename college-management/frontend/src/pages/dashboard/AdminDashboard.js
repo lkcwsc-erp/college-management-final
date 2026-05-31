@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import StudentViewFull from '../../components/StudentViewFull';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -19,9 +20,6 @@ const AdminDashboard = () => {
   const [staff, setStaff] = useState([]);
   const [editStaff, setEditStaff] = useState(null);
   const [visiblePasswords, setVisiblePasswords] = useState({});
-  const [studentSearch, setStudentSearch] = useState('');
-  const [studentYearFilter, setStudentYearFilter] = useState('all');
-  const [admStudents, setAdmStudents] = useState([]);
 
   const [staffForm, setStaffForm] = useState({
     name: '', username: '', email: '', password: '', phone: '', role: 'staff_student'
@@ -43,7 +41,6 @@ const AdminDashboard = () => {
     API.get('/events').then(res => setEvents(res.data.events || []));
     API.get('/gallery').then(res => setGallery(res.data.gallery || []));
     API.get('/students').then(res => setStudents(res.data.students || [])).catch(() => {});
-    API.get('/admissions/staff-view/all').then(res => setAdmStudents(res.data.admissions || [])).catch(() => {});
     API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
     API.get('/auth/staff').then(res => setStaff(res.data.staff || [])).catch(() => {});
   }, []);
@@ -262,112 +259,12 @@ const AdminDashboard = () => {
           {activeTab === 'students' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Complete student information. Edit/Delete access only for Student Section Staff and Principal.</p>
-
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input type="text" placeholder="🔍 Search by name, email, student ID, PRN, aadhar..."
-                  value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
-                  style={{ flex: 1, minWidth: 220, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
-                <select value={studentYearFilter} onChange={e => setStudentYearFilter(e.target.value)}
-                  style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-                  <option value="all">All Years</option>
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                  <option value="3rd Year">3rd Year</option>
-                </select>
-                <button onClick={() => {
-                  const data = admStudents.filter(s => {
-                    const q = studentSearch.toLowerCase();
-                    const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.prnNumber?.toLowerCase().includes(q);
-                    return mq && (studentYearFilter === 'all' || s.admissionYear === studentYearFilter);
-                  });
-                  const headers = ['Student ID','Name','Email','Mobile','Category','Caste','Course','Subject','Year','PRN','ABC ID','Aadhar No','Father','Mother','DOB','Address','Family Income','SSC %','HSC %','Scholarship Status'];
-                  const rows = data.map(s => [s.studentId||'',s.applicantName||'',s.email||'',s.phone||'',s.category||'',s.caste||'',s.courseType||'',s.preferredSubject||'',s.admissionYear||'',s.prnNumber||'',s.aparIdNumber||'',s.aadharNumber||'',s.fatherName||'',s.motherName||'',s.dateOfBirth?new Date(s.dateOfBirth).toLocaleDateString('en-IN'):'',s.address||'',s.familyIncome||'',s.sscPercentage||'',s.hscPercentage||'',s.scholarshipStatus||'']);
-                  const csv = [headers,...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-                  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a'); a.href=url; a.download='students_full.csv'; a.click();
-                  URL.revokeObjectURL(url);
-                }} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                  📥 Export CSV
-                </button>
-                <button onClick={() => {
-                  const data = admStudents.filter(s => {
-                    const q = studentSearch.toLowerCase();
-                    const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q);
-                    return mq && (studentYearFilter === 'all' || s.admissionYear === studentYearFilter);
-                  });
-                  const headers = ['Student ID','Name','Email','Mobile','Category','Caste','Course','Subject','Year','PRN','ABC ID','Aadhar No','Father','Mother','DOB','Address','Family Income','SSC %','HSC %','Scholarship Status'];
-                  const rows = data.map(s => [s.studentId||'',s.applicantName||'',s.email||'',s.phone||'',s.category||'',s.caste||'',s.courseType||'',s.preferredSubject||'',s.admissionYear||'',s.prnNumber||'',s.aparIdNumber||'',s.aadharNumber||'',s.fatherName||'',s.motherName||'',s.dateOfBirth?new Date(s.dateOfBirth).toLocaleDateString('en-IN'):'',s.address||'',s.familyIncome||'',s.sscPercentage||'',s.hscPercentage||'',s.scholarshipStatus||'']);
-                  const tsv = [headers,...rows].map(r => r.join('\t')).join('\n');
-                  const blob = new Blob(['\uFEFF'+tsv],{type:'application/vnd.ms-excel'});
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a'); a.href=url; a.download='students.xls'; a.click();
-                  URL.revokeObjectURL(url);
-                }} style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                  📊 Export Excel
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-                <div style={{ background: '#e3f2fd', color: '#1565C0', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Total: {admStudents.length}</div>
-                {['1st Year','2nd Year','3rd Year'].map(y => (
-                  <div key={y} style={{ background: '#f5f5f5', color: '#555', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>
-                    {y}: {admStudents.filter(s => s.admissionYear === y).length}
-                  </div>
-                ))}
-              </div>
-
-              {admStudents.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">👩‍🎓</div><h3>No Students Yet</h3><p>Approved admissions will appear here.</p></div>
-              ) : (
-                <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.8fr 1.8fr 0.8fr 1.2fr 1fr 1fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
-                    {['Student ID', 'Name', 'Email', 'Category', 'Course / Year', 'PRN', 'Scholarship'].map(h => (
-                      <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 12 }}>{h}</span>
-                    ))}
-                  </div>
-                  {admStudents
-                    .filter(s => {
-                      const q = studentSearch.toLowerCase();
-                      const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.prnNumber?.toLowerCase().includes(q) || s.aadharNumber?.toLowerCase().includes(q);
-                      return mq && (studentYearFilter === 'all' || s.admissionYear === studentYearFilter);
-                    })
-                    .map((s, idx) => {
-                      const schC = { not_filled:['#fff3e0','#E65100'], filled:['#e3f2fd','#1565C0'], approved:['#e8f5e9','#2E7D32'], rejected:['#ffebee','#C62828'], disbursed:['#f3e5f5','#7B1FA2'] };
-                      const sc = schC[s.scholarshipStatus] || schC.not_filled;
-                      return (
-                        <div key={s._id} style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.8fr 1.8fr 0.8fr 1.2fr 1fr 1fr', padding: '11px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-                          <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#1565C0', fontWeight: 700 }}>{s.studentId || '—'}</span>
-                          <div>
-                            <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{s.applicantName}</p>
-                            <p style={{ fontSize: 10, color: '#888', margin: '1px 0 0' }}>{s.phone || ''}</p>
-                          </div>
-                          <div>
-                            <p style={{ fontSize: 12, color: '#555', margin: 0 }}>{s.email}</p>
-                            <p style={{ fontSize: 10, color: '#888', margin: '1px 0 0' }}>Aadhar: {s.aadharNumber || '—'}</p>
-                          </div>
-                          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#555' }}>{s.category || '—'}</span>
-                          <div>
-                            <p style={{ fontSize: 11, margin: 0 }}>{s.courseType || '—'}</p>
-                            <p style={{ fontSize: 10, color: '#888', margin: 0 }}>{s.admissionYear} · {s.preferredSubject || ''}</p>
-                          </div>
-                          <span style={{ fontSize: 11, fontFamily: 'monospace', color: s.prnNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>{s.prnNumber || '⚠️ —'}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: sc[0], color: sc[1] }}>
-                            {(s.scholarshipStatus || 'not_filled').replace('_',' ')}
-                          </span>
-                        </div>
-                      );
-                    })
-                  }
-                </div>
-              )}
-              <div style={{ marginTop: 12, background: '#fff3e0', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#7c5e00' }}>
-                🔒 Edit and Delete is restricted to <strong>Student Section Staff</strong> and <strong>Principal</strong> only.
-              </div>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Admin has read-only access. Edit and Delete is restricted to Student Section Staff and Principal.</p>
+              <StudentViewFull canEdit={false} themeColor="#1565C0" />
             </div>
           )}
 
+          {/* ══ COURSES ══ */}
           {activeTab === 'courses' && (
             <div>
               <div className="form-card">
