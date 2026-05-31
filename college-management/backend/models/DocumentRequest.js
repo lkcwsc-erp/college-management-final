@@ -1,69 +1,72 @@
 const mongoose = require('mongoose');
 
 const documentRequestSchema = new mongoose.Schema({
-  // Student auto-fill details
-  student: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  studentName: { type: String, required: true },
-  studentEmail: { type: String, required: true },
-  studentPhone: { type: String, default: '' },
-  branch: { type: String, default: '' },          // BA / BSc
-  admissionYear: { type: String, default: '' },   // "1st Year"
-  batch: { type: String, default: '' },           // "2026-2027"
-  rollNumber: { type: String, default: '' },
+  // Student details
+  student:          { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  studentName:      { type: String, required: true },
+  studentEmail:     { type: String, required: true },
+  studentPhone:     { type: String, default: '' },
+  branch:           { type: String, default: '' },
+  admissionYear:    { type: String, default: '' },
+  batch:            { type: String, default: '' },
+  rollNumber:       { type: String, default: '' },
 
-  // Document Request Info
+  // Document type
   documentType: {
     type: String,
     enum: ['ID_CARD', 'MARKSHEET', 'MIGRATION', 'TC', 'BONAFIDE'],
     required: true
   },
   documentTypeLabel: { type: String, default: '' },
-  reason: { type: String, default: '' },
-  urgency: {
-    type: String,
-    enum: ['normal', 'urgent'],
-    default: 'normal'
-  },
+  reason:            { type: String, default: '' },
+  urgency:           { type: String, enum: ['normal', 'urgent'], default: 'normal' },
 
-  // Workflow Status
+  // ─── WORKFLOW STATUS ─────────────────────────────────────────────────────
+  // TC:        pending_accounts → pending_exam → pending_principal → pending_generation → completed
+  // Bonafide:  pending_accounts → pending_generation → completed
+  // ID Card:   pending_accounts → pending_generation → completed
+  // Marksheet: pending_exam → pending_generation → completed
   status: {
     type: String,
     enum: [
-      'pending_accounts',
-      'rejected_by_accounts',
-      'approved_by_accounts',
-      'pending_principal',
-      'rejected_by_principal',
-      'approved_by_principal',
-      'pending_generation',
-      'completed'
+      'pending_accounts',       // waiting for Accounts to collect fee
+      'rejected_by_accounts',   // Accounts rejected
+      'pending_exam',           // waiting for Exam Section to verify result (TC only)
+      'rejected_by_exam',       // Exam Section rejected
+      'pending_principal',      // waiting for Principal approval (TC only)
+      'rejected_by_principal',  // Principal rejected
+      'pending_generation',     // approved — waiting for Student Section to generate
+      'completed'               // issued to student
     ],
     default: 'pending_accounts'
   },
 
-  // Accounts Section Action
-  accountsApprovedBy: { type: String, default: '' },
+  // Accounts Section
+  accountsApprovedBy:   { type: String, default: '' },
   accountsApprovedDate: { type: Date },
-  accountsNotes: { type: String, default: '' },
+  accountsNotes:        { type: String, default: '' },
 
-  // Principal Section Action (for TC only)
-  principalApprovedBy: { type: String, default: '' },
+  // Exam Section (TC only)
+  examVerifiedBy:       { type: String, default: '' },
+  examVerifiedDate:     { type: Date },
+  examNotes:            { type: String, default: '' },
+  examResultStatus:     { type: String, default: '' }, // pass/fail/atkt
+
+  // Principal (TC only)
+  principalApprovedBy:   { type: String, default: '' },
   principalApprovedDate: { type: Date },
-  principalNotes: { type: String, default: '' },
+  principalNotes:        { type: String, default: '' },
 
   // Student Section - Final Generation
-  generatedBy: { type: String, default: '' },
-  generatedDate: { type: Date },
+  generatedBy:           { type: String, default: '' },
+  generatedDate:         { type: Date },
   generatedDocumentFile: { type: String, default: '' },
-  generationNotes: { type: String, default: '' },
+  generationNotes:       { type: String, default: '' },
 
   // Rejection
   rejectionReason: { type: String, default: '' },
-  rejectedBy: { type: String, default: '' },
-  rejectedAt: { type: String, default: '' }, // accounts / principal
+  rejectedBy:      { type: String, default: '' },
+  rejectedAt:      { type: String, default: '' },
 
 }, { timestamps: true });
 
