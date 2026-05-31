@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import StudentViewFull from '../../components/StudentViewFull';
 
 const STATUS_CONFIG = {
   not_filled: { label: '📝 Not Filled',  bg: '#fff3e0', color: '#E65100' },
@@ -95,6 +96,7 @@ const ScholarshipSectionDashboard = () => {
     { id: 'home',      label: '🏠 Dashboard' },
     { id: 'students',  label: '👩‍🎓 Students', badge: notFilled },
     { id: 'mahadbt',   label: '🌐 MahaDBT Credentials' },
+    { id: 'all_students', label: '👩‍🎓 All Students' },
   ];
 
   return (
@@ -481,6 +483,15 @@ const ScholarshipSectionDashboard = () => {
             </div>
           )}
 
+
+          {/* ══ ALL STUDENTS ══ */}
+          {activeTab === 'all_students' && (
+            <div>
+              <h2 style={{ color: '#7B1FA2', marginBottom: 4 }}>👩‍🎓 All Students</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View complete student information. Read-only view.</p>
+              <StudentViewFull canEdit={false} themeColor="#7B1FA2" />
+            </div>
+          )}
         </div>
       </main>
     </div>
