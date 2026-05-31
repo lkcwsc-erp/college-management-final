@@ -361,8 +361,11 @@ const docStatusStyle = (status) => {
   const map = {
     pending_accounts:     { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Review' },
     rejected_by_accounts: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected' },
-    pending_principal:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Forwarded to Principal' },
-    pending_generation:   { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Approved → Student Section' },
+    pending_exam:         { bg: '#e3f2fd', color: '#1565C0', label: '🔍 At Exam Section' },
+    rejected_by_exam:     { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Exam' },
+    pending_principal:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ At Principal' },
+    rejected_by_principal:{ bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' },
+    pending_generation:   { bg: '#e8f5e9', color: '#2E7D32', label: '✅ At Student Section' },
     completed:            { bg: '#e3f2fd', color: '#1565C0', label: '🏁 Completed' },
   };
   return map[status] || { bg: '#f5f5f5', color: '#666', label: status };
@@ -752,8 +755,9 @@ const AccountsSectionDashboard = () => {
                   style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
                   <option value="all">All Requests</option>
                   <option value="pending_accounts">⏳ Pending</option>
-                  <option value="pending_generation">✅ Approved</option>
+                  <option value="pending_exam">🔍 At Exam Section</option>
                   <option value="pending_principal">🔄 At Principal</option>
+                  <option value="pending_generation">✅ At Student Section</option>
                   <option value="completed">🏁 Completed</option>
                   <option value="rejected_by_accounts">❌ Rejected</option>
                 </select>
