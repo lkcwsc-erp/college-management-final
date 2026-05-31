@@ -215,11 +215,6 @@ const StudentSectionDashboard = () => {
   const [credMsg, setCredMsg] = useState('');
   const [generatedCreds, setGeneratedCreds] = useState(null);
 
-  // ✅ NEW: All Students states
-  const [allStudents, setAllStudents] = useState([]);
-  const [studentsLoading, setStudentsLoading] = useState(false);
-  const [studentSearch, setStudentSearch] = useState('');
-
   const handleLogout = () => { logout(); navigate('/'); };
 
   const fetchEnquiries = async () => {
@@ -240,33 +235,10 @@ const StudentSectionDashboard = () => {
     finally { setAdmissionsLoading(false); }
   };
 
-  // ✅ NEW: Fetch All Students
- const fetchAllStudents = async () => {
-    setStudentsLoading(true);
-    try {
-      const res = await API.get('/auth/students');
-      if (res.data.success) setAllStudents(res.data.students || []);
-    } catch (err) { console.error('Failed to fetch students:', err); }
-    finally { setStudentsLoading(false); }
-  };
-
-  const handleDeleteStudent = async (id, name) => {
-    if (!window.confirm(`Delete student "${name}"? This cannot be undone.`)) return;
-    try {
-      await API.delete(`/auth/students/${id}`);
-      fetchAllStudents();
-    } catch (err) {
-      alert('Failed to delete student: ' + (err.response?.data?.message || 'Error'));
-    }
-  };
   useEffect(() => {
     if (['home', 'enquiries', 'admissions'].includes(activeTab)) {
       fetchEnquiries();
       fetchAdmissions();
-    }
-    // ✅ NEW: Load students when tab opens
-    if (activeTab === 'students') {
-      fetchAllStudents();
     }
   }, [activeTab]);
 
