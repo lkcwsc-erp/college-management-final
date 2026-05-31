@@ -169,7 +169,8 @@ const AdminDashboard = () => {
     { id: 'gallery',  label: '🖼️ Gallery' },
     { id: 'notices',  label: '📢 Notices' },
     { id: 'events',   label: '🗓️ Events' },
-    { id: 'contacts', label: '📬 Messages' },
+    { id: 'contacts',  label: '📬 Messages' },
+    { id: 'messaging', label: '✉️ Send Message' },
   ];
 
   const roleLabel = (role) => ({
@@ -751,8 +752,160 @@ const AdminDashboard = () => {
             </div>
           )}
 
+          {/* ══ MESSAGING ══ */}
+          {activeTab === 'messaging' && <AdminMessagingTab user={user} showMessage={showMessage} />}
+
         </div>
       </main>
+    </div>
+  );
+};
+
+// ── Admin Messaging Component ─────────────────────────────────────────────────
+const AdminMessagingTab = ({ user, showMessage }) => {
+  const [admissions, setAdmissions] = React.useState([]);
+  const [staff, setStaff]           = React.useState([]);
+  const [loading, setLoading]       = React.useState(false);
+  const [subject, setSubject]       = React.useState('');
+  const [message, setMessage]       = React.useState('');
+  const [target, setTarget]         = React.useState('all_students'); // all_students | all_staff | specific
+  const [selected, setSelected]     = React.useState([]); // specific emails
+  const [sending, setSending]       = React.useState(false);
+  const [msg, setMsg]               = React.useState('');
+  const [search, setSearch]         = React.useState('');
+
+  React.useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      API.get('/admissions/staff-view/all').catch(() => ({ data: { admissions: [] } })),
+      API.get('/auth/staff').catch(() => ({ data: { staff: [] } })),
+    ]).then(([admRes, staffRes]) => {
+      setAdmissions(admRes.data.admissions || []);
+      setStaff(staffRes.data.staff || []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const getRecipients = () => {
+    if (target === 'all_students') return admissions.map(a => ({ email: a.email, name: a.applicantName }));
+    if (target === 'all_staff')    return staff.map(s => ({ email: s.email, name: s.name }));
+    return selected.map(email => {
+      const adm = admissions.find(a => a.email === email);
+      const st  = staff.find(s => s.email === email);
+      return { email, name: adm?.applicantName || st?.name || email };
+    });
+  };
+
+  const handleSend = async () => {
+    if (!subject.trim() || !message.trim()) { setMsg('❌ Subject and message are required.'); return; }
+    const recipients = getRecipients();
+    if (recipients.length === 0) { setMsg('❌ No recipients selected.'); return; }
+    if (!window.confirm(`Send message to ${recipients.length} recipient(s)?`)) return;
+
+    setSending(true);
+    try {
+      const res = await API.post('/auth/send-message', { recipients, subject, message });
+      setMsg(`✅ Sent to ${res.data.sent} recipient(s).${res.data.failed > 0 ? ` ${res.data.failed} failed.` : ''}`);
+      setSubject(''); setMessage(''); setSelected([]);
+      setTimeout(() => setMsg(''), 5000);
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to send')); }
+    finally { setSending(false); }
+  };
+
+  const allPeople = [
+    ...admissions.map(a => ({ email: a.email, name: a.applicantName, type: 'student', course: a.courseType, year: a.admissionYear })),
+    ...staff.map(s => ({ email: s.email, name: s.name, type: 'staff', role: s.role })),
+  ].filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.email?.toLowerCase().includes(search.toLowerCase()));
+
+  const recipients = getRecipients();
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>✉️ Send Message</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Send email messages to students and staff directly from the portal.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        {/* Left — compose */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24 }}>
+          <h4 style={{ color: '#1565C0', marginBottom: 16 }}>📝 Compose Message</h4>
+
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Send To</label>
+            <select value={target} onChange={e => { setTarget(e.target.value); setSelected([]); }}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+              <option value="all_students">👩‍🎓 All Students ({admissions.length})</option>
+              <option value="all_staff">👨‍💼 All Staff ({staff.length})</option>
+              <option value="specific">🎯 Specific People</option>
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Subject *</label>
+            <input type="text" placeholder="e.g. Exam Schedule Notice" value={subject} onChange={e => setSubject(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Message *</label>
+            <textarea rows="6" placeholder="Type your message here..." value={message} onChange={e => setMessage(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+
+          <div style={{ background: '#f0f9ff', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#1565C0' }}>
+            📨 Will be sent to: <strong>{recipients.length} recipient(s)</strong>
+            {target === 'all_students' && ` — All ${admissions.length} students`}
+            {target === 'all_staff' && ` — All ${staff.length} staff members`}
+          </div>
+
+          <button onClick={handleSend} disabled={sending || !subject || !message || recipients.length === 0}
+            style={{ width: '100%', background: sending ? '#aaa' : '#1565C0', color: '#fff', border: 'none', borderRadius: 9, padding: '13px', fontSize: 15, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', opacity: (!subject || !message || recipients.length === 0) ? 0.6 : 1 }}>
+            {sending ? '⏳ Sending...' : `✉️ Send to ${recipients.length} Recipient(s)`}
+          </button>
+        </div>
+
+        {/* Right — select specific */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24 }}>
+          <h4 style={{ color: '#1565C0', marginBottom: 14 }}>
+            {target === 'specific' ? '🎯 Select Recipients' : '👥 Preview Recipients'}
+          </h4>
+
+          <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, marginBottom: 12, boxSizing: 'border-box' }} />
+
+          {loading ? <div style={{ textAlign: 'center', color: '#888', padding: 20 }}>⏳ Loading...</div> : (
+            <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #f0f4f8', borderRadius: 8 }}>
+              {allPeople.slice(0, 50).map((p, i) => {
+                const isSelected = target === 'specific' ? selected.includes(p.email) :
+                  (target === 'all_students' ? p.type === 'student' : p.type === 'staff');
+                return (
+                  <div key={i} onClick={() => {
+                    if (target !== 'specific') return;
+                    setSelected(prev => prev.includes(p.email) ? prev.filter(e => e !== p.email) : [...prev, p.email]);
+                  }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid #f0f4f8', cursor: target === 'specific' ? 'pointer' : 'default', background: isSelected ? '#e8f5e9' : '#fff' }}>
+                    <span style={{ fontSize: 14 }}>{isSelected ? '✅' : (target === 'specific' ? '⬜' : '•')}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 600, fontSize: 13, margin: 0, color: '#1a1a2e' }}>{p.name}</p>
+                      <p style={{ fontSize: 11, color: '#888', margin: 0 }}>{p.email} · {p.type === 'student' ? `${p.course} ${p.year}` : p.role}</p>
+                    </div>
+                    <span style={{ fontSize: 10, background: p.type === 'student' ? '#e3f2fd' : '#e8f5e9', color: p.type === 'student' ? '#1565C0' : '#2E7D32', padding: '1px 7px', borderRadius: 10, fontWeight: 600 }}>
+                      {p.type}
+                    </span>
+                  </div>
+                );
+              })}
+              {allPeople.length > 50 && <div style={{ padding: '8px 12px', fontSize: 12, color: '#888', textAlign: 'center' }}>Showing 50 of {allPeople.length}. Search to filter.</div>}
+            </div>
+          )}
+
+          {target === 'specific' && selected.length > 0 && (
+            <div style={{ marginTop: 10, background: '#e8f5e9', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#2E7D32', fontWeight: 600 }}>
+              ✅ {selected.length} recipient(s) selected
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
