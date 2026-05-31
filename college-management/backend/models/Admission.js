@@ -299,7 +299,10 @@ const admissionSchema = new mongoose.Schema(
       enum: ['not_filled', 'filled', 'approved', 'rejected', 'disbursed'],
       default: 'not_filled',
     },
-    scholarshipNote: { type: String, default: '' },
+    scholarshipNote:     { type: String, default: '' },
+    mahaDBTUsername:     { type: String, default: '' },
+    mahaDBTPassword:     { type: String, default: '' },
+    mahaDBTAppNo:        { type: String, default: '' },
 
     studentSectionRemark: { type: String, default: '' },
     principalRemark:      { type: String, default: '' },
