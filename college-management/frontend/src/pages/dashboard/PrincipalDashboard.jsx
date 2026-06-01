@@ -5,7 +5,6 @@ import API from '../../api/axios';
 import './Dashboard.css';
 import AdminReports from '../../components/AdminReports';
 import StudentViewFull from './StudentViewFull';
-import StudentsReport from '../../components/StudentsReport';
 
 // ─── Admission Detail Modal ───────────────────────────────────────────────────
 const AdmissionModal = ({ adm, onClose, onRefresh, showMsg }) => {
