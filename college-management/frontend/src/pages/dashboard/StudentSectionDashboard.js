@@ -301,14 +301,12 @@ const StudentSectionDashboard = () => {
     { id: 'enquiries',    label: '📝 Admission Enquiries' },
     { id: 'admissions',   label: '🎓 Pending Admissions' },
     { id: 'credentials',  label: '👥 Generate Credentials' },
-    { id: 'documents',    label: '📋 Document Verification' },
+    { id: 'generate_docs', label: '📄 Documents & Certificates' },
     { id: 'carryforward', label: '🎓 SY/TY Carry Forward' },
-    { id: 'tc',           label: '📄 Generate TC' },
-    { id: 'bonafide',     label: '📜 Generate Bonafide' },
-    { id: 'idcard',       label: '🪪 Generate ID Card' },
     { id: 'prn',          label: '🔢 Update PRN/ABC ID' },
     { id: 'doc_replace',  label: '📝 Correct Documents' },
     { id: 'students',     label: '👩‍🎓 All Students' },
+    { id: 'receipts',     label: '🧾 Payment Receipts' },
   ];
 
   return (
@@ -658,22 +656,18 @@ const StudentSectionDashboard = () => {
           )}
 
 
-          {activeTab === 'documents' && <DocumentVerificationTab user={user} />}
 
-          {/* ══════════════ GENERATE TC ══════════════ */}
-          {activeTab === 'tc' && <GenerateDocTab user={user} docType="TC" label="Transfer Certificate (TC)" icon="📄" />}
 
-          {/* ══════════════ GENERATE BONAFIDE ══════════════ */}
-          {activeTab === 'bonafide' && <GenerateDocTab user={user} docType="BONAFIDE" label="Bonafide Certificate" icon="📜" />}
 
-          {/* ══════════════ GENERATE ID CARD ══════════════ */}
-          {activeTab === 'idcard' && <GenerateDocTab user={user} docType="ID_CARD" label="ID Card" icon="🪪" />}
 
           {/* ══════════════ UPDATE PRN / ABC ID ══════════════ */}
           {activeTab === 'prn' && <UpdatePrnTab />}
 
           {/* ══════════════ CORRECT DOCUMENTS ══════════════ */}
           {activeTab === 'doc_replace' && <DocumentReplaceTab />}
+
+          {/* ══════════════ DOCUMENTS & CERTIFICATES ══════════════ */}
+          {activeTab === 'generate_docs' && <AllDocumentsTab user={user} />}
 
           {/* ══════════════ CARRY FORWARD ══════════════ */}
           {activeTab === 'carryforward' && <CarryForwardTab />}
@@ -688,195 +682,16 @@ const StudentSectionDashboard = () => {
 // DOCUMENT VERIFICATION TAB
 // Shows all doc requests that are pending_generation → student section marks complete
 // ─────────────────────────────────────────────────────────────────────────────
-const DocumentVerificationTab = ({ user }) => {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [filter, setFilter] = useState('pending_generation');
-  const [search, setSearch] = useState('');
+const COLLEGE_NAME_DOC    = "Late Kalpana Chawla Women's Senior College (LKCWSC)";
+const COLLEGE_TRUST_DOC   = "Vidya-Niketan Sevabhavi Sanstha's";
+const COLLEGE_SUBTITLE_DOC = "Affiliated to SNDT Women's University, Mumbai";
+const COLLEGE_ADDRESS_DOC  = "Gangakhed, Dist. Parbhani, Maharashtra - 431514";
+const COLLEGE_CONTACT_DOC  = "+91 9307162914  |  lkcwsc.vnssorg.com";
 
-  const fetchRequests = async () => {
-    setLoading(true);
-    try {
-      const res = await API.get('/document-requests/student-section/all');
-      setRequests(res.data.requests || []);
-    } catch { }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchRequests(); }, []);
-
-  const handleComplete = async () => {
-    setSaving(true);
-    try {
-      await API.put(`/document-requests/student-section/complete/${selected._id}`, { notes });
-      setMsg('✅ Marked as completed!');
-      setTimeout(() => { setSelected(null); setNotes(''); setMsg(''); fetchRequests(); }, 1500);
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-    finally { setSaving(false); }
-  };
-
-  const statusStyle = (s) => ({
-    pending_generation: { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Generation' },
-    completed:          { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Completed' },
-  }[s] || { bg: '#f5f5f5', color: '#666', label: s });
-
-  const filtered = requests.filter(r => {
-    const mf = filter === 'all' || r.status === filter;
-    const q = search.toLowerCase();
-    const ms = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
-    return mf && ms;
-  });
-
-  const pending = requests.filter(r => r.status === 'pending_generation').length;
-
-  return (
-    <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📋 Document Verification & Generation</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-        These requests are fee-verified and approved. Generate & issue the documents.
-      </p>
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input type="text" placeholder="🔍 Search by student name or email..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
-        <select value={filter} onChange={e => setFilter(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-          <option value="all">All Requests</option>
-          <option value="pending_generation">⏳ Pending Generation</option>
-          <option value="completed">✅ Completed</option>
-        </select>
-        <button onClick={fetchRequests}
-          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[
-          { label: 'Total', count: requests.length, color: '#1565C0', bg: '#e3f2fd' },
-          { label: 'Pending', count: pending, color: '#E65100', bg: '#fff3e0' },
-          { label: 'Completed', count: requests.filter(r => r.status === 'completed').length, color: '#2E7D32', bg: '#e8f5e9' },
-        ].map((p, i) => (
-          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>
-            {p.label}: {p.count}
-          </div>
-        ))}
-      </div>
-
-      {/* Completion modal */}
-      {selected && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 500, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ color: '#1565C0', marginBottom: 4 }}>✅ Mark Document as Generated</h3>
-            <p style={{ color: '#666', fontSize: 13, marginBottom: 18 }}>Confirm you have issued this document to the student.</p>
-            <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Student</span><span>{selected.studentName}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Document</span><span>{selected.documentTypeLabel}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}><span style={{ color: '#888', fontWeight: 600 }}>Branch</span><span>{selected.branch || 'N/A'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}><span style={{ color: '#888', fontWeight: 600 }}>Year</span><span>{selected.admissionYear || 'N/A'}</span></div>
-            </div>
-            <div className="form-group" style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>Notes (optional)</label>
-              <textarea rows="2" placeholder="e.g. Issued physically at counter..." value={notes} onChange={e => setNotes(e.target.value)}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
-            </div>
-            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={handleComplete} disabled={saving}
-                style={{ flex: 1, background: '#2E7D32', color: '#fff', padding: '11px', borderRadius: 9, border: 'none', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? '⏳ Saving...' : '✅ Mark as Completed'}
-              </button>
-              <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }}
-                style={{ padding: '11px 20px', background: '#eee', color: '#333', borderRadius: 9, border: 'none', fontSize: 14, cursor: 'pointer' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">📭</div><h3>No requests found</h3><p>Document requests approved by Accounts will appear here.</p></div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filtered.map(req => {
-            const ss = statusStyle(req.status);
-            const isPending = req.status === 'pending_generation';
-            return (
-              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e0e0'}`, borderRadius: 12, padding: 18, borderLeft: `4px solid ${ss.color}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <h4 style={{ color: '#1565C0', fontSize: 16, margin: 0 }}>{req.documentTypeLabel || req.documentType}</h4>
-                      {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 12, padding: '2px 10px', borderRadius: 12, fontWeight: 600 }}>⚡ Urgent</span>}
-                    </div>
-                    <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Requested: {new Date(req.createdAt).toLocaleString('en-IN')}</p>
-                  </div>
-                  <span style={{ padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: ss.bg, color: ss.color }}>{ss.label}</span>
-                </div>
-                <div style={{ background: '#f8faff', padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <span><strong>Name:</strong> {req.studentName}</span>
-                  <span><strong>Email:</strong> {req.studentEmail}</span>
-                  <span><strong>Branch:</strong> {req.branch || 'N/A'}</span>
-                  <span><strong>Year:</strong> {req.admissionYear || 'N/A'}</span>
-                  {req.rollNumber && <span><strong>Roll No:</strong> {req.rollNumber}</span>}
-                  {req.studentPhone && <span><strong>Phone:</strong> {req.studentPhone}</span>}
-                </div>
-                {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
-                {req.accountsNotes && <p style={{ fontSize: 12, color: '#777', marginBottom: 10, fontStyle: 'italic' }}>Accounts Note: {req.accountsNotes}</p>}
-                {req.principalNotes && <p style={{ fontSize: 12, color: '#777', marginBottom: 10, fontStyle: 'italic' }}>Principal Note: {req.principalNotes}</p>}
-                {isPending && (
-                  <button onClick={() => { setSelected(req); setNotes(''); setMsg(''); }}
-                    style={{ background: '#2E7D32', color: '#fff', padding: '9px 22px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                    ✅ Mark as Generated / Issued
-                  </button>
-                )}
-                {req.status === 'completed' && (
-                  <p style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GENERATE DOC TAB  (TC / Bonafide / ID Card)
-// Prints the actual document using browser print
-// ─────────────────────────────────────────────────────────────────────────────
-const COLLEGE_NAME    = 'Late Kalpana Chawla Women\'s Senior College (LKCWSC)';
-const COLLEGE_TRUST   = 'Vidya-Niketan Sevabhavi Sanstha\'s';
-const COLLEGE_SUBTITLE = 'Affiliated to SNDT Women\'s University, Mumbai';
-const COLLEGE_ADDRESS  = 'Gangakhed, Dist. Parbhani, Maharashtra - 431514';
-const COLLEGE_CONTACT  = '+91 9307162914  |  lkcwsc.vnssorg.com';
-
-// ─── Shared letterhead HTML ──────────────────────────────────────────────────
-const letterheadHTML = () => `
-  <div style="border-bottom:3px double #1a237e;padding-bottom:14px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
-    <img src="data:image/jpeg;base64,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" style="width:70px;height:70px;object-fit:contain;flex-shrink:0" />
-    <div style="flex:1;text-align:center">
-      <div style="font-size:10px;color:#555;letter-spacing:0.5px">${COLLEGE_TRUST}</div>
-      <div style="font-size:19px;font-weight:bold;color:#1a237e;margin:2px 0;line-height:1.2">${COLLEGE_NAME}</div>
-      <div style="font-size:10.5px;color:#333;margin-bottom:2px">${COLLEGE_SUBTITLE}</div>
-      <div style="font-size:10px;color:#555">${COLLEGE_ADDRESS}</div>
-      <div style="font-size:10px;color:#555">${COLLEGE_CONTACT}</div>
-    </div>
-  </div>`;
-
-// ─── Print TC ────────────────────────────────────────────────────────────────
 const printTC = (adm) => {
   const tcNo = 'TC' + new Date().getFullYear() + '-' + Date.now().toString().slice(-5);
-  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate — ${tcNo}</title>
+  const dateStr = new Date().toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center}
@@ -885,340 +700,381 @@ const printTC = (adm) => {
     .meta{display:flex;justify-content:space-between;font-size:12px;color:#333;margin-bottom:16px}
     table{width:100%;border-collapse:collapse;margin-bottom:20px}
     tr:nth-child(even){background:#f3f4f6}
-    td{padding:9px 12px;border:1px solid #9fa8da;font-size:13px;vertical-align:top}
+    td{padding:9px 12px;border:1px solid #9fa8da;font-size:13px}
     td:first-child{width:38%;font-weight:bold;color:#283593;background:#e8eaf6}
-    td:last-child{color:#111}
-    .notice{background:#fff9c4;border:1px solid #f9a825;border-radius:4px;padding:10px 14px;font-size:11.5px;color:#5d4037;margin-bottom:20px}
     .sign-row{display:flex;justify-content:space-between;margin-top:44px}
     .sign-box{text-align:center;width:160px}
     .sign-line{border-top:1px solid #333;padding-top:6px;margin-top:36px;font-size:12px;font-weight:bold}
-    .sign-sub{font-size:10px;color:#666}
     .footer{text-align:center;font-size:10px;color:#777;margin-top:20px;border-top:1px dashed #9fa8da;padding-top:10px}
-    @media print{body{background:white;padding:0}.page{box-shadow:none;border:2px solid #1a237e}}
-  </style></head>
-  <body><div class="page">
-    ${letterheadHTML()}
-    <div class="doc-title">TRANSFER CERTIFICATE</div>
-    <div class="meta">
-      <span><strong>TC No.:</strong> ${tcNo}</span>
-      <span><strong>Date:</strong> ${dateStr}</span>
+    @media print{body{background:white;padding:0}.page{box-shadow:none}}
+  </style></head><body><div class="page">
+    <div style="border-bottom:3px double #1a237e;padding-bottom:14px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAB4AHgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD32iiigAqOaaK2heaeVIokG53dgqqPUk9KoatrUWmeVCkT3V/cZFvaQ43yEdTzwqjux4H1IBwNUiisLePVvFRfUZ/MAttPtYy8Mb4LYVDgOwAYmR8YwSNtAGl/wkNzqXGgaa93Gel5cMYLf6qSCz/8BXHvWVrk17p+mXl7quvzN9mRZZrPSlSAqhYAsS258AEnOR0rnfEPjDxFq6QQeHoS9tqNnczWksGQ1xH5YK7X6xzI27KHg8evGhJ4DvtS8R3V/KLW0tLyGVJQhJlkjnhCyI64+8JBuDFiMKoAHNAF9LXwhd+IzotxbXd1e7XKvfNPIkpTG8KznDEbhnHH5GuX1670jRtcu9MTwrocrW97Czk2gBWxMamSQ/7QZiAentXWw+FdJ0XWbfWtR1uT7XFtYNcSxxqXEIiY8jdtIGdu7AJJHWnX6+BdR1G9vbrVdMa5vbA6fM329BuhJJIHzYB569elAGBp194Risorq8ibTZLl5pIf7Oa4jEdsJTHHLIYzhAcD5jgc+xrqI7e6hvJbTSfFYmuYP9ZZ34S4K8A8ldsg4I5JPUVSk8H6DrMMMWnarIlmllHYTwWc6OtxbocqjHBI6kEqQSGNZGvfDu8nS6uLfyLy7dLuVXJMUjXM7qqsTn7kUY4GeSo46UAdYfEN1pvGvaa9rGOt5bMZ7f6sQAyf8CXA9a3IJ4rmBJ4JUlicbkkjYMrD1BHBrza08a6np2u6gmoFTpOm+bHKhAM0ccY2xuxJ3GSVxwMEEOMHOa04LrTxE+p6HdLo139pS2udOvlMcUlw4UiN0/hkO4YdOucncKAO6orM0nWotTMsEkT2t/BgXFpLjfHnoQRwynsw4PsQQNOgAooooAKzNa1b+zLeNIYvtF/ct5VrbA4Mj4zyeygcs3YD1wDfmmjt4JJ5nWOKNS7uxwFUDJJ9sVyK6ibGym8WX1rLLdXeyCwtMhWjhZhsUluFLHDuT04B+6KAKFpDNc6rrun3awyxRxCPWNTad47glovMVYEUHbGoIxyOcnk5JoaJ4X1DWbef7Tqd5Jb3XF1eGUlNRhYeZBcRA5Eci4VWXG0jIIORWxa2mg+Pw2qRrqunXyxrb3iRu9tKyMNwjkxw6kNkEZ4bgjNaLvJfyf2DoTfY9PsgILq7h4MeAB5EP+0BjLfw9B833QBtrcWWgiTRdAtJdQvt5luAJMKsj8s88nRWY84AJPZcUmo208GnTaj4n12SK1iXc9vYEwRD/Z3D945PTqM+ldDYafaaXZpaWUCQwJ0RfXuSepJ6knk968Z+KXiGTWfEC6Jayf6JYk+Zzw0uPmJ9lHH1zQBz2q+LPtF2y6Np9ppdtnCssKvcOPV5GBOfofzqRPEGs6VbO0Op3Du6ZcSvvVRnjgjrVLRPD11qsnmwovlA8M5xn8K7H/hAZ7yyl82cb2AwEHQjpQBz2ga7G91u1Oxtb1S3zB4wrn/ccYZW/GvYLGyuXsYr/wAOa1M1vIMra6gTcR/7u4nzEI6feIHoa8HNncaNrZsLtec4z6jsa9Q+H2tmy1I6ZM/7m6OUz/DJj+o4+oFAHXf2jZ6ldW2m6/p4tL5Jlmt45jvilkTkNFJ0YjrggMOu3vXO+KUPgvwzbxafHNNcNctdPqMkCzSmYsC5GVIErqzhDjHG3jIrvL/T7TVLOS0vYEngk+8jj8iO4I6gjkdqxrS7u9Cv4dL1Sd7i0nbZZX8h+Yt2hlP97+638XQ/N94AjvbGSbRbO+1O9tdP1q1UbL5PkRXPG0hsZRuMofw5ANaWi6t/acEkc8X2e/tm8u6tt2fLbGQQe6MOVbuPQggcP46g1Eaus+pwpNoMF5bXaTzmM21tEqNHOsqt8xLByVwGySoGCOb2l/ZLbw7p+raDc3N9Jo8C2t0JomSa4twAxVkYA7gpEievQcMaAO+oqOCeK5t47iCRZIpUDo6nIZSMgj8KKAMPxCP7SvLDQRzHdMZ7sf8ATvGQSp/3nKL7gtXNa/qN/qfimW10/Up/scaLag6eYryKOZmIcXdvjeFOQuQeMHkZrYOqQWE/ifxJdAvDZAW0YBAJWJdzAE8ZMkjD/gIrnfB2gW03i77XJZfYptOgSSOBhHcE+YHCutyh5H38oQDnnJBoA6SSzTw/pFl4d0NEt729JUOm5hEAB5s3zEn5RgKCTyUHSui0+wt9LsIbK0j2QQrtUZyfck9yTkk9ySaydEX+0NZ1TWHGV8w2NrntHESHI/3pN/4Ktb9AGfrmpro2hX2ovjFvCzgHu2OB+JxXzPBIZjdyTuWmmU5J6lmbJr2f4v6ibXwpFZq2GvLhVI9VX5j+u2vDrX57uJTv27stsHOPagD2DwdZCLTYx5fzHmu/0+NVABUV4/p1/qGnr9rtvtwtowpZJpFYMD2GAOR+ld9f6hfw+H4tQtnZGkQH5FBK574NAHI/E2wjPi+xkVApaIk4HUisQO0TRSxNiQEFWHYjkGpvE2rXOoWMMt7Pem8gZljMsKBGx15X9D0Ncxp2oSzXJjYnkEgfSgD6T0q+XU9Ktb1Ok8auQOx7j880/ULC21OwmsruMSQTLtden4g9iDyCOhANcl8N9SFxo81ix+a3fco/2W5/nmu2oA5a3tjrem3fh7WJpft1jJGwuYyFdwG3QzrkEZyvPBG5WGMVz/hjULjSPFKaHBbWKRTySNc2lpK9zPbtt+WWeXARBhQojGMblxkCuq1xf7P1bS9ZThVlFlcn1ilICk/7smz6Bm9a5Tx8Lay1y0aae2ijmje5xql68FkHiK/wRgGSU5B+YnAXgHpQB0/hmWK0ub3RopEe2hIubJkYFTbyE/KCOoVw6+w20VTjuEx4U1uKz+wJcKLaW2CBfKWdNyrjA6SIg6dzRQBg3tw0PgKy1J9SvLdbyWaR7eCxiuhcGV3l+ZHHIVQTwRwDVrwbp+m6dpN/4gjtlguYPOEiw2b2CsFUE74N7Lu44bA4PFZN14rtvDnhHw6upWGnX9k+nW7xRyXKJLFPjaHZW/5ZnON6glcNkEGtzTLW3tPhNqqWsulyg2l2xOlyGSEMVb5Q5JLEcAk+nQdKAOn8MWps/C+mQMPnFsjSH1dhuY/ixNa1RWu37JDt+75a4/KpaAPGvjDeedr2n2Qb5be2aVh7sf8ABa5nwRBbp4l3XAXYIgy7vepfH94bzxvqbk5EZ8pfoox/PNZcD/Zb6xbOGeLH16GgD0/Xb/TUiFvbJEpbmSQKMD0FdNp9zA+kQQwmK4k8n/VdQfUe1eeWcEMviA7ppBYTKGVRjKk4PU/livTLWCK2s9tndOOOMInJ7ZwKAKr6Vous6PNGqJtlUjGMFD/jXgVpatba9cIeVglaIt2JzivbDavZefcXl1lk+eV1Xy1IxknGa8VjvmuLlnBISS4aUj3LZ/rQB3nw91A2PilIGY7LgGIj3PI/UV7LXz1b3D2GpQXqcGKQN+R/z+dfQUMqzwRzIcpIoZT7EZoAzfEtp9u8M6nbgfO9tJs9nCkqfwIBqC4sz4n0KwlW/u7FZVjuN1rs3HK5xllbHXORg8da2ZseRJu+7tOfyrhr+3nuPhFpoSaJESztJJ0mufs6TRLsLxmX+DcvGff3oAt6pp9zo3gK7SXUptQeyl+1xXE53SbUmEihmzyQBjPH0FFYV/4fs7DTNa1LQbaztNDl0CdXFpPvS4mPKnaPl+QKw3Dk78dqKAOm8K6ZZTeHLRLuztpprMy2m6SJWZRHI64yRx0z+NXoDa6tp+qadbxW0VvhoFMEqMHV4wd2F+7948HnjPese6gtkj8W6PeTS29tPH9sEkQLMscqbXIAznDoxx/te9c/8OZktdSWVI5xa6jD5cU91bR2K5RmdIYYAxZ8b5ck8AKAOKAO88MXX2zwvpk7H5zbIJB6OBtYfgQa05XEUTyHoqlufasPRG/s/WNU0ZzhfMN9be8UpJYD/dk3/gy+tXtdkMWh3jA4Jj2j6nj+tAHzhrsxm1u9lY5LyMT+NVdYk5tCjYKx9R2OaTVJgdQuCvIMrY+mapzFpItx520Adt4Q8R2kj/Z9T4bgq/avTrLxDoNrZs0MrSSdAiAsTXz5YTLb3kcrH5QfmHtXVy+L/KtxDpsGxsY82QAn8BQBsfEXxJeT2wswRbJOdzRKcuy/7XoK8/0+cRTqXyVBzWrYaNqnie/ZYVeRicyzyH5VHqSa3NR8NWotYtM0cfaZs5muscSN6L6KPXvQBVnniYblYMpHOPpXsngDVF1LwpbqX3S2uYJPXjp+mK8DmtLqxLRyq644OR6V2vwt8Qf2frUllO2IblQMk9CDwf1oA9b8S3f2HwzqdyD86W0mz3cqQo/EkCue8WacIfCml6bFDcTz20kJhWCGOfmJerRO6+YnqAcgkHtWp4glS71HTtJLqsXmfbrskgBYYSGGfTMmz8Fb0rjPHF9N4hktJNLtbLV9PWJJIU+wLeGR2Dk7gCHiU7YwHGB8+ScDFAFi0WFfAmsadELpby8uV89JtNeyVXuJFTEaNxtx6E85J60VspotrYahomkWkU8SNMdRnge6eZYhEgAC7icDzHTgcfKaKANPxCf7NvbDXhxHbMYLsj/n3kIBY/7rhG9hurD1fwAbnXr7Xk1AJcmRJ4mYfOuwA+WZGzsTcgOUAIDODkHjuJ4Yrm3kgmjWSKRSjowyGUjBB9sVxkWhWup3Ufh7X5rq4TTlL28DTEQ3sGQEeQD77J91gTjOCR8woAnh1BvE3h3TPFOkRbr+23N9nDg+YPuzQbuhyV+U9NyoelL4s1y2m8FpqFpNvguCGRsYPAJwR2IIwQehBFdZFFFBCkMMaRxIAqoigBQOwA6CvOfiJ4N1G8sZbvQmd0aQz3WnJ/y1fGDJH/t46r0br97qAeITtmQZrRj06W+sYRZBXYA+YN3O7P8Ahis6VC5QjqcggjBBB5BHY+1avh/TG1Kdoop/LmJ4GcZ/HNADI/DWoA5mEUK+rvWpaadpFsQ1zO97IP8AllCML+Jq1D4YvLrzDLFNGIp3hPmDfkr1wc4NdHpnhmxtcNKPOkH8LYwD9Bx+dADtMF5qsCwRxLa6cpH7mIbUP+8erV00cEFjbkKuc4UkdWPYD8aljj2QruAUAcKOABWf532vU/LDFYLdSzsOx6fnQBaKZBSWNJox8rNtBGe/Hf61z2u+GLKzjbWbFks5bb94yj7kg9AOxOcDHUkCuj+1W9vbyXdzcQ2ttFgZdsYBOAAByST6ZJPFXdG0SfUbyHU9SgaC1gbfZWMgw27tLKOzf3U/h6n5vugFd7X7P4O1PUfEkEz3WqQpBPbwt86I/wC7jgUk4By/Jzjc7HpXPeCNFOp63FqSSxkWV1JNNNcWoh1BndeEd0JSWFg24MMAgLjpXqs0Mc8LwyorxupVlYZBB7GuTuNMstNiTwt4egWze+BkuXiJzBB91nycncQNienUcKaAL/h//iZX9/rx5inYW1ofWCMn5h/vOXb3G2ity3gitbeK3gjWOGJAiIowFUDAA/CigCSvH/H/AMUvCs3h24m0PXF/4SGycPZFYJFdH3BXHzLjBUsCDwfqBXsFfIXxm0KLQfiVfrAU8m8C3iop+4XzuB9PmDH6EUAaifEn4rvoTa2t9KdNU4M/2SHHXbnG3OMkDOMZ4zmsz/hdnxA/6Dv/AJKw/wDxNRaZ4o8OJo1mupW1097b20dmFiiUhVWcy+YjluDtZgVKkE4ORWvd/EHR7q7eJIZZYLjAnWeJVWdhHCqlyWY43Rsckk855NAHHX/jDX9d1Vbu5uI5L2XCF47eNDIeg3BQAT7nmnjVvE+krNPveAQXH2eRjGnyyjPy9OvB/Ku+1vxboem3F3bzX1xf3E9p5bSRCKRWJeZl3FH27l3pg5bgDgEcZl/8R9Kubi/eG1uI7a+ZzLaeWvl7RDKir16F2Rz6EsecDIBz9v458Y6lMltBfNNIqyOqCGPOAC7Hp6Amte38S/EmTSbbVIJHNhLIEilEEO3cX2AnjgbuMnjPetG5+I+hy3GoyRJdwieFlUx2ygyqY5lETkucKhlTBH9zAAwtYuheLND0vStMM63kl5BALSaEQJ5Xl/axOW3FssdowFwBnnNAEP8AwszxzOJgNTdxCu6UrbRnYuQuTheBkgfiKs6d4n+Il7pF7qNhNLLZRMTcSpBEcbRuPGM8Dk46Cp7nxvo91oq2Ilvrd5NOazleKBQoG+FgNm/B4jfJG0HcDtzk1had4rj0fw1NplnErzy3cp+0SwKXSF4xGdhJO1iNwPB4PWgCfTvHfjK61yCWzvftF/0gDQRvsOOSqkYDYHXGfetV/jD8R47OK7fWSIJneONzaw4ZlClh93tuX860pviVo0WpW0tp9vESzQ+fIYE8x4ozOQDljkjzIu4B2dAABVST4g6RIn2SX7fJasQZ3EMavPIv2UCYgkgOfJlPf7w65NAFWH4z/EOeaOGPXAXkYKo+ywjJJwP4a9Z8BfE/wzZ6AkniPW1XxHcyub8tA7MzBiqD5F24CgAAcde5NeZ3nxE0iW5cJHcvBKQ0+6Bf3rqtuFY5YnrE55JPzD1NU/hhpNt4p+Llu7bVtIp5L7y3wCwU7lXH1K5HoDQB9bg5ANFLRQAHpXyZ408J+OfFXjDU9Zbwzqmy4mPlAwn5Yx8qD/vkCiigD161+Avgx7SFprfUFlaNS4+1EYbHPb1qX/hQfgj/AJ43/wD4FH/CiigCjqP7PnhiQRyadNdQyJ1jnlLxyexxhh9QfwNZ/wDwp3w7aEjUfDOrlR/y106/Fwn/AHyQrj/vk0UUAB+G3wqjbbcz6jaN3W8klgI/77QU/wD4Vr8IcZ/tuL/warRRQAwfDb4UyNtt7jULtuy2kks5P/fCGj/hTvhy7IGneGdXCn/lrqN+LdP++QGf/wAdFFFAGhp37PnhmPzJNRmuppHxiKCUpHH7AnLH6k/gKvf8KD8Ef88b/wD8Cj/hRRQAyb4CeC1gkMcF+XCkqPtR5OOO1eOeEPCXjrwv4s03WY/DGqEWswaRRCctGeHX8VJFFFAH1qDkA8/jRRRQB//Z" style="width:70px;height:70px;object-fit:contain;flex-shrink:0" />
+      <div style="flex:1;text-align:center">
+        <div style="font-size:10px;color:#555">Vidya-Niketan Sevabhavi Sanstha's</div>
+        <div style="font-size:19px;font-weight:bold;color:#1a237e;margin:2px 0">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+        <div style="font-size:10.5px;color:#333">Affiliated to SNDT Women's University, Mumbai</div>
+        <div style="font-size:10px;color:#555">Gangakhed, Dist. Parbhani, Maharashtra - 431514 | +91 9307162914 | lkcwsc.vnssorg.com</div>
+      </div>
     </div>
+    <div class="doc-title">TRANSFER CERTIFICATE</div>
+    <div class="meta"><span><strong>TC No.:</strong> ${tcNo}</span><span><strong>Date:</strong> ${dateStr}</span></div>
     <table>
-      <tr><td>Full Name of Student</td><td><strong>${adm.applicantName || '—'}</strong></td></tr>
-      <tr><td>Mother's Name</td><td>${adm.motherName || '—'}</td></tr>
-      <tr><td>Father's / Guardian's Name</td><td>${adm.fatherName || '—'}</td></tr>
-      <tr><td>Date of Birth</td><td>${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—'}</td></tr>
-      <tr><td>Gender</td><td>${adm.gender || '—'}</td></tr>
-      <tr><td>Category / Caste / Sub-Caste</td><td>${adm.category ? adm.category.toUpperCase() : '—'} / ${adm.caste || '—'}</td></tr>
-      <tr><td>Nationality / Religion</td><td>Indian / ${adm.religion || '—'}</td></tr>
-      <tr><td>Student ID (ERP)</td><td>${adm.studentId || '—'}</td></tr>
-      <tr><td>PRN Number</td><td>${adm.prnNumber || '—'}</td></tr>
-      <tr><td>ABC / APAR ID</td><td>${adm.aparIdNumber || '—'}</td></tr>
-      <tr><td>Course</td><td>${adm.courseType || '—'}</td></tr>
-      <tr><td>Subject / Stream</td><td>${adm.preferredSubject || '—'}</td></tr>
-      <tr><td>Year of Admission</td><td>${adm.admissionYear || '—'}</td></tr>
-      <tr><td>Last Exam Appeared</td><td>—</td></tr>
-      <tr><td>Result of Last Exam</td><td>—</td></tr>
-      <tr><td>Fees Paid Up To</td><td>—</td></tr>
-      <tr><td>Reason for Leaving</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+      <tr><td>Full Name</td><td><strong>${adm.applicantName||'—'}</strong></td></tr>
+      <tr><td>Mother's Name</td><td>${adm.motherName||'—'}</td></tr>
+      <tr><td>Father's / Guardian's Name</td><td>${adm.fatherName||'—'}</td></tr>
+      <tr><td>Date of Birth</td><td>${adm.dateOfBirth?new Date(adm.dateOfBirth).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}):'—'}</td></tr>
+      <tr><td>Gender</td><td>${adm.gender||'—'}</td></tr>
+      <tr><td>Category / Caste</td><td>${adm.category?adm.category.toUpperCase():'—'} / ${adm.caste||'—'}</td></tr>
+      <tr><td>Nationality / Religion</td><td>Indian / ${adm.religion||'—'}</td></tr>
+      <tr><td>Student ID (ERP)</td><td>${adm.studentId||'—'}</td></tr>
+      <tr><td>PRN Number</td><td>${adm.prnNumber||'—'}</td></tr>
+      <tr><td>ABC / APAR ID</td><td>${adm.aparIdNumber||'—'}</td></tr>
+      <tr><td>Course</td><td>${adm.courseType||'—'}</td></tr>
+      <tr><td>Subject / Stream</td><td>${adm.preferredSubject||'—'}</td></tr>
+      <tr><td>Year of Admission</td><td>${adm.admissionYear||'—'}</td></tr>
+      <tr><td>Reason for Leaving</td><td>&nbsp;</td></tr>
       <tr><td>Conduct &amp; Character</td><td>Good</td></tr>
-      <tr><td>Remarks</td><td>&nbsp;</td></tr>
       <tr><td>Date of Issue</td><td>${dateStr}</td></tr>
     </table>
-    <div class="notice">⚠️ This Transfer Certificate should be submitted to the institution to which the student seeks admission. Once issued, it cannot be duplicated without formal application.</div>
     <div class="sign-row">
-      <div class="sign-box">
-        <div class="sign-line">Class Teacher</div>
-        <div class="sign-sub">LKCWSC</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line">Student Section</div>
-        <div class="sign-sub">LKCWSC</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line">Principal</div>
-        <div class="sign-sub">LKCWSC, Gangakhed</div>
-      </div>
+      <div class="sign-box"><div class="sign-line">Class Teacher</div></div>
+      <div class="sign-box"><div class="sign-line">Student Section</div></div>
+      <div class="sign-box"><div class="sign-line">Principal</div></div>
     </div>
-    <div class="footer">
-      Generated through LKCWSC ERP System &nbsp;|&nbsp; Valid only with official stamp and signature &nbsp;|&nbsp; TC No.: ${tcNo}
-    </div>
-  </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
-  </body></html>`;
-  const w = window.open('', '_blank', 'width=800,height=960'); w.document.write(html); w.document.close();
+    <div class="footer">Generated through LKCWSC ERP System | TC No.: ${tcNo}</div>
+  </div><scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=800,height=960'); w.document.write(html); w.document.close();
 };
 
-// ─── Print Bonafide ──────────────────────────────────────────────────────────
 const printBonafide = (adm) => {
   const certNo = 'BON' + new Date().getFullYear() + '-' + Date.now().toString().slice(-5);
-  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-  const acadYear = (() => { const y = new Date().getFullYear(); const m = new Date().getMonth()+1; return m>=6?`${y}-${y+1}`:`${y-1}-${y}`; })();
-  const dOrS = adm.gender === 'Male' ? 'S/o' : 'D/o';
-  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate — ${certNo}</title>
+  const dateStr = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  const acadYear = (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${y+1}`:`${y-1}-${y}`; })();
+  const dOrS = adm.gender==='Male'?'S/o':'D/o';
+  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center}
     .page{background:white;max-width:660px;width:100%;border:2px solid #1a237e;padding:36px;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
     .doc-title{text-align:center;font-size:17px;font-weight:bold;letter-spacing:3px;text-decoration:underline;color:#1a237e;margin:0 0 16px}
     .meta{display:flex;justify-content:space-between;font-size:12px;color:#333;margin-bottom:20px}
-    .cert-body{font-size:14px;line-height:2.1;text-align:justify;color:#111}
-    .cert-body p{margin-bottom:14px}
+    .body{font-size:14px;line-height:2.1;text-align:justify}
     .hl{font-weight:bold;border-bottom:1px solid #333}
-    .purpose-box{border:1px solid #9fa8da;border-radius:4px;padding:12px 16px;margin:20px 0;font-size:13px;color:#555;background:#f8f9ff}
     .sign-row{display:flex;justify-content:space-between;margin-top:50px}
     .sign-box{text-align:center;width:180px}
     .sign-line{border-top:1px solid #333;padding-top:6px;margin-top:40px;font-size:12px;font-weight:bold}
-    .sign-sub{font-size:10px;color:#666}
     .footer{text-align:center;font-size:10px;color:#777;margin-top:20px;border-top:1px dashed #9fa8da;padding-top:10px}
     @media print{body{background:white;padding:0}.page{box-shadow:none}}
-  </style></head>
-  <body><div class="page">
-    ${letterheadHTML()}
+  </style></head><body><div class="page">
+    <div style="border-bottom:3px double #1a237e;padding-bottom:14px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+      <img src="data:image/jpeg;base64,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" style="width:70px;height:70px;object-fit:contain;flex-shrink:0" />
+      <div style="flex:1;text-align:center">
+        <div style="font-size:10px;color:#555">Vidya-Niketan Sevabhavi Sanstha's</div>
+        <div style="font-size:19px;font-weight:bold;color:#1a237e;margin:2px 0">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+        <div style="font-size:10.5px;color:#333">Affiliated to SNDT Women's University, Mumbai</div>
+        <div style="font-size:10px;color:#555">Gangakhed, Dist. Parbhani, Maharashtra - 431514 | +91 9307162914 | lkcwsc.vnssorg.com</div>
+      </div>
+    </div>
     <div class="doc-title">BONAFIDE CERTIFICATE</div>
-    <div class="meta">
-      <span><strong>Cert. No.:</strong> ${certNo}</span>
-      <span><strong>Date:</strong> ${dateStr}</span>
-    </div>
-    <div class="cert-body">
-      <p>This is to certify that <span class="hl">${adm.applicantName || '____________________'}</span>,
-      <em>${dOrS}</em> <span class="hl">${adm.fatherName || '____________________'}</span>,
-      resident of <span class="hl">${adm.address || '____________________'}</span>,
-      is a <em>bona fide</em> student of this college for the academic year
-      <span class="hl">${acadYear}</span>.</p>
-
-      <p>She is currently enrolled in <span class="hl">${adm.courseType || '________'}</span>
-      (Subject: <span class="hl">${adm.preferredSubject || '________'}</span>),
-      <span class="hl">${adm.admissionYear || '________'}</span>.</p>
-
-      <p>Her Student ID (ERP) is <span class="hl">${adm.studentId || '________'}</span>,
-      PRN Number is <span class="hl">${adm.prnNumber || '________'}</span>
-      and ABC / APAR ID is <span class="hl">${adm.aparIdNumber || '________'}</span>.</p>
-
+    <div class="meta"><span><strong>Cert. No.:</strong> ${certNo}</span><span><strong>Date:</strong> ${dateStr}</span></div>
+    <div class="body">
+      <p>This is to certify that <span class="hl">${adm.applicantName||'____________________'}</span>,
+      <em>${dOrS}</em> <span class="hl">${adm.fatherName||'____________________'}</span>,
+      is a <em>bona fide</em> student of this college for the academic year <span class="hl">${acadYear}</span>.</p>
+      <p>She is currently enrolled in <span class="hl">${adm.courseType||'________'}</span>
+      (Subject: <span class="hl">${adm.preferredSubject||'________'}</span>), <span class="hl">${adm.admissionYear||'________'}</span>.</p>
+      <p>Student ID: <span class="hl">${adm.studentId||'________'}</span> &nbsp;|&nbsp;
+      PRN: <span class="hl">${adm.prnNumber||'________'}</span> &nbsp;|&nbsp;
+      ABC ID: <span class="hl">${adm.aparIdNumber||'________'}</span>.</p>
       <p>Her conduct and character are <span class="hl">Good</span>.</p>
-
-      <p>This certificate is issued on her request for the purpose of
-      <span class="hl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>.</p>
+      <p>This certificate is issued on her request for the purpose of <span class="hl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>.</p>
     </div>
-    <div class="purpose-box">
-      📌 <strong>Note:</strong> This certificate is valid for a period of six months from the date of issue. For duplicate certificate, a fresh application with fees must be submitted.
+    <div style="border:1px solid #9fa8da;border-radius:4px;padding:10px 14px;margin:18px 0;font-size:12px;color:#555;background:#f8f9ff">
+      📌 Valid for 6 months from date of issue.
     </div>
     <div class="sign-row">
-      <div class="sign-box">
-        <div class="sign-line">Student Section</div>
-        <div class="sign-sub">LKCWSC</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line">Principal</div>
-        <div class="sign-sub">LKCWSC, Gangakhed</div>
-      </div>
+      <div class="sign-box"><div class="sign-line">Student Section</div></div>
+      <div class="sign-box"><div class="sign-line">Principal</div></div>
     </div>
-    <div class="footer">
-      Generated through LKCWSC ERP System &nbsp;|&nbsp; Valid with official stamp and signature &nbsp;|&nbsp; Cert. No.: ${certNo}
-    </div>
-  </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
-  </body></html>`;
-  const w = window.open('', '_blank', 'width=740,height=900'); w.document.write(html); w.document.close();
+    <div class="footer">Generated through LKCWSC ERP System | Cert. No.: ${certNo}</div>
+  </div><scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=740,height=900'); w.document.write(html); w.document.close();
 };
 
-// ─── Print ID Card ───────────────────────────────────────────────────────────
 const printIDCard = (adm) => {
   const validYear = new Date().getFullYear();
-  const html = `<!DOCTYPE html><html><head><title>ID Card — ${adm.applicantName}</title>
+  const html = `<!DOCTYPE html><html><head><title>ID Card</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Arial,sans-serif;background:#e8eaf6;padding:40px;display:flex;justify-content:center;align-items:flex-start;gap:20px;flex-wrap:wrap}
-    .card{width:320px;border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.2);font-family:Arial,sans-serif}
+    body{font-family:Arial,sans-serif;background:#e8eaf6;padding:40px;display:flex;justify-content:center}
+    .card{width:320px;border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.2)}
     .card-top{background:linear-gradient(135deg,#1a237e,#283593);color:white;padding:14px 16px;text-align:center}
-    .trust-name{font-size:8.5px;opacity:0.8;letter-spacing:0.5px;margin-bottom:2px}
-    .college-name{font-size:11.5px;font-weight:bold;letter-spacing:0.3px;line-height:1.3;margin-bottom:1px}
-    .affil{font-size:8px;opacity:0.75}
     .id-label{background:#ffd54f;color:#1a237e;font-size:11px;font-weight:bold;letter-spacing:2px;text-align:center;padding:4px}
     .card-body{background:white;padding:14px}
-    .row{display:flex;gap:12px;align-items:flex-start}
-    .photo{width:70px;height:85px;border:2px solid #1a237e;border-radius:4px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;color:#1a237e}
+    .row{display:flex;gap:12px}
+    .photo{width:70px;height:85px;border:2px solid #1a237e;border-radius:4px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
     .info{flex:1}
-    .name{font-size:13px;font-weight:bold;color:#1a237e;margin-bottom:5px;line-height:1.2}
-    .field{font-size:10px;color:#444;margin:2px 0;line-height:1.4}
+    .name{font-size:13px;font-weight:bold;color:#1a237e;margin-bottom:5px}
+    .field{font-size:10px;color:#444;margin:2px 0}
     .field span{font-weight:600;color:#1a237e}
-    .id-chip{background:#1a237e;color:white;font-size:10px;font-weight:bold;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:5px;letter-spacing:0.5px}
-    .card-bottom{background:#1a237e;color:white;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;font-size:9px}
-    .barcode{font-family:monospace;font-size:7px;letter-spacing:2px;opacity:0.6}
-    @media print{body{background:white;padding:20px}.card{box-shadow:none}}
-  </style></head>
-  <body>
+    .id-chip{background:#1a237e;color:white;font-size:10px;font-weight:bold;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:5px}
+    .card-bottom{background:#1a237e;color:white;padding:7px 14px;display:flex;justify-content:space-between;font-size:9px}
+    @media print{body{background:white;padding:0}.card{box-shadow:none}}
+  </style></head><body>
   <div class="card">
     <div class="card-top">
-      <div class="trust-name">${COLLEGE_TRUST}</div>
-      <div class="college-name">Late Kalpana Chawla Women's Senior College</div>
-      <div class="affil">Affiliated to SNDT Women's University | Gangakhed</div>
+      <div style="font-size:8.5px;opacity:0.8;margin-bottom:2px">Vidya-Niketan Sevabhavi Sanstha's</div>
+      <div style="font-size:11.5px;font-weight:bold;line-height:1.3;margin-bottom:1px">Late Kalpana Chawla Women's Senior College</div>
+      <div style="font-size:8px;opacity:0.75">Affiliated to SNDT Women's University, Mumbai | Gangakhed</div>
     </div>
     <div class="id-label">STUDENT IDENTITY CARD</div>
     <div class="card-body">
       <div class="row">
         <div class="photo">👩</div>
         <div class="info">
-          <div class="name">${adm.applicantName || '—'}</div>
-          <div class="field"><span>Course:</span> ${adm.courseType || '—'}</div>
-          <div class="field"><span>Subject:</span> ${adm.preferredSubject || '—'}</div>
-          <div class="field"><span>Year:</span> ${adm.admissionYear || '—'}</div>
-          <div class="field"><span>DOB:</span> ${adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : '—'}</div>
-          <div class="field"><span>PRN:</span> ${adm.prnNumber || '—'}</div>
-          <div class="id-chip">${adm.studentId || 'ID PENDING'}</div>
+          <div class="name">${adm.applicantName||'—'}</div>
+          <div class="field"><span>Course:</span> ${adm.courseType||'—'}</div>
+          <div class="field"><span>Subject:</span> ${adm.preferredSubject||'—'}</div>
+          <div class="field"><span>Year:</span> ${adm.admissionYear||'—'}</div>
+          <div class="field"><span>DOB:</span> ${adm.dateOfBirth?new Date(adm.dateOfBirth).toLocaleDateString('en-IN'):'—'}</div>
+          <div class="field"><span>PRN:</span> ${adm.prnNumber||'—'}</div>
+          <div class="id-chip">${adm.studentId||'ID PENDING'}</div>
         </div>
       </div>
     </div>
     <div class="card-bottom">
       <div>Valid: ${validYear}–${validYear+1}</div>
-      <div class="barcode">||| ${adm.studentId || '0000'} |||</div>
       <div>lkcwsc.vnssorg.com</div>
     </div>
   </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
-  </body></html>`;
-  const w = window.open('', '_blank', 'width=400,height=380'); w.document.write(html); w.document.close();
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=400,height=380'); w.document.write(html); w.document.close();
 };
 
-const GenerateDocTab = ({ user, docType, label, icon }) => {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [admMap, setAdmMap] = useState({});
-  const [admLoading, setAdmLoading] = useState(false);
-  const [msg, setMsg] = useState('');
+
+const DOC_CONFIG = {
+  TC:        { label: 'Transfer Certificate', icon: '📄', color: '#1565C0', bg: '#e3f2fd' },
+  BONAFIDE:  { label: 'Bonafide Certificate',  icon: '📜', color: '#7B1FA2', bg: '#f3e5f5' },
+  ID_CARD:   { label: 'ID Card',               icon: '🪪', color: '#2E7D32', bg: '#e8f5e9' },
+  MARKSHEET: { label: 'Marksheet',             icon: '📋', color: '#E65100', bg: '#fff3e0' },
+  MIGRATION: { label: 'Migration Certificate', icon: '📜', color: '#795548', bg: '#efebe9' },
+};
+
+const AllDocumentsTab = ({ user }) => {
+  const [requests, setRequests]   = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [admMap, setAdmMap]       = useState({});
+  const [search, setSearch]       = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [completing, setCompleting] = useState('');
+  const [rejecting, setRejecting]   = useState('');
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectNote, setRejectNote]   = useState('');
+  const [msg, setMsg]               = useState('');
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/document-requests/student-section/all');
-      const all = (res.data.requests || []).filter(r => r.documentType === docType);
-      setRequests(all);
-    } catch { }
-    finally { setLoading(false); }
-
-    setAdmLoading(true);
-    try {
-      const res2 = await API.get('/admissions/student-section/approved');
+      const [reqRes, admRes] = await Promise.all([
+        API.get('/document-requests/student-section/all'),
+        API.get('/admissions/student-section/approved'),
+      ]);
+      setRequests(reqRes.data.requests || []);
       const map = {};
-      (res2.data.admissions || []).forEach(a => { map[a.email] = a; });
+      (admRes.data.admissions || []).forEach(a => { map[a.email] = a; });
       setAdmMap(map);
     } catch { }
-    finally { setAdmLoading(false); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [docType]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData(); }, []);
 
   const handlePrint = (req) => {
     const adm = admMap[req.studentEmail] || {};
     const merged = {
-      applicantName: req.studentName,
-      email: req.studentEmail,
-      studentId: adm.studentId || '',
-      prnNumber: adm.prnNumber || '',
-      aparIdNumber: adm.aparIdNumber || '',
-      dateOfBirth: adm.dateOfBirth || '',
-      gender: adm.gender || 'Female',
-      fatherName: adm.fatherName || '',
-      motherName: adm.motherName || '',
-      category: adm.category || '',
-      caste: adm.caste || '',
-      courseType: req.branch || adm.courseType || '',
-      preferredSubject: adm.preferredSubject || '',
-      admissionYear: req.admissionYear || adm.admissionYear || '',
-      address: adm.address || '',
-      religion: adm.religion || '',
+      applicantName: req.studentName, email: req.studentEmail,
+      studentId: adm.studentId||'', prnNumber: adm.prnNumber||'',
+      aparIdNumber: adm.aparIdNumber||'', dateOfBirth: adm.dateOfBirth||'',
+      gender: adm.gender||'Female', fatherName: adm.fatherName||'',
+      motherName: adm.motherName||'', category: adm.category||'',
+      caste: adm.caste||'', courseType: req.branch||adm.courseType||'',
+      preferredSubject: adm.preferredSubject||'',
+      admissionYear: req.admissionYear||adm.admissionYear||'',
+      address: adm.address||'', religion: adm.religion||'',
     };
-    if (docType === 'TC') printTC(merged);
-    else if (docType === 'BONAFIDE') printBonafide(merged);
+    if (req.documentType === 'TC') printTC(merged);
+    else if (req.documentType === 'BONAFIDE') printBonafide(merged);
     else printIDCard(merged);
   };
 
   const handleComplete = async (req) => {
     setCompleting(req._id);
     try {
-      await API.put(`/document-requests/student-section/complete/${req._id}`, { notes: `${label} generated and issued.` });
-      setMsg('✅ Marked as completed!');
+      await API.put(`/document-requests/student-section/complete/${req._id}`, {
+        notes: `${DOC_CONFIG[req.documentType]?.label || req.documentType} generated and issued.`
+      });
+      setMsg('✅ Marked as issued!');
       setTimeout(() => setMsg(''), 3000);
       fetchData();
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
     finally { setCompleting(''); }
   };
 
-  const pending = requests.filter(r => r.status === 'pending_generation');
-  const completed = requests.filter(r => r.status === 'completed');
-  const filtered = requests.filter(r => !search || r.studentName?.toLowerCase().includes(search.toLowerCase()) || r.studentEmail?.toLowerCase().includes(search.toLowerCase()));
+  const handleReject = async () => {
+    if (!rejectNote.trim()) return;
+    setRejecting(rejectModal._id);
+    try {
+      await API.put(`/document-requests/accounts/reject/${rejectModal._id}`, { reason: rejectNote });
+      setMsg('✅ Request rejected.');
+      setRejectModal(null); setRejectNote('');
+      setTimeout(() => setMsg(''), 3000);
+      fetchData();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setRejecting(''); }
+  };
+
+  const filtered = requests.filter(r => {
+    const mt = typeFilter === 'all' || r.documentType === typeFilter;
+    const ms = statusFilter === 'all' || r.status === statusFilter;
+    const q  = search.toLowerCase();
+    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
+    return mt && ms && mq;
+  });
+
+  const pending = requests.filter(r => r.status === 'pending_generation').length;
+
+  const statusStyle = (s) => ({
+    pending_accounts:      { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Accounts' },
+    rejected_by_accounts:  { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' },
+    pending_exam:          { bg: '#e3f2fd', color: '#1565C0', label: '🔍 At Exam Section' },
+    rejected_by_exam:      { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Exam' },
+    pending_principal:     { bg: '#fff3e0', color: '#E65100', label: '🔄 At Principal' },
+    rejected_by_principal: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' },
+    pending_generation:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Issue' },
+    completed:             { bg: '#f3e5f5', color: '#7B1FA2', label: '🏁 Issued' },
+  }[s] || { bg: '#f5f5f5', color: '#888', label: s });
 
   return (
     <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>{icon} Generate {label}</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Print and issue {label.toLowerCase()} for approved requests.</p>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📄 Documents & Certificates</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Print TC, Bonafide, ID Card and mark as issued. All document types in one place.</p>
 
-      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending}</div>
+        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Issued: {requests.filter(r=>r.status==='completed').length}</div>
+        {Object.entries(DOC_CONFIG).map(([k,v]) => {
+          const c = requests.filter(r=>r.documentType===k).length;
+          return c > 0 ? <div key={k} style={{ background: v.bg, color: v.color, borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: 600 }}>{v.icon} {v.label}: {c}</div> : null;
+        })}
+      </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Types</option>
+          {Object.entries(DOC_CONFIG).map(([k,v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Status</option>
+          <option value="pending_generation">✅ Ready to Issue</option>
+          <option value="completed">🏁 Issued</option>
+          <option value="pending_accounts">⏳ At Accounts</option>
+          <option value="pending_exam">🔍 At Exam Section</option>
+          <option value="pending_principal">🔄 At Principal</option>
+          <option value="rejected_by_accounts">❌ Rejected</option>
+        </select>
         <button onClick={fetchData}
           style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
           🔄 Refresh
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending.length}</div>
-        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Completed: {completed.length}</div>
-      </div>
-
-      {loading || admLoading ? (
-        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">{icon}</div>
-          <h3>No {label} Requests</h3>
-          <p>Approved {label.toLowerCase()} requests from Accounts section will appear here.</p>
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 26, maxWidth: 440, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color: '#C62828', marginBottom: 12 }}>❌ Reject Request</h3>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 14 }}>Student: <strong>{rejectModal.studentName}</strong> — {DOC_CONFIG[rejectModal.documentType]?.label}</p>
+            <textarea rows="3" placeholder="Reason for rejection..." value={rejectNote} onChange={e => setRejectNote(e.target.value)}
+              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={handleReject} disabled={!rejectNote.trim() || rejecting === rejectModal._id}
+                style={{ background: '#C62828', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                {rejecting === rejectModal._id ? '⏳...' : '❌ Confirm Reject'}
+              </button>
+              <button onClick={() => { setRejectModal(null); setRejectNote(''); }}
+                style={{ background: '#eee', color: '#333', padding: '10px 18px', borderRadius: 8, border: 'none', fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
         </div>
-      ) : (
+      )}
+
+      {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p><h3>Loading...</h3></div>
+      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">📭</div><h3>No requests found</h3><p>Document requests will appear here after Accounts section approves them.</p></div>
+      : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map(req => {
-            const isPending = req.status === 'pending_generation';
+            const cfg = DOC_CONFIG[req.documentType] || { label: req.documentType, icon: '📄', color: '#555', bg: '#f5f5f5' };
+            const ss  = statusStyle(req.status);
+            const isReady = req.status === 'pending_generation';
+            const canPrint = ['TC','BONAFIDE','ID_CARD'].includes(req.documentType);
+            const adm = admMap[req.studentEmail] || {};
             return (
-              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e0e0'}`, borderRadius: 12, padding: 18, borderLeft: `4px solid ${isPending ? '#E65100' : '#2E7D32'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                  <div>
-                    <h4 style={{ color: '#1565C0', fontSize: 15, margin: 0 }}>{req.studentName}</h4>
-                    <p style={{ fontSize: 12, color: '#888', margin: '3px 0 0' }}>{req.studentEmail} · {req.branch || 'N/A'} · {req.admissionYear || 'N/A'}</p>
-                    {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600, display: 'inline-block', marginTop: 4 }}>⚡ Urgent</span>}
+              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isReady ? cfg.color+'55' : '#e0e7ef'}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${cfg.color}` }}>
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: isReady ? cfg.bg+'aa' : '#fafbff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 22 }}>{cfg.icon}</span>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <h4 style={{ color: cfg.color, fontSize: 15, margin: 0 }}>{cfg.label}</h4>
+                        {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600 }}>⚡ Urgent</span>}
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 12, background: ss.bg, color: ss.color }}>{ss.label}</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>{new Date(req.createdAt).toLocaleString('en-IN')}</p>
+                    </div>
                   </div>
-                  <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: isPending ? '#fff3e0' : '#e8f5e9', color: isPending ? '#E65100' : '#2E7D32' }}>
-                    {isPending ? '⏳ Pending' : '✅ Completed'}
-                  </span>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {canPrint && (
+                      <button onClick={() => handlePrint(req)}
+                        style={{ background: cfg.color, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        🖨️ Print {cfg.label}
+                      </button>
+                    )}
+                    {isReady && (
+                      <button onClick={() => handleComplete(req)} disabled={completing === req._id}
+                        style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: completing===req._id?'not-allowed':'pointer', opacity: completing===req._id?0.7:1 }}>
+                        {completing === req._id ? '⏳...' : '✅ Mark Issued'}
+                      </button>
+                    )}
+                    {isReady && (
+                      <button onClick={() => { setRejectModal(req); setRejectNote(''); }}
+                        style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        ❌ Reject
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
-                {admMap[req.studentEmail] && (
-                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 14px', marginBottom: 12, fontSize: 12, color: '#0c4a6e' }}>
-                    Student ID: <strong>{admMap[req.studentEmail].studentId || '—'}</strong> &nbsp;·&nbsp;
-                    PRN: <strong>{admMap[req.studentEmail].prnNumber || '—'}</strong> &nbsp;·&nbsp;
-                    ABC ID: <strong>{admMap[req.studentEmail].aparIdNumber || '—'}</strong>
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => handlePrint(req)}
-                    style={{ background: '#1565C0', color: '#fff', padding: '9px 20px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                    🖨️ Print {label}
-                  </button>
-                  {isPending && (
-                    <button onClick={() => handleComplete(req)} disabled={completing === req._id}
-                      style={{ background: '#2E7D32', color: '#fff', padding: '9px 20px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: completing === req._id ? 'not-allowed' : 'pointer', opacity: completing === req._id ? 0.7 : 1 }}>
-                      {completing === req._id ? '⏳...' : '✅ Mark Issued'}
-                    </button>
-                  )}
+                <div style={{ padding: '10px 18px 14px', fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, borderTop: '1px solid #f0f4f8' }}>
+                  <span><strong>Student:</strong> {req.studentName}</span>
+                  <span><strong>Email:</strong> {req.studentEmail}</span>
+                  <span><strong>Branch:</strong> {req.branch||'—'}</span>
+                  <span><strong>Year:</strong> {req.admissionYear||'—'}</span>
+                  {adm.studentId && <span><strong>Student ID:</strong> {adm.studentId}</span>}
+                  {adm.prnNumber && <span><strong>PRN:</strong> {adm.prnNumber}</span>}
+                  {req.reason && <span style={{gridColumn:'1/-1'}}><strong>Reason:</strong> {req.reason}</span>}
+                  {req.accountsNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Accounts: {req.accountsNotes}</span>}
+                  {req.principalNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Principal: {req.principalNotes}</span>}
                 </div>
                 {req.status === 'completed' && req.generatedBy && (
-                  <p style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600, marginTop: 8 }}>
-                    ✅ Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}
-                  </p>
+                  <div style={{ padding: '6px 18px 10px', fontSize: 12, color: '#7B1FA2', fontWeight: 600, borderTop: '1px solid #f0f4f8' }}>
+                    🏁 Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}
+                  </div>
                 )}
               </div>
             );
@@ -1228,6 +1084,7 @@ const GenerateDocTab = ({ user, docType, label, icon }) => {
     </div>
   );
 };
+
 
 const UpdatePrnTab = () => {
   const [admissions, setAdmissions] = useState([]);
