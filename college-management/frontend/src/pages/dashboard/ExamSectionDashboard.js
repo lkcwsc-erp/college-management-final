@@ -469,6 +469,335 @@ const ExamDocTab = ({ type, title, desc, color }) => {
   );
 };
 
+
+// ─── Attendance Tracker ───────────────────────────────────────────────────────
+const AttendanceTab = () => {
+  const [view, setView]             = useState('mark');  // 'mark' | 'report'
+  const [students, setStudents]     = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [date, setDate]             = useState(new Date().toISOString().split('T')[0]);
+  const [subject, setSubject]       = useState('');
+  const [session, setSession]       = useState('full_day');
+  const [attendance, setAttendance] = useState({});  // { email: 'present'|'absent'|'late' }
+  const [saving, setSaving]         = useState(false);
+  const [msg, setMsg]               = useState('');
+  const [yearFilter, setYearFilter] = useState('all');
+  // Report state
+  const [rptSubject, setRptSubject]   = useState('');
+  const [rptFrom, setRptFrom]         = useState('');
+  const [rptTo, setRptTo]             = useState('');
+  const [rptRecords, setRptRecords]   = useState([]);
+  const [rptLoading, setRptLoading]   = useState(false);
+  const [subjects, setSubjects]       = useState([]);
+
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/attendance/students');
+      setStudents(res.data.students || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const res = await API.get('/attendance/subjects');
+      setSubjects(res.data.subjects || []);
+    } catch { }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+    fetchSubjects();
+  }, []);
+
+  // Load existing attendance when date+subject changes
+  useEffect(() => {
+    if (!date || !subject) return;
+    API.get(`/attendance/by-date?date=${date}&subject=${encodeURIComponent(subject)}`)
+      .then(res => {
+        const map = {};
+        (res.data.records || []).forEach(r => { map[r.studentEmail] = r.status; });
+        setAttendance(map);
+      }).catch(() => {});
+  }, [date, subject]);
+
+  const filteredStudents = students.filter(s =>
+    yearFilter === 'all' || s.admissionYear === yearFilter
+  );
+
+  const markAll = (status) => {
+    const map = {};
+    filteredStudents.forEach(s => { map[s.email] = status; });
+    setAttendance(prev => ({ ...prev, ...map }));
+  };
+
+  const handleSave = async () => {
+    if (!subject.trim()) { setMsg('❌ Enter subject name.'); return; }
+    if (!date) { setMsg('❌ Select date.'); return; }
+    const records = filteredStudents.map(s => ({
+      studentEmail: s.email,
+      studentName:  s.applicantName,
+      studentId:    s.studentId || '',
+      courseType:   s.courseType || '',
+      admissionYear: s.admissionYear || '',
+      status:       attendance[s.email] || 'absent',
+    }));
+    setSaving(true);
+    try {
+      await API.post('/attendance/bulk', { date, subject, session, records });
+      setMsg(`✅ Attendance saved for ${records.length} students!`);
+      fetchSubjects();
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSaving(false); }
+  };
+
+  const fetchReport = async () => {
+    setRptLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (rptSubject) params.append('subject', rptSubject);
+      if (rptFrom)    params.append('fromDate', rptFrom);
+      if (rptTo)      params.append('toDate', rptTo);
+      const res = await API.get(`/attendance/report?${params}`);
+      setRptRecords(res.data.records || []);
+    } catch { }
+    finally { setRptLoading(false); }
+  };
+
+  const presentCount = filteredStudents.filter(s => attendance[s.email] === 'present').length;
+  const absentCount  = filteredStudents.filter(s => attendance[s.email] === 'absent' || !attendance[s.email]).length;
+  const lateCount    = filteredStudents.filter(s => attendance[s.email] === 'late').length;
+
+  // Report summary
+  const rptSummary = rptRecords.reduce((acc, r) => {
+    if (!acc[r.studentEmail]) acc[r.studentEmail] = { name: r.studentName, id: r.studentId, total: 0, present: 0, absent: 0, late: 0 };
+    acc[r.studentEmail].total++;
+    acc[r.studentEmail][r.status]++;
+    return acc;
+  }, {});
+
+  const exportRptCSV = () => {
+    const headers = ['Student Name','Student ID','Total Days','Present','Absent','Late','Attendance %'];
+    const rows = Object.values(rptSummary).map(s => [s.name, s.id, s.total, s.present, s.absent, s.late, s.total > 0 ? Math.round((s.present/s.total)*100)+'%' : '0%']);
+    const csv = [headers,...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='attendance_report.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div>
+      <h2 style={{ color: '#f57c00', marginBottom: 4 }}>📋 Attendance Tracker</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Mark daily attendance and view reports.</p>
+
+      {/* View toggle */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 24, background: '#f0f4f8', borderRadius: 10, padding: 4, width: 'fit-content' }}>
+        {[{ id: 'mark', label: '✏️ Mark Attendance' }, { id: 'report', label: '📊 View Report' }].map(t => (
+          <button key={t.id} onClick={() => setView(t.id)}
+            style={{ padding: '9px 22px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: view === t.id ? '#f57c00' : 'transparent', color: view === t.id ? '#fff' : '#555' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      {/* ── MARK ATTENDANCE ── */}
+      {view === 'mark' && (
+        <div>
+          {/* Controls */}
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#f57c00', marginBottom: 5 }}>📅 Date *</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #ffe0b2', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#f57c00', marginBottom: 5 }}>📚 Subject *</label>
+                <input type="text" list="subjects-list" placeholder="e.g. Physics, Math..." value={subject} onChange={e => setSubject(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #ffe0b2', fontSize: 14, boxSizing: 'border-box' }} />
+                <datalist id="subjects-list">{subjects.map(s => <option key={s} value={s} />)}</datalist>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#f57c00', marginBottom: 5 }}>🕐 Session</label>
+                <select value={session} onChange={e => setSession(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+                  <option value="full_day">Full Day</option>
+                  <option value="morning">Morning</option>
+                  <option value="afternoon">Afternoon</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 5 }}>📊 Year Filter</label>
+                <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+                  <option value="all">All Years</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Quick mark + stats */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: '#555', fontWeight: 600 }}>Mark All:</span>
+              <button onClick={() => markAll('present')} style={{ background: '#e8f5e9', color: '#2E7D32', border: '1px solid #a5d6a7', borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✅ All Present</button>
+              <button onClick={() => markAll('absent')}  style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>❌ All Absent</button>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+                <span style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>✅ {presentCount}</span>
+                <span style={{ background: '#ffebee', color: '#C62828', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>❌ {absentCount}</span>
+                {lateCount > 0 && <span style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>⏰ {lateCount}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Student list */}
+          {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p><h3>Loading...</h3></div>
+          : filteredStudents.length === 0 ? <div className="empty-state"><div className="empty-icon">👩‍🎓</div><h3>No students found</h3></div>
+          : (
+            <div>
+              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', marginBottom: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr', background: '#f57c00', padding: '12px 16px', gap: 8 }}>
+                  {['Student','Course / Year','Student ID','Attendance'].map(h => <span key={h} style={{color:'#fff',fontWeight:700,fontSize:13}}>{h}</span>)}
+                </div>
+                {filteredStudents.map((s, idx) => {
+                  const status = attendance[s.email] || 'absent';
+                  return (
+                    <div key={s._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx%2===0?'#fafbff':'#fff' }}>
+                      <div>
+                        <p style={{fontWeight:600,fontSize:13,margin:0}}>{s.applicantName}</p>
+                        <p style={{fontSize:11,color:'#888',margin:0}}>{s.email}</p>
+                      </div>
+                      <div>
+                        <p style={{fontSize:12,margin:0}}>{s.courseType||'—'}</p>
+                        <p style={{fontSize:11,color:'#888',margin:0}}>{s.admissionYear}</p>
+                      </div>
+                      <span style={{fontSize:12,fontFamily:'monospace',color:'#1565C0',fontWeight:600}}>{s.studentId||'—'}</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {['present','absent','late'].map(st => (
+                          <button key={st} onClick={() => setAttendance(prev => ({ ...prev, [s.email]: st }))}
+                            style={{
+                              padding: '5px 10px', borderRadius: 7, border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                              background: status === st ? (st==='present'?'#2E7D32':st==='absent'?'#C62828':'#E65100') : '#f0f0f0',
+                              color: status === st ? '#fff' : '#888',
+                            }}>
+                            {st==='present'?'✅':st==='absent'?'❌':'⏰'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button onClick={handleSave} disabled={saving || !subject.trim()}
+                style={{ background: saving||!subject.trim() ? '#aaa' : '#f57c00', color: '#fff', border: 'none', borderRadius: 9, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: saving||!subject.trim() ? 'not-allowed' : 'pointer' }}>
+                {saving ? '⏳ Saving...' : `💾 Save Attendance (${filteredStudents.length} students)`}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── REPORT ── */}
+      {view === 'report' && (
+        <div>
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20 }}>
+            <h4 style={{ color: '#f57c00', marginBottom: 14 }}>🔍 Filter Report</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 5 }}>Subject</label>
+                <input type="text" list="subjects-list2" placeholder="All subjects" value={rptSubject} onChange={e => setRptSubject(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+                <datalist id="subjects-list2">{subjects.map(s => <option key={s} value={s} />)}</datalist>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 5 }}>From Date</label>
+                <input type="date" value={rptFrom} onChange={e => setRptFrom(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 5 }}>To Date</label>
+                <input type="date" value={rptTo} onChange={e => setRptTo(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={fetchReport} disabled={rptLoading}
+                style={{ background: '#f57c00', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, fontWeight: 700, cursor: rptLoading ? 'not-allowed' : 'pointer', opacity: rptLoading ? 0.7 : 1 }}>
+                {rptLoading ? '⏳...' : '📊 Generate Report'}
+              </button>
+              {rptRecords.length > 0 && (
+                <button onClick={exportRptCSV}
+                  style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  📥 Export CSV
+                </button>
+              )}
+            </div>
+          </div>
+
+          {rptRecords.length > 0 && (
+            <div>
+              {/* Summary table */}
+              <h4 style={{ color: '#f57c00', marginBottom: 12 }}>📊 Student-wise Summary</h4>
+              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', marginBottom: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr', background: '#f57c00', padding: '12px 16px', gap: 8 }}>
+                  {['Student','Total Days','Present','Absent','Late','Attendance %'].map(h => <span key={h} style={{color:'#fff',fontWeight:700,fontSize:12}}>{h}</span>)}
+                </div>
+                {Object.values(rptSummary).sort((a,b) => b.present/b.total - a.present/a.total).map((s, idx) => {
+                  const pct = s.total > 0 ? Math.round((s.present/s.total)*100) : 0;
+                  const pctColor = pct >= 75 ? '#2E7D32' : pct >= 60 ? '#E65100' : '#C62828';
+                  return (
+                    <div key={s.id||idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr', padding: '10px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx%2===0?'#fafbff':'#fff' }}>
+                      <div>
+                        <p style={{fontWeight:600,fontSize:13,margin:0}}>{s.name}</p>
+                        <p style={{fontSize:10,color:'#888',margin:0}}>{s.id||''}</p>
+                      </div>
+                      <span style={{fontSize:13,fontWeight:700,textAlign:'center'}}>{s.total}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:'#2E7D32',textAlign:'center'}}>{s.present}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:'#C62828',textAlign:'center'}}>{s.absent}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:'#E65100',textAlign:'center'}}>{s.late}</span>
+                      <span style={{fontSize:13,fontWeight:800,color:pctColor}}>{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Detailed records */}
+              <h4 style={{ color: '#f57c00', marginBottom: 12 }}>📅 Detailed Records ({rptRecords.length})</h4>
+              <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.5fr 1fr 1fr', background: '#f57c00', padding: '12px 16px', gap: 8 }}>
+                  {['Date','Student','Subject','Session','Status'].map(h => <span key={h} style={{color:'#fff',fontWeight:700,fontSize:12}}>{h}</span>)}
+                </div>
+                {rptRecords.slice(0,100).map((r, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.5fr 1fr 1fr', padding: '10px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx%2===0?'#fafbff':'#fff' }}>
+                    <span style={{fontSize:12,color:'#555'}}>{r.date}</span>
+                    <div><p style={{fontWeight:600,fontSize:12,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:'#aaa',margin:0}}>{r.studentId||''}</p></div>
+                    <span style={{fontSize:12}}>{r.subject}</span>
+                    <span style={{fontSize:11,color:'#888'}}>{r.session}</span>
+                    <span style={{fontSize:12,fontWeight:700,padding:'2px 8px',borderRadius:10,background:r.status==='present'?'#e8f5e9':r.status==='absent'?'#ffebee':'#fff3e0',color:r.status==='present'?'#2E7D32':r.status==='absent'?'#C62828':'#E65100'}}>
+                      {r.status==='present'?'✅ Present':r.status==='absent'?'❌ Absent':'⏰ Late'}
+                    </span>
+                  </div>
+                ))}
+                {rptRecords.length > 100 && <div style={{padding:'10px',textAlign:'center',fontSize:12,color:'#888'}}>Showing 100 of {rptRecords.length}. Export CSV for full data.</div>}
+              </div>
+            </div>
+          )}
+
+          {rptRecords.length === 0 && !rptLoading && (
+            <div className="empty-state"><div className="empty-icon">📋</div><h3>No records yet</h3><p>Click "Generate Report" to view attendance data.</p></div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main ExamSectionDashboard ────────────────────────────────────────────────
 const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
@@ -661,6 +990,7 @@ const ExamSectionDashboard = () => {
           )}
 
           {activeTab === 'receipts'       && <PaymentReceiptsTab themeColor="#f57c00" />}
+          {activeTab === 'attendance'    && <AttendanceTab />}
           {activeTab === 'upload_result' && <ResultUploadTab />}
           {activeTab === 'tc_verify'     && <ExamDocTab type="TC" title="📄 TC Verification" desc="Verify student result status before TC is sent to Principal." color="#1565C0" />}
           {activeTab === 'marksheet'     && <ExamDocTab type="MARKSHEET" title="📋 Marksheet Requests" desc="Process marksheet requests from students." color="#f57c00" />}
