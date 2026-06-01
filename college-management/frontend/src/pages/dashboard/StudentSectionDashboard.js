@@ -682,11 +682,6 @@ const StudentSectionDashboard = () => {
 // DOCUMENT VERIFICATION TAB
 // Shows all doc requests that are pending_generation → student section marks complete
 // ─────────────────────────────────────────────────────────────────────────────
-const COLLEGE_NAME_DOC    = "Late Kalpana Chawla Women's Senior College (LKCWSC)";
-const COLLEGE_TRUST_DOC   = "Vidya-Niketan Sevabhavi Sanstha's";
-const COLLEGE_SUBTITLE_DOC = "Affiliated to SNDT Women's University, Mumbai";
-const COLLEGE_ADDRESS_DOC  = "Gangakhed, Dist. Parbhani, Maharashtra - 431514";
-const COLLEGE_CONTACT_DOC  = "+91 9307162914  |  lkcwsc.vnssorg.com";
 
 const printTC = (adm) => {
   const tcNo = 'TC' + new Date().getFullYear() + '-' + Date.now().toString().slice(-5);
