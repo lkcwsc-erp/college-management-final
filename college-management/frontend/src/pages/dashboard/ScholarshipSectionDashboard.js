@@ -347,7 +347,7 @@ const ScholarshipSectionDashboard = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <h4 style={{ color: '#7B1FA2', margin: 0, fontSize: 14 }}>🏅 Scholarship & MahaDBT</h4>
                   {!editMode ? (
-                    <button onClick={() => { setEditMode(true); setEditData({ scholarshipStatus: selected.scholarshipStatus, scholarshipNote: selected.scholarshipNote || '', mahaDBTUsername: selected.mahaDBTUsername || '', mahaDBTPassword: selected.mahaDBTPassword || '', mahaDBTAppNo: selected.mahaDBTAppNo || '' }); }}
+                    <button onClick={() => { setEditMode(true); setEditData({ scholarshipStatus: selected.scholarshipStatus, scholarshipNote: selected.scholarshipNote || '', mahaDBTUsername: selected.mahaDBTUsername || '', mahaDBTPassword: selected.mahaDBTPassword || '', mahaDBTAppNo: selected.mahaDBTAppNo || '', scholarshipAmount: selected.scholarshipAmount || '' }); }}
                       style={{ background: '#7B1FA2', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                       ✏️ Edit
                     </button>
@@ -367,6 +367,7 @@ const ScholarshipSectionDashboard = () => {
                   <div style={{ fontSize: 13 }}>
                     {[
                       ['Scholarship Status', STATUS_CONFIG[selected.scholarshipStatus]?.label || '—'],
+                      ['Scholarship Amount', selected.scholarshipAmount > 0 ? `₹${Number(selected.scholarshipAmount).toLocaleString('en-IN')}` : '—'],
                       ['MahaDBT Username', selected.mahaDBTUsername || '—'],
                       ['MahaDBT Password', selected.mahaDBTPassword ? '••••••' : '—'],
                       ['Application No.', selected.mahaDBTAppNo || '—'],
@@ -411,8 +412,19 @@ const ScholarshipSectionDashboard = () => {
                     </div>
                     <div className="form-group" style={{ gridColumn: '1/-1' }}>
                       <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#7B1FA2', marginBottom: 5 }}>Notes</label>
-                      <textarea rows="2" placeholder="Any notes about scholarship status..." value={editData.scholarshipNote} onChange={e => setEditData(p => ({ ...p, scholarshipNote: e.target.value }))}
+                      <div className="form-group">
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#7B1FA2', marginBottom: 5 }}>💰 Scholarship Amount (₹) — Auto-deducted from fees</label>
+                        <input type="number" min="0" placeholder="e.g. 5000 — leave 0 if not applicable"
+                          value={editData.scholarshipAmount}
+                          onChange={e => setEditData(p => ({ ...p, scholarshipAmount: e.target.value }))}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #ce93d8', fontSize: 14, boxSizing: 'border-box' }} />
+                        <p style={{ fontSize: 11, color: '#888', marginTop: 4 }}>This amount will be auto-deducted from the student's fee balance in their dashboard.</p>
+                      </div>
+                      <div className="form-group" style={{ gridColumn: '1/-1' }}>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#7B1FA2', marginBottom: 5 }}>Notes</label>
+                        <textarea rows="2" placeholder="Any notes about scholarship status..." value={editData.scholarshipNote} onChange={e => setEditData(p => ({ ...p, scholarshipNote: e.target.value }))}
                         style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #ce93d8', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+                      </div>
                     </div>
                   </div>
                 )}
