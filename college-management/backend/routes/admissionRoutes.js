@@ -506,13 +506,14 @@ router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarshi
 // ========== UPDATE MAHADBT CREDENTIALS ==================================
 router.put('/update-mahadbt/:id', protect, authorizeRoles('staff_scholarship', 'admin'), async (req, res) => {
   try {
-    const { mahaDBTUsername, mahaDBTPassword, mahaDBTAppNo, scholarshipStatus, scholarshipNote } = req.body;
+    const { mahaDBTUsername, mahaDBTPassword, mahaDBTAppNo, scholarshipStatus, scholarshipNote, scholarshipAmount } = req.body;
     const update = {};
-    if (mahaDBTUsername !== undefined) update.mahaDBTUsername = mahaDBTUsername;
-    if (mahaDBTPassword !== undefined) update.mahaDBTPassword = mahaDBTPassword;
-    if (mahaDBTAppNo    !== undefined) update.mahaDBTAppNo    = mahaDBTAppNo;
-    if (scholarshipStatus)             update.scholarshipStatus = scholarshipStatus;
-    if (scholarshipNote !== undefined) update.scholarshipNote  = scholarshipNote;
+    if (mahaDBTUsername !== undefined)  update.mahaDBTUsername  = mahaDBTUsername;
+    if (mahaDBTPassword !== undefined)  update.mahaDBTPassword  = mahaDBTPassword;
+    if (mahaDBTAppNo    !== undefined)  update.mahaDBTAppNo     = mahaDBTAppNo;
+    if (scholarshipStatus)              update.scholarshipStatus = scholarshipStatus;
+    if (scholarshipNote !== undefined)  update.scholarshipNote  = scholarshipNote;
+    if (scholarshipAmount !== undefined) update.scholarshipAmount = Number(scholarshipAmount) || 0;
     const admission = await Admission.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!admission) return res.status(404).json({ success: false, message: 'Not found' });
     res.json({ success: true, message: 'MahaDBT data updated', admission });
