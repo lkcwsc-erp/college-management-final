@@ -171,6 +171,7 @@ const AdminDashboard = () => {
     { id: 'events',   label: '🗓️ Events' },
     { id: 'contacts',  label: '📬 Messages' },
     { id: 'messaging', label: '✉️ Send Message' },
+    { id: 'receipts',  label: '🧾 Payment Receipts' },
   ];
 
   const roleLabel = (role) => ({
@@ -753,10 +754,99 @@ const AdminDashboard = () => {
           )}
 
           {/* ══ MESSAGING ══ */}
+          {activeTab === 'receipts'  && <PaymentReceiptsTab themeColor="#1565C0" />}
           {activeTab === 'messaging' && <AdminMessagingTab user={user} showMessage={showMessage} />}
 
         </div>
       </main>
+    </div>
+  );
+};
+
+
+// ─── Shared Payment Receipts Tab ─────────────────────────────────────────────
+const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
+  const [receipts, setReceipts]     = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [search, setSearch]         = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [errMsg, setErrMsg]         = useState("");
+
+  const fetchReceipts = async () => {
+    setLoading(true); setErrMsg("");
+    try {
+      const res = await API.get("/admissions/receipts/all");
+      setReceipts(res.data.receipts || []);
+    } catch (e) { setErrMsg("Failed to load: " + (e.response?.data?.message || "Error")); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchReceipts(); }, []);
+
+  const filtered = receipts.filter(r => {
+    const q  = search.toLowerCase();
+    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q) || r.studentId?.toLowerCase().includes(q) || r.receiptNo?.toLowerCase().includes(q);
+    const mt = typeFilter === "all" || r.feeType === typeFilter;
+    const now = new Date(); let md = true;
+    if (dateFilter === "today") { const d = new Date(r.paidAt); md = d.toDateString() === now.toDateString(); }
+    else if (dateFilter === "week") { const d = new Date(r.paidAt); md = (now - d) <= 7*24*60*60*1000; }
+    else if (dateFilter === "month") { const d = new Date(r.paidAt); md = d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
+    return mq && mt && md;
+  });
+
+  const totalAmount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+  const feeTypes = [...new Set(receipts.map(r => r.feeType).filter(Boolean))];
+
+  return (
+    <div>
+      <h2 style={{ color: themeColor, marginBottom: 4 }}>🧾 Payment Receipts</h2>
+      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>All fee receipts collected by Accounts Section.</p>
+      {errMsg && <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 14, fontSize: 14, background: "#ffebee", color: "#C62828" }}>{errMsg}</div>}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ background: "#e8f5e9", color: "#2E7D32", borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>💰 Total: ₹{totalAmount.toLocaleString("en-IN")}</div>
+        <div style={{ background: "#e3f2fd", color: themeColor, borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>🧾 Count: {filtered.length}</div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <input type="text" placeholder="🔍 Name, ID, receipt no..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 9, border: "1px solid #ddd", fontSize: 14 }} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Fee Types</option>
+          {feeTypes.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <button onClick={fetchReceipts} style={{ padding: "9px 14px", background: "#f0f4ff", color: themeColor, border: "1px solid #ddd", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🔄</button>
+      </div>
+      {loading ? <div className="empty-state"><p style={{fontSize:"2rem"}}>⏳</p><h3>Loading...</h3></div>
+      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts found</h3></div>
+      : (
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e0e7ef", boxShadow: "0 2px 10px rgba(0,0,0,.06)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", background: themeColor, padding: "12px 16px", gap: 8 }}>
+            {["Receipt No","Student","Email","Fee Type","Amount","Mode","Date"].map(h => <span key={h} style={{color:"#fff",fontWeight:700,fontSize:12}}>{h}</span>)}
+          </div>
+          {filtered.map((r, idx) => (
+            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", padding: "11px 16px", gap: 8, alignItems: "center", borderBottom: "1px solid #f0f4f8", background: idx%2===0?"#fafbff":"#fff" }}>
+              <span style={{fontSize:11,fontFamily:"monospace",color:themeColor,fontWeight:700}}>{r.receiptNo||"—"}</span>
+              <div><p style={{fontWeight:600,fontSize:13,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:"#888",margin:0}}>{r.studentId||""} · {r.admissionYear||""}</p></div>
+              <span style={{fontSize:11,color:"#555"}}>{r.studentEmail}</span>
+              <span style={{fontSize:12}}>{r.feeTypeLabel||r.feeType||"—"}</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>₹{(r.amount||0).toLocaleString("en-IN")}</span>
+              <span style={{fontSize:11,background:r.paymentMode==="online"?"#e3f2fd":"#e8f5e9",color:r.paymentMode==="online"?"#1565C0":"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:600}}>{r.paymentMode==="online"?"🌐 Online":"💵 Cash"}</span>
+              <span style={{fontSize:11,color:"#888"}}>{r.paidAt?new Date(r.paidAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}</span>
+            </div>
+          ))}
+          <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
