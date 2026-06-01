@@ -241,7 +241,7 @@ const printReceipt = (data) => {
     body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center;align-items:flex-start}
     .page{background:white;max-width:520px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.15)}
     /* Letterhead */
-    .letterhead{border-bottom:4px double #1a237e;padding:18px 24px 12px;text-align:center}
+    .letterhead{border-bottom:4px double #1a237e;padding:14px 20px 12px;display:flex;align-items:center;gap:12px}
     .trust{font-size:11px;color:#555;letter-spacing:0.5px;margin-bottom:2px}
     .college{font-size:18px;font-weight:bold;color:#1a237e;letter-spacing:0.5px;line-height:1.2;margin-bottom:3px}
     .affil{font-size:10.5px;color:#333;margin-bottom:2px}
