@@ -772,8 +772,8 @@ const printBonafide = (adm) => {
   const dobYear  = dobObj ? dobObj.getFullYear() : '________';
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const dobWords = dobObj ? (dobObj.getDate() + ' ' + monthNames[dobObj.getMonth()] + ' ' + dobObj.getFullYear()) : '________________';
-  const name     = adm.applicantName || '______________________________';
-  const course   = (adm.courseType||'__________') + (adm.preferredSubject ? ' (' + adm.preferredSubject + ')' : '');
+  const name     = adm.applicantName || '';
+  const course   = (adm.courseType||'') + (adm.preferredSubject ? ' (' + adm.preferredSubject + ')' : '');
 
   const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
   <style>
@@ -782,19 +782,21 @@ const printBonafide = (adm) => {
     .page{background:white;width:720px;border:3px solid #000;box-shadow:0 4px 20px rgba(0,0,0,.2)}
     .header{display:flex;align-items:center;border-bottom:2px solid #000;padding:10px 14px 10px 10px}
     .hlogo{width:88px;height:88px;object-fit:contain;flex-shrink:0}
-    .htxt{flex:1;text-align:center;line-height:1.4}
-    .trust{font-size:11px}
-    .affil{font-size:11px}
-    .cname{font-size:21px;font-weight:900}
+    .htxt{flex:1;text-align:center;line-height:1.5}
+    .trust{font-size:11.5px}
+    .affil{font-size:11.5px}
+    .cname{font-size:21px;font-weight:900;line-height:1.3}
     .addr{font-size:11.5px}
-    .yr-row{text-align:center;padding:5px;border-bottom:1px solid #000;font-size:14px;font-weight:bold;letter-spacing:8px}
+    .yr-row{text-align:center;padding:6px 0 5px;border-bottom:1px solid #000;font-size:14px;font-weight:bold;letter-spacing:10px}
     .title-row{display:flex;align-items:center;justify-content:space-between;padding:5px 14px;border-bottom:1px solid #000}
     .tbox{background:#000;color:#fff;font-size:15px;font-weight:bold;letter-spacing:3px;padding:5px 20px}
-    .body{padding:18px 22px 8px;font-size:13.5px}
-    .row{line-height:3;display:block}
-    .ul{border-bottom:1.5px solid #000;display:inline-block;min-width:200px;text-align:center;font-weight:bold;font-size:13.5px}
-    .ul-sm{border-bottom:1.5px solid #000;display:inline-block;min-width:50px;text-align:center;font-size:13.5px}
-    .foot{display:flex;justify-content:space-between;align-items:center;padding:10px 22px 12px;border-top:1px solid #000;margin-top:8px}
+    .body{padding:14px 20px 0px}
+    .line{font-size:13.5px;margin-bottom:0;padding:10px 0 0 0;display:block;line-height:1}
+    .ul{border-bottom:1.5px solid #000;display:inline-block;min-width:210px;text-align:center;font-weight:bold}
+    .ul-sm{border-bottom:1.5px solid #000;display:inline-block;min-width:48px;text-align:center}
+    .ul-lg{border-bottom:1.5px solid #000;display:inline-block;min-width:290px}
+    .gap{display:block;height:16px}
+    .foot{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 12px;border-top:1px solid #000;margin-top:16px}
     @media print{body{background:white;padding:0}.page{box-shadow:none}}
   </style></head><body><div class="page">
 
@@ -808,20 +810,25 @@ const printBonafide = (adm) => {
       </div>
     </div>
 
-    <div class="yr-row">20${acY1s}&nbsp;&nbsp;-&nbsp;&nbsp;20${acY2s}</div>
+    <div class="yr-row">20${acY1s}&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;20${acY2s}</div>
 
     <div class="title-row">
-      <span style="font-size:12px">No. :&nbsp; ${certNo}</span>
+      <span style="font-size:12px">No. :&nbsp;&nbsp;</span>
       <span class="tbox">BONAFIDE&nbsp;&nbsp;CERTIFICATE</span>
       <span style="font-size:12px">Date :&nbsp; ${day} / ${month} /20${year2}</span>
     </div>
 
     <div class="body">
-      <span class="row">This is to certify that Miss <span class="ul">&nbsp;${name}&nbsp;</span> is/was a bonafide</span>
-      <span class="row">student of <span class="ul">&nbsp;${course}&nbsp;</span> Class of this College during</span>
-      <span class="row">the academic year 20<span class="ul-sm">${acY1s}</span> - 20<span class="ul-sm">${acY2s}</span>&nbsp;&nbsp;To the best of my knowledge and belief, she bears good</span>
-      <span class="row">moral character. As per office records, her date of birth is <span class="ul-sm">${dobDay}</span> / <span class="ul-sm">${dobMonth}</span> / <span class="ul-sm" style="min-width:80px">${dobYear}</span>.</span>
-      <span class="row">(in words)&nbsp; <span class="ul" style="min-width:300px">&nbsp;${dobWords}&nbsp;</span></span>
+      <span class="line">This is to certify that Miss&nbsp; <span class="ul">&nbsp;${name}&nbsp;</span> &nbsp;is/was a bonafide</span>
+      <span class="gap"></span>
+      <span class="line">student of &nbsp;<span class="ul" style="min-width:270px">&nbsp;${course}&nbsp;</span> &nbsp;Class of this College during</span>
+      <span class="gap"></span>
+      <span class="line">the academic year 20<span class="ul-sm">&nbsp;${acY1s}&nbsp;</span> - 20<span class="ul-sm">&nbsp;${acY2s}&nbsp;</span> &nbsp;To the best of my knowledge and belief, she bears good</span>
+      <span class="gap"></span>
+      <span class="line">moral character. As per office records, her date of birth is &nbsp;<span class="ul-sm">&nbsp;${dobDay}&nbsp;</span> / <span class="ul-sm">&nbsp;${dobMonth}&nbsp;</span> / <span class="ul-sm" style="min-width:72px">&nbsp;${dobYear}&nbsp;</span>.</span>
+      <span class="gap"></span>
+      <span class="line">(in words) &nbsp;<span class="ul-lg">&nbsp;${dobWords}&nbsp;</span></span>
+      <span style="display:block;height:30px"></span>
     </div>
 
     <div class="foot">
