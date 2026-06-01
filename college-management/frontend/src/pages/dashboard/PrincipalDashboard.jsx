@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import AdminReports from '../../components/AdminReports';
 import StudentViewFull from './StudentViewFull';
 import StudentsReport from '../../components/StudentsReport';
 
@@ -578,7 +579,7 @@ const PrincipalDashboard = () => {
           )}
 
           {/* ── COLLEGE REPORTS (Students) ── */}
-          {activeTab === 'reports' && <StudentsReport themeColor="#C62828" />}
+          {activeTab === 'reports' && <AdminReports themeColor="#C62828" />}
 
           {/* ── OTHER TABS ── */}
 {!['home', 'admissions', 'tc', 'reports'].includes(activeTab) && (
