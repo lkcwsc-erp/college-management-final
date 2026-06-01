@@ -253,55 +253,46 @@ const genVerificationNo = () => 'ERP' + Date.now().toString(36).toUpperCase().sl
 
 // ─── Receipt printer (official format per LKCWSC document) ───────────────────
 const printReceipt = (data) => {
-  const vNo = genVerificationNo();
-  const acadYear = data.academicYear || getAcademicYear();
-  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const acadYear = data.academicYear || (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })();
+  const dateStr  = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
   const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${data.receiptNo}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Times New Roman',serif;background:#e8eaf6;padding:30px;display:flex;justify-content:center;align-items:flex-start}
-    .page{background:white;max-width:520px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.15)}
-    /* Letterhead */
-    .letterhead{border-bottom:4px double #1a237e;padding:14px 20px 12px;display:flex;align-items:center;gap:12px}
-    .trust{font-size:11px;color:#555;letter-spacing:0.5px;margin-bottom:2px}
-    .college{font-size:18px;font-weight:bold;color:#1a237e;letter-spacing:0.5px;line-height:1.2;margin-bottom:3px}
-    .affil{font-size:10.5px;color:#333;margin-bottom:2px}
+    body{font-family:'Times New Roman',serif;background:#f0f4f8;padding:24px;display:flex;justify-content:center}
+    .page{background:white;max-width:480px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+    .letterhead{border-bottom:3px double #1a237e;padding:14px 18px 10px;display:flex;align-items:center;gap:12px}
+    .lh-text{flex:1;text-align:center}
+    .trust{font-size:10px;color:#555;letter-spacing:0.5px}
+    .college{font-size:15px;font-weight:bold;color:#1a237e;line-height:1.2;margin:2px 0}
+    .affil{font-size:10px;color:#333}
     .contact{font-size:10px;color:#555}
-    /* Title bar */
-    .title-bar{background:#1a237e;color:white;text-align:center;padding:8px;font-size:14px;font-weight:bold;letter-spacing:2px}
-    /* Body */
-    .body{padding:18px 24px}
-    /* Sections */
-    .section-title{font-size:10.5px;font-weight:bold;color:#1a237e;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1a237e;padding-bottom:3px;margin:14px 0 8px}
-    table{width:100%;border-collapse:collapse;margin-bottom:4px}
-    td{padding:5px 8px;font-size:12px;border:1px solid #c5cae9}
-    td:first-child{background:#e8eaf6;font-weight:600;color:#283593;width:42%}
+    .title-bar{background:#1a237e;color:white;text-align:center;padding:7px;font-size:13px;font-weight:bold;letter-spacing:2px}
+    .body{padding:16px 20px}
+    .section-title{font-size:10px;font-weight:bold;color:#1a237e;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1a237e;padding-bottom:2px;margin:12px 0 7px}
+    table{width:100%;border-collapse:collapse;margin-bottom:3px}
+    td{padding:4px 7px;font-size:11.5px;border:1px solid #c5cae9}
+    td:first-child{background:#e8eaf6;font-weight:600;color:#283593;width:44%}
     td:last-child{color:#111}
-    /* Amount box */
-    .amount-section{background:#e8f5e9;border:2px solid #2E7D32;border-radius:4px;padding:12px 16px;margin:14px 0;display:flex;justify-content:space-between;align-items:center}
-    .amount-label{font-size:11px;color:#1b5e20;font-weight:600;text-transform:uppercase;letter-spacing:1px}
-    .amount-value{font-size:26px;font-weight:bold;color:#1b5e20}
-    /* PAID stamp */
-    .paid-wrap{text-align:right;margin-top:4px}
-    .paid-stamp{display:inline-block;border:3px solid #2E7D32;color:#2E7D32;font-size:16px;font-weight:bold;padding:4px 16px;transform:rotate(-6deg);letter-spacing:5px;opacity:0.85}
-    /* Verification */
-    .verify{background:#fafafa;border:1px dashed #9fa8da;border-radius:3px;padding:8px 12px;margin-top:12px;font-size:9.5px;color:#555;text-align:center}
-    .verify code{font-family:monospace;font-size:10px;color:#1a237e;font-weight:bold}
-    /* Footer */
-    .footer{border-top:2px solid #e8eaf6;padding:10px 24px;display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;color:#555;margin-top:8px}
-    .footer .sig{text-align:center}
-    .footer .sig-line{border-top:1px solid #555;width:120px;margin:18px auto 4px}
-    @media print{
-      body{background:white;padding:0}
-      .page{box-shadow:none;max-width:100%}
-    }
+    .amount-section{background:#e8f5e9;border:2px solid #2E7D32;border-radius:4px;padding:10px 14px;margin:12px 0;display:flex;justify-content:space-between;align-items:center}
+    .amt-label{font-size:10px;color:#1b5e20;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+    .amt-words{font-size:10px;color:#388e3c;margin-top:2px}
+    .amt-value{font-size:24px;font-weight:bold;color:#1b5e20}
+    .paid-wrap{text-align:right;margin:4px 0}
+    .paid-stamp{display:inline-block;border:3px solid #2E7D32;color:#2E7D32;font-size:14px;font-weight:bold;padding:3px 14px;transform:rotate(-6deg);letter-spacing:5px;opacity:0.85}
+    .verify{background:#fafafa;border:1px dashed #9fa8da;border-radius:3px;padding:6px 10px;margin-top:10px;font-size:9px;color:#555;text-align:center}
+    .footer{border-top:2px solid #e8eaf6;padding:8px 20px;display:flex;justify-content:space-between;align-items:flex-end;font-size:9.5px;color:#555;margin-top:6px}
+    .sig-line{border-top:1px solid #555;width:110px;margin:16px auto 3px;text-align:center}
+    @media print{body{background:white;padding:0}.page{box-shadow:none;max-width:100%}}
   </style></head>
   <body><div class="page">
     <div class="letterhead">
-      <div class="trust">Vidya-Niketan Sevabhavi Sanstha's</div>
-      <div class="college">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
-      <div class="affil">Affiliated to SNDT Women's University, Mumbai</div>
-      <div class="contact">Gangakhed, Maharashtra &nbsp;|&nbsp; Contact: +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
+      <img src="data:image/jpeg;base64,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" style="width:58px;height:58px;object-fit:contain;flex-shrink:0" />
+      <div class="lh-text">
+        <div class="trust">Vidya-Niketan Sevabhavi Sanstha&#x2019;s</div>
+        <div class="college">Late Kalpana Chawala Women&#x2019;s Senior College (LKCWSC)</div>
+        <div class="affil">Affiliated to SNDT Women&#x2019;s University</div>
+        <div class="contact">Gangakhed, Maharashtra | +91 9307162914 | lkcwsc.vnssorg.com</div>
+      </div>
     </div>
     <div class="title-bar">✦ FEE RECEIPT ✦</div>
     <div class="body">
@@ -314,48 +305,40 @@ const printReceipt = (data) => {
       <div class="section-title">Student Details</div>
       <table>
         <tr><td>Student Name</td><td>${data.studentName}</td></tr>
-        ${data.prnNumber ? `<tr><td>PRN Number</td><td>${data.prnNumber}</td></tr>` : ''}
-        ${data.studentId  ? `<tr><td>Student ID</td><td>${data.studentId}</td></tr>` : ''}
-        ${data.branch     ? `<tr><td>Course &amp; Year</td><td>${data.branch}${data.year ? ' — ' + data.year : ''}</td></tr>` : ''}
+        ${data.prnNumber?`<tr><td>PRN Number</td><td>${data.prnNumber}</td></tr>`:''}
+        ${data.studentId?`<tr><td>Student ID</td><td>${data.studentId}</td></tr>`:''}
+        ${data.branch?`<tr><td>Course &amp; Year</td><td>${data.branch}${data.year?' — '+data.year:''}</td></tr>`:''}
       </table>
       <div class="section-title">Payment Details</div>
       <table>
         <tr><td>Fee Type</td><td>${data.feeLabel}</td></tr>
-        ${data.semester   ? `<tr><td>Semester</td><td>${data.semester}</td></tr>` : ''}
-        <tr><td>Payment Mode</td><td>${data.paymentMode === 'online' ? 'Online / UPI' : 'Cash'}</td></tr>
-        ${data.transactionId ? `<tr><td>Transaction ID / UTR</td><td>${data.transactionId}</td></tr>` : ''}
-        ${data.scholarshipDeduction > 0 ? `<tr><td>Scholarship Deduction</td><td>− ₹${Number(data.scholarshipDeduction).toLocaleString('en-IN')}</td></tr>` : ''}
-        <tr><td>Payment Status</td><td><strong style="color:#2E7D32">PAID ✓</strong></td></tr>
+        ${data.semester?`<tr><td>Semester / Year</td><td>${data.semester}</td></tr>`:''}
+        <tr><td>Payment Mode</td><td>${data.paymentMode==='online'?'Online / UPI':'Cash'}</td></tr>
+        ${data.transactionId?`<tr><td>Transaction ID / UTR</td><td>${data.transactionId}</td></tr>`:''}
+        ${data.scholarshipDeduction>0?`<tr><td>Scholarship Deduction</td><td>&#x2212; &#x20B9;${Number(data.scholarshipDeduction).toLocaleString('en-IN')}</td></tr>`:''}
+        <tr><td>Payment Status</td><td><strong style="color:#2E7D32">PAID &#x2713;</strong></td></tr>
       </table>
       <div class="amount-section">
-        <div><div class="amount-label">Amount Paid</div><div style="font-size:10px;color:#388e3c;margin-top:2px">Rupees ${amountInWords(data.amount)} Only</div></div>
-        <div class="amount-value">₹${Number(data.amount).toLocaleString('en-IN')}/-</div>
+        <div>
+          <div class="amt-label">Amount Paid</div>
+          <div class="amt-words">Rupees ${amountInWords(data.amount)} Only</div>
+        </div>
+        <div class="amt-value">&#x20B9;${Number(data.amount).toLocaleString('en-IN')}/-</div>
       </div>
       <div class="paid-wrap"><span class="paid-stamp">PAID</span></div>
-      <div class="verify">
-        ERP Verification No: <code>${vNo}</code> &nbsp;|&nbsp; Collected by: <strong>${data.collectedBy}</strong>
-      </div>
+      <div class="verify">ERP Verification No: <strong>${data.verificationNo||'ERP'+Date.now().toString(36).toUpperCase().slice(-8)}</strong> &nbsp;|&nbsp; Collected by: <strong>${data.collectedBy}</strong></div>
     </div>
     <div class="footer">
-      <div style="font-size:9px;color:#888">*This is a computer-generated receipt. Valid without signature.<br/>Generated through LKCWSC ERP System</div>
-      <div class="sig">
-        <div class="sig-line"></div>
-        <div>Accounts Section</div>
-        <div style="font-size:9px;color:#888">LKCWSC</div>
-      </div>
+      <div style="font-size:8.5px;color:#888">*Computer-generated receipt. Valid without signature.<br/>Generated through LKCWSC ERP System</div>
+      <div style="text-align:center"><div class="sig-line">Accounts Section</div><div style="font-size:8.5px;color:#888">LKCWSC</div></div>
     </div>
   </div>
-  <scri${'pt'}>
-    function amtWords(n){return n;} // placeholder
-    window.onload=()=>{window.print();}
-  </scri${'pt'}>
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}>
   </body></html>`;
-  const w = window.open('', '_blank', 'width=580,height=820');
-  w.document.write(html);
-  w.document.close();
+  const w = window.open('','_blank','width=560,height=800'); w.document.write(html); w.document.close();
 };
 
-// ─── Amount in words (simple Indian system) ───────────────────────────────────
+
 const amountInWords = (num) => {
   const a = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
   const b = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
