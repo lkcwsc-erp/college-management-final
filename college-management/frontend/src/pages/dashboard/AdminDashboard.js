@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import AdminReports from '../../components/AdminReports';
 import StudentViewFull from './StudentViewFull';
 
 const AdminDashboard = () => {
@@ -171,6 +172,7 @@ const AdminDashboard = () => {
     { id: 'events',   label: '🗓️ Events' },
     { id: 'contacts',  label: '📬 Messages' },
     { id: 'messaging', label: '✉️ Send Message' },
+    { id: 'reports',   label: '📊 Reports' },
     { id: 'receipts',  label: '🧾 Payment Receipts' },
   ];
 
@@ -754,6 +756,7 @@ const AdminDashboard = () => {
           )}
 
           {/* ══ MESSAGING ══ */}
+          {activeTab === 'reports'   && <AdminReports themeColor="#1565C0" />}
           {activeTab === 'receipts'  && <PaymentReceiptsTab themeColor="#1565C0" />}
           {activeTab === 'messaging' && <AdminMessagingTab user={user} showMessage={showMessage} />}
 
