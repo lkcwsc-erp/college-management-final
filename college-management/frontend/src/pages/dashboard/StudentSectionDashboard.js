@@ -651,7 +651,7 @@ const StudentSectionDashboard = () => {
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Student Section Staff can view, edit, and delete student records.</p>
-              <StudentViewFull canEdit={true} themeColor="#1565C0" />
+              <StudentViewFull canEdit={true} themeColor="#1565C0" role="student_section" />
             </div>
           )}
 
