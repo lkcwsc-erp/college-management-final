@@ -813,10 +813,10 @@ const printBonafide = (adm) => {
     .h3{font-size:20px;font-weight:900}
     .h4{font-size:11.5px}
     /* Year row */
-    .yrrow{text-align:center;border-bottom:1px solid #000;padding:4px 0;font-size:14px;font-weight:bold;letter-spacing:12px}
+    .yrrow{text-align:center;border-bottom:1px solid #000;padding:2px 0;font-size:13px;font-weight:bold;letter-spacing:4px}
     /* Title row */
     .titrow{display:flex;align-items:center;justify-content:space-between;padding:4px 14px;border-bottom:1px solid #000}
-    .tbox{background:#000;color:#fff;font-size:14px;font-weight:bold;letter-spacing:3px;padding:4px 16px}
+    .tbox{background:#000;color:#fff;font-size:16px;font-weight:900;letter-spacing:4px;padding:6px 20px}
     .meta{font-size:12px}
     /* Body */
     .body{padding:14px 18px 6px;font-size:14px}
@@ -866,7 +866,7 @@ const printBonafide = (adm) => {
     </div>
 
     <div class="foot">
-      <b style="font-size:14px">Rs. 10/-</b>
+      <div style="width:80px"></div>
       <span style="font-size:11px;color:#444;text-align:center">Seal of the College</span>
       <b style="font-size:14px">PRINCIPAL</b>
     </div>
