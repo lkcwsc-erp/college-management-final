@@ -6,6 +6,158 @@ import './Dashboard.css';
 
 // Official fee structure 2025-26
 
+
+// ── Print receipt for student ────────────────────────────────────────────────
+const printStudentReceipt = (p, adm) => {
+  const logo = "data:image/jpeg;base64,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";
+  const acadYear = (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })();
+  const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  const amt = p.amount || 0;
+  // Amount in words
+  const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const inW=(n)=>{if(n===0)return'';if(n<20)return a[n]+' ';if(n<100)return b[Math.floor(n/10)]+' '+(n%10?a[n%10]+' ':'');if(n<1000)return a[Math.floor(n/100)]+'Hundred '+(n%100?inW(n%100):'');return a[Math.floor(n/1000)]+'Thousand '+(n%1000?inW(n%1000):'');};
+  const amtWords = inW(amt).trim() + ' Only';
+
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#fff;display:flex;justify-content:center;padding:16px}
+    .r{width:160mm;border:1px solid #999}
+    .hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #999}
+    .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+    .htxt{flex:1;text-align:center}
+    .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3}
+    .haddr{font-size:9px;color:#444;margin-top:1px}
+    .copy-line{padding:3px 10px;font-size:10px;border-bottom:1px dashed #aaa}
+    .meta{display:flex;justify-content:space-between;padding:3px 10px;font-size:11px;border-bottom:1px dashed #aaa}
+    .info{padding:3px 10px 4px;font-size:11px;border-bottom:1px dashed #aaa}
+    .irow{display:flex;gap:4px;margin:1px 0}
+    .ik{font-weight:700;min-width:100px}
+    table{width:100%;border-collapse:collapse}
+    thead tr{background:#ddd}
+    th{padding:5px 8px;font-size:11px;font-weight:700;text-align:left;border:1px solid #aaa}
+    th:last-child{text-align:right}
+    td{padding:4px 8px;font-size:11px;border:1px solid #ccc}
+    td:first-child{text-align:center;width:32px}
+    td:last-child{text-align:right}
+    .tot td{font-weight:800;background:#f0f0f0;border-top:2px solid #555}
+    .al{padding:4px 10px;font-size:11px;border-top:1px dashed #aaa}
+    .sig{display:flex;justify-content:space-between;align-items:flex-end;padding:5px 10px 8px;border-top:1px dashed #aaa;margin-top:4px}
+    .sl{font-size:9.5px;color:#555;font-style:italic;max-width:220px;line-height:1.5}
+    .sr{text-align:center;font-size:10px}
+    .srl{border-top:1px solid #555;margin-top:20px;padding-top:2px;font-weight:700}
+    .erp{padding:3px 10px;font-size:9px;color:#666;border-top:1px dashed #aaa;text-align:center}
+    @media print{body{padding:0}@page{size:A5;margin:5mm}}
+  </style></head><body><div class="r">
+    <div class="hdr">
+      <img src="${logo}" class="hlogo"/>
+      <div class="htxt">
+        <div style="font-size:9px;color:#555">Vidya-Niketan Sevabhavi Sanstha's</div>
+        <div class="hname">Late Kalpana Chawala Women's Senior College (LKCWSC)</div>
+        <div class="haddr">Affiliated to SNDT Women's University | Gangakhed, Dist. Parbhani – 431514</div>
+        <div class="haddr">+91 9307162914 | lkcwsc.vnssorg.com</div>
+      </div>
+    </div>
+    <div class="copy-line">Fee Receipt (Student Copy)</div>
+    <div class="meta">
+      <span><b>Receipt No.:</b> ${p.receiptNo||'—'}</span>
+      <span><b>Date:</b> ${dateStr}</span>
+    </div>
+    <div class="info">
+      <div class="irow"><span class="ik">Student Name</span><span>: ${adm?.applicantName||'—'}</span><span style="margin-left:20px"><b>Student UID</b> : ${adm?.studentId||'—'}</span></div>
+      <div class="irow"><span class="ik">Class</span><span>: ${(adm?.courseType||'—')+' '+(adm?.admissionYear||'')}</span><span style="margin-left:20px"><b>Academic Year</b> : ${acadYear}</span></div>
+    </div>
+    <table style="margin-top:4px">
+      <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>${p.feeTypeLabel||p.feeType||'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+        <tr class="tot"><td colspan="2" style="text-align:right;padding-right:8px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+      </tbody>
+    </table>
+    <div class="al">Amt. in words(Rs.): <b>${amtWords}</b></div>
+    <div class="al">Paid by: <b>${p.paymentMode==='online'?'Online':'Cash'}</b> &nbsp; Rs. <b>${amt.toLocaleString('en-IN')}.00</b> &nbsp; Date: <b>${dateStr}</b></div>
+    <div class="al">Narration :</div>
+    <div class="sig">
+      <div class="sl">Signature<br/>(Accounted by : Not Required)<br/><br/>This is system generated receipt and does not require seal/stamp.</div>
+      <div class="sr"><div class="srl">Accounts Section<br/>LKCWSC</div></div>
+    </div>
+    <div class="erp">ERP Verification No: <b>${p.receiptNo||'—'}</b> | Collected by: <b>${p.collectedBy||'Accounts Section'}</b></div>
+  </div>
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=680,height=680');
+  w.document.write(html); w.document.close();
+};
+
+// ── Document Request Form ────────────────────────────────────────────────────
+const DocRequestForm = ({ myAdmission, onSubmitted }) => {
+  const [docType, setDocType] = useState('');
+  const [reason, setReason]   = useState('');
+  const [urgency, setUrgency] = useState('normal');
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg]         = useState('');
+
+  const handleSubmit = async () => {
+    if (!docType) { setMsg('❌ Please select document type.'); return; }
+    setSubmitting(true);
+    try {
+      await API.post('/document-requests', { documentType: docType, reason, urgency });
+      setMsg('✅ Request submitted successfully!');
+      setDocType(''); setReason(''); setUrgency('normal');
+      setTimeout(() => setMsg(''), 3000);
+      if (onSubmitted) onSubmitted();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to submit')); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+      <h4 style={{ color: '#1565C0', marginBottom: 16, fontSize: 14 }}>📋 Apply for a Document</h4>
+      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{}</div>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Document Type *</label>
+          <select value={docType} onChange={e => setDocType(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+            <option value="">— Select —</option>
+            <option value="TC">🎓 Transfer Certificate (TC)</option>
+            <option value="BONAFIDE">📋 Bonafide Certificate</option>
+            <option value="ID_CARD">🪪 ID Card</option>
+            <option value="MARKSHEET">📄 Marksheet</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Priority</label>
+          <select value={urgency} onChange={e => setUrgency(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+            <option value="normal">Normal</option>
+            <option value="urgent">⚡ Urgent</option>
+          </select>
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Reason / Purpose</label>
+        <input type="text" placeholder="e.g. For job application, higher studies..." value={reason} onChange={e => setReason(e.target.value)}
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+      </div>
+      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{msg}</div>}
+      <button onClick={handleSubmit} disabled={submitting}
+        style={{ background: submitting?'#aaa':'#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
+        {submitting ? '⏳ Submitting...' : '📤 Submit Request'}
+      </button>
+
+      {docType && (
+        <div style={{ marginTop: 12, background: '#f8faff', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#555' }}>
+          {docType==='TC' && '📋 TC Workflow: You → Accounts (fee) → Exam Section (result) → Principal → Student Section (print)'}
+          {docType==='BONAFIDE' && '📋 Bonafide Workflow: You → Accounts (fee) → Student Section (print)'}
+          {docType==='ID_CARD' && '📋 ID Card Workflow: You → Accounts (fee) → Student Section (issue)'}
+          {docType==='MARKSHEET' && '📋 Marksheet Workflow: You → Exam Section → Student Section (issue)'}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Yearly fee structure for student view ───────────────────────────────────
 const OFFICIAL_FEES_YEARLY = {
   'B.Sc.': {
@@ -31,6 +183,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
   const [notices, setNotices] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
   const [myAdmission, setMyAdmission] = useState(null);
   const [admissionLoading, setAdmissionLoading] = useState(true);
 
@@ -39,13 +192,6 @@ const StudentDashboard = () => {
   const [resultsLoading] = useState(false);
   const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false });
   const [examSubmitted, setExamSubmitted] = useState({ regular: false, backlog: false });
-
-  // Document Request states
-  const [docRequests, setDocRequests] = useState([]);
-  const [docReqLoading, setDocReqLoading] = useState(false);
-  const [docReqForm, setDocReqForm] = useState({ documentType: '', reason: '', urgency: 'normal' });
-  const [docReqSubmitting, setDocReqSubmitting] = useState(false);
-  const [docReqMsg, setDocReqMsg] = useState('');
 
   useEffect(() => {
     API.get('/notices').then(res => setNotices(res.data.notices || []));
@@ -68,128 +214,6 @@ const StudentDashboard = () => {
       .then(res => setExamSettings(res.data.settings || {}))
       .catch(() => {});
   }, [user]);
-
-  // Fetch doc requests when tab opens
-  useEffect(() => {
-    if (activeTab === 'documents') {
-      setDocReqLoading(true);
-      API.get('/document-requests/my')
-        .then(res => setDocRequests(res.data.requests || []))
-        .catch(() => {})
-        .finally(() => setDocReqLoading(false));
-    }
-  }, [activeTab]);
-
-  const handleDocReqSubmit = async () => {
-    if (!docReqForm.documentType) { setDocReqMsg('❌ Please select a document type.'); return; }
-    setDocReqSubmitting(true); setDocReqMsg('');
-    try {
-      const res = await API.post('/document-requests', docReqForm);
-      if (res.data.success) {
-        setDocReqMsg('✅ ' + res.data.message);
-        setDocReqForm({ documentType: '', reason: '', urgency: 'normal' });
-        const updated = await API.get('/document-requests/my');
-        setDocRequests(updated.data.requests || []);
-      } else { setDocReqMsg('❌ ' + res.data.message); }
-    } catch (e) { setDocReqMsg('❌ ' + (e.response?.data?.message || 'Error submitting request.')); }
-    setDocReqSubmitting(false);
-  };
-
-  const handlePrintReceipt = (payment, studentInfo) => {
-    const win = window.open('', '_blank', 'width=800,height=600');
-    const college = 'Late Kalpana Chawla Women\'s Senior College';
-    const address = 'Gangakhed, Dist. Parbhani – 431514, Maharashtra, INDIA';
-    win.document.write(`
-      <!DOCTYPE html><html><head><title>Fee Receipt</title>
-      <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
-        .receipt { max-width: 700px; margin: 0 auto; border: 2px solid #000; padding: 20px; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 12px; }
-        .header h2 { margin: 0 0 2px; font-size: 18px; }
-        .header h3 { margin: 0 0 2px; font-size: 14px; font-weight: normal; }
-        .header p { margin: 2px 0; font-size: 12px; }
-        .title-row { text-align: center; font-size: 15px; font-weight: bold; margin: 10px 0; text-decoration: underline; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 12px; font-size: 13px; }
-        .info-grid div { display: flex; gap: 6px; }
-        .info-grid label { font-weight: bold; white-space: nowrap; min-width: 110px; }
-        table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
-        th, td { border: 1px solid #000; padding: 7px 10px; }
-        th { background: #f0f0f0; font-weight: bold; }
-        .total-row td { font-weight: bold; background: #f5f5f5; }
-        .footer { font-size: 12px; margin-top: 16px; }
-        .words { font-weight: bold; font-size: 13px; margin: 8px 0; }
-        .sig { margin-top: 30px; text-align: right; font-size: 12px; }
-        @media print { button { display: none; } }
-      </style></head><body>
-      <div class="receipt">
-        <div class="header">
-          <h2>${college}</h2>
-          <h3>${address}</h3>
-          <p>Ph: (02452) XXXXXX</p>
-        </div>
-        <div class="title-row">Fee Receipt (Student Copy)</div>
-        <hr style="border:1px dashed #999; margin:10px 0"/>
-        <div class="info-grid">
-          <div><label>Receipt No. :</label><span>${payment.receiptNo || '—'}</span></div>
-          <div><label>Receipt Date :</label><span>${payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : '—'}</span></div>
-          <div><label>Student Name :</label><span>${studentInfo.name}</span></div>
-          <div><label>Student ID :</label><span>${studentInfo.studentId || '—'}</span></div>
-          <div><label>Course :</label><span>${studentInfo.course}</span></div>
-          <div><label>Year :</label><span>${studentInfo.year}</span></div>
-          <div><label>Father's Name :</label><span>${studentInfo.fatherName || '—'}</span></div>
-          <div><label>Phone :</label><span>${studentInfo.phone || '—'}</span></div>
-        </div>
-        <table>
-          <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
-          <tbody>
-            <tr><td style="text-align:center">1</td><td>${payment.feeTypeLabel || payment.feeType || 'College Fees'}</td><td style="text-align:right">₹${(payment.amount || 0).toLocaleString('en-IN')}.00</td></tr>
-            <tr class="total-row"><td colspan="2" style="text-align:right">Total Amount</td><td style="text-align:right">₹${(payment.amount || 0).toLocaleString('en-IN')}.00</td></tr>
-          </tbody>
-        </table>
-        <div class="words">Amt. in words: ${numberToWords(payment.amount || 0)} Only</div>
-        <div class="footer">
-          <strong>Paid by:</strong> ${payment.paymentMode === 'online' ? 'Online' : 'Cash'} &nbsp;&nbsp;
-          <strong>Rs. ${(payment.amount || 0).toLocaleString('en-IN')}</strong> &nbsp;&nbsp;
-          <strong>Date:</strong> ${payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : '—'}
-        </div>
-        <div class="footer"><strong>Narration:</strong> ${payment.narration || ''}</div>
-        <div class="sig">
-          <p>Signature</p>
-          <p style="font-size:11px">(Accounted by: ${payment.accountedBy || 'Not Required'})</p>
-        </div>
-        <hr style="margin-top:20px"/>
-        <p style="font-size:11px; text-align:center;">This is a system generated receipt and does not require seal/stamp.</p>
-        <div style="text-align:center; margin-top:10px">
-          <button onclick="window.print()" style="padding:8px 24px;background:#1565C0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ Print</button>
-        </div>
-      </div></body></html>
-    `);
-    win.document.close();
-  };
-
-  // Convert number to words
-  const numberToWords = (num) => {
-    const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
-    const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-    if (num === 0) return 'Zero';
-    if (num < 20) return ones[num];
-    if (num < 100) return tens[Math.floor(num/10)] + (num%10 ? ' '+ones[num%10] : '');
-    if (num < 1000) return ones[Math.floor(num/100)]+' Hundred'+(num%100?' '+numberToWords(num%100):'');
-    if (num < 100000) return numberToWords(Math.floor(num/1000))+' Thousand'+(num%1000?' '+numberToWords(num%1000):'');
-    if (num < 10000000) return numberToWords(Math.floor(num/100000))+' Lakh'+(num%100000?' '+numberToWords(num%100000):'');
-    return numberToWords(Math.floor(num/10000000))+' Crore'+(num%10000000?' '+numberToWords(num%10000000):'');
-  };
-
-  const DOC_STATUS_INFO = {
-    pending_accounts:      { color: '#E65100', bg: '#fff3e0', label: '⏳ Pending – Accounts Section' },
-    rejected_by_accounts:  { color: '#C62828', bg: '#ffebee', label: '❌ Rejected by Accounts' },
-    pending_exam:          { color: '#1565C0', bg: '#e3f2fd', label: '🔍 Pending – Exam Section' },
-    rejected_by_exam:      { color: '#C62828', bg: '#ffebee', label: '❌ Rejected by Exam Section' },
-    pending_principal:     { color: '#6A1B9A', bg: '#f3e5f5', label: '📋 Pending – Principal' },
-    rejected_by_principal: { color: '#C62828', bg: '#ffebee', label: '❌ Rejected by Principal' },
-    pending_generation:    { color: '#00796B', bg: '#e0f2f1', label: '🖨️ Pending – Being Generated' },
-    completed:             { color: '#2E7D32', bg: '#e8f5e9', label: '✅ Completed – Collect from Office' },
-  };
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -653,7 +677,7 @@ const StudentDashboard = () => {
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                             <thead>
                               <tr style={{ background: '#f5f5f5' }}>
-                                {['Receipt No','Date','Fee Type','Amount','Mode','Status','Receipt'].map(h => (
+                                {['Receipt No','Date','Fee Type','Amount','Mode','Status'].map(h => (
                                   <th key={h} style={{ padding: '8px 12px', fontWeight: 700, color: '#009688', textAlign: 'center', borderBottom: '2px solid #009688', fontSize: 12 }}>{h}</th>
                                 ))}
                               </tr>
@@ -667,21 +691,11 @@ const StudentDashboard = () => {
                                   <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 700, color: '#2E7D32' }}>₹{(p.amount||0).toLocaleString('en-IN')}.00</td>
                                   <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>{p.paymentMode==='online'?'🌐 Online':'💵 Cash'}</td>
                                   <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
                                     <span style={{ background: '#e8f5e9', color: '#2E7D32', padding: '2px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>PAID ✓</span>
-                                  </td>
-                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
-                                    <button
-                                      onClick={() => handlePrintReceipt(p, {
-                                        name: myAdmission.applicantName,
-                                        studentId: myAdmission.studentId,
-                                        course: myAdmission.courseType || myAdmission.course?.name || '—',
-                                        year: myAdmission.admissionYear || '—',
-                                        fatherName: myAdmission.fatherName,
-                                        phone: myAdmission.phone,
-                                      })}
-                                      style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-                                      🖨️ Print
-                                    </button>
+                                    <button onClick={() => printStudentReceipt(p, myAdmission)}
+                                      style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>🖨️ Print</button>
+                                  </div>
                                   </td>
                                 </tr>
                               ))}
@@ -702,127 +716,76 @@ const StudentDashboard = () => {
             </div>
           )}
 
+
           {/* ============ DOCUMENTS TAB ============ */}
           {activeTab === 'documents' && (
             <div>
               <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📄 Request Documents</h3>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-                Apply for official documents like ID Card, Bonafide, TC, Marksheet, or Migration Certificate.
-              </p>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Apply for Transfer Certificate, Bonafide, ID Card or Marksheet.</p>
 
-              {/* New Request Form */}
-              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
-                <div style={{ background: 'linear-gradient(135deg,#1565C0,#1976D2)', padding: '14px 20px' }}>
-                  <h4 style={{ color: '#fff', margin: 0, fontSize: 15 }}>📝 Submit New Document Request</h4>
-                </div>
-                <div style={{ padding: 20 }}>
-                  {!myAdmission ? (
-                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>
-                      <p style={{ fontSize: '2rem', margin: 0 }}>⚠️</p>
-                      <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Admission Required</p>
-                      <p style={{ fontSize: 13 }}>Please complete your admission application first to request documents.</p>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div>
-                        <label style={{ fontSize: 13, fontWeight: 700, color: '#333', display: 'block', marginBottom: 6 }}>Document Type *</label>
-                        <select
-                          value={docReqForm.documentType}
-                          onChange={e => setDocReqForm(f => ({ ...f, documentType: e.target.value }))}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, background: '#f8faff' }}>
-                          <option value="">-- Select Document --</option>
-                          <option value="ID_CARD">🪪 ID Card</option>
-                          <option value="BONAFIDE">📋 Bonafide Certificate</option>
-                          <option value="MARKSHEET">📄 Marksheet</option>
-                          <option value="TC">🎓 Transfer Certificate (TC)</option>
-                          <option value="MIGRATION">📜 Migration Certificate</option>
-                        </select>
-                      </div>
+              {/* Apply form */}
+              <DocRequestForm myAdmission={myAdmission} onSubmitted={() => {
+                API.get('/document-requests/my').then(r => setMyRequests(r.data.requests || [])).catch(() => {});
+              }} />
 
-                      {docReqForm.documentType === 'TC' && (
-                        <div style={{ background: '#fff3e0', border: '1px solid #ffe082', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#7c3d00' }}>
-                          ⚠️ <strong>Transfer Certificate (TC)</strong> requires verification by Accounts Section → Exam Section → Principal. Processing may take 7–10 working days.
-                        </div>
-                      )}
-                      {docReqForm.documentType === 'MARKSHEET' && (
-                        <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#0c4a6e' }}>
-                          ℹ️ <strong>Marksheet requests</strong> go directly to the Examination Section for verification.
-                        </div>
-                      )}
-
-                      <div>
-                        <label style={{ fontSize: 13, fontWeight: 700, color: '#333', display: 'block', marginBottom: 6 }}>Reason / Purpose</label>
-                        <textarea
-                          rows={3}
-                          placeholder="e.g. Required for job application, bank loan, further education..."
-                          value={docReqForm.reason}
-                          onChange={e => setDocReqForm(f => ({ ...f, reason: e.target.value }))}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 13, fontWeight: 700, color: '#333', display: 'block', marginBottom: 6 }}>Urgency</label>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                          {[{val:'normal',label:'🟢 Normal (5–7 days)'},{val:'urgent',label:'🔴 Urgent (1–2 days)'}].map(opt => (
-                            <label key={opt.val} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, background: docReqForm.urgency===opt.val?'#e3f2fd':'#f8f8f8', padding: '8px 16px', borderRadius: 8, border: `2px solid ${docReqForm.urgency===opt.val?'#1565C0':'#ddd'}`, fontWeight: docReqForm.urgency===opt.val?700:400 }}>
-                              <input type="radio" name="urgency" value={opt.val} checked={docReqForm.urgency===opt.val} onChange={e => setDocReqForm(f => ({ ...f, urgency: e.target.value }))} style={{ margin: 0 }} />
-                              {opt.label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {docReqMsg && (
-                        <div style={{ padding: '10px 14px', borderRadius: 8, background: docReqMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color: docReqMsg.startsWith('✅')?'#2E7D32':'#C62828', fontSize: 13, fontWeight: 600 }}>
-                          {docReqMsg}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={handleDocReqSubmit}
-                        disabled={docReqSubmitting}
-                        style={{ background: docReqSubmitting?'#aaa':'linear-gradient(135deg,#1565C0,#1976D2)', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: docReqSubmitting?'not-allowed':'pointer', alignSelf: 'flex-start' }}>
-                        {docReqSubmitting ? '⏳ Submitting...' : '📤 Submit Request'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* My Requests List */}
-              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
-                <div style={{ background: '#009688', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>📋 My Document Requests</span>
-                  <button onClick={() => { setDocReqLoading(true); API.get('/document-requests/my').then(r => setDocRequests(r.data.requests||[])).catch(()=>{}).finally(()=>setDocReqLoading(false)); }}
-                    style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>🔄 Refresh</button>
-                </div>
-                <div style={{ padding: 20 }}>
-                  {docReqLoading ? (
-                    <div style={{ textAlign: 'center', padding: 30, color: '#888' }}>⏳ Loading...</div>
-                  ) : docRequests.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 30, color: '#888' }}>
-                      <p style={{ fontSize: '2.5rem', margin: 0 }}>📭</p>
-                      <p style={{ fontWeight: 600, marginTop: 8 }}>No requests yet</p>
-                      <p style={{ fontSize: 13 }}>Submit a new request above.</p>
+              {/* My Requests */}
+              <div style={{ marginTop: 24 }}>
+                  <h4 style={{ color: '#1565C0', marginBottom: 14 }}>📋 My Requests ({myRequests.length})</h4>
+                  {myRequests.length === 0 ? (
+                    <div style={{ background: '#f8faff', borderRadius: 10, padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>
+                      No document requests yet. Apply above.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {docRequests.map((req, i) => {
-                        const st = DOC_STATUS_INFO[req.status] || { color: '#666', bg: '#f5f5f5', label: req.status };
+                      {myRequests.map((req, i) => {
+                        const statusMap = {
+                          pending_accounts:      { bg: '#fff3e0', color: '#E65100', label: '⏳ At Accounts (Fee Verification)' },
+                          rejected_by_accounts:  { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' },
+                          pending_exam:          { bg: '#e3f2fd', color: '#1565C0', label: '⏳ At Exam Section' },
+                          rejected_by_exam:      { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Exam Section' },
+                          pending_principal:     { bg: '#fff3e0', color: '#E65100', label: '⏳ At Principal' },
+                          rejected_by_principal: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' },
+                          pending_generation:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Collect' },
+                          completed:             { bg: '#e8f5e9', color: '#1b5e20', label: '🏁 Issued — Collect from office' },
+                        };
+                        const ss = statusMap[req.status] || { bg: '#f5f5f5', color: '#888', label: req.status };
                         return (
-                          <div key={req._id || i} style={{ borderRadius: 10, border: `1px solid ${st.color}30`, overflow: 'hidden' }}>
-                            <div style={{ background: st.bg, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                              <div>
-                                <span style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>{req.documentTypeLabel || req.documentType}</span>
-                                {req.urgency === 'urgent' && <span style={{ marginLeft: 8, background: '#C62828', color: '#fff', padding: '1px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>URGENT</span>}
+                          <div key={i} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: `4px solid ${ss.color}`, boxShadow: '0 1px 6px rgba(0,0,0,.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <h4 style={{ fontSize: 14, color: '#1a1a2e', margin: 0 }}>{req.documentTypeLabel || req.documentType}</h4>
+                                {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600 }}>⚡ Urgent</span>}
                               </div>
-                              <span style={{ background: st.bg, color: st.color, border: `1px solid ${st.color}50`, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{st.label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: ss.bg, color: ss.color }}>{ss.label}</span>
                             </div>
-                            <div style={{ padding: '10px 16px', background: '#fff', fontSize: 13, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                              <span><strong>Applied:</strong> {new Date(req.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span>
-                              {req.reason && <span><strong>Reason:</strong> {req.reason}</span>}
-                              {req.rejectionReason && <span style={{ color: '#C62828' }}><strong>Rejected:</strong> {req.rejectionReason}</span>}
-                              {req.generationNotes && <span style={{ color: '#2E7D32' }}><strong>Note:</strong> {req.generationNotes}</span>}
+                            {req.reason && <p style={{ fontSize: 12, color: '#666', margin: '0 0 6px' }}>Reason: {req.reason}</p>}
+                            <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>Applied: {new Date(req.createdAt).toLocaleDateString('en-IN')}</p>
+                            {/* Workflow progress */}
+                            <div style={{ background: '#f8faff', padding: '10px 12px', borderRadius: 8, marginTop: 10, fontSize: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span>📝 Submitted</span>
+                                {req.documentType === 'MARKSHEET' ? (
+                                  <>
+                                    <span>→</span>
+                                    <span style={{ color: req.examVerifiedDate ? '#2E7D32' : '#999', fontWeight: req.examVerifiedDate ? 600 : 400 }}>{req.examVerifiedDate ? '✅' : '⏳'} Exam Section</span>
+                                    <span>→</span>
+                                    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? 600 : 400 }}>{req.status === 'completed' ? '✅' : '⏳'} Student Section</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>→</span>
+                                    <span style={{ color: req.accountsApprovedDate ? '#2E7D32' : '#999', fontWeight: req.accountsApprovedDate ? 600 : 400 }}>{req.accountsApprovedDate ? '✅' : '⏳'} Accounts</span>
+                                    {req.documentType === 'TC' && (<>
+                                      <span>→</span>
+                                      <span style={{ color: req.examVerifiedDate ? '#2E7D32' : '#999', fontWeight: req.examVerifiedDate ? 600 : 400 }}>{req.examVerifiedDate ? '✅' : '⏳'} Exam Section</span>
+                                      <span>→</span>
+                                      <span style={{ color: req.principalApprovedDate ? '#2E7D32' : '#999', fontWeight: req.principalApprovedDate ? 600 : 400 }}>{req.principalApprovedDate ? '✅' : '⏳'} Principal</span>
+                                    </>)}
+                                    <span>→</span>
+                                    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? 600 : 400 }}>{req.status === 'completed' ? '✅' : '⏳'} Student Section</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -830,7 +793,7 @@ const StudentDashboard = () => {
                     </div>
                   )}
                 </div>
-              </div>
+              }
             </div>
           )}
 
