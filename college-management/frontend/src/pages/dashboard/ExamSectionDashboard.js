@@ -3,134 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
-
-// ─── Shared read-only student viewer ─────────────────────────────────────────
-const StudentViewer = ({ themeColor = '#1565C0', readOnly = true }) => {
-  const [admissions, setAdmissions] = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [search, setSearch]         = useState('');
-  const [yearFilter, setYearFilter] = useState('all');
-  const [selected, setSelected]     = useState(null);
-
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await API.get('/admissions/staff-view/all');
-      setAdmissions(res.data.admissions || []);
-    } catch { }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetch(); }, [fetch]);
-
-  const filtered = admissions.filter(a => {
-    const my = yearFilter === 'all' || a.admissionYear === yearFilter;
-    const q  = search.toLowerCase();
-    const mq = !q || a.applicantName?.toLowerCase().includes(q) ||
-               a.studentId?.toLowerCase().includes(q) ||
-               a.email?.toLowerCase().includes(q) ||
-               a.prnNumber?.toLowerCase().includes(q);
-    return my && mq;
-  });
-
-  const years = [...new Set(admissions.map(a => a.admissionYear).filter(Boolean))].sort();
-
-  return (
-    <div>
-      {selected ? (
-        <div>
-          <button onClick={() => setSelected(null)}
-            style={{ background: '#e3f2fd', color: themeColor, border: `1px solid ${themeColor}44`, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20 }}>
-            ← Back to List
-          </button>
-          <h3 style={{ color: themeColor, marginBottom: 16 }}>👩‍🎓 {selected.applicantName}</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {[
-              { title: '👤 Personal', fields: [
-                ['Name', selected.applicantName], ['Father', selected.fatherName], ['Mother', selected.motherName],
-                ['DOB', selected.dateOfBirth ? new Date(selected.dateOfBirth).toLocaleDateString('en-IN') : '—'],
-                ['Gender', selected.gender], ['Category', (selected.category||'—').toUpperCase()],
-                ['Caste', selected.caste], ['Religion', selected.religion],
-                ['Mobile', selected.phone], ['Email', selected.email], ['Address', selected.address],
-              ]},
-              { title: '🎓 Academic', fields: [
-                ['Student ID', selected.studentId], ['PRN Number', selected.prnNumber],
-                ['ABC / APAR ID', selected.aparIdNumber], ['Aadhar No.', selected.aadharNumber],
-                ['Course', selected.courseType], ['Subject', selected.preferredSubject],
-                ['Year', selected.admissionYear], ['Admission Date', selected.createdAt ? new Date(selected.createdAt).toLocaleDateString('en-IN') : '—'],
-                ['SSC %', selected.sscPercentage ? `${selected.sscPercentage}%` : '—'],
-                ['HSC %', selected.hscPercentage ? `${selected.hscPercentage}%` : '—'],
-                ['Family Income', selected.familyIncome ? `₹${selected.familyIncome}` : '—'],
-              ]},
-            ].map(section => (
-              <div key={section.title} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
-                <h4 style={{ color: themeColor, marginBottom: 14, fontSize: 14 }}>{section.title}</h4>
-                {section.fields.map(([l, v]) => v && v !== '—' && (
-                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f4f8', fontSize: 13 }}>
-                    <span style={{ color: '#888', fontWeight: 600 }}>{l}</span>
-                    <span style={{ color: '#222', maxWidth: '55%', textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-            <input type="text" placeholder="🔍 Search by name, ID, PRN or email..." value={search} onChange={e => setSearch(e.target.value)}
-              style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
-            <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
-              style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-              <option value="all">All Years</option>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <button onClick={fetch}
-              style={{ padding: '9px 16px', background: '#e3f2fd', color: themeColor, border: `1px solid ${themeColor}44`, borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-              🔄 Refresh
-            </button>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-            <div style={{ background: '#e3f2fd', color: themeColor, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Total: {admissions.length}</div>
-            <div style={{ background: '#f5f5f5', color: '#555', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Showing: {filtered.length}</div>
-          </div>
-          {loading ? (
-            <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state"><div className="empty-icon">👩‍🎓</div><h3>No students found</h3></div>
-          ) : (
-            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.2fr 1fr 0.7fr', background: themeColor, padding: '13px 16px', gap: 8 }}>
-                {['Student', 'Course / Year', 'Student ID', 'PRN Number', 'Category', 'View'].map(h => (
-                  <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
-                ))}
-              </div>
-              {filtered.map((adm, idx) => (
-                <div key={adm._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.2fr 1fr 0.7fr', padding: '11px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{adm.applicantName}</p>
-                    <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.email}</p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 12, margin: 0 }}>{adm.courseType || '—'}</p>
-                    <p style={{ fontSize: 11, color: '#888', margin: 0 }}>{adm.admissionYear}</p>
-                  </div>
-                  <span style={{ fontSize: 12, fontFamily: 'monospace', color: themeColor, fontWeight: 600 }}>{adm.studentId || '—'}</span>
-                  <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.prnNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>{adm.prnNumber || '⚠️ Missing'}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#555' }}>{adm.category || '—'}</span>
-                  <button onClick={() => setSelected(adm)}
-                    style={{ background: '#e3f2fd', color: themeColor, border: `1px solid ${themeColor}44`, borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    👁️
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+import StudentViewFull from './StudentViewFull';
 
 // ─── Result Upload Tab ────────────────────────────────────────────────────────
 const ResultUploadTab = () => {
@@ -470,7 +343,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
 };
 
 
-// ─── Attendance Tracker ───────────────────────────────────────────────────────
+// ─── Exam Doc Tab (TC Verification + Marksheet) ──────────────────────────────
 const AttendanceTab = () => {
   const [view, setView]             = useState('mark');  // 'mark' | 'report'
   const [students, setStudents]     = useState([]);
@@ -998,7 +871,7 @@ const ExamSectionDashboard = () => {
             <div>
               <h2 style={{ color: '#f57c00', marginBottom: 4 }}>👩‍🎓 View Students</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Read-only view of all enrolled students.</p>
-              <StudentViewer themeColor="#f57c00" />
+              <StudentViewFull canEdit={false} themeColor="#f57c00" role="exam" />
             </div>
           )}
 
