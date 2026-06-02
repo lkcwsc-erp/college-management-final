@@ -246,41 +246,47 @@ const printReceipt = (data) => {
   const amt      = data.amount || 0;
   const amtWords = data.amountInWords || '';
   const logo     = "data:image/jpeg;base64,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";
+  const feeRows  = data.feeBreakdown || [{ sr: 1, particular: data.feeTypeLabel||data.feeLabel||'Fee', amount: amt }];
 
   const html = `<!DOCTYPE html><html><head><title>Fee Receipt — ${data.receiptNo}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Arial,sans-serif;background:#f5f5f5;display:flex;justify-content:center;align-items:flex-start;padding:16px;min-height:100vh}
-    .receipt{background:white;width:190mm;max-width:190mm;border:1.5px solid #1a237e;border-radius:4px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.15)}
-    /* ── Header ── */
-    .hdr{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:2px solid #1a237e}
+    body{font-family:Arial,sans-serif;background:#f5f5f5;display:flex;justify-content:center;padding:20px}
+    .receipt{background:white;width:160mm;border:1px solid #ccc;padding:0;box-shadow:0 2px 12px rgba(0,0,0,.12)}
+    /* Header */
+    .hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #ccc}
     .hlogo{width:54px;height:54px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:9px;color:#555}
-    .hname{font-size:14px;font-weight:800;color:#1a237e;line-height:1.2}
-    .haffil{font-size:9px;color:#555}
-    .haddr{font-size:9px;color:#555}
-    /* ── Title ── */
-    .title{text-align:center;padding:6px;border-bottom:2px solid #1a237e;font-size:13px;font-weight:900;letter-spacing:4px;color:#1a237e;background:#f0f4ff}
-    /* ── 3 columns ── */
-    .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid #e0e0e0}
-    .col{padding:8px 12px}
-    .col+.col{border-left:1px solid #e0e0e0}
-    .col-title{font-size:8.5px;font-weight:800;color:#1a237e;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #e0e0e0}
-    .row{display:flex;justify-content:space-between;gap:4px;padding:2px 0;font-size:9.5px}
-    .row .lbl{color:#666;font-weight:600;white-space:nowrap}
-    .row .val{color:#111;font-weight:700;text-align:right;word-break:break-word}
-    /* ── Amount row ── */
-    .amt-row{display:flex;justify-content:space-between;align-items:center;padding:7px 14px;border-bottom:1px solid #e0e0e0;background:#f8faff}
-    .amt-words{font-size:10px;color:#444;font-style:italic}
-    .amt-fig{font-size:20px;font-weight:900;color:#1a237e}
-    .paid-stamp{border:2px solid #2E7D32;color:#2E7D32;font-size:10px;font-weight:900;letter-spacing:3px;padding:2px 8px;border-radius:3px;transform:rotate(-8deg);display:inline-block}
-    /* ── Footer ── */
-    .ftr{display:flex;justify-content:space-between;align-items:center;padding:5px 14px;background:#f0f4ff;font-size:8.5px;color:#555}
-    .sig{text-align:right;font-size:9px}
-    .sig-line{border-top:1px solid #888;margin-top:16px;padding-top:3px;font-weight:700;color:#1a237e}
-    .note{font-size:8px;color:#888;font-style:italic}
-    @media print{body{background:white;padding:0}.receipt{box-shadow:none;border:1.5px solid #1a237e}@page{size:A4;margin:8mm}}
+    .hname{font-size:14px;font-weight:800;color:#000;line-height:1.3}
+    .haddr{font-size:9px;color:#333;margin-top:2px}
+    /* Title */
+    .rtitle{padding:5px 14px;font-size:12px;font-weight:600;border-bottom:1px dashed #aaa}
+    /* Meta row */
+    .metarow{display:flex;justify-content:space-between;padding:5px 14px;font-size:11px;border-bottom:1px solid #eee;flex-wrap:wrap;gap:4px}
+    .metaitem{display:flex;gap:4px}
+    .metalk{font-weight:700;color:#333}
+    .metav{color:#000;font-weight:600}
+    /* Particulars table */
+    table{width:100%;border-collapse:collapse;margin:0}
+    thead tr{background:#1a237e;color:#fff}
+    th{padding:7px 10px;font-size:11px;text-align:left}
+    th:last-child{text-align:right}
+    td{padding:6px 10px;font-size:11.5px;border-bottom:1px solid #eee}
+    td:first-child{text-align:center;width:36px;font-weight:600}
+    td:last-child{text-align:right;font-weight:700}
+    .total-row td{font-weight:800;font-size:13px;border-top:2px solid #000;background:#f8f8f8}
+    /* Amount words */
+    .amtwords{padding:6px 14px;font-size:11px;border-bottom:1px solid #eee}
+    .amtwords strong{color:#000}
+    /* Payment info */
+    .payinfo{padding:5px 14px;font-size:11px;border-bottom:1px solid #eee}
+    /* Footer */
+    .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:8px 14px 10px}
+    .footnote{font-size:9px;color:#777;font-style:italic;max-width:200px}
+    .sig{text-align:right;font-size:10px}
+    .sigline{border-top:1px solid #555;margin-top:24px;padding-top:3px;font-weight:600}
+    @media print{body{background:white;padding:0}.receipt{box-shadow:none;border:1px solid #ccc}@page{size:A5;margin:6mm}}
   </style></head><body>
   <div class="receipt">
     <div class="hdr">
@@ -288,66 +294,66 @@ const printReceipt = (data) => {
       <div class="htxt">
         <div class="htrust">Vidya-Niketan Sevabhavi Sanstha's</div>
         <div class="hname">Late Kalpana Chawala Women's Senior College (LKCWSC)</div>
-        <div class="haffil">Affiliated to SNDT Women's University, Mumbai</div>
-        <div class="haddr">Gangakhed, Maharashtra &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
+        <div class="haddr">Affiliated to SNDT Women's University | Gangakhed, Dist. Parbhani – 431514</div>
+        <div class="haddr">📞 +91 9307162914 | 🌐 lkcwsc.vnssorg.com</div>
       </div>
     </div>
 
-    <div class="title">✦ &nbsp; F E E &nbsp; R E C E I P T &nbsp; ✦</div>
+    <div class="rtitle">Fee Receipt (Student Copy)</div>
 
-    <div class="cols">
-      <div class="col">
-        <div class="col-title">Receipt Details</div>
-        <div class="row"><span class="lbl">Receipt No</span><span class="val">${data.receiptNo}</span></div>
-        <div class="row"><span class="lbl">Date</span><span class="val">${dateStr}</span></div>
-        <div class="row"><span class="lbl">Academic Year</span><span class="val">${acadYear}</span></div>
-      </div>
-      <div class="col">
-        <div class="col-title">Student Details</div>
-        <div class="row"><span class="lbl">Name</span><span class="val">${data.studentName||'—'}</span></div>
-        <div class="row"><span class="lbl">Student ID</span><span class="val">${data.studentId||'—'}</span></div>
-        <div class="row"><span class="lbl">Course & Year</span><span class="val">${(data.courseType||data.branch||'—')} — ${(data.admissionYear||data.year||'—')}</span></div>
-      </div>
-      <div class="col">
-        <div class="col-title">Payment Details</div>
-        <div class="row"><span class="lbl">Fee Type</span><span class="val">${data.feeTypeLabel||data.feeType||'—'}</span></div>
-        <div class="row"><span class="lbl">Mode</span><span class="val">${data.paymentMode==='online'?'Online / UPI':'Cash'}</span></div>
-        ${data.transactionId ? `<div class="row"><span class="lbl">Txn ID</span><span class="val">${data.transactionId}</span></div>` : ''}
-        <div class="row"><span class="lbl">Status</span><span class="val" style="color:#2E7D32;font-weight:800">PAID ✓</span></div>
-      </div>
+    <div class="metarow">
+      <div class="metaitem"><span class="metalk">Receipt No. :</span><span class="metav">${data.receiptNo}</span></div>
+      <div class="metaitem"><span class="metalk">Receipt Date :</span><span class="metav">${dateStr}</span></div>
+    </div>
+    <div class="metarow">
+      <div class="metaitem"><span class="metalk">Student Name :</span><span class="metav">${data.studentName||'—'}</span></div>
+      <div class="metaitem"><span class="metalk">Student UID :</span><span class="metav">${data.studentId||'—'}</span></div>
+    </div>
+    <div class="metarow">
+      <div class="metaitem"><span class="metalk">Class :</span><span class="metav">${(data.courseType||data.branch||'—')} — ${(data.admissionYear||data.year||'—')}</span></div>
+      <div class="metaitem"><span class="metalk">Academic Year :</span><span class="metav">${acadYear}</span></div>
     </div>
 
-    <div class="amt-row">
-      <div>
-        <div style="font-size:8.5px;color:#888;font-weight:700;margin-bottom:2px">AMOUNT PAID</div>
-        <div class="amt-words">${amtWords}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <div class="amt-fig">₹${amt.toLocaleString('en-IN')}/-</div>
-        <div class="paid-stamp">P A I D</div>
-      </div>
+    <table>
+      <thead>
+        <tr><th>S.No.</th><th>Particulars</th><th style="text-align:right">Total (in Rs.)</th></tr>
+      </thead>
+      <tbody>
+        ${feeRows.map((r,i) => `<tr><td>${i+1}</td><td>${r.particular||r.label||'Fee'}</td><td>₹${Number(r.amount||0).toLocaleString('en-IN')}.00</td></tr>`).join('')}
+        <tr class="total-row"><td colspan="2" style="text-align:right;padding-right:14px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+      </tbody>
+    </table>
+
+    <div class="amtwords">Amt. in words (Rs.): &nbsp;<strong>${amtWords}</strong></div>
+
+    <div class="payinfo">
+      Paid by: <strong>${data.paymentMode==='online'?'Online':'Cash'}</strong>
+      &nbsp;&nbsp; Rs. <strong>${amt.toLocaleString('en-IN')}.00</strong>
+      ${data.transactionId ? `&nbsp;&nbsp; Transaction ID: <strong>${data.transactionId}</strong>` : ''}
+      &nbsp;&nbsp; Date: <strong>${dateStr}</strong>
     </div>
 
-    <div style="padding:4px 14px;font-size:8.5px;color:#777;border-bottom:1px dashed #ddd;text-align:center">
+    <div style="padding:4px 14px;font-size:10px;color:#666;border-bottom:1px solid #eee">
       ERP Verification No: <strong>${data.verificationNo||'—'}</strong> &nbsp;|&nbsp; Collected by: <strong>${data.collectedBy||'—'}</strong>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;padding:6px 14px 8px">
+    <div class="foot">
       <div>
-        <div class="note">*Computer-generated receipt. Valid without signature.</div>
-        <div class="note">Generated through LKCWSC ERP System</div>
+        <div class="footnote">Signature<br/>(Accounted by: Not Required)</div>
+        <div class="footnote" style="margin-top:6px">This is a system generated receipt and does not require seal/stamp.</div>
       </div>
       <div class="sig">
-        <div class="sig-line">Accounts Section<br/>LKCWSC</div>
+        <div class="sigline">Accounts Section<br/>LKCWSC</div>
       </div>
     </div>
   </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  <scr${'ipt'}>window.onload=()=>{window.print()}</scr${'ipt'}></body></html>`;
 
-  const w = window.open('','_blank','width=830,height=520');
+  const w = window.open('','_blank','width=700,height=700');
   w.document.write(html);
   w.document.close();
 };
+
 
 const genReceiptNo = () => {
   const y = new Date().getFullYear();
