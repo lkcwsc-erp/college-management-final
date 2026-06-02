@@ -107,13 +107,13 @@ const StudentDashboard = () => {
 
   const getDocStatusStyle = (status) => {
     switch (status) {
-      case 'pending_accounts':      return { bg: '#fff3e0', color: '#E65100', label: '⏳ Step 1/4 — Accounts (Fee Verification)' };
+      case 'pending_accounts':      return { bg: '#fff3e0', color: '#E65100', label: '⏳ Step 1 — Accounts (Fee Verification)' };
       case 'rejected_by_accounts':  return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts Section' };
-      case 'pending_exam':          return { bg: '#e3f2fd', color: '#1565C0', label: '⏳ Step 2/4 — Exam Section (Result Check)' };
+      case 'pending_exam':          return { bg: '#e3f2fd', color: '#1565C0', label: '⏳ At Exam Section (Processing)' };
       case 'rejected_by_exam':      return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Examination Section' };
-      case 'pending_principal':     return { bg: '#fff3e0', color: '#E65100', label: '⏳ Step 3/4 — Principal (Approval)' };
+      case 'pending_principal':     return { bg: '#fff3e0', color: '#E65100', label: '⏳ At Principal (Approval)' };
       case 'rejected_by_principal': return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' };
-      case 'pending_generation':    return { bg: '#e8f5e9', color: '#2E7D32', label: '⏳ Step 4/4 — Student Section (Printing)' };
+      case 'pending_generation':    return { bg: '#e8f5e9', color: '#2E7D32', label: '⏳ At Student Section (Ready to Issue)' };
       case 'completed':             return { bg: '#e8f5e9', color: '#1b5e20', label: '✅ Completed — Ready to Collect' };
       default:                      return { bg: '#f5f5f5', color: '#666', label: status };
     }
@@ -891,25 +891,39 @@ const StudentDashboard = () => {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span>📝 Submitted</span>
                                 <span>→</span>
-                                <span style={{ color: req.accountsApprovedDate ? '#2E7D32' : '#999', fontWeight: req.accountsApprovedDate ? '600' : '400' }}>
-                                  {req.accountsApprovedDate ? '✅' : '⏳'} Accounts
-                                </span>
-                                {req.documentType === 'TC' && (
+                                {req.documentType === 'MARKSHEET' ? (
                                   <>
-                                    <span>→</span>
                                     <span style={{ color: req.examVerifiedDate ? '#2E7D32' : '#999', fontWeight: req.examVerifiedDate ? '600' : '400' }}>
                                       {req.examVerifiedDate ? '✅' : '⏳'} Exam Section
                                     </span>
                                     <span>→</span>
-                                    <span style={{ color: req.principalApprovedDate ? '#2E7D32' : '#999', fontWeight: req.principalApprovedDate ? '600' : '400' }}>
-                                      {req.principalApprovedDate ? '✅' : '⏳'} Principal
+                                    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? '600' : '400' }}>
+                                      {req.status === 'completed' ? '✅' : '⏳'} Student Section
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span style={{ color: req.accountsApprovedDate ? '#2E7D32' : '#999', fontWeight: req.accountsApprovedDate ? '600' : '400' }}>
+                                      {req.accountsApprovedDate ? '✅' : '⏳'} Accounts
+                                    </span>
+                                    {req.documentType === 'TC' && (
+                                      <>
+                                        <span>→</span>
+                                        <span style={{ color: req.examVerifiedDate ? '#2E7D32' : '#999', fontWeight: req.examVerifiedDate ? '600' : '400' }}>
+                                          {req.examVerifiedDate ? '✅' : '⏳'} Exam Section
+                                        </span>
+                                        <span>→</span>
+                                        <span style={{ color: req.principalApprovedDate ? '#2E7D32' : '#999', fontWeight: req.principalApprovedDate ? '600' : '400' }}>
+                                          {req.principalApprovedDate ? '✅' : '⏳'} Principal
+                                        </span>
+                                      </>
+                                    )}
+                                    <span>→</span>
+                                    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? '600' : '400' }}>
+                                      {req.status === 'completed' ? '✅' : '⏳'} Student Section
                                     </span>
                                   </>
                                 )}
-                                <span>→</span>
-                                <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? '600' : '400' }}>
-                                  {req.status === 'completed' ? '✅' : '⏳'} Student Section
-                                </span>
                               </div>
                             </div>
 
