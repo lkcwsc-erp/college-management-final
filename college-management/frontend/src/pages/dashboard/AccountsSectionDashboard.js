@@ -261,7 +261,7 @@ const printReceipt = (data) => {
     .haffil{font-size:9px;color:#555}
     .haddr{font-size:9px;color:#555}
     /* ── Title ── */
-    .title{text-align:center;padding:5px;border-bottom:1px solid #e0e0e0;font-size:11px;font-weight:700;letter-spacing:3px;color:#1a237e;background:#f0f4ff}
+    .title{text-align:center;padding:6px;border-bottom:2px solid #1a237e;font-size:13px;font-weight:900;letter-spacing:4px;color:#1a237e;background:#f0f4ff}
     /* ── 3 columns ── */
     .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid #e0e0e0}
     .col{padding:8px 12px}
@@ -306,7 +306,7 @@ const printReceipt = (data) => {
         <div class="col-title">Student Details</div>
         <div class="row"><span class="lbl">Name</span><span class="val">${data.studentName||'—'}</span></div>
         <div class="row"><span class="lbl">Student ID</span><span class="val">${data.studentId||'—'}</span></div>
-        <div class="row"><span class="lbl">Course & Year</span><span class="val">${data.courseType||'—'} — ${data.admissionYear||'—'}</span></div>
+        <div class="row"><span class="lbl">Course & Year</span><span class="val">${(data.courseType||data.branch||'—')} — ${(data.admissionYear||data.year||'—')}</span></div>
       </div>
       <div class="col">
         <div class="col-title">Payment Details</div>
@@ -514,7 +514,13 @@ const AccountsSectionDashboard = () => {
       setPayHistory(hist);
       localStorage.setItem('lkcwsc_pay_history', JSON.stringify(hist));
 
-      printReceipt({ ...entry, receiptNo: rNo });
+      printReceipt({ 
+        ...entry, receiptNo: rNo,
+        feeTypeLabel: docFees[selectedDoc.documentType]?.label || selectedDoc.documentTypeLabel || entry.feeLabel || 'Document Fee',
+        courseType: selectedDoc.branch || '',
+        admissionYear: selectedDoc.admissionYear || '',
+        verificationNo: 'ERP' + rNo,
+      });
       showToast('Receipt generated & request approved!');
       closeDocModal(); fetchDocRequests();
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); }
@@ -572,7 +578,13 @@ const AccountsSectionDashboard = () => {
       setPayHistory(hist);
       localStorage.setItem('lkcwsc_pay_history', JSON.stringify(hist));
 
-      printReceipt({ ...entry, receiptNo: rNo });
+      printReceipt({ 
+        ...entry, receiptNo: rNo,
+        feeTypeLabel: feeType?.label || entry.feeLabel || 'Fee',
+        courseType: selectedAdm.courseType || '',
+        admissionYear: selectedAdm.admissionYear || '',
+        verificationNo: 'ERP' + rNo,
+      });
       showToast('Fee collected & receipt generated!');
       setSelectedAdm(null);
       setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash');
