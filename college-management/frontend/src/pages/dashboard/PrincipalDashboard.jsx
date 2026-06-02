@@ -591,7 +591,7 @@ const PrincipalDashboard = () => {
             <div>
               <h2 style={{ color: '#C62828', marginBottom: 4 }}>👩‍🎓 All Students</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Principal has full access — view, edit, and delete student records.</p>
-              <StudentViewFull canEdit={true} themeColor="#C62828" />
+              <StudentViewFull canEdit={true} themeColor="#C62828" role="principal" />
             </div>
           )}
           {activeTab === 'receipts' && <PaymentReceiptsTab themeColor="#C62828" />}
