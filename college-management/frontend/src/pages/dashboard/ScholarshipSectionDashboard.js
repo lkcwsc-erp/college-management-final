@@ -501,7 +501,7 @@ const ScholarshipSectionDashboard = () => {
             <div>
               <h2 style={{ color: '#7B1FA2', marginBottom: 4 }}>👩‍🎓 All Students</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View complete student information. Read-only view.</p>
-              <StudentViewFull canEdit={false} themeColor="#7B1FA2" />
+              <StudentViewFull canEdit={false} themeColor="#7B1FA2" role="scholarship" />
             </div>
           )}
           {activeTab === 'receipts' && <PaymentReceiptsTab themeColor="#7B1FA2" />}
