@@ -64,8 +64,6 @@ const StudentDashboard = () => {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const handleDocSubmit = async (e) => {
-  };
 
   const tabs = [
     { id: 'home', label: '🏠 Dashboard' },
