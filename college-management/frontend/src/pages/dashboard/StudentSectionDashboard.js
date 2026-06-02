@@ -684,7 +684,7 @@ const StudentSectionDashboard = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const printTC = (adm) => {
-  const tcNo    = 'TC' + new Date().getFullYear().toString().slice(-2) + '-' + Date.now().toString().slice(-5);
+
   const today   = new Date();
   const dateStr = String(today.getDate()).padStart(2,'0') + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + today.getFullYear();
 
