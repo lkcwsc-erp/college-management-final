@@ -577,17 +577,14 @@ const PrincipalDashboard = () => {
             </div>
           )}
 
-          {/* ── COLLEGE REPORTS (Students) ── */}
+          {/* ── COLLEGE REPORTS ── */}
           {activeTab === 'reports' && <AdminReports themeColor="#C62828" />}
 
-          {/* ── OTHER TABS ── */}
-{!['home', 'admissions', 'tc', 'reports'].includes(activeTab) && (
-            <div className="empty-state">
-              <div className="empty-icon">🚧</div>
-              <h3>{tabs.find(t => t.id === activeTab)?.label}</h3>
-              <p>This feature is under development. Coming soon!</p>
-            </div>
-          )}
+          {/* ── STAFF OVERVIEW ── */}
+          {activeTab === 'staff' && <PrincipalStaffTab />}
+
+          {/* ── NOTICES ── */}
+          {activeTab === 'notices' && <PrincipalNoticesTab />}
 
           {/* ══ ALL STUDENTS ══ */}
           {activeTab === 'all_students' && (
@@ -719,6 +716,137 @@ const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
           <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
             <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Staff Overview Tab ───────────────────────────────────────────────────────
+const PrincipalStaffTab = () => {
+  const [staff, setStaff]     = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    API.get('/auth/staff')
+      .then(res => setStaff(res.data.staff || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const roleLabel = (role) => ({
+    staff_student:     '👩‍🎓 Student Section',
+    staff_accounts:    '💰 Accounts Section',
+    staff_exam:        '📝 Exam Section',
+    staff_scholarship: '🏅 Scholarship Section',
+    staff_principal:   '🎓 Principal',
+    admin:             '⚙️ Admin',
+  }[role] || role);
+
+  return (
+    <div>
+      <h2 style={{ color: '#C62828', marginBottom: 4 }}>👥 Staff Overview</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>All staff members and their roles.</p>
+      {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p></div>
+      : staff.length === 0 ? <div className="empty-state"><div className="empty-icon">👥</div><h3>No staff found</h3></div>
+      : (
+        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr', background: '#C62828', padding: '12px 16px', gap: 8 }}>
+            {['Name','Email','Role','Status'].map(h => <span key={h} style={{color:'#fff',fontWeight:700,fontSize:13}}>{h}</span>)}
+          </div>
+          {staff.map((s, idx) => (
+            <div key={s._id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx%2===0?'#fafbff':'#fff' }}>
+              <div>
+                <p style={{fontWeight:600,fontSize:14,margin:0}}>{s.name}</p>
+                <p style={{fontSize:11,color:'#888',margin:0}}>{s.phone||''}</p>
+              </div>
+              <span style={{fontSize:12,color:'#555'}}>{s.email}</span>
+              <span style={{fontSize:12,fontWeight:600,color:'#C62828'}}>{roleLabel(s.role)}</span>
+              <span style={{fontSize:12,background:'#e8f5e9',color:'#2E7D32',padding:'2px 10px',borderRadius:10,fontWeight:600}}>Active</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Notices Tab ─────────────────────────────────────────────────────────────
+const PrincipalNoticesTab = () => {
+  const [notices, setNotices]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [title, setTitle]       = useState('');
+  const [body, setBody]         = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [msg, setMsg]           = useState('');
+
+  const fetchNotices = () => {
+    setLoading(true);
+    API.get('/notices').then(res => setNotices(res.data.notices||[])).catch(()=>{}).finally(()=>setLoading(false));
+  };
+
+  useEffect(() => { fetchNotices(); }, []);
+
+  const handleAdd = async () => {
+    if (!title.trim()) { setMsg('❌ Title required.'); return; }
+    setSaving(true);
+    try {
+      await API.post('/notices', { title, content: body });
+      setMsg('✅ Notice posted!'); setTitle(''); setBody('');
+      setTimeout(() => setMsg(''), 3000);
+      fetchNotices();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this notice?')) return;
+    try { await API.delete(`/notices/${id}`); fetchNotices(); } catch {}
+  };
+
+  return (
+    <div>
+      <h2 style={{ color: '#C62828', marginBottom: 4 }}>📢 Important Notices</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Post and manage college notices.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
+
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20 }}>
+        <h4 style={{ color: '#C62828', marginBottom: 14 }}>📝 Post New Notice</h4>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 5 }}>Title *</label>
+          <input type="text" placeholder="Notice title..." value={title} onChange={e => setTitle(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 5 }}>Content</label>
+          <textarea rows="3" placeholder="Notice content..." value={body} onChange={e => setBody(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+        </div>
+        <button onClick={handleAdd} disabled={saving}
+          style={{ background: '#C62828', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: saving?'not-allowed':'pointer', opacity: saving?0.7:1 }}>
+          {saving ? '⏳ Posting...' : '📢 Post Notice'}
+        </button>
+      </div>
+
+      {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p></div>
+      : notices.length === 0 ? <div className="empty-state"><div className="empty-icon">📢</div><h3>No notices yet</h3></div>
+      : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {notices.map(n => (
+            <div key={n._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: '4px solid #C62828', boxShadow: '0 1px 6px rgba(0,0,0,.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
+                <h4 style={{ color: '#1a1a2e', fontSize: 15, margin: 0 }}>{n.title}</h4>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#aaa' }}>{n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-IN') : ''}</span>
+                  <button onClick={() => handleDelete(n._id)}
+                    style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>🗑️</button>
+                </div>
+              </div>
+              {n.content && <p style={{ fontSize: 13, color: '#555', margin: 0 }}>{n.content}</p>}
+            </div>
+          ))}
         </div>
       )}
     </div>
