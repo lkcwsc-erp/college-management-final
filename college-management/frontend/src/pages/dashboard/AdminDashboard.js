@@ -264,7 +264,7 @@ const AdminDashboard = () => {
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Admin has read-only access. Edit and Delete is restricted to Student Section Staff and Principal.</p>
-              <StudentViewFull canEdit={false} themeColor="#1565C0" />
+              <StudentViewFull canEdit={false} themeColor="#1565C0" role="readonly" />
             </div>
           )}
 
