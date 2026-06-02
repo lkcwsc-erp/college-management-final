@@ -778,6 +778,8 @@ const PrincipalNoticesTab = () => {
   const [loading, setLoading]   = useState(false);
   const [title, setTitle]       = useState('');
   const [body, setBody]         = useState('');
+  const [photo, setPhoto]       = useState('');  // base64
+  const [photoName, setPhotoName] = useState('');
   const [saving, setSaving]     = useState(false);
   const [msg, setMsg]           = useState('');
 
@@ -788,12 +790,22 @@ const PrincipalNoticesTab = () => {
 
   useEffect(() => { fetchNotices(); }, []);
 
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setMsg('❌ Image must be under 2MB.'); return; }
+    setPhotoName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhoto(ev.target.result); // base64 with data:image prefix
+    reader.readAsDataURL(file);
+  };
+
   const handleAdd = async () => {
     if (!title.trim()) { setMsg('❌ Title required.'); return; }
     setSaving(true);
     try {
-      await API.post('/notices', { title, content: body });
-      setMsg('✅ Notice posted!'); setTitle(''); setBody('');
+      await API.post('/notices', { title, content: body || ' ', attachment: photo || '' });
+      setMsg('✅ Notice posted!'); setTitle(''); setBody(''); setPhoto(''); setPhotoName('');
       setTimeout(() => setMsg(''), 3000);
       fetchNotices();
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
@@ -808,10 +820,11 @@ const PrincipalNoticesTab = () => {
   return (
     <div>
       <h2 style={{ color: '#C62828', marginBottom: 4 }}>📢 Important Notices</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Post and manage college notices.</p>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Post and manage college notices. Photos/images can be attached.</p>
 
       {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
 
+      {/* Post form */}
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20 }}>
         <h4 style={{ color: '#C62828', marginBottom: 14 }}>📝 Post New Notice</h4>
         <div style={{ marginBottom: 12 }}>
@@ -819,17 +832,43 @@ const PrincipalNoticesTab = () => {
           <input type="text" placeholder="Notice title..." value={title} onChange={e => setTitle(e.target.value)}
             style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
         </div>
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 12 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 5 }}>Content</label>
           <textarea rows="3" placeholder="Notice content..." value={body} onChange={e => setBody(e.target.value)}
             style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
         </div>
+
+        {/* Photo upload */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 5 }}>📷 Attach Photo / Image (optional, max 2MB)</label>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }}>
+              📎 Choose Image
+              <input type="file" accept="image/*" onChange={handlePhotoChange} style={{ display: 'none' }} />
+            </label>
+            {photoName && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ {photoName}</span>
+                <button onClick={() => { setPhoto(''); setPhotoName(''); }}
+                  style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>✕ Remove</button>
+              </div>
+            )}
+          </div>
+          {photo && (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Preview:</p>
+              <img src={photo} alt="preview" style={{ maxWidth: 200, maxHeight: 140, borderRadius: 8, border: '1px solid #ddd', objectFit: 'contain' }} />
+            </div>
+          )}
+        </div>
+
         <button onClick={handleAdd} disabled={saving}
           style={{ background: '#C62828', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: saving?'not-allowed':'pointer', opacity: saving?0.7:1 }}>
           {saving ? '⏳ Posting...' : '📢 Post Notice'}
         </button>
       </div>
 
+      {/* Notices list */}
       {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p></div>
       : notices.length === 0 ? <div className="empty-state"><div className="empty-icon">📢</div><h3>No notices yet</h3></div>
       : (
@@ -838,13 +877,16 @@ const PrincipalNoticesTab = () => {
             <div key={n._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: '4px solid #C62828', boxShadow: '0 1px 6px rgba(0,0,0,.05)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
                 <h4 style={{ color: '#1a1a2e', fontSize: 15, margin: 0 }}>{n.title}</h4>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                   <span style={{ fontSize: 11, color: '#aaa' }}>{n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-IN') : ''}</span>
                   <button onClick={() => handleDelete(n._id)}
                     style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>🗑️</button>
                 </div>
               </div>
-              {n.content && <p style={{ fontSize: 13, color: '#555', margin: 0 }}>{n.content}</p>}
+              {n.content && n.content !== ' ' && <p style={{ fontSize: 13, color: '#555', margin: '0 0 10px' }}>{n.content}</p>}
+              {n.attachment && (
+                <img src={n.attachment} alt="notice" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, border: '1px solid #ddd', objectFit: 'contain', display: 'block' }} />
+              )}
             </div>
           ))}
         </div>
