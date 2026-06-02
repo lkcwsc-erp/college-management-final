@@ -249,6 +249,12 @@ const StudentDashboard = () => {
                       {myAdmission?.courseType || myAdmission?.hscStream || 'N/A'}
                     </p>
                   </div>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#e8f5e9', borderRadius: '10px', border: '1px solid #a5d6a7' }}>
+                    <p style={{ fontSize: '11px', color: '#2E7D32', margin: 0, fontWeight: '700' }}>CURRENT YEAR</p>
+                    <p style={{ fontSize: '14px', color: '#1b5e20', fontWeight: '700', margin: '2px 0 0' }}>
+                      {myAdmission?.admissionYear || 'N/A'}
+                    </p>
+                  </div>
                   <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
                     <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>EMAIL</p>
                     <p style={{ fontSize: '13px', color: '#333', fontWeight: '500', margin: '2px 0 0', wordBreak: 'break-all' }}>
