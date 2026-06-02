@@ -776,9 +776,20 @@ const printBonafide = (adm) => {
     'Twenty-Seven','Twenty-Eight','Twenty-Nine','Thirty','Thirty-One'];
   const monthNames = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
   const yearToWords = (y) => {
+    if (y >= 1000) {
+      const th = Math.floor(y/1000);
+      const rem = y % 1000;
+      const thWord = ones[th] + ' Thousand';
+      if (rem === 0) return thWord;
+      if (rem < 100) return thWord + ' ' + (rem < ones.length ? ones[rem] : tens[Math.floor(rem/10)] + (rem%10 ? '-'+ones[rem%10] : ''));
+      const h = Math.floor(rem/100), r = rem%100;
+      const hw = ones[h] + ' Hundred';
+      const rw = r===0?'':(r<ones.length?ones[r]:tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:''));
+      return thWord + ' ' + hw + (rw?' '+rw:'');
+    }
     const h = Math.floor(y/100), r = y%100;
-    const tens = ['','Ten','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
     const hw = ones[h]+' Hundred';
     const rw = r===0?'':(r<ones.length?ones[r]:tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:''));
     return (hw+(rw?' '+rw:'')).trim();
