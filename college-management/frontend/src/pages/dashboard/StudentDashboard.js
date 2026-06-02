@@ -40,6 +40,13 @@ const StudentDashboard = () => {
   const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false });
   const [examSubmitted, setExamSubmitted] = useState({ regular: false, backlog: false });
 
+  // Document Request states
+  const [docRequests, setDocRequests] = useState([]);
+  const [docReqLoading, setDocReqLoading] = useState(false);
+  const [docReqForm, setDocReqForm] = useState({ documentType: '', reason: '', urgency: 'normal' });
+  const [docReqSubmitting, setDocReqSubmitting] = useState(false);
+  const [docReqMsg, setDocReqMsg] = useState('');
+
   useEffect(() => {
     API.get('/notices').then(res => setNotices(res.data.notices || []));
     if (user?.email) {
@@ -61,6 +68,128 @@ const StudentDashboard = () => {
       .then(res => setExamSettings(res.data.settings || {}))
       .catch(() => {});
   }, [user]);
+
+  // Fetch doc requests when tab opens
+  useEffect(() => {
+    if (activeTab === 'documents') {
+      setDocReqLoading(true);
+      API.get('/document-requests/my')
+        .then(res => setDocRequests(res.data.requests || []))
+        .catch(() => {})
+        .finally(() => setDocReqLoading(false));
+    }
+  }, [activeTab]);
+
+  const handleDocReqSubmit = async () => {
+    if (!docReqForm.documentType) { setDocReqMsg('❌ Please select a document type.'); return; }
+    setDocReqSubmitting(true); setDocReqMsg('');
+    try {
+      const res = await API.post('/document-requests', docReqForm);
+      if (res.data.success) {
+        setDocReqMsg('✅ ' + res.data.message);
+        setDocReqForm({ documentType: '', reason: '', urgency: 'normal' });
+        const updated = await API.get('/document-requests/my');
+        setDocRequests(updated.data.requests || []);
+      } else { setDocReqMsg('❌ ' + res.data.message); }
+    } catch (e) { setDocReqMsg('❌ ' + (e.response?.data?.message || 'Error submitting request.')); }
+    setDocReqSubmitting(false);
+  };
+
+  const handlePrintReceipt = (payment, studentInfo) => {
+    const win = window.open('', '_blank', 'width=800,height=600');
+    const college = 'Late Kalpana Chawla Women\'s Senior College';
+    const address = 'Gangakhed, Dist. Parbhani – 431514, Maharashtra, INDIA';
+    win.document.write(`
+      <!DOCTYPE html><html><head><title>Fee Receipt</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
+        .receipt { max-width: 700px; margin: 0 auto; border: 2px solid #000; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 12px; }
+        .header h2 { margin: 0 0 2px; font-size: 18px; }
+        .header h3 { margin: 0 0 2px; font-size: 14px; font-weight: normal; }
+        .header p { margin: 2px 0; font-size: 12px; }
+        .title-row { text-align: center; font-size: 15px; font-weight: bold; margin: 10px 0; text-decoration: underline; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 12px; font-size: 13px; }
+        .info-grid div { display: flex; gap: 6px; }
+        .info-grid label { font-weight: bold; white-space: nowrap; min-width: 110px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+        th, td { border: 1px solid #000; padding: 7px 10px; }
+        th { background: #f0f0f0; font-weight: bold; }
+        .total-row td { font-weight: bold; background: #f5f5f5; }
+        .footer { font-size: 12px; margin-top: 16px; }
+        .words { font-weight: bold; font-size: 13px; margin: 8px 0; }
+        .sig { margin-top: 30px; text-align: right; font-size: 12px; }
+        @media print { button { display: none; } }
+      </style></head><body>
+      <div class="receipt">
+        <div class="header">
+          <h2>${college}</h2>
+          <h3>${address}</h3>
+          <p>Ph: (02452) XXXXXX</p>
+        </div>
+        <div class="title-row">Fee Receipt (Student Copy)</div>
+        <hr style="border:1px dashed #999; margin:10px 0"/>
+        <div class="info-grid">
+          <div><label>Receipt No. :</label><span>${payment.receiptNo || '—'}</span></div>
+          <div><label>Receipt Date :</label><span>${payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : '—'}</span></div>
+          <div><label>Student Name :</label><span>${studentInfo.name}</span></div>
+          <div><label>Student ID :</label><span>${studentInfo.studentId || '—'}</span></div>
+          <div><label>Course :</label><span>${studentInfo.course}</span></div>
+          <div><label>Year :</label><span>${studentInfo.year}</span></div>
+          <div><label>Father's Name :</label><span>${studentInfo.fatherName || '—'}</span></div>
+          <div><label>Phone :</label><span>${studentInfo.phone || '—'}</span></div>
+        </div>
+        <table>
+          <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
+          <tbody>
+            <tr><td style="text-align:center">1</td><td>${payment.feeTypeLabel || payment.feeType || 'College Fees'}</td><td style="text-align:right">₹${(payment.amount || 0).toLocaleString('en-IN')}.00</td></tr>
+            <tr class="total-row"><td colspan="2" style="text-align:right">Total Amount</td><td style="text-align:right">₹${(payment.amount || 0).toLocaleString('en-IN')}.00</td></tr>
+          </tbody>
+        </table>
+        <div class="words">Amt. in words: ${numberToWords(payment.amount || 0)} Only</div>
+        <div class="footer">
+          <strong>Paid by:</strong> ${payment.paymentMode === 'online' ? 'Online' : 'Cash'} &nbsp;&nbsp;
+          <strong>Rs. ${(payment.amount || 0).toLocaleString('en-IN')}</strong> &nbsp;&nbsp;
+          <strong>Date:</strong> ${payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : '—'}
+        </div>
+        <div class="footer"><strong>Narration:</strong> ${payment.narration || ''}</div>
+        <div class="sig">
+          <p>Signature</p>
+          <p style="font-size:11px">(Accounted by: ${payment.accountedBy || 'Not Required'})</p>
+        </div>
+        <hr style="margin-top:20px"/>
+        <p style="font-size:11px; text-align:center;">This is a system generated receipt and does not require seal/stamp.</p>
+        <div style="text-align:center; margin-top:10px">
+          <button onclick="window.print()" style="padding:8px 24px;background:#1565C0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ Print</button>
+        </div>
+      </div></body></html>
+    `);
+    win.document.close();
+  };
+
+  // Convert number to words
+  const numberToWords = (num) => {
+    const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+    const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    if (num === 0) return 'Zero';
+    if (num < 20) return ones[num];
+    if (num < 100) return tens[Math.floor(num/10)] + (num%10 ? ' '+ones[num%10] : '');
+    if (num < 1000) return ones[Math.floor(num/100)]+' Hundred'+(num%100?' '+numberToWords(num%100):'');
+    if (num < 100000) return numberToWords(Math.floor(num/1000))+' Thousand'+(num%1000?' '+numberToWords(num%1000):'');
+    if (num < 10000000) return numberToWords(Math.floor(num/100000))+' Lakh'+(num%100000?' '+numberToWords(num%100000):'');
+    return numberToWords(Math.floor(num/10000000))+' Crore'+(num%10000000?' '+numberToWords(num%10000000):'');
+  };
+
+  const DOC_STATUS_INFO = {
+    pending_accounts:      { color: '#E65100', bg: '#fff3e0', label: '⏳ Pending – Accounts Section' },
+    rejected_by_accounts:  { color: '#C62828', bg: '#ffebee', label: '❌ Rejected by Accounts' },
+    pending_exam:          { color: '#1565C0', bg: '#e3f2fd', label: '🔍 Pending – Exam Section' },
+    rejected_by_exam:      { color: '#C62828', bg: '#ffebee', label: '❌ Rejected by Exam Section' },
+    pending_principal:     { color: '#6A1B9A', bg: '#f3e5f5', label: '📋 Pending – Principal' },
+    rejected_by_principal: { color: '#C62828', bg: '#ffebee', label: '❌ Rejected by Principal' },
+    pending_generation:    { color: '#00796B', bg: '#e0f2f1', label: '🖨️ Pending – Being Generated' },
+    completed:             { color: '#2E7D32', bg: '#e8f5e9', label: '✅ Completed – Collect from Office' },
+  };
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -524,7 +653,7 @@ const StudentDashboard = () => {
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                             <thead>
                               <tr style={{ background: '#f5f5f5' }}>
-                                {['Receipt No','Date','Fee Type','Amount','Mode','Status'].map(h => (
+                                {['Receipt No','Date','Fee Type','Amount','Mode','Status','Receipt'].map(h => (
                                   <th key={h} style={{ padding: '8px 12px', fontWeight: 700, color: '#009688', textAlign: 'center', borderBottom: '2px solid #009688', fontSize: 12 }}>{h}</th>
                                 ))}
                               </tr>
@@ -539,6 +668,20 @@ const StudentDashboard = () => {
                                   <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>{p.paymentMode==='online'?'🌐 Online':'💵 Cash'}</td>
                                   <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
                                     <span style={{ background: '#e8f5e9', color: '#2E7D32', padding: '2px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>PAID ✓</span>
+                                  </td>
+                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                                    <button
+                                      onClick={() => handlePrintReceipt(p, {
+                                        name: myAdmission.applicantName,
+                                        studentId: myAdmission.studentId,
+                                        course: myAdmission.courseType || myAdmission.course?.name || '—',
+                                        year: myAdmission.admissionYear || '—',
+                                        fatherName: myAdmission.fatherName,
+                                        phone: myAdmission.phone,
+                                      })}
+                                      style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+                                      🖨️ Print
+                                    </button>
                                   </td>
                                 </tr>
                               ))}
@@ -556,6 +699,138 @@ const StudentDashboard = () => {
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {/* ============ DOCUMENTS TAB ============ */}
+          {activeTab === 'documents' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📄 Request Documents</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+                Apply for official documents like ID Card, Bonafide, TC, Marksheet, or Migration Certificate.
+              </p>
+
+              {/* New Request Form */}
+              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 24, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                <div style={{ background: 'linear-gradient(135deg,#1565C0,#1976D2)', padding: '14px 20px' }}>
+                  <h4 style={{ color: '#fff', margin: 0, fontSize: 15 }}>📝 Submit New Document Request</h4>
+                </div>
+                <div style={{ padding: 20 }}>
+                  {!myAdmission ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>
+                      <p style={{ fontSize: '2rem', margin: 0 }}>⚠️</p>
+                      <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Admission Required</p>
+                      <p style={{ fontSize: 13 }}>Please complete your admission application first to request documents.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#333', display: 'block', marginBottom: 6 }}>Document Type *</label>
+                        <select
+                          value={docReqForm.documentType}
+                          onChange={e => setDocReqForm(f => ({ ...f, documentType: e.target.value }))}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, background: '#f8faff' }}>
+                          <option value="">-- Select Document --</option>
+                          <option value="ID_CARD">🪪 ID Card</option>
+                          <option value="BONAFIDE">📋 Bonafide Certificate</option>
+                          <option value="MARKSHEET">📄 Marksheet</option>
+                          <option value="TC">🎓 Transfer Certificate (TC)</option>
+                          <option value="MIGRATION">📜 Migration Certificate</option>
+                        </select>
+                      </div>
+
+                      {docReqForm.documentType === 'TC' && (
+                        <div style={{ background: '#fff3e0', border: '1px solid #ffe082', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#7c3d00' }}>
+                          ⚠️ <strong>Transfer Certificate (TC)</strong> requires verification by Accounts Section → Exam Section → Principal. Processing may take 7–10 working days.
+                        </div>
+                      )}
+                      {docReqForm.documentType === 'MARKSHEET' && (
+                        <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#0c4a6e' }}>
+                          ℹ️ <strong>Marksheet requests</strong> go directly to the Examination Section for verification.
+                        </div>
+                      )}
+
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#333', display: 'block', marginBottom: 6 }}>Reason / Purpose</label>
+                        <textarea
+                          rows={3}
+                          placeholder="e.g. Required for job application, bank loan, further education..."
+                          value={docReqForm.reason}
+                          onChange={e => setDocReqForm(f => ({ ...f, reason: e.target.value }))}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#333', display: 'block', marginBottom: 6 }}>Urgency</label>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                          {[{val:'normal',label:'🟢 Normal (5–7 days)'},{val:'urgent',label:'🔴 Urgent (1–2 days)'}].map(opt => (
+                            <label key={opt.val} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, background: docReqForm.urgency===opt.val?'#e3f2fd':'#f8f8f8', padding: '8px 16px', borderRadius: 8, border: `2px solid ${docReqForm.urgency===opt.val?'#1565C0':'#ddd'}`, fontWeight: docReqForm.urgency===opt.val?700:400 }}>
+                              <input type="radio" name="urgency" value={opt.val} checked={docReqForm.urgency===opt.val} onChange={e => setDocReqForm(f => ({ ...f, urgency: e.target.value }))} style={{ margin: 0 }} />
+                              {opt.label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {docReqMsg && (
+                        <div style={{ padding: '10px 14px', borderRadius: 8, background: docReqMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color: docReqMsg.startsWith('✅')?'#2E7D32':'#C62828', fontSize: 13, fontWeight: 600 }}>
+                          {docReqMsg}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handleDocReqSubmit}
+                        disabled={docReqSubmitting}
+                        style={{ background: docReqSubmitting?'#aaa':'linear-gradient(135deg,#1565C0,#1976D2)', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: docReqSubmitting?'not-allowed':'pointer', alignSelf: 'flex-start' }}>
+                        {docReqSubmitting ? '⏳ Submitting...' : '📤 Submit Request'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* My Requests List */}
+              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                <div style={{ background: '#009688', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>📋 My Document Requests</span>
+                  <button onClick={() => { setDocReqLoading(true); API.get('/document-requests/my').then(r => setDocRequests(r.data.requests||[])).catch(()=>{}).finally(()=>setDocReqLoading(false)); }}
+                    style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>🔄 Refresh</button>
+                </div>
+                <div style={{ padding: 20 }}>
+                  {docReqLoading ? (
+                    <div style={{ textAlign: 'center', padding: 30, color: '#888' }}>⏳ Loading...</div>
+                  ) : docRequests.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 30, color: '#888' }}>
+                      <p style={{ fontSize: '2.5rem', margin: 0 }}>📭</p>
+                      <p style={{ fontWeight: 600, marginTop: 8 }}>No requests yet</p>
+                      <p style={{ fontSize: 13 }}>Submit a new request above.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {docRequests.map((req, i) => {
+                        const st = DOC_STATUS_INFO[req.status] || { color: '#666', bg: '#f5f5f5', label: req.status };
+                        return (
+                          <div key={req._id || i} style={{ borderRadius: 10, border: `1px solid ${st.color}30`, overflow: 'hidden' }}>
+                            <div style={{ background: st.bg, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                              <div>
+                                <span style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>{req.documentTypeLabel || req.documentType}</span>
+                                {req.urgency === 'urgent' && <span style={{ marginLeft: 8, background: '#C62828', color: '#fff', padding: '1px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>URGENT</span>}
+                              </div>
+                              <span style={{ background: st.bg, color: st.color, border: `1px solid ${st.color}50`, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{st.label}</span>
+                            </div>
+                            <div style={{ padding: '10px 16px', background: '#fff', fontSize: 13, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                              <span><strong>Applied:</strong> {new Date(req.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span>
+                              {req.reason && <span><strong>Reason:</strong> {req.reason}</span>}
+                              {req.rejectionReason && <span style={{ color: '#C62828' }}><strong>Rejected:</strong> {req.rejectionReason}</span>}
+                              {req.generationNotes && <span style={{ color: '#2E7D32' }}><strong>Note:</strong> {req.generationNotes}</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
