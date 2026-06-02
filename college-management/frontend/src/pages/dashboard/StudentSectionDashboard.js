@@ -761,10 +761,7 @@ const printBonafide = (adm) => {
   const now      = new Date();
   const day      = String(now.getDate()).padStart(2,'0');
   const month    = String(now.getMonth()+1).padStart(2,'0');
-  const year2    = String(now.getFullYear()).slice(-2);
-  const acadY1   = now.getMonth()+1 >= 6 ? now.getFullYear() : now.getFullYear()-1;
-  const acY1s    = String(acadY1).slice(-2);
-  const acY2s    = String(acadY1+1).slice(-2);
+  const fullYear = now.getFullYear();
 
   const dobObj   = adm.dateOfBirth ? new Date(adm.dateOfBirth) : null;
   const dobDD    = dobObj ? String(dobObj.getDate()).padStart(2,'0')     : '____';
@@ -796,36 +793,56 @@ const printBonafide = (adm) => {
     ? ones[dobObj.getDate()]+' '+monthNames[dobObj.getMonth()]+' '+yearToWords(dobObj.getFullYear())
     : '_______________________________________';
 
-  const name    = adm.applicantName || '';
-  const course  = (adm.courseType||adm.branch||'')+' '+(adm.preferredSubject||'');
+  // Academic year
+  const acadY1   = now.getMonth()+1 >= 6 ? fullYear : fullYear-1;
+  const acadYear = acadY1 + '-' + String(acadY1+1).slice(-2);
+
+  // Course — full name
+  const ct = (adm.courseType||adm.branch||'').toLowerCase();
+  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
+    ? 'Bachelor of Science (B.Sc.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
+    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')
+    ? 'Bachelor of Arts (B.A.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
+    : (adm.courseType||adm.branch||'') + (adm.preferredSubject?' — '+adm.preferredSubject:'');
+
+  const name      = adm.applicantName || '';
+  const studentId = adm.studentId     || '____________________';
 
   const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px}
-    .page{background:white;width:720px;border:3px solid #000;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+    .page{background:white;width:730px;border:2.5px solid #000;box-shadow:0 4px 20px rgba(0,0,0,.15)}
     /* Header */
-    .hdr{display:flex;align-items:center;gap:0;border-bottom:2px solid #000;padding:8px 12px}
+    .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
     .logo{width:86px;height:86px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .h1{font-size:11px}
-    .h2{font-size:11px}
-    .h3{font-size:20px;font-weight:900}
-    .h4{font-size:11.5px}
-    /* Year row */
-    .yrrow{text-align:center;border-bottom:1px solid #000;padding:2px 0;font-size:13px;font-weight:bold;letter-spacing:4px}
-    /* Title row */
-    .titrow{display:flex;align-items:center;justify-content:space-between;padding:4px 14px;border-bottom:1px solid #000}
-    .tbox{background:#000;color:#fff;font-size:16px;font-weight:900;letter-spacing:4px;padding:6px 20px}
-    .meta{font-size:12px}
+    .h1{font-size:11px;color:#333}
+    .h2{font-size:11px;color:#333;margin-bottom:3px}
+    .h3{font-size:22px;font-weight:900;color:#000;line-height:1.2;margin-bottom:2px}
+    .h4{font-size:11.5px;color:#000}
+    .h5{font-size:10.5px;color:#555;margin-top:2px}
+    /* Title bar */
+    .titlebar{text-align:center;padding:8px 0;border-bottom:1px solid #000}
+    .titletxt{font-size:17px;font-weight:900;letter-spacing:5px;text-decoration:underline;text-underline-offset:4px;color:#000}
+    /* Meta */
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;padding:7px 18px;border-bottom:1px solid #ccc;font-size:12.5px}
+    .mrow{display:flex;gap:4px;align-items:baseline}
+    .ml{font-weight:700;white-space:nowrap;color:#000}
+    .mv{border-bottom:1px solid #000;flex:1;min-width:100px;font-weight:bold;padding-left:3px}
     /* Body */
-    .body{padding:14px 18px 6px;font-size:14px}
-    .line{display:block;line-height:1;margin-bottom:20px}
-    .ul{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;text-align:center}
-    .ul-sm{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;text-align:center;min-width:44px}
+    .body{padding:14px 20px 8px;font-size:14px;line-height:2.2;text-align:justify}
+    .ul{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;min-width:200px;text-align:center}
+    .ul-sm{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;min-width:44px;text-align:center}
+    .ul-yr{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;min-width:70px;text-align:center}
+    .ul-lg{border-bottom:1.5px solid #000;display:inline-block;min-width:340px;font-weight:bold}
     /* Footer */
-    .foot{display:flex;justify-content:space-between;align-items:center;padding:10px 18px 12px;border-top:1px solid #000;margin-top:8px}
-    @media print{body{background:white;padding:0}.page{box-shadow:none;border:3px solid #000}@page{size:A5 landscape;margin:0}}
+    .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:10px 20px 12px}
+    .signbox{text-align:center;min-width:120px}
+    .signline{border-top:1px solid #000;padding-top:5px;margin-top:40px;font-size:13px;font-weight:bold}
+    /* ERP */
+    .erp{border-top:1px dashed #aaa;padding:5px 18px;font-size:9.5px;color:#666;display:flex;justify-content:space-between}
+    @media print{body{background:white;padding:0}.page{box-shadow:none;border:2.5px solid #000}}
   </style></head><body><div class="page">
 
     <div class="hdr">
@@ -834,47 +851,64 @@ const printBonafide = (adm) => {
         <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="h2">Affiliated to S.N.D.T. Women's University, Mumbai</div>
         <div class="h3">Late Kalpana Chawala Women's Senior College</div>
-        <div class="h4">Lecture Colony, Gangakhed Tq. Gangakhed Dist. Parbhani</div>
+        <div class="h4">Lecture Colony, Gangakhed Tq. Gangakhed Dist. Parbhani – 431514</div>
+        <div class="h5">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
       </div>
     </div>
 
-    <div class="yrrow">20${acY1s}&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;20${acY2s}</div>
+    <div class="titlebar">
+      <span class="titletxt">BONAFIDE &nbsp; CERTIFICATE</span>
+    </div>
 
-    <div class="titrow">
-      <span class="meta">No. :&nbsp;&nbsp; ${certNo}</span>
-      <span class="tbox">BONAFIDE &nbsp; CERTIFICATE</span>
-      <span class="meta">Date :&nbsp; ${day} / ${month} /20${year2}</span>
+    <div class="meta">
+      <div class="mrow"><span class="ml">Certificate No.:</span><span class="mv">&nbsp;${certNo}</span></div>
+      <div class="mrow"><span class="ml">Date:</span><span class="mv">&nbsp;${day} / ${month} / ${fullYear}</span></div>
+      <div class="mrow"><span class="ml">Student ID:</span><span class="mv">&nbsp;${studentId}</span></div>
+      <div class="mrow"><span class="ml">Academic Year:</span><span class="mv">&nbsp;${acadYear}</span></div>
     </div>
 
     <div class="body">
-      <span class="line">
-        This is to certify that Miss &nbsp;<span class="ul" style="min-width:280px">&nbsp;${name}&nbsp;</span>&nbsp; is/was a bonafide
-      </span>
-      <span class="line">
-        student of &nbsp;<span class="ul" style="min-width:300px">&nbsp;${course.trim()||'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}&nbsp;</span>&nbsp; Class of this College during
-      </span>
-      <span class="line">
-        the academic year 20<span class="ul-sm">&nbsp;${acY1s}&nbsp;</span> - 20<span class="ul-sm">&nbsp;${acY2s}&nbsp;</span> &nbsp;&nbsp;To the best of my knowledge and belief, she bears good
-      </span>
-      <span class="line">
-        moral character. As per office records, her date of birth is &nbsp;<span class="ul-sm">&nbsp;${dobDD}&nbsp;</span> / <span class="ul-sm">&nbsp;${dobMM}&nbsp;</span> / <span class="ul-sm" style="min-width:70px">&nbsp;${dobYYYY}&nbsp;</span>.
-      </span>
-      <span class="line">
-        (in words) &nbsp;<span class="ul" style="min-width:340px">&nbsp;${dobWords}&nbsp;</span>
-      </span>
-      <span style="display:block;height:24px"></span>
+      <p>
+        This is to certify that Miss <span class="ul">&nbsp;${name}&nbsp;</span>
+        is/was a bonafide student of Late Kalpana Chawala Women's Senior College, Gangakhed.
+      </p>
+      <p>
+        She is studying in <span class="ul" style="min-width:280px">&nbsp;${courseFull||'__________________________________'}&nbsp;</span> Class of this College.
+      </p>
+      <p>
+        As per college records, her Date of Birth is&nbsp;
+        <span class="ul-sm">&nbsp;${dobDD}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm">&nbsp;${dobMM}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-yr">&nbsp;${dobYYYY}&nbsp;</span>
+      </p>
+      <p>
+        (In Words): <span class="ul-lg">&nbsp;${dobWords}&nbsp;</span>
+      </p>
+      <p>
+        To the best of my knowledge and belief, her conduct and moral character are <strong>good</strong>.
+        This certificate is issued on her request for official purpose.
+      </p>
     </div>
 
     <div class="foot">
-      <div style="width:80px"></div>
-      <span style="font-size:11px;color:#444;text-align:center">Seal of the College</span>
-      <b style="font-size:14px">PRINCIPAL</b>
+      <div class="signbox">
+        <div class="signline">Clerk</div>
+      </div>
+      <div class="signbox">
+        <div style="font-size:11px;color:#555;margin-top:40px;text-align:center">Seal of the College</div>
+      </div>
+      <div class="signbox">
+        <div class="signline">Principal</div>
+      </div>
+    </div>
+
+    <div class="erp">
+      <span>ERP Verification ID: <strong>ERP${certNo}</strong></span>
+      <span>Generated Through College ERP System</span>
     </div>
 
   </div>
   <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
 
-  const w = window.open('','_blank','width=780,height=580');
+  const w = window.open('','_blank','width=800,height=700');
   w.document.write(html);
   w.document.close();
 };
