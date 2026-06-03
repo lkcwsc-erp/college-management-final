@@ -112,6 +112,12 @@ exports.registerStudent = async (req, res) => {
         role: user.role,
       }
     });
+
+    // Also save plainPassword to Admission for Student Section visibility
+    try {
+      const Admission = require('../models/Admission');
+      await Admission.findOneAndUpdate({ email }, { plainPassword: password });
+    } catch (e) { /* non-critical */ }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
