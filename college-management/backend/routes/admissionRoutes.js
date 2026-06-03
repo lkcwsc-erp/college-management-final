@@ -530,23 +530,24 @@ router.get('/staff-view/all', protect, authorizeRoles('staff_exam', 'staff_schol
       .populate('course', 'name type')
       .sort({ applicantName: 1 });
 
-    // For student section — attach plainPassword from User model
+    // For student section — attach plainPassword from User model if not in Admission
     const isStudentSection = req.user.role === 'staff_student' || req.user.role === 'admin';
-    let admissionsWithCreds = admissions;
+    let result = admissions.map(a => a.toObject());
 
     if (isStudentSection) {
-      const emails = admissions.map(a => a.email).filter(Boolean);
-      const users  = await User.find({ email: { $in: emails } }).select('email plainPassword');
-      const userMap = {};
-      users.forEach(u => { userMap[u.email] = u.plainPassword || ''; });
-      admissionsWithCreds = admissions.map(a => {
-        const obj = a.toObject();
-        obj.plainPassword = userMap[a.email] || '';
-        return obj;
-      });
+      const emails = result.filter(a => !a.plainPassword).map(a => a.email).filter(Boolean);
+      if (emails.length > 0) {
+        const users = await User.find({ email: { $in: emails } }).select('email plainPassword');
+        const userMap = {};
+        users.forEach(u => { userMap[u.email] = u.plainPassword || ''; });
+        result = result.map(a => ({
+          ...a,
+          plainPassword: a.plainPassword || userMap[a.email] || '',
+        }));
+      }
     }
 
-    res.json({ success: true, admissions: admissionsWithCreds });
+    res.json({ success: true, admissions: result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
