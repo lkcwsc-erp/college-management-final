@@ -1010,7 +1010,6 @@ const printIDCard = (adm) => {
   const validYear = new Date().getFullYear();
   const dobStr = adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
 
-  // Full course name
   const ct = (adm.courseType||'').toLowerCase();
   const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
     ? 'Bachelor of Science (B.Sc.)'
@@ -1018,102 +1017,86 @@ const printIDCard = (adm) => {
     ? 'Bachelor of Arts (B.A.)'
     : adm.courseType || '—';
 
-  const yearLabel = adm.admissionYear || '—';
-
-  const html = `<!DOCTYPE html><html><head><title>ID Card - ${adm.applicantName}</title>
+  const html = `<!DOCTYPE html><html><head><title>ID Card</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Times New Roman',serif;background:#dde;padding:30px;display:flex;justify-content:center;align-items:flex-start}
-    .card{width:230px;border-radius:0;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);background:white;border:1px solid #aaa}
-    /* Header */
-    .hdr{background:#fff;padding:10px 8px 6px;text-align:center;border-bottom:3px double #1a237e}
-    .logo{width:52px;height:52px;object-fit:contain}
-    .sanstha{font-size:7px;color:#555;margin:2px 0 0;font-style:italic}
-    .college{font-size:10px;font-weight:700;color:#1a237e;line-height:1.3;margin:2px 0}
-    .affil{font-size:7px;color:#777}
-    /* Title bar */
-    .titlebar{background:#1a237e;padding:5px;text-align:center}
-    .titletext{color:#ffd54f;font-size:9px;font-weight:700;letter-spacing:2.5px}
-    /* Photo area */
-    .photoarea{padding:12px 0 8px;text-align:center;background:#f8f9ff}
-    .photobox{width:80px;height:95px;border:2px solid #1a237e;border-radius:2px;margin:0 auto 6px;overflow:hidden;background:#e8eaf6;display:flex;align-items:center;justify-content:center}
+    html,body{width:225px;height:358px;overflow:hidden;background:#fff;font-family:Arial,sans-serif}
+    .card{width:225px;height:358px;background:#fff;border:1.5px solid #1a237e;display:flex;flex-direction:column}
+    .hdr{background:#fff;padding:6px 6px 4px;text-align:center;border-bottom:2px solid #1a237e;flex-shrink:0}
+    .logo{width:38px;height:38px;object-fit:contain}
+    .sanstha{font-size:6px;color:#666;margin:1px 0;font-style:italic}
+    .college{font-size:8.5px;font-weight:700;color:#1a237e;line-height:1.2;margin:1px 0}
+    .affil{font-size:6px;color:#888}
+    .titlebar{background:#1a237e;padding:4px;text-align:center;flex-shrink:0}
+    .titletext{color:#ffd54f;font-size:8px;font-weight:700;letter-spacing:2px}
+    .photoarea{padding:6px 0 4px;text-align:center;background:#f8f9ff;flex-shrink:0}
+    .photobox{width:65px;height:75px;border:1.5px solid #1a237e;margin:0 auto 4px;overflow:hidden;background:#e8eaf6;display:flex;align-items:center;justify-content:center}
     .photobox img{width:100%;height:100%;object-fit:cover}
-    .photobox .emoji{font-size:36px}
-    .stuname{font-size:12px;font-weight:700;color:#1a237e;padding:0 8px;line-height:1.3}
-    /* Details */
-    .details{padding:8px 12px 4px;border-top:1px solid #e0e0e0}
-    .drow{display:flex;align-items:baseline;margin:4px 0;font-size:9px}
-    .dlabel{color:#555;min-width:52px;font-weight:700;font-family:Arial,sans-serif}
-    .dval{color:#1a237e;font-weight:700;font-family:Arial,sans-serif;flex:1}
-    /* ID chip */
-    .idchip{background:#1a237e;color:#ffd54f;text-align:center;padding:5px;font-size:10px;font-weight:700;letter-spacing:1px;font-family:Arial,sans-serif;border-top:1px solid #0d47a1}
-    /* Signature area */
-    .sigarea{display:grid;grid-template-columns:1fr 1fr;padding:8px 12px 4px;border-top:1px solid #e0e0e0;gap:8px}
+    .stuname{font-size:10px;font-weight:700;color:#1a237e;padding:0 4px;line-height:1.2}
+    .details{padding:5px 10px 3px;flex-shrink:0}
+    .drow{display:flex;margin:2.5px 0;font-size:8px}
+    .dlabel{color:#555;min-width:48px;font-weight:700}
+    .dval{color:#1a237e;font-weight:700;flex:1;font-size:7.5px}
+    .idchip{background:#1a237e;color:#ffd54f;text-align:center;padding:4px;font-size:9px;font-weight:700;letter-spacing:0.5px;flex-shrink:0}
+    .sigarea{display:grid;grid-template-columns:1fr 1fr;padding:5px 10px 3px;gap:6px;flex-shrink:0}
     .sigbox{text-align:center}
-    .sigline{border-top:1px solid #333;padding-top:3px;font-size:7px;color:#444;font-family:Arial,sans-serif}
-    /* Footer */
-    .footer{background:#1a237e;padding:5px 8px}
-    .frow{display:flex;justify-content:space-between;font-size:7px;color:rgba(255,255,255,0.85);font-family:Arial,sans-serif}
-    .faddr{font-size:6.5px;color:rgba(255,255,255,0.65);text-align:center;margin-top:2px;font-family:Arial,sans-serif}
-    @media print{body{background:white;padding:0}.card{box-shadow:none;border:1px solid #888}@page{size:3in 5in;margin:3mm}}
+    .sigline{border-top:1px solid #333;padding-top:2px;font-size:6.5px;color:#444}
+    .footer{background:#1a237e;padding:4px 6px;margin-top:auto;flex-shrink:0}
+    .frow{display:flex;justify-content:space-between;font-size:6.5px;color:rgba(255,255,255,0.9)}
+    .faddr{font-size:6px;color:rgba(255,255,255,0.7);text-align:center;margin-top:1px}
+    @media print{@page{size:225px 358px;margin:0}html,body{width:225px;height:358px}}
   </style></head><body>
   <div class="card">
-
     <div class="hdr">
-      <img src="${logo}" class="logo"/>
-      <div class="sanstha">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-      <div class="college">Late Kalpana Chawla Women's<br/>Senior College, Gangakhed</div>
-      <div class="affil">Affiliated to SNDT Women's University, Mumbai</div>
+      <img src="${logo}" class="logo"/><br/>
+      <span class="sanstha">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</span><br/>
+      <span class="college">Late Kalpana Chawla Women's Senior College</span><br/>
+      <span class="affil">Affiliated to SNDT Women's University, Mumbai</span>
     </div>
-
-    <div class="titlebar">
-      <span class="titletext">STUDENT IDENTITY CARD</span>
-    </div>
-
+    <div class="titlebar"><span class="titletext">STUDENT IDENTITY CARD</span></div>
     <div class="photoarea">
       <div class="photobox">
-        ${adm.studentPhoto
-          ? `<img src="${adm.studentPhoto}" alt="photo"/>`
-          : `<span class="emoji">👩</span>`
-        }
+        ${adm.studentPhoto ? `<img src="${adm.studentPhoto}"/>` : '<div style="font-size:28px;text-align:center;padding-top:18px">👩</div>'}
       </div>
       <div class="stuname">${adm.applicantName||'—'}</div>
     </div>
-
     <div class="details">
-      <div class="drow"><span class="dlabel">Course :</span><span class="dval">${courseFull}</span></div>
-      <div class="drow"><span class="dlabel">Year :</span><span class="dval">${yearLabel}</span></div>
-      <div class="drow"><span class="dlabel">DOB :</span><span class="dval">${dobStr}</span></div>
-      <div class="drow"><span class="dlabel">Mobile :</span><span class="dval">${adm.phone||'—'}</span></div>
-      <div class="drow"><span class="dlabel">Blood Gr :</span><span class="dval">${adm.bloodGroup||'—'}</span></div>
-      <div class="drow"><span class="dlabel">Valid :</span><span class="dval">${validYear} – ${validYear+1}</span></div>
+      <div class="drow"><span class="dlabel">Course</span><span class="dval">: ${courseFull}</span></div>
+      <div class="drow"><span class="dlabel">Year</span><span class="dval">: ${adm.admissionYear||'—'}</span></div>
+      <div class="drow"><span class="dlabel">DOB</span><span class="dval">: ${dobStr}</span></div>
+      <div class="drow"><span class="dlabel">Mobile</span><span class="dval">: ${adm.phone||'—'}</span></div>
+      <div class="drow"><span class="dlabel">Blood Gr.</span><span class="dval">: ${adm.bloodGroup||'—'}</span></div>
+      <div class="drow"><span class="dlabel">Valid</span><span class="dval">: ${validYear} – ${validYear+1}</span></div>
     </div>
-
-    <div class="idchip">${adm.studentId || 'ID PENDING'}</div>
-
+    <div class="idchip">${adm.studentId||'ID PENDING'}</div>
     <div class="sigarea">
-      <div class="sigbox">
-        <div style="height:22px"></div>
-        <div class="sigline">Student Signature</div>
-      </div>
-      <div class="sigbox">
-        <div style="height:22px"></div>
-        <div class="sigline">Principal</div>
-      </div>
+      <div class="sigbox"><div style="height:16px"></div><div class="sigline">Student Signature</div></div>
+      <div class="sigbox"><div style="height:16px"></div><div class="sigline">Principal</div></div>
     </div>
-
     <div class="footer">
-      <div class="frow">
-        <span>lkcwsc.vnssorg.com</span>
-        <span>+91 9307162914</span>
-      </div>
+      <div class="frow"><span>lkcwsc.vnssorg.com</span><span>+91 9307162914</span></div>
       <div class="faddr">Lecture Colony, Gangakhed, Dist. Parbhani – 431514</div>
     </div>
-
   </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  <scri${'pt'}>
+  window.onload = () => {
+    // Use html2canvas to download as JPG
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.onload = () => {
+      html2canvas(document.querySelector('.card'), {scale:3, useCORS:true, allowTaint:true}).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'ID_Card_${(adm.applicantName||"student").replace(/\s+/g,"_")}.jpg';
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
+        setTimeout(() => window.close(), 500);
+      });
+    };
+    document.head.appendChild(script);
+  };
+  </scri${'pt'}></body></html>`;
 
-  const w = window.open('','_blank','width=320,height=580');
+  const w = window.open('','_blank','width=260,height=420');
   w.document.write(html);
   w.document.close();
 };
