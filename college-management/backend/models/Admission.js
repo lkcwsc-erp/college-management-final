@@ -307,6 +307,8 @@ const admissionSchema = new mongoose.Schema(
 
     studentSectionRemark: { type: String, default: '' },
     principalRemark:      { type: String, default: '' },
+    tcIssued:             { type: Boolean, default: false },
+    tcIssuedDate:         { type: Date },
 
     studentSectionStatus: {
       type:    String,
