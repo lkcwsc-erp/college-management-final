@@ -20,6 +20,13 @@ const documentRequestSchema = new mongoose.Schema({
   documentTypeLabel: { type: String, default: '' },
   reason:            { type: String, default: '' },
   urgency:           { type: String, enum: ['normal', 'urgent'], default: 'normal' },
+  marksheetSemester: { type: String, default: '' },
+  marksheetSession:  { type: String, default: '' },
+  marksheetYear:     { type: String, default: '' },
+  // Marksheet specific
+  marksheetSemester:    { type: String, default: '' }, // Sem I, Sem II, etc.
+  marksheetSession:     { type: String, default: '' }, // 'mar_apr' | 'nov_dec'
+  marksheetYear:        { type: String, default: '' }, // e.g. 2025
 
   // ─── WORKFLOW STATUS ─────────────────────────────────────────────────────
   // TC:        pending_accounts → pending_exam → pending_principal → pending_generation → completed
