@@ -98,6 +98,18 @@ router.get('/:studentId', protect, authorizeRoles('staff_exam', 'staff', 'admin'
 router.put('/:id', protect, authorizeRoles('staff_exam', 'staff', 'admin'), updateResult);
 router.delete('/:id', protect, authorizeRoles('staff_exam', 'admin'), deleteResult);
 
+
+// All results for Principal
+router.get('/all-results', protect, authorizeRoles('staff_principal', 'staff_exam', 'admin'), async (req, res) => {
+  try {
+    const Result = require('../models/Result');
+    const results = await Result.find().sort({ createdAt: -1 }).limit(500);
+    res.json({ success: true, results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
 // ── Exam Form Settings (global toggle by exam staff) ──────────────────────────
 const ExamSettings = (() => {
