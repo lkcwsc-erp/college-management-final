@@ -93,6 +93,8 @@ const printStudentReceipt = (p, adm) => {
 const DocRequestForm = ({ myAdmission, onSubmitted }) => {
   const [docType, setDocType] = useState('');
   const [reason, setReason]   = useState('');
+  const [semester, setSemester] = useState('');
+  const [examName, setExamName] = useState('');
   const [urgency, setUrgency] = useState('normal');
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg]         = useState('');
@@ -101,9 +103,10 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
     if (!docType) { setMsg('❌ Please select document type.'); return; }
     setSubmitting(true);
     try {
-      await API.post('/document-requests', { documentType: docType, reason, urgency });
+      const fullReason = docType === 'MARKSHEET' ? `${reason}${semester ? ' | Semester: '+semester : ''}${examName ? ' | Exam: '+examName : ''}` : reason;
+      await API.post('/document-requests', { documentType: docType, reason: fullReason, urgency });
       setMsg('✅ Request submitted successfully!');
-      setDocType(''); setReason(''); setUrgency('normal');
+      setDocType(''); setReason(''); setUrgency('normal'); setSemester(''); setExamName('');
       setTimeout(() => setMsg(''), 3000);
       if (onSubmitted) onSubmitted();
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to submit')); }
@@ -140,6 +143,29 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
         <input type="text" placeholder="e.g. For job application, higher studies..." value={reason} onChange={e => setReason(e.target.value)}
           style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
       </div>
+      {docType === 'MARKSHEET' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Semester *</label>
+            <select value={semester} onChange={e => setSemester(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+              <option value="">— Select Semester —</option>
+              <option value="Semester I">Semester I</option>
+              <option value="Semester II">Semester II</option>
+              <option value="Semester III">Semester III</option>
+              <option value="Semester IV">Semester IV</option>
+              <option value="Semester V">Semester V</option>
+              <option value="Semester VI">Semester VI</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Examination Name *</label>
+            <input type="text" placeholder="e.g. Winter 2024, Summer 2025..."
+              value={examName} onChange={e => setExamName(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+          </div>
+        </div>
+      )}
       {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{msg}</div>}
       <button onClick={handleSubmit} disabled={submitting}
         style={{ background: submitting?'#aaa':'#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
