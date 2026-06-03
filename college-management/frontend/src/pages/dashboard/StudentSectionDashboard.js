@@ -1781,23 +1781,6 @@ Promote to ${newYear} with ATKT?`)) return;
 };
 
 
-const DOCUMENT_FIELDS = [
-  { key: 'aadharNumber',              label: '🪪 Aadhar Number',             type: 'text',   note: 'Must be 12 digits' },
-  { key: 'aadharName',                label: '🪪 Name on Aadhar',            type: 'text',   note: '' },
-  { key: 'aparIdNumber',              label: '🎓 ABC / APAR ID',             type: 'text',   note: '' },
-  { key: 'casteCertificateNo',        label: '📜 Caste Certificate No.',      type: 'text',   note: '' },
-  { key: 'casteCertificateAuthority', label: '📜 Caste Authority',           type: 'text',   note: '' },
-  { key: 'sscObtainedMarks',          label: '📝 SSC Obtained Marks',        type: 'number', note: '' },
-  { key: 'sscTotalMarks',             label: '📝 SSC Total Marks',           type: 'number', note: '' },
-  { key: 'sscPercentage',             label: '📝 SSC Percentage (%)',        type: 'number', note: '' },
-  { key: 'hscObtainedMarks',          label: '📝 HSC Obtained Marks',        type: 'number', note: '' },
-  { key: 'hscTotalMarks',             label: '📝 HSC Total Marks',           type: 'number', note: '' },
-  { key: 'hscPercentage',             label: '📝 HSC Percentage (%)',        type: 'number', note: '' },
-  { key: 'prevYearObtainedMarks',     label: '📊 Prev Year Obtained Marks',  type: 'number', note: '' },
-  { key: 'prevYearTotalMarks',        label: '📊 Prev Year Total Marks',     type: 'number', note: '' },
-  { key: 'prevYearPercentage',        label: '📊 Prev Year Percentage (%)',  type: 'number', note: '' },
-];
-
 const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
   const [receipts, setReceipts]     = useState([]);
   const [loading, setLoading]       = useState(false);
