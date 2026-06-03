@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
-import StudentViewFull from './StudentViewFull';
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
@@ -567,6 +567,96 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           <div style={{ marginTop:16, background:'#fff8e1', padding:'12px 16px', borderRadius:10, border:'1px solid #ffe082', fontSize:13, color:'#7c5e00' }}>
             💡 Changes apply immediately when a student submits a new document request.
           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// ─── Accounts Student Fee Summary ─────────────────────────────────────────────
+const AccountsStudentFeeView = ({ themeColor }) => {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [search, setSearch]     = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    API.get('/admissions/staff-view/all')
+      .then(res => setStudents(res.data.admissions || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const getCourseKey = (courseType) => {
+    const ct = (courseType||'').toLowerCase();
+    return ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
+  };
+
+  const getYearFee = (s) => {
+    const ck = getCourseKey(s.courseType);
+    if (!ck || !YEARLY_FEES[ck]) return 0;
+    const yr = s.admissionYear;
+    return YEARLY_FEES[ck].years?.[yr]?.total || YEARLY_FEES[ck][yr] || 0;
+  };
+
+  const filtered = students.filter(s => {
+    const q = search.toLowerCase();
+    return !q || s.applicantName?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+  });
+
+  const totalFees    = filtered.reduce((s,st) => s + getYearFee(st), 0);
+  const totalPaid    = filtered.reduce((s,st) => s + (st.feeLedger||[]).reduce((a,p)=>a+(p.amount||0),0), 0);
+  const totalPending = Math.max(0, totalFees - totalPaid);
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14, marginBottom:20 }}>
+        <div style={{ background:'#e3f2fd', borderRadius:12, padding:'14px 18px' }}>
+          <div style={{ fontSize:12, color:'#1565C0', fontWeight:600 }}>Total Annual Fees</div>
+          <div style={{ fontSize:20, fontWeight:800, color:'#0d47a1' }}>₹{totalFees.toLocaleString('en-IN')}</div>
+        </div>
+        <div style={{ background:'#e8f5e9', borderRadius:12, padding:'14px 18px' }}>
+          <div style={{ fontSize:12, color:'#2E7D32', fontWeight:600 }}>Total Collected</div>
+          <div style={{ fontSize:20, fontWeight:800, color:'#1b5e20' }}>₹{totalPaid.toLocaleString('en-IN')}</div>
+        </div>
+        <div style={{ background:'#ffebee', borderRadius:12, padding:'14px 18px' }}>
+          <div style={{ fontSize:12, color:'#C62828', fontWeight:600 }}>Total Pending</div>
+          <div style={{ fontSize:20, fontWeight:800, color:'#b71c1c' }}>₹{totalPending.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+
+      <input type="text" placeholder="🔍 Search student..." value={search} onChange={e=>setSearch(e.target.value)}
+        style={{ width:'100%', padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14, marginBottom:14, boxSizing:'border-box' }} />
+
+      {loading ? <div style={{textAlign:'center',padding:20}}>⏳</div> : (
+        <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr', background:themeColor, padding:'10px 14px', gap:8 }}>
+            {['Student','Course/Year','Annual Fee','Paid','Pending','Status'].map(h=>(
+              <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((s,idx) => {
+            const annual  = getYearFee(s);
+            const paid    = (s.feeLedger||[]).reduce((a,p)=>a+(p.amount||0),0);
+            const pending = Math.max(0, annual - paid);
+            const status  = s.tcIssued ? 'TC Issued' : pending === 0 && annual > 0 ? 'Fully Paid' : paid > 0 ? 'Partial' : 'Unpaid';
+            const statusColor = { 'Fully Paid':'#2E7D32', Partial:'#E65100', Unpaid:'#C62828', 'TC Issued':'#7B1FA2' }[status] || '#888';
+            return (
+              <div key={s._id} style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr', padding:'10px 14px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+                <div>
+                  <p style={{ fontWeight:600, fontSize:13, margin:0 }}>{s.applicantName}</p>
+                  <p style={{ fontSize:10, color:'#888', margin:0 }}>{s.studentId||'—'}</p>
+                </div>
+                <span style={{ fontSize:12 }}>{s.courseType} · {s.admissionYear}</span>
+                <span style={{ fontSize:12, fontWeight:700 }}>₹{annual.toLocaleString('en-IN')}</span>
+                <span style={{ fontSize:12, fontWeight:700, color:'#2E7D32' }}>₹{paid.toLocaleString('en-IN')}</span>
+                <span style={{ fontSize:12, fontWeight:700, color: pending>0?'#C62828':'#2E7D32' }}>₹{pending.toLocaleString('en-IN')}</span>
+                <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10, background:`${statusColor}22`, color:statusColor }}>{status}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -1268,9 +1358,9 @@ const AccountsSectionDashboard = () => {
           {/* ══ ALL STUDENTS ══ */}
           {activeTab === 'all_students' && (
             <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View complete student information. Read-only view.</p>
-              <StudentViewFull canEdit={false} themeColor="#1565C0" role="accounts" />
+              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students — Fee Status</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View fee paid and pending for each student.</p>
+              <AccountsStudentFeeView themeColor="#1565C0" />
             </div>
           )}
         </div>
