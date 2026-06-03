@@ -19,7 +19,7 @@ const DOC_LABELS = {
 // Submit request
 router.post('/', protect, async (req, res) => {
   try {
-    const { documentType, reason, urgency } = req.body;
+    const { documentType, reason, urgency, marksheetSemester, marksheetSession, marksheetYear } = req.body;
     if (!Object.keys(DOC_LABELS).includes(documentType))
       return res.status(400).json({ success: false, message: 'Invalid document type' });
 
@@ -37,6 +37,9 @@ router.post('/', protect, async (req, res) => {
       documentTypeLabel: DOC_LABELS[documentType],
       reason:            reason || '',
       urgency:           urgency || 'normal',
+      marksheetSemester: marksheetSemester || '',
+      marksheetSession:  marksheetSession  || '',
+      marksheetYear:     marksheetYear     || '',
       status:            initialStatus,
     };
 
@@ -285,6 +288,15 @@ router.put('/student-section/complete/:id', protect, authorizeRoles('staff_stude
       generatedDate: new Date(),
       generationNotes: notes || '',
     }, { new: true });
+
+    // If TC issued — mark student as inactive (TC issued = left college)
+    if (request && request.documentType === 'TC') {
+      await Admission.findOneAndUpdate(
+        { email: request.studentEmail },
+        { tcIssued: true, tcIssuedDate: new Date(), status: 'tc_issued' }
+      );
+    }
+
     res.json({ success: true, message: '✅ Document issued to student!', request });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
