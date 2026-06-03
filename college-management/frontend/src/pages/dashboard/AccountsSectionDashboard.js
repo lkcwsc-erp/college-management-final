@@ -12,162 +12,124 @@ const COLLEGE_NAME = 'Late Kalpana Chawla Women\'s Senior College (LKCWSC)';
 const COLLEGE_SUBTITLE = 'Senior Science & Arts College, Gangakhed';
 const COLLEGE_UPI = 'lkcwsc@upi';
 
-// ─── Official Fee Structure 2025-26 (from SNDT University circular) ───────────
-const OFFICIAL_FEES = {
+// ─── Full itemized fee structure from SNDT 2025-26 ────────────────────────────
+const DETAILED_FEES = {
   'B.Sc.': {
     label: 'B.Sc. (Un-aided)',
-    semesters: {
-      'Sem I':   29927, 'Sem II':  750,
-      'Sem III': 28207, 'Sem IV':  750,
-      'Sem V':   27842, 'Sem VI':  2850,
-    },
-    breakdown: {
-      'Sem I': [
-        { label: 'Sports Fee', amt: 250 },
-        { label: 'Students Development Fee', amt: 225 },
-        { label: 'Students Diary Fee', amt: 50 },
-        { label: 'CHETNA Fee', amt: 20 },
-        { label: 'Library Fee (Database)', amt: 100 },
-        { label: 'E-Suvidha Fee', amt: 100 },
-        { label: 'Disaster Management Fee', amt: 10 },
-        { label: 'Ashwamedh & Avishkar Fees', amt: 30 },
-        { label: 'Swami Vivekanand Yuva Suraksha Yojana', amt: 62 },
-        { label: 'Eligibility Fee', amt: 400 },
-        { label: 'Enrolment Fee', amt: 400 },
-        { label: 'Examination Fee', amt: 750 },
-        { label: 'Practical Exam Fee', amt: 500 },
-        { label: 'Central Information Access', amt: 120 },
-        { label: 'Admission Fee (College)', amt: 550 },
-        { label: 'Tuition Fee', amt: 16500 },
-        { label: 'Gymkhana Fee', amt: 700 },
-        { label: 'Laboratory Fee', amt: 5250 },
-        { label: 'Development Fee', amt: 500 },
-        { label: 'Medical Fee', amt: 100 },
-        { label: 'Identity Card Fee', amt: 100 },
-        { label: 'Annual Miscellaneous Fee', amt: 250 },
-        { label: 'Project Fee', amt: 0 },
-        { label: 'Magazine Fee', amt: 75 },
-        { label: 'Placement Fee', amt: 0 },
-        { label: 'Library Fee (College)', amt: 1000 },
-        { label: 'Extra-Curricular / Activity Fee', amt: 365 },
-        { label: 'Computer Training Fees', amt: 300 },
-        { label: 'Subject Association Fee', amt: 200 },
-        { label: 'Laboratory Deposit', amt: 300 },
-        { label: 'Caution Money Deposit', amt: 100 },
-        { label: 'Library Deposit', amt: 500 },
-      ],
-      'Sem II':  [{ label: 'Enrolment Fee', amt: 750 }],
-      'Sem III': [
-        { label: 'Sports Fee', amt: 250 }, { label: 'Students Development Fee', amt: 225 },
-        { label: 'Students Diary Fee', amt: 50 }, { label: 'Library Fee (Database)', amt: 100 },
-        { label: 'E-Suvidha Fee', amt: 100 }, { label: 'Disaster Management Fee', amt: 10 },
-        { label: 'Ashwamedh & Avishkar Fees', amt: 30 }, { label: 'Swami Vivekanand Yuva Suraksha Yojana', amt: 62 },
-        { label: 'Examination Fee', amt: 750 }, { label: 'Practical Exam Fee', amt: 500 },
-        { label: 'Central Information Access', amt: 120 },
-        { label: 'Admission Fee (College)', amt: 550 }, { label: 'Tuition Fee', amt: 16500 },
-        { label: 'Gymkhana Fee', amt: 700 }, { label: 'Laboratory Fee', amt: 5250 },
-        { label: 'Development Fee', amt: 500 }, { label: 'Medical Fee', amt: 100 },
-        { label: 'Identity Card Fee', amt: 100 }, { label: 'Annual Miscellaneous Fee', amt: 250 },
-        { label: 'Magazine Fee', amt: 75 }, { label: 'Library Fee (College)', amt: 1000 },
-        { label: 'Extra-Curricular / Activity Fee', amt: 365 }, { label: 'Computer Training Fees', amt: 300 },
-        { label: 'Subject Association Fee', amt: 200 },
-      ],
-      'Sem IV':  [{ label: 'Enrolment Fee', amt: 750 }],
-      'Sem V': [
-        { label: 'Sports Fee', amt: 250 }, { label: 'Students Development Fee', amt: 225 },
-        { label: 'CHETNA Fee', amt: 100 }, { label: 'Library Fee (Database)', amt: 100 },
-        { label: 'Disaster Management Fee', amt: 10 }, { label: 'Ashwamedh & Avishkar Fees', amt: 30 },
-        { label: 'Swami Vivekanand Yuva Suraksha Yojana', amt: 62 },
-        { label: 'Examination Fee', amt: 750 }, { label: 'Practical Exam Fee', amt: 500 },
-        { label: 'Central Information Access', amt: 120 },
-        { label: 'Admission Fee (College)', amt: 550 }, { label: 'Tuition Fee', amt: 16500 },
-        { label: 'Gymkhana Fee', amt: 700 }, { label: 'Laboratory Fee', amt: 5250 },
-        { label: 'Development Fee', amt: 500 }, { label: 'Medical Fee', amt: 100 },
-        { label: 'Identity Card Fee', amt: 250 }, { label: 'Project Fee', amt: 75 },
-        { label: 'Placement Fee', amt: 1000 }, { label: 'Extra-Curricular / Activity Fee', amt: 300 },
-        { label: 'Computer Training Fees', amt: 200 },
-      ],
-      'Sem VI': [
-        { label: 'Enrolment Fee', amt: 750 }, { label: 'University Development Fund', amt: 200 },
-        { label: 'Passing Certificate Fee', amt: 700 }, { label: 'Convocation Fee', amt: 100 },
-        { label: 'Magazine Fee', amt: 500 }, { label: 'Library Fee (College)', amt: 500 },
-        { label: 'Annual Field Work/Edu/Indus/Visit', amt: 100 },
-      ],
-    },
+    items: [
+      // Sr, Name, Section, Sem1, Sem2, Sem3, Sem4, Sem5, Sem6
+      { id:'bsc_s1',  name:'Sports Fee',                        section:'University', s:[250,0,250,0,250,0] },
+      { id:'bsc_s2',  name:'Students Development Fee',          section:'University', s:[225,0,225,0,225,0] },
+      { id:'bsc_s3',  name:'Students Diary Fee',                section:'University', s:[50,0,50,0,50,0] },
+      { id:'bsc_s4',  name:'CHETNA Fee',                        section:'University', s:[20,0,0,0,0,0] },
+      { id:'bsc_s5',  name:'Library Fee (Database)',            section:'University', s:[100,0,100,0,100,0] },
+      { id:'bsc_s6',  name:'E-Suvidha Fee',                     section:'University', s:[100,0,100,0,100,0] },
+      { id:'bsc_s7',  name:'Disaster Management Fee',           section:'University', s:[10,0,10,0,10,0] },
+      { id:'bsc_s8',  name:'Ashwamedh & Avishkar Fees',         section:'University', s:[30,0,30,0,30,0] },
+      { id:'bsc_s9',  name:'Swami Vivekanand Yuva Suraksha',    section:'University', s:[62,0,62,0,62,0] },
+      { id:'bsc_s10', name:'Eligibility Fee',                   section:'University', s:[400,0,0,0,0,0] },
+      { id:'bsc_s11', name:'Enrollment Fee',                    section:'University', s:[400,0,0,0,0,0] },
+      { id:'bsc_s12', name:'Examination Fee',                   section:'University', s:[750,750,750,750,750,750] },
+      { id:'bsc_s13', name:'Practical Exam Fee',                section:'University', s:[250,250,250,250,250,250] },
+      { id:'bsc_s14', name:'Central Information Access',        section:'University', s:[120,0,120,0,120,0] },
+      { id:'bsc_s15', name:'University Development Fund',       section:'University', s:[120,0,120,0,120,0] },
+      { id:'bsc_s16', name:'Passing Certificate Fee',           section:'University', s:[0,0,0,0,0,200] },
+      { id:'bsc_s17', name:'Convocation Fee',                   section:'University', s:[0,0,0,0,0,700] },
+      { id:'bsc_s18', name:'Alumni Fee (University)',           section:'University', s:[0,0,0,0,0,100] },
+      { id:'bsc_c1',  name:'Admission Fee',                     section:'College',    s:[550,0,550,0,550,0] },
+      { id:'bsc_c2',  name:'Tuition Fee',                       section:'College',    s:[16500,0,16500,0,16500,0] },
+      { id:'bsc_c3',  name:'Gymkhana Fee',                      section:'College',    s:[700,0,700,0,700,0] },
+      { id:'bsc_c4',  name:'Laboratory Fee',                    section:'College',    s:[5250,0,5250,0,5250,0] },
+      { id:'bsc_c5',  name:'Development Fee',                   section:'College',    s:[500,0,500,0,500,0] },
+      { id:'bsc_c6',  name:'Medical Fee',                       section:'College',    s:[100,0,100,0,100,0] },
+      { id:'bsc_c7',  name:'Identity Card Fee',                 section:'College',    s:[100,0,100,0,100,0] },
+      { id:'bsc_c8',  name:'Annual Miscellaneous Fee',          section:'College',    s:[250,0,250,0,250,0] },
+      { id:'bsc_c9',  name:'Magazine Fee',                      section:'College',    s:[75,0,75,0,75,0] },
+      { id:'bsc_c10', name:'Placement Fee',                     section:'College',    s:[0,0,0,0,0,500] },
+      { id:'bsc_c11', name:'Library Fee',                       section:'College',    s:[1000,0,1000,0,1000,0] },
+      { id:'bsc_c12', name:'Internship Fee/OJT',                section:'College',    s:[0,0,0,0,0,500] },
+      { id:'bsc_c13', name:'Alumni Fee (College)',               section:'College',    s:[0,0,0,0,0,100] },
+      { id:'bsc_c14', name:'Extra-Curricular Activity Fee',     section:'College',    s:[365,0,365,0,0,0] },
+      { id:'bsc_c15', name:'Computer Training Fees',            section:'College',    s:[300,0,300,0,300,0] },
+      { id:'bsc_c16', name:'Subject Association Fee',           section:'College',    s:[200,0,200,0,200,0] },
+      { id:'bsc_c17', name:'Laboratory Deposit',                section:'College',    s:[300,0,0,0,0,0] },
+      { id:'bsc_c18', name:'Caution Money Deposit',             section:'College',    s:[100,0,0,0,0,0] },
+      { id:'bsc_c19', name:'Library Deposit',                   section:'College',    s:[500,0,0,0,0,0] },
+    ],
   },
   'B.A.': {
     label: 'B.A. (Un-aided)',
-    semesters: {
-      '1st Sem': 13877, '2nd Sem': 750,
-      '3rd Sem': 11957, '4th Sem': 750,
-      '5th Sem': 12092, '6th Sem': 2450,
-    },
-    breakdown: {
-      '1st Sem': [
-        { label: 'Sports Fee', amt: 250 }, { label: 'Students Development Fee', amt: 225 },
-        { label: 'Students Diary Fee', amt: 50 }, { label: 'CHETNA Fee', amt: 20 },
-        { label: 'Library Fee (Database)', amt: 100 }, { label: 'E-Suvidha Fee', amt: 100 },
-        { label: 'Disaster Management Fee', amt: 10 }, { label: 'Ashwamedh & Avishkar Fees', amt: 30 },
-        { label: 'Swami Vivekanand Yuva Suraksha Yojana', amt: 62 },
-        { label: 'Eligibility Fee', amt: 400 }, { label: 'Enrolment Fee', amt: 400 },
-        { label: 'Examination Fee', amt: 750 }, { label: 'Central Information Access', amt: 120 },
-        { label: 'Admission Fee (College)', amt: 550 }, { label: 'Tuition Fee', amt: 5500 },
-        { label: 'Gymkhana Fee', amt: 700 },
-        { label: 'Laboratory Fee (Psychology/Geography)', amt: 300 },
-        { label: 'Development Fee', amt: 500 }, { label: 'Medical Fee', amt: 100 },
-        { label: 'Identity Card Fee', amt: 100 }, { label: 'Annual Miscellaneous Fee', amt: 250 },
-        { label: 'Project Fee', amt: 0 }, { label: 'Magazine Fee', amt: 75 },
-        { label: 'Placement Fee', amt: 1000 }, { label: 'Computer Training Fee', amt: 500 },
-        { label: 'Extra-Curricular / Activity Fee', amt: 365 },
-        { label: 'Subject Association Fee', amt: 200 },
-        { label: 'Laboratory Deposit', amt: 500 },
-        { label: 'Caution Money Deposit', amt: 100 },
-        { label: 'Library Deposit', amt: 500 },
-      ],
-      '2nd Sem': [{ label: 'Enrolment Fee', amt: 750 }],
-      '3rd Sem': [
-        { label: 'Sports Fee', amt: 250 }, { label: 'Students Development Fee', amt: 225 },
-        { label: 'Students Diary Fee', amt: 50 }, { label: 'Library Fee (Database)', amt: 100 },
-        { label: 'E-Suvidha Fee', amt: 100 }, { label: 'Disaster Management Fee', amt: 10 },
-        { label: 'Ashwamedh & Avishkar Fees', amt: 30 }, { label: 'Swami Vivekanand Yuva Suraksha Yojana', amt: 62 },
-        { label: 'Examination Fee', amt: 750 }, { label: 'Central Information Access', amt: 120 },
-        { label: 'Admission Fee (College)', amt: 550 }, { label: 'Tuition Fee', amt: 5500 },
-        { label: 'Gymkhana Fee', amt: 700 }, { label: 'Laboratory Fee (Psychology/Geography)', amt: 300 },
-        { label: 'Development Fee', amt: 500 }, { label: 'Medical Fee', amt: 100 },
-        { label: 'Identity Card Fee', amt: 100 }, { label: 'Annual Miscellaneous Fee', amt: 250 },
-        { label: 'Magazine Fee', amt: 75 }, { label: 'Placement Fee', amt: 1000 },
-        { label: 'Annual Field Work/Edu/Indus/Visit', amt: 500 },
-        { label: 'Extra-Curricular / Activity Fee', amt: 365 }, { label: 'Subject Association Fee', amt: 200 },
-      ],
-      '4th Sem': [{ label: 'Enrolment Fee', amt: 750 }],
-      '5th Sem': [
-        { label: 'Sports Fee', amt: 250 }, { label: 'Students Development Fee', amt: 225 },
-        { label: 'CHETNA Fee', amt: 100 }, { label: 'Library Fee (Database)', amt: 100 },
-        { label: 'Disaster Management Fee', amt: 10 }, { label: 'Ashwamedh & Avishkar Fees', amt: 30 },
-        { label: 'Swami Vivekanand Yuva Suraksha Yojana', amt: 62 },
-        { label: 'Examination Fee', amt: 500 }, { label: 'Central Information Access', amt: 120 },
-        { label: 'Admission Fee (College)', amt: 550 }, { label: 'Tuition Fee', amt: 5500 },
-        { label: 'Gymkhana Fee', amt: 700 }, { label: 'Laboratory Fee (Psychology/Geography)', amt: 300 },
-        { label: 'Development Fee', amt: 500 }, { label: 'Medical Fee', amt: 100 },
-        { label: 'Identity Card Fee', amt: 250 }, { label: 'Project Fee', amt: 75 },
-        { label: 'Placement Fee', amt: 1000 }, { label: 'Library Fee (College)', amt: 50 },
-        { label: 'Computer Training Fee', amt: 100 },
-        { label: 'Extra-Curricular / Activity Fee', amt: 200 },
-        { label: 'Annual Field Work/Edu/Indus/Visit', amt: 500 },
-      ],
-      '6th Sem': [
-        { label: 'Enrolment Fee', amt: 750 }, { label: 'University Development Fund', amt: 200 },
-        { label: 'Passing Certificate Fee', amt: 700 }, { label: 'Convocation Fee', amt: 100 },
-        { label: 'Magazine Fee', amt: 50 }, { label: 'Library Fee (College)', amt: 50 },
-        { label: 'Annual Field Work/Edu/Indus/Visit', amt: 100 },
-        { label: 'Computer Training Fee', amt: 100 },
-      ],
-    },
+    items: [
+      { id:'ba_s1',  name:'Sports Fee',                          section:'University', s:[250,0,250,0,250,0] },
+      { id:'ba_s2',  name:'Students Development Fee',            section:'University', s:[225,0,225,0,225,0] },
+      { id:'ba_s3',  name:'Students Diary Fee',                  section:'University', s:[50,0,50,0,50,0] },
+      { id:'ba_s4',  name:'CHETNA Fee',                          section:'University', s:[20,0,0,0,0,0] },
+      { id:'ba_s5',  name:'Library Fee (Database)',              section:'University', s:[100,0,100,0,100,0] },
+      { id:'ba_s6',  name:'E-Suvidha Fee',                       section:'University', s:[100,0,100,0,100,0] },
+      { id:'ba_s7',  name:'Disaster Management Fee',             section:'University', s:[10,0,10,0,10,0] },
+      { id:'ba_s8',  name:'Ashwamedh & Avishkar Fees',           section:'University', s:[30,0,30,0,30,0] },
+      { id:'ba_s9',  name:'Swami Vivekanand Yuva Suraksha',      section:'University', s:[62,0,62,0,62,0] },
+      { id:'ba_s10', name:'Eligibility Fee',                     section:'University', s:[400,0,0,0,0,0] },
+      { id:'ba_s11', name:'Enrollment Fee',                      section:'University', s:[400,0,0,0,0,0] },
+      { id:'ba_s12', name:'Examination Fee',                     section:'University', s:[750,750,750,750,750,750] },
+      { id:'ba_s13', name:'Practical Exam Fee (Geo/Psy)',        section:'University', s:[0,0,0,0,500,500] },
+      { id:'ba_s14', name:'Central Information Access',          section:'University', s:[120,0,120,0,120,0] },
+      { id:'ba_s15', name:'University Development Fund',         section:'University', s:[120,0,120,0,120,0] },
+      { id:'ba_s16', name:'Passing Certificate Fee',             section:'University', s:[0,0,0,0,0,200] },
+      { id:'ba_s17', name:'Convocation Fee',                     section:'University', s:[0,0,0,0,0,700] },
+      { id:'ba_s18', name:'Alumni Fee (University)',             section:'University', s:[0,0,0,0,0,100] },
+      { id:'ba_c1',  name:'Admission Fee',                       section:'College',    s:[550,0,550,0,550,0] },
+      { id:'ba_c2',  name:'Tuition Fee',                         section:'College',    s:[5500,0,5500,0,5500,0] },
+      { id:'ba_c3',  name:'Gymkhana Fee',                        section:'College',    s:[700,0,700,0,700,0] },
+      { id:'ba_c4',  name:'Laboratory Fee (Psy/Geo)',            section:'College',    s:[300,0,300,0,300,0] },
+      { id:'ba_c5',  name:'Development Fee',                     section:'College',    s:[500,0,500,0,500,0] },
+      { id:'ba_c6',  name:'Medical Fee',                         section:'College',    s:[100,0,100,0,100,0] },
+      { id:'ba_c7',  name:'Identity Card Fee',                   section:'College',    s:[100,0,100,0,100,0] },
+      { id:'ba_c8',  name:'Annual Miscellaneous Fee',            section:'College',    s:[250,0,250,0,250,0] },
+      { id:'ba_c9',  name:'Magazine Fee',                        section:'College',    s:[75,0,75,0,75,0] },
+      { id:'ba_c10', name:'Placement Fee',                       section:'College',    s:[0,0,0,0,0,50] },
+      { id:'ba_c11', name:'Library Fee',                         section:'College',    s:[1000,0,1000,0,1000,0] },
+      { id:'ba_c12', name:'Internship Fee',                      section:'College',    s:[0,0,0,0,0,50] },
+      { id:'ba_c13', name:'Computer Training Fee',               section:'College',    s:[500,0,500,0,500,0] },
+      { id:'ba_c14', name:'Alumni Fee (College)',                 section:'College',    s:[0,0,0,0,0,100] },
+      { id:'ba_c15', name:'Extra-Curricular Activity Fee',       section:'College',    s:[365,0,365,0,0,0] },
+      { id:'ba_c16', name:'Subject Association Fee',             section:'College',    s:[200,0,200,0,200,0] },
+      { id:'ba_c17', name:'Laboratory Deposit',                  section:'College',    s:[500,0,0,0,0,0] },
+      { id:'ba_c18', name:'Caution Money Deposit',               section:'College',    s:[100,0,0,0,0,0] },
+      { id:'ba_c19', name:'Library Deposit',                     section:'College',    s:[500,0,0,0,0,0] },
+    ],
   },
 };
 
+// Helper: get fee items for a student's course + semester
+// eslint-disable-next-line no-unused-vars
+const getDetailedFeeItems = (courseType, semIndex) => {
+  const ct = (courseType||'').toLowerCase();
+  const courseKey = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.'
+    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
+  if (!courseKey) return [];
+  return DETAILED_FEES[courseKey].items.filter(item => item.s[semIndex] > 0);
+};
 
-// ─── Yearly fee totals (Sem I + Sem II combined) ─────────────────────────────
+// Helper: semester index from year+sem
+// eslint-disable-next-line no-unused-vars
+const getSemIndex = (admYear, semNum) => {
+  const yearOffset = admYear === '1st Year' ? 0 : admYear === '2nd Year' ? 2 : 4;
+  return yearOffset + (semNum === 2 ? 1 : 0);
+};
+
+// Helper: document fees
+// eslint-disable-next-line no-unused-vars
+const DOC_FEES = {
+  tc:        { label: '📄 Transfer Certificate (TC)',   amount: 500 },
+  bonafide:  { label: '📋 Bonafide Certificate',         amount: 100 },
+  id_card:   { label: '🪪 ID Card',                      amount: 100 },
+  marksheet: { label: '📋 Marksheet',                    amount: 50  },
+  migration: { label: '📜 Migration Certificate',        amount: 500 },
+  degree:    { label: '🎓 Degree Certificate',           amount: 500 },
+};
+
+
 const YEARLY_FEES = {
   'B.Sc.': {
     label: 'B.Sc. (Un-aided)',
@@ -196,8 +158,9 @@ const detectCourse = (adm) => {
 };
 
 // Map admissionYear to semesters
+// eslint-disable-next-line no-unused-vars
 const getSemesters = (courseKey, year) => {
-  const course = OFFICIAL_FEES[courseKey];
+  const course = YEARLY_FEES[courseKey];
   if (!course) return [];
   const allSems = Object.keys(course.semesters);
   if (!year) return allSems;
@@ -433,8 +396,7 @@ const AccountsSectionDashboard = () => {
   const [admFeeAmt, setAdmFeeAmt]           = useState('');
   const [admFeeType, setAdmFeeType]         = useState('admission');
   const [admSelectedSem, setAdmSelectedSem] = useState('');
-  const [admSelectedYear, setAdmSelectedYear] = useState('');
-  const [admViewMode, setAdmViewMode] = useState('yearly'); // 'yearly' | 'semester'
+  const [selectedFeeItems, setSelectedFeeItems] = useState({}); // {itemId: true/false}
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
   const [admLoading2, setAdmLoading2]       = useState(false);
 
@@ -553,7 +515,7 @@ const AccountsSectionDashboard = () => {
     const rNo = genReceiptNo();
     const feeType = FEE_TYPES.find(f => f.key === admFeeType);
     const courseKey = detectCourse(selectedAdm);
-    const course = courseKey ? OFFICIAL_FEES[courseKey] : null;
+    const course = courseKey ? YEARLY_FEES[courseKey] : null;
     const selSemAmt = course && admSelectedSem ? course.semesters[admSelectedSem] : null;
     try {
       await API.put(`/admissions/mark-fees-paid/${selectedAdm._id}`, {
@@ -1274,169 +1236,144 @@ const AccountsSectionDashboard = () => {
 
             <div className="form-group" style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>Fee Type *</label>
-              <select value={admFeeType} onChange={e => { setAdmFeeType(e.target.value); setAdmFeeAmt(''); setAdmSelectedSem(''); setAdmSelectedYear(''); }}
+              <select value={admFeeType} onChange={e => { setAdmFeeType(e.target.value); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setSelectedFeeItems({}); }}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
                 {FEE_TYPES.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
               </select>
             </div>
 
+            {/* ── ADMISSION FEE — Itemized checkbox selection ── */}
             {admFeeType === 'admission' && (() => {
-              const courseKey = detectCourse(selectedAdm);
-              const yearlyCourse = courseKey ? YEARLY_FEES[courseKey] : null;
-              const semCourse = courseKey ? OFFICIAL_FEES[courseKey] : null;
+              const ct = (selectedAdm.courseType||'').toLowerCase();
+              const courseKey = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.'
+                : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
+              const course = courseKey ? DETAILED_FEES[courseKey] : null;
 
-              return (
+              const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
+              const yearSems = {
+                '1st Year': [0,1], '2nd Year': [2,3], '3rd Year': [4,5]
+              };
+              const admYear = selectedAdm.admissionYear || '1st Year';
+              const semIndices = yearSems[admYear] || [0,1];
+
+              // Auto-select all items for selected sem when sem changes
+              const autoSelectSem = (semIdx) => {
+                if (!course) return;
+                const map = {};
+                course.items.forEach(item => {
+                  if (item.s[semIdx] > 0) map[item.id] = true;
+                });
+                setSelectedFeeItems(map);
+                const total = course.items.reduce((s, item) => s + (map[item.id] ? item.s[semIdx] : 0), 0);
+                setAdmFeeAmt(String(Math.max(0, total - Number(admScholarshipAmt||0))));
+              };
+
+              const recalc = (newItems, semIdx) => {
+                if (!course) return;
+                const total = course.items.reduce((s, item) => s + (newItems[item.id] ? item.s[semIdx] : 0), 0);
+                setAdmFeeAmt(String(Math.max(0, total - Number(admScholarshipAmt||0))));
+              };
+
+              return course ? (
                 <div style={{ marginBottom: 14 }}>
-                  {/* View mode toggle */}
-                  <div style={{ display: 'flex', gap: 0, marginBottom: 14, background: '#f0f4f8', borderRadius: 8, padding: 3, width: 'fit-content' }}>
-                    {[{id:'yearly',label:'📅 Yearly'},{id:'semester',label:'📋 Semester-wise'}].map(m => (
-                      <button key={m.id} onClick={() => { setAdmViewMode(m.id); setAdmFeeAmt(''); setAdmSelectedSem(''); setAdmSelectedYear(''); }}
-                        style={{ padding: '7px 18px', borderRadius: 6, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: admViewMode === m.id ? '#1565C0' : 'transparent', color: admViewMode === m.id ? '#fff' : '#555' }}>
-                        {m.label}
-                      </button>
-                    ))}
+                  {/* Semester selector */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#1565C0', marginBottom: 6 }}>Select Semester *</label>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {semIndices.map(si => (
+                        <button key={si} onClick={() => { setAdmSelectedSem(semLabels[si]);  autoSelectSem(si); }}
+                          style={{ padding: '8px 16px', borderRadius: 8, border: `2px solid ${admSelectedSem === semLabels[si] ? '#1565C0' : '#ddd'}`, background: admSelectedSem === semLabels[si] ? '#e3f2fd' : '#fff', color: admSelectedSem === semLabels[si] ? '#1565C0' : '#555', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                          {semLabels[si]} — ₹{course.items.reduce((s,i) => s + i.s[si], 0).toLocaleString('en-IN')}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* ── YEARLY VIEW ── */}
-                  {admViewMode === 'yearly' && yearlyCourse && (
-                    <div>
-                      <p style={{ fontWeight: 700, color: '#1565C0', fontSize: 13, marginBottom: 10 }}>📅 Select Year — {yearlyCourse.label}</p>
-                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-                        {Object.entries(yearlyCourse.years).map(([yr, data]) => {
-                          const schol = Number(admScholarshipAmt || 0);
-                          const payable = Math.max(0, data.total - schol);
-                          const isSelected = admSelectedYear === yr;
-                          return (
-                            <button key={yr} onClick={() => {
-                              setAdmSelectedYear(yr);
-                              setAdmSelectedSem(yr);
-                              setAdmFeeAmt(String(payable));
-                            }}
-                              style={{ padding: '12px 16px', borderRadius: 10, border: `2px solid ${isSelected ? '#1565C0' : '#ddd'}`, background: isSelected ? '#e3f2fd' : '#fff', color: isSelected ? '#1565C0' : '#555', fontWeight: 700, fontSize: 13, cursor: 'pointer', minWidth: 160, textAlign: 'center' }}>
-                              <div style={{ fontSize: 14, marginBottom: 4 }}>{yr}</div>
-                              <div style={{ fontSize: 18, fontWeight: 800, color: isSelected ? '#1565C0' : '#333' }}>₹{data.total.toLocaleString('en-IN')}</div>
-                              <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>Sem I: ₹{data.sem1.toLocaleString('en-IN')} + Sem II: ₹{data.sem2.toLocaleString('en-IN')}</div>
-                              {schol > 0 && <div style={{ fontSize: 11, color: '#7B1FA2', fontWeight: 600, marginTop: 4 }}>After scholarship: ₹{payable.toLocaleString('en-IN')}</div>}
-                            </button>
-                          );
-                        })}
-                      </div>
+                  {/* Fee items checklist */}
+                  {admSelectedSem && (() => {
+                    const semIdx = semLabels.indexOf(admSelectedSem);
+                    const uItems = course.items.filter(i => i.section === 'University' && i.s[semIdx] > 0);
+                    const cItems = course.items.filter(i => i.section === 'College' && i.s[semIdx] > 0);
+                    const selectedTotal = course.items.reduce((s, item) => s + (selectedFeeItems[item.id] ? item.s[semIdx] : 0), 0);
 
-                      {/* All years summary table */}
-                      <div style={{ background: '#f8faff', borderRadius: 10, border: '1px solid #e0e7ef', overflow: 'hidden', marginBottom: 10 }}>
-                        <div style={{ background: '#1565C0', padding: '8px 14px', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr', gap: 8 }}>
-                          {['Year','Sem I','Sem II','Total','After Scholarship'].map(h => <span key={h} style={{color:'#fff',fontWeight:700,fontSize:12}}>{h}</span>)}
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>📋 Select Fee Items — {admSelectedSem}</span>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => { const m = {}; course.items.forEach(i => { if (i.s[semIdx] > 0) m[i.id] = true; }); setSelectedFeeItems(m); recalc(m, semIdx); }}
+                              style={{ fontSize: 11, padding: '3px 10px', background: '#e3f2fd', color: '#1565C0', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>✅ All</button>
+                            <button onClick={() => { setSelectedFeeItems({}); setAdmFeeAmt('0'); }}
+                              style={{ fontSize: 11, padding: '3px 10px', background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>❌ None</button>
+                          </div>
                         </div>
-                        {Object.entries(yearlyCourse.years).map(([yr, data], i) => {
-                          const schol = Number(admScholarshipAmt || 0);
-                          const payable = Math.max(0, data.total - schol);
-                          return (
-                            <div key={yr} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr', gap: 8, padding: '9px 14px', borderBottom: i<2?'1px solid #f0f4f8':'none', background: admSelectedYear===yr?'#e3f2fd':'transparent' }}>
-                              <span style={{fontSize:13,fontWeight:700,color:'#1565C0'}}>{yr}</span>
-                              <span style={{fontSize:13}}>₹{data.sem1.toLocaleString('en-IN')}</span>
-                              <span style={{fontSize:13}}>₹{data.sem2.toLocaleString('en-IN')}</span>
-                              <span style={{fontSize:13,fontWeight:700}}>₹{data.total.toLocaleString('en-IN')}</span>
-                              <span style={{fontSize:13,fontWeight:700,color:'#7B1FA2'}}>₹{payable.toLocaleString('en-IN')}</span>
+
+                        <div style={{ border: '1px solid #e0e7ef', borderRadius: 10, overflow: 'hidden', marginBottom: 10, maxHeight: 280, overflowY: 'auto' }}>
+                          {/* University Fees */}
+                          {uItems.length > 0 && (
+                            <div>
+                              <div style={{ background: '#e8eaf6', padding: '5px 12px', fontSize: 11, fontWeight: 800, color: '#1a237e', letterSpacing: 0.5 }}>🏛️ UNIVERSITY FEES (A)</div>
+                              {uItems.map(item => (
+                                <div key={item.id} onClick={() => {
+                                  const nm = {...selectedFeeItems, [item.id]: !selectedFeeItems[item.id]};
+                                  setSelectedFeeItems(nm); recalc(nm, semIdx);
+                                }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 12px', borderBottom: '1px solid #f0f4f8', cursor: 'pointer', background: selectedFeeItems[item.id] ? '#f0f9ff' : '#fff' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input type="checkbox" checked={!!selectedFeeItems[item.id]} onChange={() => {}} style={{ cursor: 'pointer', width: 14, height: 14 }} />
+                                    <span style={{ fontSize: 13, color: selectedFeeItems[item.id] ? '#1a237e' : '#555' }}>{item.name}</span>
+                                  </div>
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: selectedFeeItems[item.id] ? '#1565C0' : '#888' }}>₹{item.s[semIdx].toLocaleString('en-IN')}</span>
+                                </div>
+                              ))}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                          )}
+                          {/* College Fees */}
+                          {cItems.length > 0 && (
+                            <div>
+                              <div style={{ background: '#e8f5e9', padding: '5px 12px', fontSize: 11, fontWeight: 800, color: '#1b5e20', letterSpacing: 0.5 }}>🏫 COLLEGE FEES (B)</div>
+                              {cItems.map(item => (
+                                <div key={item.id} onClick={() => {
+                                  const nm = {...selectedFeeItems, [item.id]: !selectedFeeItems[item.id]};
+                                  setSelectedFeeItems(nm); recalc(nm, semIdx);
+                                }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 12px', borderBottom: '1px solid #f0f4f8', cursor: 'pointer', background: selectedFeeItems[item.id] ? '#f0fff4' : '#fff' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input type="checkbox" checked={!!selectedFeeItems[item.id]} onChange={() => {}} style={{ cursor: 'pointer', width: 14, height: 14 }} />
+                                    <span style={{ fontSize: 13, color: selectedFeeItems[item.id] ? '#1b5e20' : '#555' }}>{item.name}</span>
+                                  </div>
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: selectedFeeItems[item.id] ? '#2E7D32' : '#888' }}>₹{item.s[semIdx].toLocaleString('en-IN')}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
-                  {/* ── SEMESTER VIEW ── */}
-                  {admViewMode === 'semester' && semCourse && (
-                    <div>
-                      <p style={{ fontWeight: 700, color: '#1565C0', fontSize: 13, marginBottom: 10 }}>📋 Select Semester — {semCourse.label}</p>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                        {getSemesters(courseKey, selectedAdm.admissionYear).map(sem => (
-                          <button key={sem} onClick={() => {
-                            setAdmSelectedSem(sem);
-                            setAdmSelectedYear('');
-                            const gross = semCourse.semesters[sem];
-                            const schol = Number(admScholarshipAmt || 0);
-                            setAdmFeeAmt(String(Math.max(0, gross - schol)));
-                          }}
-                            style={{ padding: '8px 14px', borderRadius: 8, border: `2px solid ${admSelectedSem === sem && !admSelectedYear ? '#1565C0' : '#ddd'}`, background: admSelectedSem === sem && !admSelectedYear ? '#e3f2fd' : '#fff', color: admSelectedSem === sem && !admSelectedYear ? '#1565C0' : '#555', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'center', minWidth: 90 }}>
-                            {sem}<br/><span style={{fontSize:14}}>₹{semCourse.semesters[sem].toLocaleString('en-IN')}</span>
-                          </button>
-                        ))}
+                        {/* Summary */}
+                        <div style={{ background: '#e8eaf6', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ color: '#555' }}>Selected items total:</span>
+                            <span style={{ fontWeight: 700, color: '#1a237e' }}>₹{selectedTotal.toLocaleString('en-IN')}</span>
+                          </div>
+                          {Number(admScholarshipAmt||0) > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <span style={{ color: '#7B1FA2' }}>− Scholarship:</span>
+                              <span style={{ fontWeight: 700, color: '#7B1FA2' }}>−₹{Number(admScholarshipAmt).toLocaleString('en-IN')}</span>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 14, borderTop: '1px solid #9fa8da', paddingTop: 6, marginTop: 4 }}>
+                            <span style={{ color: '#1565C0' }}>Net Payable:</span>
+                            <span style={{ color: '#1565C0' }}>₹{Math.max(0, selectedTotal - Number(admScholarshipAmt||0)).toLocaleString('en-IN')}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {!yearlyCourse && !semCourse && (
-                    <div style={{ background: '#fff3e0', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, color: '#E65100' }}>⚠️ Course not detected. Enter amount manually.</div>
-                  )}
+                    );
+                  })()}
                 </div>
+              ) : (
+                <div style={{ background: '#fff3e0', padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, color: '#E65100' }}>⚠️ Course not detected. Enter amount manually.</div>
               );
             })()}
 
-
-            {admFeeType === 'admission' && (
-              <div style={{ background: '#f3e5f5', border: '1px solid #ce93d8', borderRadius: 10, padding: 14, marginBottom: 14 }}>
-                <label style={{ display: 'block', fontWeight: 700, color: '#6A1B9A', marginBottom: 8, fontSize: 13 }}>🏅 Scholarship Deduction (₹)</label>
-                <input type="number" min="0" placeholder="0 — leave blank if no scholarship"
-                  value={admScholarshipAmt}
-                  onChange={e => {
-                    setAdmScholarshipAmt(e.target.value);
-                    const ck = detectCourse(selectedAdm);
-                    if (admSelectedYear && ck) {
-                      const yr = YEARLY_FEES[ck]?.years[admSelectedYear];
-                      if (yr) setAdmFeeAmt(String(Math.max(0, yr.total - Number(e.target.value || 0))));
-                    } else if (admSelectedSem && ck) {
-                      const cr = OFFICIAL_FEES[ck];
-                      if (cr) setAdmFeeAmt(String(Math.max(0, (cr.semesters[admSelectedSem] || 0) - Number(e.target.value || 0))));
-                    }
-                  }}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #ce93d8', fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }} />
-
-                {(admSelectedYear || admSelectedSem) && (() => {
-                  const ck = detectCourse(selectedAdm);
-                  const yearData = admSelectedYear && ck ? YEARLY_FEES[ck]?.years[admSelectedYear] : null;
-                  const semData  = admSelectedSem && !admSelectedYear && ck ? OFFICIAL_FEES[ck]?.semesters[admSelectedSem] : null;
-                  const gross = yearData ? yearData.total : (semData || 0);
-                  const schol = Number(admScholarshipAmt || 0);
-                  const payable = Math.max(0, gross - schol);
-                  const alreadyPaid = selectedAdm.fees || 0;
-                  const balance = Math.max(0, payable - alreadyPaid);
-                  return gross > 0 ? (
-                    <div style={{ marginTop: 12, background: '#fff', borderRadius: 8, border: '1px solid #ce93d8', overflow: 'hidden' }}>
-                      <div style={{ background: '#6A1B9A', padding: '8px 14px' }}>
-                        <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>💰 Fee Calculation — {admSelectedYear || admSelectedSem}</span>
-                      </div>
-                      <div style={{ padding: '10px 14px', fontSize: 13 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
-                          <span style={{ color: '#555' }}>Gross {admSelectedYear ? 'Yearly' : 'Semester'} Fee</span>
-                          <span style={{ fontWeight: 600 }}>₹{gross.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0', color: '#6A1B9A' }}>
-                          <span>− Scholarship Deduction</span>
-                          <span style={{ fontWeight: 600 }}>− ₹{schol.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0', color: '#1565C0' }}>
-                          <span>= Net Payable</span>
-                          <span style={{ fontWeight: 700 }}>₹{payable.toLocaleString('en-IN')}</span>
-                        </div>
-                        {alreadyPaid > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0', color: '#2E7D32' }}>
-                            <span>− Already Paid</span>
-                            <span style={{ fontWeight: 600 }}>− ₹{alreadyPaid.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 0', fontWeight: 800, fontSize: 15, color: balance === 0 ? '#2E7D32' : '#C62828' }}>
-                          <span>{balance === 0 ? '✅ Fully Paid' : '⚠️ Balance Due'}</span>
-                          <span>₹{balance.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            )}
-
-
-            <div className="form-group" style={{ marginBottom: 14 }}>
+          <div className="form-group" style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>Amount Collecting Now (₹) *</label>
               <input type="number" min="1" placeholder="Auto-filled from semester selection"
                 value={admFeeAmt} onChange={e => setAdmFeeAmt(e.target.value)}
