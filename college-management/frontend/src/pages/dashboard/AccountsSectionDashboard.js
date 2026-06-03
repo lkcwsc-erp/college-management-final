@@ -287,8 +287,11 @@ const printReceipt = (data) => {
         <tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr>
       </thead>
       <tbody>
-        <tr><td>1</td><td>${data.feeTypeLabel||data.feeLabel||'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
-        <tr class="total-row"><td colspan="2" style="text-align:right;font-weight:800">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+        ${(data.feeBreakdown && data.feeBreakdown.length > 0)
+          ? data.feeBreakdown.map((r,i) => `<tr><td>${i+1}</td><td>${r.particular||r.label||r.name||'Fee'}</td><td style="text-align:right">₹${Number(r.amount||0).toLocaleString('en-IN')}.00</td></tr>`).join('')
+          : `<tr><td>1</td><td>${data.feeTypeLabel||data.feeLabel||'Fee'}</td><td style="text-align:right">₹${amt.toLocaleString('en-IN')}.00</td></tr>`
+        }
+        <tr class="total-row"><td colspan="2" style="text-align:right;font-weight:800;padding-right:8px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
       </tbody>
     </table>
 
@@ -839,6 +842,23 @@ const AccountsSectionDashboard = () => {
         scholarshipAmount: admScholarshipAmt ? Number(admScholarshipAmt) : undefined,
       });
 
+      // Build itemized breakdown from selected fee items
+      const ct = (selectedAdm.courseType||'').toLowerCase();
+      const ck = ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
+      const course2 = ck ? DETAILED_FEES[ck] : null;
+      const feeBreakdown = course2 && Object.keys(selectedFeeItems).length > 0
+        ? course2.items
+            .filter(item => selectedFeeItems[item.id])
+            .map((item, i) => {
+              const semIdx = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].indexOf(admSelectedSem);
+              const yr = ['1st Year','1st Year','2nd Year','2nd Year','3rd Year','3rd Year'];
+              const semIdxs = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
+              const idxs = semIdxs[selectedAdm.admissionYear||'1st Year'] || [0,1];
+              const yearAmt = (item.s[idxs[0]]||0) + (item.s[idxs[1]]||0);
+              return { sr: i+1, particular: item.name, amount: yearAmt };
+            }).filter(r => r.amount > 0)
+        : [];
+
       const entry = {
         id: rNo, date: new Date().toISOString(),
         studentName: selectedAdm.applicantName,
@@ -855,6 +875,7 @@ const AccountsSectionDashboard = () => {
         type: 'admission',
         scholarshipDeduction: admScholarshipAmt ? Number(admScholarshipAmt) : 0,
         totalFees: selSemAmt || 0,
+        feeBreakdown,
       };
       const hist = [entry, ...payHistory].slice(0, 200);
       setPayHistory(hist);
@@ -866,6 +887,7 @@ const AccountsSectionDashboard = () => {
         courseType: selectedAdm.courseType || '',
         admissionYear: selectedAdm.admissionYear || '',
         verificationNo: 'ERP' + rNo,
+        feeBreakdown: entry.feeBreakdown || [],
       });
       showToast('Fee collected & receipt generated!'); setAdmMsg('');
       setSelectedAdm(null);
@@ -930,6 +952,7 @@ const AccountsSectionDashboard = () => {
     { id: 'fee_struct', label: '💼 Fee Structure' },
     { id: 'expenses',   label: '🏗️ College Expenses' },
     { id: 'history',    label: '🧾 Payment History' },
+    { id: 'finance',      label: '📊 Finance Overview' },
     { id: 'all_students', label: '👩‍🎓 All Students' },
   ];
 
@@ -1137,6 +1160,15 @@ const AccountsSectionDashboard = () => {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ════════════════════════ FINANCE OVERVIEW ════════════════════════ */}
+          {activeTab === 'finance' && (
+            <div>
+              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📊 Finance Overview</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Student-wise fee summary — paid, pending, and payment history.</p>
+              <AccountsStudentFeeView themeColor="#1565C0" />
             </div>
           )}
 
@@ -1360,12 +1392,8 @@ const AccountsSectionDashboard = () => {
           {activeTab === 'all_students' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View student records and fee status.</p>
-              <AccountsStudentFeeView themeColor="#1565C0" />
-              <div style={{ marginTop: 28 }}>
-                <h3 style={{ color: '#1565C0', marginBottom: 14 }}>📋 Student Records</h3>
-                <StudentViewFull canEdit={false} themeColor="#1565C0" role="accounts" />
-              </div>
+              <p style={{ color: '#666', marginBottom: 14, fontSize: 14 }}>View complete student information. Click 👁️ to see details including fee history.</p>
+              <StudentViewFull canEdit={false} themeColor="#1565C0" role="accounts" />
             </div>
           )}
         </div>
