@@ -263,18 +263,18 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
               <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
                 <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🎓 Academic Details</h4>
                 {[
-                  ['Student ID',   selected.studentId],
-                  ['PRN Number',   selected.prnNumber],
-                  ['ABC / APAR ID',selected.aparIdNumber],
-                  ['Course',       selected.courseType],
-                  ['Subject',      selected.preferredSubject],
-                  ['Year',         selected.admissionYear],
-                  ['SSC %',        selected.sscPercentage?`${selected.sscPercentage}%`:'—'],
-                  ['HSC %',        selected.hscPercentage?`${selected.hscPercentage}%`:'—'],
-                ].filter(([,v])=>v&&v!=='—').map(([l,v])=>(
+                  ['Student ID',    selected.studentId    || '—'],
+                  ['PRN Number',    selected.prnNumber    || '—'],
+                  ['ABC / APAR ID', selected.aparIdNumber || '—'],
+                  ['Course',        selected.courseType   || '—'],
+                  ['Subject',       selected.preferredSubject || '—'],
+                  ['Year',          selected.admissionYear || '—'],
+                  ['SSC %',         selected.sscPercentage ? `${selected.sscPercentage}%` : '—'],
+                  ['HSC %',         selected.hscPercentage ? `${selected.hscPercentage}%` : '—'],
+                ].map(([l,v])=>(
                   <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
                     <span style={{ color:'#888', fontWeight:600, minWidth:120 }}>{l}</span>
-                    <span style={{ color:'#222', textAlign:'right' }}>{v}</span>
+                    <span style={{ color: v==='—' ? '#ccc' : '#222', textAlign:'right' }}>{v}</span>
                   </div>
                 ))}
               </div>
