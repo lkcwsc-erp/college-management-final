@@ -130,7 +130,6 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
 
   // ── DETAIL VIEW ────────────────────────────────────────────────────────────
   if (selected) {
-    const sc = schColor(selected.scholarshipStatus);
     return (
       <div>
         {/* Top bar */}
