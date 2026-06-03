@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import StudentViewFull from './StudentViewFull';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1358,9 +1359,13 @@ const AccountsSectionDashboard = () => {
           {/* ══ ALL STUDENTS ══ */}
           {activeTab === 'all_students' && (
             <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students — Fee Status</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View fee paid and pending for each student.</p>
+              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View student records and fee status.</p>
               <AccountsStudentFeeView themeColor="#1565C0" />
+              <div style={{ marginTop: 28 }}>
+                <h3 style={{ color: '#1565C0', marginBottom: 14 }}>📋 Student Records</h3>
+                <StudentViewFull canEdit={false} themeColor="#1565C0" role="accounts" />
+              </div>
             </div>
           )}
         </div>
