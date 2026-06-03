@@ -578,7 +578,14 @@ const PrincipalDashboard = () => {
           )}
 
           {/* ── COLLEGE REPORTS ── */}
-          {activeTab === 'reports' && <AdminReports themeColor="#C62828" />}
+          {activeTab === 'reports' && (
+            <div>
+              <AdminReports themeColor="#C62828" />
+              <div style={{ marginTop: 24 }}>
+                <PrincipalPassFailReport />
+              </div>
+            </div>
+          )}
 
           {/* ── STAFF OVERVIEW ── */}
           {activeTab === 'staff' && <PrincipalStaffTab />}
@@ -721,6 +728,104 @@ const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
     </div>
   );
 };
+
+// ─── Pass/Fail Report ────────────────────────────────────────────────────────
+const PrincipalPassFailReport = () => {
+  const [results, setResults]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [semFilter, setSemFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    API.get('/results/all-results')
+      .then(res => setResults(res.data.results || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = results.filter(r => {
+    const ms = !semFilter || String(r.semester) === semFilter;
+    const my = !yearFilter || String(r.year) === yearFilter;
+    return ms && my;
+  });
+
+  const sems  = [...new Set(results.map(r => r.semester))].sort();
+  const years = [...new Set(results.map(r => r.year))].sort().reverse();
+
+  const passCount = filtered.filter(r => r.result === 'PASS' || r.result === 'DISTINCTION').length;
+  const failCount = filtered.filter(r => r.result === 'FAIL').length;
+  const atktCount = filtered.filter(r => r.result === 'ATKT').length;
+
+  return (
+    <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+      <h3 style={{ color:'#C62828', marginBottom:16 }}>📊 Pass / Fail Report</h3>
+
+      {/* Summary */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:20 }}>
+        <div style={{ background:'#e3f2fd', borderRadius:10, padding:'12px 16px', textAlign:'center' }}>
+          <div style={{ fontSize:11, color:'#555', fontWeight:600 }}>Total</div>
+          <div style={{ fontSize:22, fontWeight:800, color:'#1565C0' }}>{filtered.length}</div>
+        </div>
+        <div style={{ background:'#e8f5e9', borderRadius:10, padding:'12px 16px', textAlign:'center' }}>
+          <div style={{ fontSize:11, color:'#2E7D32', fontWeight:600 }}>Pass / Distinction</div>
+          <div style={{ fontSize:22, fontWeight:800, color:'#1b5e20' }}>{passCount}</div>
+        </div>
+        <div style={{ background:'#fff3e0', borderRadius:10, padding:'12px 16px', textAlign:'center' }}>
+          <div style={{ fontSize:11, color:'#E65100', fontWeight:600 }}>ATKT</div>
+          <div style={{ fontSize:22, fontWeight:800, color:'#E65100' }}>{atktCount}</div>
+        </div>
+        <div style={{ background:'#ffebee', borderRadius:10, padding:'12px 16px', textAlign:'center' }}>
+          <div style={{ fontSize:11, color:'#C62828', fontWeight:600 }}>Fail</div>
+          <div style={{ fontSize:22, fontWeight:800, color:'#C62828' }}>{failCount}</div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
+        <select value={semFilter} onChange={e => setSemFilter(e.target.value)}
+          style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }}>
+          <option value="">All Semesters</option>
+          {sems.map(s => <option key={s} value={s}>Semester {s}</option>)}
+        </select>
+        <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
+          style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }}>
+          <option value="">All Years</option>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+
+      {loading ? <div style={{textAlign:'center',padding:20,fontSize:'1.5rem'}}>⏳</div>
+      : filtered.length === 0 ? <div style={{textAlign:'center',padding:20,color:'#888',fontSize:14}}>No results found.</div>
+      : (
+        <div style={{ background:'#fff', borderRadius:10, overflow:'hidden', border:'1px solid #e0e7ef' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1.8fr 1fr 1fr 0.8fr 0.8fr 0.8fr', background:'#C62828', padding:'10px 14px', gap:8 }}>
+            {['Student','Course/Year','Semester','%','Result',''].map(h=>(
+              <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((r,idx) => {
+            const resColor = { DISTINCTION:'#1b5e20', PASS:'#2E7D32', ATKT:'#E65100', FAIL:'#C62828' }[r.result] || '#888';
+            return (
+              <div key={r._id||idx} style={{ display:'grid', gridTemplateColumns:'1.8fr 1fr 1fr 0.8fr 0.8fr 0.8fr', padding:'9px 14px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+                <div>
+                  <p style={{ fontWeight:600, fontSize:13, margin:0 }}>{r.studentName||r.studentEmail}</p>
+                  <p style={{ fontSize:10, color:'#888', margin:0 }}>{r.studentEmail}</p>
+                </div>
+                <span style={{ fontSize:12 }}>{r.courseType||'—'}</span>
+                <span style={{ fontSize:12 }}>Sem {r.semester} · {r.year}</span>
+                <span style={{ fontSize:13, fontWeight:700 }}>{r.percentage}%</span>
+                <span style={{ fontSize:11, fontWeight:800, color:resColor, padding:'2px 6px', borderRadius:8, background:`${resColor}18` }}>{r.result}</span>
+                <span style={{ fontSize:10, color:'#888' }}>{r.subjects?.length||0} subj.</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 // ─── Staff Overview Tab ───────────────────────────────────────────────────────
 const PrincipalStaffTab = () => {
