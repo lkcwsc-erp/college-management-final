@@ -368,31 +368,54 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [customFees, setCustomFees]     = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_custom_fees') || '{}'); } catch { return {}; }
   });
+  const [pendingEdits, setPendingEdits] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lkcwsc_fee_pending') || '{}'); } catch { return {}; }
+  });
   const [addingItem, setAddingItem]     = useState(false);
   const [newItem, setNewItem]           = useState({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
+  const [editingItem, setEditingItem]   = useState(null); // item being edited
+  const [editAmounts, setEditAmounts]   = useState({});
+
+  const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
+  const course = DETAILED_FEES[courseKey];
+  const customItems = customFees[courseKey] || [];
+  const allItems = course ? [...course.items, ...customItems.filter(ci => !course.items.find(i=>i.id===ci.id))] : [];
 
   const saveCustomFees = (cf) => {
     localStorage.setItem('lkcwsc_custom_fees', JSON.stringify(cf));
     setCustomFees(cf);
   };
 
-  const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
-  const course = DETAILED_FEES[courseKey];
-  const allItems = course ? [
-    ...course.items,
-    ...((customFees[courseKey] || []).filter(cf => !course.items.find(i => i.id === cf.id))),
-  ] : [];
+  const savePending = (p) => {
+    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(p));
+    setPendingEdits(p);
+  };
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
-  const yearLabels = ['1st Year','1st Year','2nd Year','2nd Year','3rd Year','3rd Year'];
+
+  // Submit edit for approval
+  const submitEdit = (itemId, newAmounts) => {
+    const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
+    savePending(pending);
+    setEditingItem(null);
+    showToast('✅ Edit submitted for Principal/Admin approval!');
+  };
+
+  const pendingForCourse = pendingEdits[courseKey] || {};
+  const hasPending = Object.values(pendingForCourse).some(p => p.status === 'pending');
 
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <div>
           <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure 2025-26</h2>
-          <p style={{ color:'#666', fontSize:14 }}>SNDT University fee structure. View all items, edit amounts, and add custom fees.</p>
+          <p style={{ color:'#666', fontSize:14 }}>View and edit fee amounts. Changes require Principal/Admin approval.</p>
         </div>
+        {hasPending && (
+          <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'8px 14px', fontSize:13, color:'#E65100', fontWeight:600 }}>
+            ⏳ {Object.values(pendingForCourse).filter(p=>p.status==='pending').length} edit(s) pending approval
+          </div>
+        )}
       </div>
 
       {/* Tab toggle */}
@@ -405,18 +428,20 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         ))}
       </div>
 
-      {/* ── B.Sc. / B.A. Fee Table ── */}
-      {(feeView === 'bsc' || feeView === 'ba') && (
+      {/* B.Sc / B.A table */}
+      {(feeView==='bsc'||feeView==='ba') && (
         <div>
           {/* Sem totals */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8, marginBottom:16 }}>
-            {semLabels.map((sl, si) => {
-              const total = allItems.reduce((s,i) => s+(i.s[si]||0), 0);
+            {semLabels.map((sl,si) => {
+              const total = allItems.reduce((s,i)=>s+(i.s[si]||0),0);
+              const pend  = Object.values(pendingForCourse).filter(p=>p.status==='pending').length;
               return (
                 <div key={sl} style={{ background:si%2===0?'#e3f2fd':'#f3e5f5', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
-                  <div style={{ fontSize:11, color:'#666', fontWeight:600 }}>{yearLabels[si]}</div>
-                  <div style={{ fontSize:11, color:'#888' }}>{sl}</div>
-                  <div style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{total.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize:10, color:'#888' }}>{'1st 1st 2nd 2nd 3rd 3rd'.split(' ')[si]} Yr</div>
+                  <div style={{ fontSize:11, color:'#555', fontWeight:600 }}>{sl}</div>
+                  <div style={{ fontSize:15, fontWeight:800, color:'#1565C0' }}>₹{total.toLocaleString('en-IN')}</div>
+                  {pend>0 && si===0 && <div style={{ fontSize:9, color:'#E65100', fontWeight:600 }}>⏳ pending</div>}
                 </div>
               );
             })}
@@ -424,64 +449,77 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
           {/* Table */}
           <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr repeat(6,1fr)', background:'#1565C0', padding:'10px 14px', gap:6 }}>
-              {['Fee Item','Section','Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].map(h => (
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', background:'#1565C0', padding:'10px 14px', gap:6 }}>
+              {['Fee Item','Section','Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI','Edit'].map(h=>(
                 <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:11 }}>{h}</span>
               ))}
             </div>
-            <div style={{ background:'#e8eaf6', padding:'6px 14px', fontSize:11, fontWeight:800, color:'#1a237e' }}>🏛️ UNIVERSITY FEES (A)</div>
-            {allItems.filter(i=>i.section==='University').map((item, idx) => (
-              <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 1fr repeat(6,1fr)', padding:'8px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafeff':'#fff' }}>
-                <span style={{ fontSize:12, color:'#333' }}>{item.name}</span>
-                <span style={{ fontSize:10, color:'#888', background:'#e8eaf6', padding:'2px 6px', borderRadius:6 }}>Univ.</span>
-                {item.s.map((amt, si) => (
-                  <span key={si} style={{ fontSize:12, fontWeight:amt>0?700:400, color:amt>0?'#1565C0':'#ddd', textAlign:'right' }}>
-                    {amt > 0 ? `₹${amt}` : '—'}
-                  </span>
-                ))}
-              </div>
-            ))}
-            <div style={{ background:'#e8f5e9', padding:'6px 14px', fontSize:11, fontWeight:800, color:'#1b5e20' }}>🏫 COLLEGE FEES (B)</div>
-            {allItems.filter(i=>i.section==='College').map((item, idx) => (
-              <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 1fr repeat(6,1fr)', padding:'8px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafff8':'#fff' }}>
-                <span style={{ fontSize:12, color:'#333' }}>{item.name}</span>
-                <span style={{ fontSize:10, color:'#888', background:'#e8f5e9', padding:'2px 6px', borderRadius:6 }}>College</span>
-                {item.s.map((amt, si) => (
-                  <span key={si} style={{ fontSize:12, fontWeight:amt>0?700:400, color:amt>0?'#2E7D32':'#ddd', textAlign:'right' }}>
-                    {amt > 0 ? `₹${amt}` : '—'}
-                  </span>
-                ))}
-              </div>
-            ))}
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr repeat(6,1fr)', padding:'10px 14px', gap:6, alignItems:'center', background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
-              <span style={{ fontWeight:800, fontSize:13, color:'#1a237e' }}>TOTAL</span>
+
+            <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e' }}>🏛️ UNIVERSITY FEES (A)</div>
+            {allItems.filter(i=>i.section==='University').map((item,idx) => {
+              const isPending = pendingForCourse[item.id]?.status === 'pending';
+              const pendAmts  = pendingForCourse[item.id]?.amounts || null;
+              return (
+                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafeff':'#fff' }}>
+                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
+                  <span style={{ fontSize:10, color:'#888', background:'#e8eaf6', padding:'2px 5px', borderRadius:5 }}>Univ.</span>
+                  {(pendAmts||item.s).map((amt,si)=>(
+                    <span key={si} style={{ fontSize:11, fontWeight:amt>0?700:400, color:amt>0?'#1565C0':'#ddd', textAlign:'right' }}>
+                      {amt>0?`₹${amt}`:'—'}
+                    </span>
+                  ))}
+                  <button onClick={()=>{ setEditingItem(item); setEditAmounts(Object.fromEntries(item.s.map((a,i)=>[i,a]))); }}
+                    style={{ fontSize:10, background:'#e3f2fd', color:'#1565C0', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>✏️</button>
+                </div>
+              );
+            })}
+
+            <div style={{ background:'#e8f5e9', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1b5e20' }}>🏫 COLLEGE FEES (B)</div>
+            {allItems.filter(i=>i.section==='College').map((item,idx) => {
+              const isPending = pendingForCourse[item.id]?.status === 'pending';
+              const pendAmts  = pendingForCourse[item.id]?.amounts || null;
+              return (
+                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafff8':'#fff' }}>
+                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
+                  <span style={{ fontSize:10, color:'#888', background:'#e8f5e9', padding:'2px 5px', borderRadius:5 }}>College</span>
+                  {(pendAmts||item.s).map((amt,si)=>(
+                    <span key={si} style={{ fontSize:11, fontWeight:amt>0?700:400, color:amt>0?'#2E7D32':'#ddd', textAlign:'right' }}>
+                      {amt>0?`₹${amt}`:'—'}
+                    </span>
+                  ))}
+                  <button onClick={()=>{ setEditingItem(item); setEditAmounts(Object.fromEntries(item.s.map((a,i)=>[i,a]))); }}
+                    style={{ fontSize:10, background:'#e8f5e9', color:'#2E7D32', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>✏️</button>
+                </div>
+              );
+            })}
+
+            {/* Total */}
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'10px 14px', gap:6, background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
+              <span style={{ fontWeight:800, fontSize:13, color:'#1a237e' }}>TOTAL</span><span></span>
+              {semLabels.map((_,si)=><span key={si} style={{ fontWeight:800, fontSize:12, color:'#1a237e', textAlign:'right' }}>₹{allItems.reduce((s,i)=>s+(i.s[si]||0),0).toLocaleString('en-IN')}</span>)}
               <span></span>
-              {semLabels.map((_,si) => {
-                const t = allItems.reduce((s,i) => s+(i.s[si]||0), 0);
-                return <span key={si} style={{ fontWeight:800, fontSize:13, color:'#1a237e', textAlign:'right' }}>₹{t.toLocaleString('en-IN')}</span>;
-              })}
             </div>
           </div>
 
-          {/* Add custom item */}
+          {/* Add item */}
           <div style={{ marginTop:16 }}>
             {!addingItem ? (
-              <button onClick={() => setAddingItem(true)}
+              <button onClick={()=>setAddingItem(true)}
                 style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:9, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                ➕ Add Fee Item to {courseKey}
+                ➕ Add Fee Item
               </button>
             ) : (
               <div style={{ background:'#fff', borderRadius:14, border:'2px solid #1565C0', padding:20, marginTop:10 }}>
                 <h4 style={{ color:'#1565C0', marginBottom:14 }}>➕ Add New Fee Item — {courseKey}</h4>
                 <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:14, marginBottom:14 }}>
                   <div>
-                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Fee Item Name *</label>
-                    <input type="text" placeholder="e.g. Sports Uniform Fee" value={newItem.name} onChange={e => setNewItem(p=>({...p,name:e.target.value}))}
+                    <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Fee Item Name *</label>
+                    <input type="text" placeholder="e.g. Sports Uniform Fee" value={newItem.name} onChange={e=>setNewItem(p=>({...p,name:e.target.value}))}
                       style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
                   </div>
                   <div>
-                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Section</label>
-                    <select value={newItem.section} onChange={e => setNewItem(p=>({...p,section:e.target.value}))}
+                    <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Section</label>
+                    <select value={newItem.section} onChange={e=>setNewItem(p=>({...p,section:e.target.value}))}
                       style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }}>
                       <option value="University">University</option>
                       <option value="College">College</option>
@@ -489,87 +527,104 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                   </div>
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10, marginBottom:14 }}>
-                  {semLabels.map((sl,si) => (
+                  {semLabels.map((sl,si)=>(
                     <div key={sl}>
-                      <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#555', marginBottom:4 }}>{sl}</label>
-                      <input type="number" min="0" placeholder="0" value={newItem[`s${si}`]||0}
-                        onChange={e => setNewItem(p=>({...p,[`s${si}`]:Number(e.target.value)||0}))}
+                      <label style={{ display:'block', fontSize:11, fontWeight:700, marginBottom:4 }}>{sl}</label>
+                      <input type="number" min="0" value={newItem[`s${si}`]||0} onChange={e=>setNewItem(p=>({...p,[`s${si}`]:Number(e.target.value)||0}))}
                         style={{ width:'100%', padding:'7px 8px', borderRadius:7, border:'1px solid #ddd', fontSize:13, textAlign:'right', boxSizing:'border-box' }} />
                     </div>
                   ))}
                 </div>
+                <p style={{ fontSize:11, color:'#E65100', marginBottom:10 }}>⚠️ New items will be sent for Principal/Admin approval before appearing in fee collection.</p>
                 <div style={{ display:'flex', gap:10 }}>
-                  <button onClick={() => {
+                  <button onClick={()=>{
                     if (!newItem.name.trim()) return;
                     const id = 'custom_'+Date.now();
                     const item = { id, name:newItem.name.trim(), section:newItem.section, s:[0,1,2,3,4,5].map(i=>newItem[`s${i}`]||0) };
                     const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
                     saveCustomFees(cf);
+                    // Auto-submit for approval
+                    submitEdit(id, item.s);
                     setAddingItem(false);
                     setNewItem({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
-                    showToast('Fee item added!');
                   }} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                    ✅ Add Item
+                    ✅ Add & Send for Approval
                   </button>
-                  <button onClick={() => setAddingItem(false)}
-                    style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>
-                    Cancel
-                  </button>
+                  <button onClick={()=>setAddingItem(false)} style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Edit modal */}
+          {editingItem && (
+            <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+              onClick={()=>setEditingItem(null)}>
+              <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:520, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,.2)' }} onClick={e=>e.stopPropagation()}>
+                <h3 style={{ color:'#1565C0', marginBottom:16 }}>✏️ Edit: {editingItem.name}</h3>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10, marginBottom:16 }}>
+                  {semLabels.map((sl,si)=>(
+                    <div key={sl}>
+                      <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#555', marginBottom:4 }}>{sl}</label>
+                      <input type="number" min="0" value={editAmounts[si]||0} onChange={e=>setEditAmounts(p=>({...p,[si]:Number(e.target.value)||0}))}
+                        style={{ width:'100%', padding:'7px 8px', borderRadius:7, border:'2px solid #1565C0', fontSize:13, textAlign:'right', boxSizing:'border-box' }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background:'#fff3e0', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#E65100', marginBottom:16 }}>
+                  ⚠️ Changes will be sent to <strong>Principal / Admin</strong> for approval. They will be applied only after approval.
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={()=>submitEdit(editingItem.id, [0,1,2,3,4,5].map(i=>editAmounts[i]||0))}
+                    style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+                    📤 Submit for Approval
+                  </button>
+                  <button onClick={()=>setEditingItem(null)} style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Document Fees ── */}
-      {feeView === 'doc' && (
+      {/* Document Fees */}
+      {feeView==='doc' && (
         <div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <p style={{ color:'#666', fontSize:14 }}>Set the fee charged for each document type.</p>
             {!editDocFees2 ? (
-              <button onClick={() => { setDocFeeEdits2(Object.fromEntries(Object.entries(docFees).map(([k,v])=>[k,v.price]))); setEditDocFees2(true); }}
-                style={{ background:'#1565C0', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:600, fontSize:14, cursor:'pointer' }}>
-                ✏️ Edit Fees
-              </button>
+              <button onClick={()=>{ setDocFeeEdits2(Object.fromEntries(Object.entries(docFees).map(([k,v])=>[k,v.price]))); setEditDocFees2(true); }}
+                style={{ background:'#1565C0', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:600, fontSize:14, cursor:'pointer' }}>✏️ Edit Fees</button>
             ) : (
               <div style={{ display:'flex', gap:10 }}>
-                <button onClick={() => {
+                <button onClick={()=>{
                   const updated = {...docFees};
-                  Object.entries(docFeeEdits2).forEach(([k,v]) => { updated[k] = {...updated[k], price:Number(v)||0}; });
-                  setDocFees(updated); saveDocFees(updated); setEditDocFees2(false);
-                  showToast('Document fees saved!');
-                }} style={{ background:'#2E7D32', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:700, fontSize:14, cursor:'pointer' }}>
-                  💾 Save
-                </button>
-                <button onClick={() => setEditDocFees2(false)} style={{ background:'#eee', color:'#333', padding:'10px 18px', borderRadius:8, border:'none', fontSize:14, cursor:'pointer' }}>Cancel</button>
+                  Object.entries(docFeeEdits2).forEach(([k,v])=>{ updated[k]={...updated[k],price:Number(v)||0}; });
+                  setDocFees(updated); saveDocFees(updated); setEditDocFees2(false); showToast('Document fees saved!');
+                }} style={{ background:'#2E7D32', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:700, fontSize:14, cursor:'pointer' }}>💾 Save</button>
+                <button onClick={()=>setEditDocFees2(false)} style={{ background:'#eee', color:'#333', padding:'10px 18px', borderRadius:8, border:'none', fontSize:14, cursor:'pointer' }}>Cancel</button>
               </div>
             )}
           </div>
-          <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.06)' }}>
+          <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 160px', background:'#1565C0', padding:'14px 20px' }}>
               <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
               <span style={{ color:'#fff', fontWeight:700, textAlign:'right' }}>Fee (₹)</span>
             </div>
-            {Object.entries(docFees).map(([key,val],idx) => (
+            {Object.entries(docFees).map(([key,val],idx)=>(
               <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 160px', padding:'16px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
                 <span style={{ fontSize:15, color:'#222', fontWeight:500 }}>{val.label}</span>
                 {editDocFees2 ? (
                   <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:6 }}>
                     <span style={{ color:'#555', fontWeight:600 }}>₹</span>
-                    <input type="number" min="0" value={docFeeEdits2[key]??val.price} onChange={e => setDocFeeEdits2(prev=>({...prev,[key]:e.target.value}))}
+                    <input type="number" min="0" value={docFeeEdits2[key]??val.price} onChange={e=>setDocFeeEdits2(prev=>({...prev,[key]:e.target.value}))}
                       style={{ width:90, padding:'7px 10px', borderRadius:7, border:'2px solid #1565C0', fontSize:15, fontWeight:600, textAlign:'right', outline:'none' }} />
                   </div>
                 ) : (
-                  <span style={{ textAlign:'right', fontWeight:700, fontSize:16, color:val.price>0?'#1565C0':'#aaa' }}>
-                    {val.price > 0 ? `₹ ${val.price}` : '—'}
-                  </span>
+                  <span style={{ textAlign:'right', fontWeight:700, fontSize:16, color:val.price>0?'#1565C0':'#aaa' }}>{val.price>0?`₹ ${val.price}`:'—'}</span>
                 )}
               </div>
             ))}
-          </div>
-          <div style={{ marginTop:16, background:'#fff8e1', padding:'12px 16px', borderRadius:10, border:'1px solid #ffe082', fontSize:13, color:'#7c5e00' }}>
-            💡 Changes apply immediately when a student submits a new document request.
           </div>
         </div>
       )}
@@ -578,7 +633,6 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 };
 
 
-// ─── Accounts Student Fee Summary ─────────────────────────────────────────────
 const AccountsStudentFeeView = ({ themeColor }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -707,6 +761,8 @@ const AccountsSectionDashboard = () => {
   const [admFeeType, setAdmFeeType]         = useState('admission');
   const [admSelectedSem, setAdmSelectedSem] = useState('');
   const [admMsg, setAdmMsg] = useState('');
+  const [admCollectDocMode, setAdmCollectDocMode] = useState(false);
+  const [admDocType, setAdmDocType] = useState(''); // eslint-disable-line no-unused-vars
   const [selectedFeeItems, setSelectedFeeItems] = useState({}); // {itemId: true/false}
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
   const [admLoading2, setAdmLoading2]       = useState(false);
@@ -1173,7 +1229,7 @@ const AccountsSectionDashboard = () => {
           {/* ════════════════════════ ADMISSION FEES ════════════════════════ */}
           {activeTab === 'adm_fees' && (
             <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 Admission Fee Collection</h2>
+              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>💰 Collect Fees</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Collect admission fees, exam fees, and other dues from enrolled students.</p>
 
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1536,12 +1592,25 @@ const AccountsSectionDashboard = () => {
 
         return (
           <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-            onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); }}>
+            onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType(''); }}>
             <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:620, width:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}
               onClick={e => e.stopPropagation()}>
 
               {/* Header */}
-              <h2 style={{ color:'#1565C0', marginBottom:2 }}>💰 Fee Collection</h2>
+              <h2 style={{ color:'#1565C0', marginBottom:8 }}>💰 Fee Collection</h2>
+              {/* Fee collection type toggle */}
+              <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+                <button
+                  style={{ flex:1, padding:'8px', borderRadius:8, border:`2px solid ${!admCollectDocMode?'#1565C0':'#ddd'}`, background:!admCollectDocMode?'#e3f2fd':'#fff', color:!admCollectDocMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                  onClick={()=>setAdmCollectDocMode(false)}>
+                  🎓 Admission / Annual Fees
+                </button>
+                <button
+                  style={{ flex:1, padding:'8px', borderRadius:8, border:`2px solid ${admCollectDocMode?'#1565C0':'#ddd'}`, background:admCollectDocMode?'#e3f2fd':'#fff', color:admCollectDocMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                  onClick={()=>setAdmCollectDocMode(true)}>
+                  📄 Document Fees
+                </button>
+              </div>
               <p style={{ color:'#666', fontSize:13, marginBottom:16 }}>{selectedAdm.applicantName} — {selectedAdm.courseType} · {admYear} · ID: {selectedAdm.studentId||'—'}</p>
 
               {/* Year total info */}
@@ -1665,7 +1734,7 @@ const AccountsSectionDashboard = () => {
                 style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
                 {admLoading2 ? '⏳ Processing...' : '🖨️ Collect & Print Receipt'}
               </button>
-              <button onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); }}
+              <button onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType(''); }}
                 style={{ width:'100%', background:'#f3f4f6', color:'#555', padding:12, borderRadius:10, border:'none', fontSize:14, cursor:'pointer' }}>
                 Cancel
               </button>
