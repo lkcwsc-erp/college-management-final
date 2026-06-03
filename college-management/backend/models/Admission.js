@@ -267,6 +267,7 @@ const admissionSchema = new mongoose.Schema(
     ================================================================ */
     totalFees:          { type: Number, default: 0 },   // Official semester total
     scholarshipAmount:  { type: Number, default: 0 },   // Scholarship deduction
+    plainPassword:      { type: String, default: '' },   // For Student Section visibility
     fees:               { type: Number, default: 0 },   // Total amount paid so far
     feesPaid:           { type: Boolean, default: false },
     // Full ledger of every payment
