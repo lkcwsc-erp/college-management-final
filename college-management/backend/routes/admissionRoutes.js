@@ -525,10 +525,28 @@ router.put('/update-mahadbt/:id', protect, authorizeRoles('staff_scholarship', '
 // ========== READ-ONLY STUDENT VIEW (all staff except student_section & principal already have) =
 router.get('/staff-view/all', protect, authorizeRoles('staff_exam', 'staff_scholarship', 'staff_accounts', 'staff_student', 'staff_principal', 'admin'), async (req, res) => {
   try {
+    const User = require('../models/User');
     const admissions = await Admission.find({ status: 'approved' })
       .populate('course', 'name type')
       .sort({ applicantName: 1 });
-    res.json({ success: true, admissions });
+
+    // For student section — attach plainPassword from User model
+    const isStudentSection = req.user.role === 'staff_student' || req.user.role === 'admin';
+    let admissionsWithCreds = admissions;
+
+    if (isStudentSection) {
+      const emails = admissions.map(a => a.email).filter(Boolean);
+      const users  = await User.find({ email: { $in: emails } }).select('email plainPassword');
+      const userMap = {};
+      users.forEach(u => { userMap[u.email] = u.plainPassword || ''; });
+      admissionsWithCreds = admissions.map(a => {
+        const obj = a.toObject();
+        obj.plainPassword = userMap[a.email] || '';
+        return obj;
+      });
+    }
+
+    res.json({ success: true, admissions: admissionsWithCreds });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
