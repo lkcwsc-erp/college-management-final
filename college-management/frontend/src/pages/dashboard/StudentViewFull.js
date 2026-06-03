@@ -231,98 +231,177 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
             </div>
           </div>
         ) : (
-          /* Read view */
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-            {/* Personal Details */}
-            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-              <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>👤 Personal Details</h4>
-              {[
-                ['Full Name',      selected.applicantName],
-                ["Father's Name",  selected.fatherName],
-                ["Mother's Name",  selected.motherName],
-                ['DOB',            selected.dateOfBirth?new Date(selected.dateOfBirth).toLocaleDateString('en-IN'):'—'],
-                ['Gender',         selected.gender],
-                ['Religion',       selected.religion],
-                ['Category',       (selected.category||'—').toUpperCase()],
-                ['Caste',          selected.caste],
-                ['Mobile',         selected.phone],
-                ['Email',          selected.email],
-                ['Aadhar',         selected.aadharNumber],
-                ['Address',        selected.address],
-                ['Family Income',  selected.familyIncome?`₹${selected.familyIncome}`:'—'],
-              ].filter(([,v])=>v&&v!=='—').map(([l,v])=>(
-                <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
-                  <span style={{ color:'#888', fontWeight:600, minWidth:120 }}>{l}</span>
-                  <span style={{ color:'#222', textAlign:'right', wordBreak:'break-all' }}>{v}</span>
+          /* Read view — All sections */
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+            {/* Row 1 — Personal + Academic */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+              {/* Personal Details */}
+              <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>👤 Personal Details</h4>
+                {[
+                  ['Full Name',     selected.applicantName],
+                  ["Father's Name", selected.fatherName],
+                  ["Mother's Name", selected.motherName],
+                  ['Guardian',      selected.guardianName],
+                  ['Guardian Phone',selected.guardianPhone],
+                  ['DOB',           selected.dateOfBirth?new Date(selected.dateOfBirth).toLocaleDateString('en-IN'):'—'],
+                  ['Gender',        selected.gender],
+                  ['Blood Group',   selected.bloodGroup],
+                  ['Nationality',   selected.nationality],
+                  ['Religion',      selected.religion],
+                  ['Category',      selected.category?(selected.category).toUpperCase():'—'],
+                  ['Caste',         selected.caste],
+                  ['Sub-Caste',     selected.subCaste],
+                  ['Marital Status',selected.isMarried?'Married':'Unmarried'],
+                  ['Husband Name',  selected.isMarried?selected.husbandName:'—'],
+                  ['Mobile',        selected.phone],
+                  ['Email',         selected.email],
+                  ['Aadhar No.',    selected.aadharNumber],
+                  ['Family Income', selected.familyIncome?`₹${selected.familyIncome}`:'—'],
+                ].map(([l,v])=>(
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right', wordBreak:'break-all', fontSize:12 }}>{v||'—'}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right column */}
+              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                {/* Academic */}
+                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                  <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🎓 Academic Details</h4>
+                  {[
+                    ['Student ID',    selected.studentId],
+                    ['PRN Number',    selected.prnNumber],
+                    ['ABC / APAR ID', selected.aparIdNumber],
+                    ['Course',        selected.courseType],
+                    ['Subject',       selected.preferredSubject],
+                    ['Year',          selected.admissionYear],
+                    ['SSC School',    selected.sscSchoolName],
+                    ['SSC Board',     selected.sscBoard],
+                    ['SSC Year',      selected.sscYOP],
+                    ['SSC %',         selected.sscPercentage?`${selected.sscPercentage}%`:'—'],
+                    ['SSC Grade',     selected.sscGrade],
+                    ['HSC College',   selected.hscCollegeName],
+                    ['HSC Board',     selected.hscBoard],
+                    ['HSC Stream',    selected.hscStream],
+                    ['HSC Year',      selected.hscYOP],
+                    ['HSC %',         selected.hscPercentage?`${selected.hscPercentage}%`:'—'],
+                    ['HSC Grade',     selected.hscGrade],
+                    ['Has Gap Year',  selected.hasGap?'Yes':'No'],
+                    ['Gap Period',    selected.hasGap?`${selected.gapFromYear||''} – ${selected.gapToYear||''}`:'—'],
+                    ['Gap Reason',    selected.gapReason],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                      <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                      <span style={{ color:(!v||v==='—'||v==='No')?'#ccc':'#222', textAlign:'right' }}>{v||'—'}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+
+                {/* Scholarship */}
+                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                  <h4 style={{ color:'#7B1FA2', marginBottom:14, fontSize:14 }}>🏅 Scholarship</h4>
+                  {[
+                    ['Status',          <span style={{ background:schColor(selected.scholarshipStatus)[0], color:schColor(selected.scholarshipStatus)[1], padding:'2px 10px', borderRadius:10, fontSize:11, fontWeight:700 }}>{(selected.scholarshipStatus||'not_filled').replace(/_/g,' ')}</span>],
+                    ['Amount',          selected.scholarshipAmount>0?`₹${Number(selected.scholarshipAmount).toLocaleString('en-IN')}`:'—'],
+                    ['MahaDBT Username',selected.mahaDBTUsername],
+                    ['MahaDBT App No.', selected.mahaDBTAppNo],
+                    ['Note',            selected.scholarshipNote],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                      <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                      <span style={{ color:'#222', textAlign:'right' }}>{v||'—'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Academic Details */}
-            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {/* Row 2 — Address + Caste + Bank */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+              {/* Address */}
               <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🎓 Academic Details</h4>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🏠 Address</h4>
                 {[
-                  ['Student ID',    selected.studentId    || '—'],
-                  ['PRN Number',    selected.prnNumber    || '—'],
-                  ['ABC / APAR ID', selected.aparIdNumber || '—'],
-                  ['Course',        selected.courseType   || '—'],
-                  ['Subject',       selected.preferredSubject || '—'],
-                  ['Year',          selected.admissionYear || '—'],
-                  ['SSC %',         selected.sscPercentage ? `${selected.sscPercentage}%` : '—'],
-                  ['HSC %',         selected.hscPercentage ? `${selected.hscPercentage}%` : '—'],
+                  ['House No.',    selected.houseNumber],
+                  ['Street/Area',  selected.streetArea],
+                  ['City/Village', selected.cityTownVillage],
+                  ['Sub-District', selected.subdistrict],
+                  ['District',     selected.district],
+                  ['State',        selected.state],
+                  ['Pin Code',     selected.pinCode],
+                  ['Address',      selected.address],
                 ].map(([l,v])=>(
-                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
-                    <span style={{ color:'#888', fontWeight:600, minWidth:120 }}>{l}</span>
-                    <span style={{ color: v==='—' ? '#ccc' : '#222', textAlign:'right' }}>{v}</span>
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:90, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right', wordBreak:'break-all' }}>{v||'—'}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Scholarship details */}
+              {/* Caste */}
               <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                <h4 style={{ color:'#7B1FA2', marginBottom:14, fontSize:14 }}>🏅 Scholarship</h4>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>📋 Caste Details</h4>
                 {[
-                  ['Status',          <span style={{ background:sc[0], color:sc[1], padding:'2px 10px', borderRadius:10, fontSize:12, fontWeight:700 }}>{(selected.scholarshipStatus||'not_filled').replace('_',' ')}</span>],
-                  ['Amount',          selected.scholarshipAmount>0?`₹${Number(selected.scholarshipAmount).toLocaleString('en-IN')}`:'—'],
-                  ['MahaDBT Username',selected.mahaDBTUsername],
-                  ['MahaDBT App No.', selected.mahaDBTAppNo],
+                  ['Caste Certificate No.',  selected.casteCertificateNo],
+                  ['Issuing Authority',       selected.casteCertificateAuthority],
+                  ['Caste Validity',          selected.casteValidity],
+                  ['Validity Date',           selected.casteValidityDate?new Date(selected.casteValidityDate).toLocaleDateString('en-IN'):'—'],
                 ].map(([l,v])=>(
-                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
-                    <span style={{ color:'#888', fontWeight:600, minWidth:120 }}>{l}</span>
-                    <span style={{ color:'#222', textAlign:'right' }}>{v||'—'}</span>
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right' }}>{v||'—'}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Credentials — only for Student Section staff */}
+              {/* Bank Details */}
+              <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🏦 Bank Details</h4>
+                {[
+                  ['Bank Name',    selected.bankName],
+                  ['Branch',       selected.bankBranch],
+                  ['Account No.',  selected.bankAccountNo],
+                  ['IFSC Code',    selected.ifscCode],
+                ].map(([l,v])=>(
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:90, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right', fontFamily:l==='Account No.'||l==='IFSC Code'?'monospace':'inherit' }}>{v||'—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Row 3 — Credentials + Fee Ledger */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+              {/* Credentials — only for Student Section */}
               {role==='student_section' && (
                 <div style={{ background:'#e8f5e9', borderRadius:14, border:'1px solid #a5d6a7', padding:20 }}>
                   <h4 style={{ color:'#2E7D32', marginBottom:14, fontSize:14 }}>🔑 Login Credentials</h4>
                   {[
                     ['Email (Username)', selected.email],
                     ['Password',         selected.plainPassword || selected.tempPassword || '(set during generation)'],
-                    ['Student ID',       selected.studentId || 'Not assigned yet'],
-                    ['PRN (if set)',      selected.prnNumber || 'Not set yet'],
+                    ['Student ID',       selected.studentId||'Not assigned yet'],
+                    ['PRN',              selected.prnNumber||'Not set yet'],
                   ].map(([l,v])=>(
-                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #c8e6c9', fontSize:13 }}>
-                      <span style={{ color:'#555', fontWeight:600, minWidth:140 }}>{l}</span>
-                      <span style={{ color:'#1b5e20', fontWeight:700, fontFamily:'monospace', background: l==='Password'?'#fff3e0':'transparent', padding: l==='Password'?'2px 8px':'0', borderRadius: l==='Password'?6:0 }}>{v}</span>
+                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #c8e6c9', fontSize:12 }}>
+                      <span style={{ color:'#555', fontWeight:600, minWidth:130, flexShrink:0 }}>{l}</span>
+                      <span style={{ color:'#1b5e20', fontWeight:700, fontFamily:'monospace', background:l==='Password'?'#fff3e0':'transparent', padding:l==='Password'?'1px 6px':'0', borderRadius:4 }}>{v}</span>
                     </div>
                   ))}
-                  <div style={{ marginTop:10, background:'#fff', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#888' }}>
-                    💡 Student logs in with their email and password above.
-                  </div>
                 </div>
               )}
 
-              {/* Fee ledger — for Accounts */}
+              {/* Fee Ledger — only for Accounts */}
               {role==='accounts' && selected.feeLedger?.length > 0 && (
                 <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
                   <h4 style={{ color:'#1565C0', marginBottom:14, fontSize:14 }}>💰 Fee Payments</h4>
                   {selected.feeLedger.map((p,i)=>(
                     <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
-                      <span style={{ color:'#555' }}>{p.feeTypeLabel||p.feeType} {p.paidAt?`— ${new Date(p.paidAt).toLocaleDateString('en-IN')}`:''}</span>
+                      <span style={{ color:'#555' }}>{p.feeTypeLabel||p.feeType} {p.paidAt?`(${new Date(p.paidAt).toLocaleDateString('en-IN')})`:''}  </span>
                       <span style={{ fontWeight:700, color:'#2E7D32' }}>₹{(p.amount||0).toLocaleString('en-IN')}</span>
                     </div>
                   ))}
