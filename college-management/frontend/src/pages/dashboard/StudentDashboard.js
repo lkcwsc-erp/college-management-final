@@ -53,9 +53,9 @@ const printStudentReceipt = (p, adm) => {
     <div class="hdr">
       <img src="${logo}" class="hlogo"/>
       <div class="htxt">
-        <div style="font-size:9px;color:#555">Vidya-Niketan Sevabhavi Sanstha's</div>
+        <div style="font-size:9px;color:#555">VidyaNiketan Sevabhavi Sanstha's Dongargav(.she)</div>
         <div class="hname">Late Kalpana Chawala Women's Senior College (LKCWSC)</div>
-        <div class="haddr">Affiliated to SNDT Women's University | Gangakhed, Dist. Parbhani – 431514</div>
+        <div class="haddr">Affiliated to SNDT Women's University,Mumbai | Gangakhed, Dist. Parbhani – 431514</div>
         <div class="haddr">+91 9307162914 | lkcwsc.vnssorg.com</div>
       </div>
     </div>
@@ -79,7 +79,7 @@ const printStudentReceipt = (p, adm) => {
     <div class="al">Paid by: <b>${p.paymentMode==='online'?'Online':'Cash'}</b> &nbsp; Rs. <b>${amt.toLocaleString('en-IN')}.00</b> &nbsp; Date: <b>${dateStr}</b></div>
     <div class="al">Narration :</div>
     <div class="sig">
-      <div class="sl">Signature<br/>(Accounted by : Not Required)<br/><br/>This is system generated receipt and does not require seal/stamp.</div>
+      <div class="sl">This is system generated receipt and does not require seal/stamp.</div>
       <div class="sr"><div class="srl">Accounts Section<br/>LKCWSC</div></div>
     </div>
     <div class="erp">ERP Verification No: <b>${p.receiptNo||'—'}</b> | Collected by: <b>${p.collectedBy||'Accounts Section'}</b></div>
