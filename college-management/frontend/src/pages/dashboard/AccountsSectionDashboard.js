@@ -850,8 +850,6 @@ const AccountsSectionDashboard = () => {
         ? course2.items
             .filter(item => selectedFeeItems[item.id])
             .map((item, i) => {
-              const semIdx = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].indexOf(admSelectedSem);
-              const yr = ['1st Year','1st Year','2nd Year','2nd Year','3rd Year','3rd Year'];
               const semIdxs = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
               const idxs = semIdxs[selectedAdm.admissionYear||'1st Year'] || [0,1];
               const yearAmt = (item.s[idxs[0]]||0) + (item.s[idxs[1]]||0);
