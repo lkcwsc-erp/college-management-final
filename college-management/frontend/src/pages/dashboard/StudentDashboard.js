@@ -13,7 +13,6 @@ const printStudentReceipt = (p, adm) => {
   const acadYear = (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })();
   const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
   const amt = p.amount || 0;
-  // Amount in words
   const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
   const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
   const inW=(n)=>{if(n===0)return'';if(n<20)return a[n]+' ';if(n<100)return b[Math.floor(n/10)]+' '+(n%10?a[n%10]+' ':'');if(n<1000)return a[Math.floor(n/100)]+'Hundred '+(n%100?inW(n%100):'');return a[Math.floor(n/1000)]+'Thousand '+(n%1000?inW(n%1000):'');};
@@ -22,72 +21,89 @@ const printStudentReceipt = (p, adm) => {
   const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Arial,sans-serif;background:#fff;display:flex;justify-content:center;padding:16px}
-    .r{width:160mm;border:1px solid #999}
-    .hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #999}
+    body{font-family:Arial,sans-serif;background:#fff;padding:10px;font-size:12px}
+    .receipt{width:160mm;border:1px solid #999;margin:0 auto}
+    .hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1.5px solid #000}
     .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3}
-    .haddr{font-size:9px;color:#444;margin-top:1px}
-    .copy-line{padding:3px 10px;font-size:10px;border-bottom:1px dashed #aaa}
-    .meta{display:flex;justify-content:space-between;padding:3px 10px;font-size:11px;border-bottom:1px dashed #aaa}
-    .info{padding:3px 10px 4px;font-size:11px;border-bottom:1px dashed #aaa}
-    .irow{display:flex;gap:4px;margin:1px 0}
-    .ik{font-weight:700;min-width:100px}
-    table{width:100%;border-collapse:collapse}
-    thead tr{background:#ddd}
-    th{padding:5px 8px;font-size:11px;font-weight:700;text-align:left;border:1px solid #aaa}
-    th:last-child{text-align:right}
-    td{padding:4px 8px;font-size:11px;border:1px solid #ccc}
-    td:first-child{text-align:center;width:32px}
-    td:last-child{text-align:right}
-    .tot td{font-weight:800;background:#f0f0f0;border-top:2px solid #555}
-    .al{padding:4px 10px;font-size:11px;border-top:1px dashed #aaa}
-    .sig{display:flex;justify-content:space-between;align-items:flex-end;padding:5px 10px 8px;border-top:1px dashed #aaa;margin-top:4px}
-    .sl{font-size:9.5px;color:#555;font-style:italic;max-width:220px;line-height:1.5}
-    .sr{text-align:center;font-size:10px}
-    .srl{border-top:1px solid #555;margin-top:20px;padding-top:2px;font-weight:700}
-    .erp{padding:3px 10px;font-size:9px;color:#666;border-top:1px dashed #aaa;text-align:center}
-    @media print{body{padding:0}@page{size:A5;margin:5mm}}
-  </style></head><body><div class="r">
+    .htrust{font-size:8.5px;color:#555}
+    .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3;margin:2px 0}
+    .haddr{font-size:8.5px;color:#444;margin-top:1px}
+    .titlebar{text-align:center;padding:5px;border-bottom:1px solid #999;font-size:13px;font-weight:900;letter-spacing:2px;background:#f5f5f5}
+    .copyline{padding:4px 12px;font-size:10px;border-bottom:1px dashed #aaa}
+    .metarow{display:flex;justify-content:space-between;padding:4px 12px;font-size:11px;border-bottom:1px dashed #aaa}
+    .infobox{padding:4px 12px;border-bottom:1px dashed #aaa}
+    table.info{width:100%;border-collapse:collapse;font-size:11px}
+    table.info td{padding:2px 4px}
+    .lbl{font-weight:700;color:#444;width:95px}
+    .val{font-weight:600;color:#000}
+    table.fees{width:100%;border-collapse:collapse;margin-top:4px}
+    table.fees thead tr{background:#ddd}
+    table.fees th{padding:5px 8px;font-size:11px;font-weight:700;text-align:left;border:1px solid #aaa}
+    table.fees th:last-child{text-align:right}
+    table.fees td{padding:5px 8px;font-size:11px;border:1px solid #ccc}
+    table.fees td:first-child{text-align:center;width:32px}
+    table.fees td:last-child{text-align:right}
+    .totrow td{font-weight:800;font-size:12px;background:#f0f0f0;border-top:2px solid #555}
+    .amtline{padding:5px 12px;font-size:11px;border-top:1px dashed #aaa}
+    .payline{padding:4px 12px;font-size:11px}
+    .narrline{padding:4px 12px 6px;font-size:11px;border-top:1px dashed #aaa}
+    .sigrow{display:flex;justify-content:space-between;align-items:flex-end;padding:6px 12px 8px;border-top:1px dashed #aaa}
+    .sigsys{font-size:9px;color:#666;font-style:italic}
+    .sigbox{text-align:center;font-size:10px}
+    .sigline{border-top:1px solid #444;margin-top:22px;padding-top:3px;font-weight:700}
+    .erpline{padding:3px 12px;font-size:9px;color:#666;border-top:1px dashed #aaa;text-align:center}
+    @media print{body{padding:0}.receipt{width:100%}@page{size:A5;margin:5mm}}
+  </style></head><body>
+  <div class="receipt">
     <div class="hdr">
       <img src="${logo}" class="hlogo"/>
       <div class="htxt">
-        <div style="font-size:9px;color:#555">Vidya-Niketan Sevabhavi Sanstha's</div>
-        <div class="hname">Late Kalpana Chawala Women's Senior College (LKCWSC)</div>
-        <div class="haddr">Affiliated to SNDT Women's University | Gangakhed, Dist. Parbhani – 431514</div>
-        <div class="haddr">+91 9307162914 | lkcwsc.vnssorg.com</div>
+        <div class="htrust">Vidya-Niketan Sevabhavi Sanstha's</div>
+        <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+        <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
+        <div class="haddr">Gangakhed, Dist. Parbhani – 431514 &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
       </div>
     </div>
-    <div class="copy-line">Fee Receipt (Student Copy)</div>
-    <div class="meta">
-      <span><b>Receipt No.:</b> ${p.receiptNo||'—'}</span>
-      <span><b>Date:</b> ${dateStr}</span>
+    <div class="titlebar">FEE RECEIPT</div>
+    <div class="copyline">Fee Receipt (Student Copy)</div>
+    <div class="metarow">
+      <span><b>Receipt No. :</b> ${p.receiptNo||'—'}</span>
+      <span><b>Date :</b> ${dateStr}</span>
     </div>
-    <div class="info">
-      <div class="irow"><span class="ik">Student Name</span><span>: ${adm?.applicantName||'—'}</span><span style="margin-left:20px"><b>Student UID</b> : ${adm?.studentId||'—'}</span></div>
-      <div class="irow"><span class="ik">Class</span><span>: ${(adm?.courseType||'—')+' '+(adm?.admissionYear||'')}</span><span style="margin-left:20px"><b>Academic Year</b> : ${acadYear}</span></div>
+    <div class="infobox">
+      <table class="info">
+        <tr>
+          <td class="lbl">Student Name</td><td class="val">: ${adm?.applicantName||'—'}</td>
+          <td class="lbl" style="padding-left:16px">Student UID</td><td class="val">: ${adm?.studentId||'—'}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Class</td><td class="val">: ${(adm?.courseType||'—')+' '+(adm?.admissionYear||'')}</td>
+          <td class="lbl" style="padding-left:16px">Academic Year</td><td class="val">: ${acadYear}</td>
+        </tr>
+      </table>
     </div>
-    <table style="margin-top:4px">
+    <table class="fees">
       <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
       <tbody>
         <tr><td>1</td><td>${p.feeTypeLabel||p.feeType||'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
-        <tr class="tot"><td colspan="2" style="text-align:right;padding-right:8px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+        <tr class="totrow"><td colspan="2" style="text-align:right;padding-right:10px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
       </tbody>
     </table>
-    <div class="al">Amt. in words(Rs.): <b>${amtWords}</b></div>
-    <div class="al">Paid by: <b>${p.paymentMode==='online'?'Online':'Cash'}</b> &nbsp; Rs. <b>${amt.toLocaleString('en-IN')}.00</b> &nbsp; Date: <b>${dateStr}</b></div>
-    <div class="al">Narration :</div>
-    <div class="sig">
-      <div class="sl">Signature<br/>(Accounted by : Not Required)<br/><br/>This is system generated receipt and does not require seal/stamp.</div>
-      <div class="sr"><div class="srl">Accounts Section<br/>LKCWSC</div></div>
+    <div class="amtline">Amt. in words (Rs.) : <b>${amtWords}</b></div>
+    <div class="payline">Paid by : <b>${p.paymentMode==='online'?'Online':'Cash'}</b> &nbsp;&nbsp; Rs. <b>${amt.toLocaleString('en-IN')}.00</b> &nbsp;&nbsp; Date : <b>${dateStr}</b></div>
+    <div class="narrline">Narration :</div>
+    <div class="sigrow">
+      <div class="sigsys">This is system generated receipt and does not require seal/stamp.</div>
+      <div class="sigbox"><div class="sigline">Accounts Section<br/>LKCWSC</div></div>
     </div>
-    <div class="erp">ERP Verification No: <b>${p.receiptNo||'—'}</b> | Collected by: <b>${p.collectedBy||'Accounts Section'}</b></div>
+    <div class="erpline">ERP Verification No: <b>${p.receiptNo||'—'}</b> | Collected by: <b>${p.collectedBy||'Accounts Section'}</b></div>
   </div>
   <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
   const w = window.open('','_blank','width=680,height=680');
   w.document.write(html); w.document.close();
 };
+
 
 // ── Document Request Form ────────────────────────────────────────────────────
 const DocRequestForm = ({ myAdmission, onSubmitted }) => {
@@ -97,6 +113,7 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
   const [msSem, setMsSem]       = useState('');
   const [msSession, setMsSession] = useState('');
   const [msYear, setMsYear]     = useState(new Date().getFullYear().toString());
+  const [msAcadYear, setMsAcadYear] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg]           = useState('');
 
@@ -114,9 +131,10 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
         marksheetSemester: docType === 'MARKSHEET' ? msSem : '',
         marksheetSession:  docType === 'MARKSHEET' ? msSession : '',
         marksheetYear:     docType === 'MARKSHEET' ? msYear : '',
+        marksheetAcadYear: docType === 'MARKSHEET' ? msAcadYear : '',
       });
       setMsg('✅ Request submitted successfully!');
-      setDocType(''); setReason(''); setUrgency('normal'); setMsSem(''); setMsSession(''); setMsYear(new Date().getFullYear().toString());
+      setDocType(''); setReason(''); setUrgency('normal'); setMsSem(''); setMsSession(''); setMsYear(new Date().getFullYear().toString()); setMsAcadYear('');
       setTimeout(() => setMsg(''), 3000);
       if (onSubmitted) onSubmitted();
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to submit')); }
@@ -162,7 +180,7 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
       {docType === 'MARKSHEET' && (
         <div style={{ background: '#e3f2fd', borderRadius: 10, padding: 14, marginBottom: 14 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: '#1565C0', marginBottom: 10 }}>📄 Marksheet Details</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Semester *</label>
               <select value={msSem} onChange={e => setMsSem(e.target.value)}
@@ -185,6 +203,14 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
               <select value={msYear} onChange={e => setMsYear(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
                 {[2023,2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Academic Year *</label>
+              <select value={msAcadYear} onChange={e => setMsAcadYear(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                <option value="">— Select —</option>
+                {['2022-23','2023-24','2024-25','2025-26','2026-27'].map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
           </div>
@@ -286,6 +312,7 @@ const StudentDashboard = () => {
     { id: 'examform', label: '📝 Exam Form' },
     { id: 'scholarship', label: '🏅 Scholarship' },
     { id: 'attendance', label: '📊 Attendance' },
+    { id: 'academic_year', label: '📅 Academic Year' },
     { id: 'notices', label: '📢 Notices' },
   ];
 
@@ -1089,6 +1116,54 @@ const StudentDashboard = () => {
                     </div>
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+
+          {/* ============ ACADEMIC YEAR TAB ============ */}
+          {activeTab === 'academic_year' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📅 Academic Year</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Your academic year details and examination schedule.</p>
+              {myAdmission ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
+                    <h4 style={{ color: '#1565C0', marginBottom: 14 }}>🎓 Current Academic Details</h4>
+                    {[
+                      ['Course', (() => { const ct=(myAdmission.courseType||'').toLowerCase(); return ct.includes('b.sc')||ct.includes('bsc')?'Bachelor of Science (B.Sc.)':ct.includes('b.a')||ct.includes('ba')?'Bachelor of Arts (B.A.)':myAdmission.courseType||'—'; })()],
+                      ['Current Year', myAdmission.admissionYear || '—'],
+                      ['Academic Year', (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })()],
+                      ['Student ID', myAdmission.studentId || '—'],
+                      ['PRN Number', myAdmission.prnNumber || 'Not assigned yet'],
+                      ['Admission Year', myAdmission.createdAt ? new Date(myAdmission.createdAt).getFullYear() : '—'],
+                    ].map(([l,v]) => (
+                      <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
+                        <span style={{ color:'#888', fontWeight:600 }}>{l}</span>
+                        <span style={{ color:'#1a1a2e', fontWeight:600 }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
+                    <h4 style={{ color: '#1565C0', marginBottom: 14 }}>📋 Exam Schedule (SNDT Pattern)</h4>
+                    {[
+                      ['Odd Semesters (I, III, V)', 'November – December'],
+                      ['Even Semesters (II, IV, VI)', 'March – April'],
+                      ['Result Declaration', '45-60 days after exam'],
+                      ['Marksheet Collection', 'Student Section after result'],
+                    ].map(([l,v]) => (
+                      <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
+                        <span style={{ color:'#888', fontWeight:600, maxWidth:200 }}>{l}</span>
+                        <span style={{ color:'#1565C0', fontWeight:600 }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop:14, background:'#e3f2fd', borderRadius:9, padding:'10px 14px', fontSize:12, color:'#1565C0' }}>
+                      💡 Current Semester: <strong>{(() => { const yr=myAdmission.admissionYear||''; const m=new Date().getMonth()+1; const odd=m>=6&&m<=12; return yr==='1st Year'?(odd?'Sem I':'Sem II'):yr==='2nd Year'?(odd?'Sem III':'Sem IV'):yr==='3rd Year'?(odd?'Sem V':'Sem VI'):'—'; })()}</strong>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state"><div className="empty-icon">📅</div><h3>No admission data found</h3></div>
               )}
             </div>
           )}
