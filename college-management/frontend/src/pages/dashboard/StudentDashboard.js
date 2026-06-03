@@ -53,9 +53,9 @@ const printStudentReceipt = (p, adm) => {
     <div class="hdr">
       <img src="${logo}" class="hlogo"/>
       <div class="htxt">
-        <div style="font-size:9px;color:#555">VidyaNiketan Sevabhavi Sanstha's Dongargav(.she)</div>
+        <div style="font-size:9px;color:#555">Vidya-Niketan Sevabhavi Sanstha's</div>
         <div class="hname">Late Kalpana Chawala Women's Senior College (LKCWSC)</div>
-        <div class="haddr">Affiliated to SNDT Women's University,Mumbai | Gangakhed, Dist. Parbhani – 431514</div>
+        <div class="haddr">Affiliated to SNDT Women's University | Gangakhed, Dist. Parbhani – 431514</div>
         <div class="haddr">+91 9307162914 | lkcwsc.vnssorg.com</div>
       </div>
     </div>
@@ -79,7 +79,7 @@ const printStudentReceipt = (p, adm) => {
     <div class="al">Paid by: <b>${p.paymentMode==='online'?'Online':'Cash'}</b> &nbsp; Rs. <b>${amt.toLocaleString('en-IN')}.00</b> &nbsp; Date: <b>${dateStr}</b></div>
     <div class="al">Narration :</div>
     <div class="sig">
-      <div class="sl">This is system generated receipt and does not require seal/stamp.</div>
+      <div class="sl">Signature<br/>(Accounted by : Not Required)<br/><br/>This is system generated receipt and does not require seal/stamp.</div>
       <div class="sr"><div class="srl">Accounts Section<br/>LKCWSC</div></div>
     </div>
     <div class="erp">ERP Verification No: <b>${p.receiptNo||'—'}</b> | Collected by: <b>${p.collectedBy||'Accounts Section'}</b></div>
@@ -91,22 +91,32 @@ const printStudentReceipt = (p, adm) => {
 
 // ── Document Request Form ────────────────────────────────────────────────────
 const DocRequestForm = ({ myAdmission, onSubmitted }) => {
-  const [docType, setDocType] = useState('');
-  const [reason, setReason]   = useState('');
-  const [semester, setSemester] = useState('');
-  const [examName, setExamName] = useState('');
-  const [urgency, setUrgency] = useState('normal');
+  const [docType, setDocType]   = useState('');
+  const [reason, setReason]     = useState('');
+  const [urgency, setUrgency]   = useState('normal');
+  const [msSem, setMsSem]       = useState('');
+  const [msSession, setMsSession] = useState('');
+  const [msYear, setMsYear]     = useState(new Date().getFullYear().toString());
   const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg]         = useState('');
+  const [msg, setMsg]           = useState('');
+
+  // Check if TC already issued
+  const tcAlreadyIssued = myAdmission?.tcIssued;
 
   const handleSubmit = async () => {
     if (!docType) { setMsg('❌ Please select document type.'); return; }
+    if (docType === 'TC' && tcAlreadyIssued) { setMsg('❌ TC has already been issued to you. Contact college for re-issue.'); return; }
+    if (docType === 'MARKSHEET' && (!msSem || !msSession || !msYear)) { setMsg('❌ Please select semester, session and year for marksheet.'); return; }
     setSubmitting(true);
     try {
-      const fullReason = docType === 'MARKSHEET' ? `${reason}${semester ? ' | Semester: '+semester : ''}${examName ? ' | Exam: '+examName : ''}` : reason;
-      await API.post('/document-requests', { documentType: docType, reason: fullReason, urgency });
+      await API.post('/document-requests', {
+        documentType: docType, reason, urgency,
+        marksheetSemester: docType === 'MARKSHEET' ? msSem : '',
+        marksheetSession:  docType === 'MARKSHEET' ? msSession : '',
+        marksheetYear:     docType === 'MARKSHEET' ? msYear : '',
+      });
       setMsg('✅ Request submitted successfully!');
-      setDocType(''); setReason(''); setUrgency('normal'); setSemester(''); setExamName('');
+      setDocType(''); setReason(''); setUrgency('normal'); setMsSem(''); setMsSession(''); setMsYear(new Date().getFullYear().toString());
       setTimeout(() => setMsg(''), 3000);
       if (onSubmitted) onSubmitted();
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to submit')); }
@@ -116,14 +126,23 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
   return (
     <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
       <h4 style={{ color: '#1565C0', marginBottom: 16, fontSize: 14 }}>📋 Apply for a Document</h4>
-      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{}</div>}
+
+      {/* TC inactive warning */}
+      {tcAlreadyIssued && (
+        <div style={{ background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 10, padding: '12px 16px', marginBottom: 14, fontSize: 13, color: '#C62828', fontWeight: 600 }}>
+          ⚠️ Your Transfer Certificate has been issued. Your account is marked as <strong>Inactive</strong>. Contact the college for any queries.
+        </div>
+      )}
+
+      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{msg}</div>}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
         <div>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Document Type *</label>
           <select value={docType} onChange={e => setDocType(e.target.value)}
             style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
             <option value="">— Select —</option>
-            <option value="TC">🎓 Transfer Certificate (TC)</option>
+            <option value="TC" disabled={tcAlreadyIssued}>🎓 Transfer Certificate (TC){tcAlreadyIssued?' — Already Issued':''}</option>
             <option value="BONAFIDE">📋 Bonafide Certificate</option>
             <option value="ID_CARD">🪪 ID Card</option>
             <option value="MARKSHEET">📄 Marksheet</option>
@@ -138,51 +157,64 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
           </select>
         </div>
       </div>
+
+      {/* Marksheet extra fields */}
+      {docType === 'MARKSHEET' && (
+        <div style={{ background: '#e3f2fd', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#1565C0', marginBottom: 10 }}>📄 Marksheet Details</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Semester *</label>
+              <select value={msSem} onChange={e => setMsSem(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                <option value="">— Select —</option>
+                {['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Session *</label>
+              <select value={msSession} onChange={e => setMsSession(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                <option value="">— Select —</option>
+                <option value="mar_apr">March / April</option>
+                <option value="nov_dec">November / December</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Year *</label>
+              <select value={msYear} onChange={e => setMsYear(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                {[2023,2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginBottom: 14 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Reason / Purpose</label>
         <input type="text" placeholder="e.g. For job application, higher studies..." value={reason} onChange={e => setReason(e.target.value)}
           style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
       </div>
-      {docType === 'MARKSHEET' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Semester *</label>
-            <select value={semester} onChange={e => setSemester(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
-              <option value="">— Select Semester —</option>
-              <option value="Semester I">Semester I</option>
-              <option value="Semester II">Semester II</option>
-              <option value="Semester III">Semester III</option>
-              <option value="Semester IV">Semester IV</option>
-              <option value="Semester V">Semester V</option>
-              <option value="Semester VI">Semester VI</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Examination Name *</label>
-            <input type="text" placeholder="e.g. Winter 2024, Summer 2025..."
-              value={examName} onChange={e => setExamName(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
-          </div>
+
+      {/* Workflow info */}
+      {docType && (
+        <div style={{ marginBottom: 14, background: '#f8faff', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#555' }}>
+          {docType==='TC' && '📋 Workflow: You → Accounts (fee) → Exam Section (result verify) → Principal → Student Section (print)'}
+          {docType==='BONAFIDE' && '📋 Workflow: You → Accounts (fee) → Student Section (print)'}
+          {docType==='ID_CARD' && '📋 Workflow: You → Accounts (fee) → Student Section (issue)'}
+          {docType==='MARKSHEET' && '📋 Workflow: You → Exam Section (process) → Student Section (issue)'}
         </div>
       )}
-      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{msg}</div>}
-      <button onClick={handleSubmit} disabled={submitting}
-        style={{ background: submitting?'#aaa':'#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
+
+      <button onClick={handleSubmit} disabled={submitting || (docType==='TC' && tcAlreadyIssued)}
+        style={{ background: submitting||(!docType)||(docType==='TC'&&tcAlreadyIssued)?'#aaa':'#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
         {submitting ? '⏳ Submitting...' : '📤 Submit Request'}
       </button>
-
-      {docType && (
-        <div style={{ marginTop: 12, background: '#f8faff', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#555' }}>
-          {docType==='TC' && '📋 TC Workflow: You → Accounts (fee) → Exam Section (result) → Principal → Student Section (print)'}
-          {docType==='BONAFIDE' && '📋 Bonafide Workflow: You → Accounts (fee) → Student Section (print)'}
-          {docType==='ID_CARD' && '📋 ID Card Workflow: You → Accounts (fee) → Student Section (issue)'}
-          {docType==='MARKSHEET' && '📋 Marksheet Workflow: You → Exam Section → Student Section (issue)'}
-        </div>
-      )}
     </div>
   );
 };
+
 
 // ─── Yearly fee structure for student view ───────────────────────────────────
 const OFFICIAL_FEES_YEARLY = {
