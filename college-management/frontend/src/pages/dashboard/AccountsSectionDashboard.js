@@ -179,7 +179,7 @@ const DEFAULT_DOC_FEES = {
 };
 
 const FEE_TYPES = [
-  { key: 'admission',    label: '🎓 Admission Fee' },
+  { key: 'admission',    label: '💰 Collect Fees' },
   { key: 'exam',         label: '📝 Exam Fee' },
   { key: 'tc',           label: '📄 TC Fee' },
   { key: 'bonafide',     label: '📋 Bonafide Fee' },
@@ -835,7 +835,7 @@ const AccountsSectionDashboard = () => {
   const tabs = [
     { id: 'home',       label: '🏠 Dashboard' },
     { id: 'doc_req',    label: '📄 Document Requests', badge: pendingDocCount },
-    { id: 'adm_fees',   label: '🎓 Admission Fees', badge: unpaidAdmCount },
+    { id: 'adm_fees',   label: '💰 Collect Fees', badge: unpaidAdmCount },
     { id: 'fee_struct', label: '💼 Fee Structure' },
     { id: 'expenses',   label: '🏗️ College Expenses' },
     { id: 'history',    label: '🧾 Payment History' },
@@ -930,7 +930,7 @@ const AccountsSectionDashboard = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
                 {[
                   { label: '📄 Document Requests', sub: 'Collect fees, approve/reject', tab: 'doc_req', tag: 'Active' },
-                  { label: '🎓 Admission Fees', sub: 'Collect admission & other fees', tab: 'adm_fees', tag: 'Important' },
+                  { label: '💰 Collect Fees', sub: 'Collect admission & other fees', tab: 'adm_fees', tag: 'Important' },
                   { label: '💼 Fee Structure', sub: 'Edit document fee amounts', tab: 'fee_struct', tag: 'Settings' },
                   { label: '🏗️ Expenses', sub: 'Record college expenditures', tab: 'expenses', tag: 'Tracking' },
                   { label: '🧾 Payment History', sub: 'View all collected receipts', tab: 'history', tag: 'Records' },
@@ -1369,177 +1369,161 @@ const AccountsSectionDashboard = () => {
       {/* ════════════ ADMISSION FEE MODAL ════════════ */}
       {/* ════════════════════════ ADMISSION FEE MODAL ════════════════════════ */}
       {selectedAdm && (() => {
-        const SEM_LABELS = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
         const ct = (selectedAdm.courseType||'').toLowerCase();
         const ck = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.'
           : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
         const course = ck ? DETAILED_FEES[ck] : null;
-        const yearSems = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
-        const semIndices = yearSems[selectedAdm.admissionYear||'1st Year'] || [0,1];
-        const curSi = SEM_LABELS.indexOf(admSelectedSem);
+        const admYear = selectedAdm.admissionYear || '1st Year';
+        // Yearly items — all sems for this year combined (unique items, max amount)
+        const yearSemIdx = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
+        const semIdxs = yearSemIdx[admYear] || [0,1];
         const schol = Number(admScholarshipAmt||0);
 
-        const calcTotal = (map, semI) => {
-          if (!course || semI < 0) return 0;
-          return course.items.reduce((s,i) => s + (map[i.id] ? (i.s[semI]||0) : 0), 0);
-        };
+        // Build yearly item list — combine both sems, sum amounts
+        const yearItems = course ? course.items.map(item => {
+          const amt = (item.s[semIdxs[0]]||0) + (item.s[semIdxs[1]]||0);
+          return { ...item, yearAmt: amt };
+        }).filter(item => item.yearAmt > 0) : [];
 
-        const doAutoSelect = (semI) => {
-          if (!course) return;
-          const m = {};
-          course.items.forEach(i => { if ((i.s[semI]||0) > 0) m[i.id] = true; });
-          setSelectedFeeItems(m);
-          const tot = calcTotal(m, semI);
-          setAdmFeeAmt(String(Math.max(0, tot - schol)));
-          setAdmSelectedSem(SEM_LABELS[semI]);
-        };
+        const yearTotal = yearItems.reduce((s,i) => s + i.yearAmt, 0);
 
-        const toggleItem = (itemId) => {
-          const m = { ...selectedFeeItems, [itemId]: !selectedFeeItems[itemId] };
-          setSelectedFeeItems(m);
-          const tot = calcTotal(m, curSi);
-          setAdmFeeAmt(String(Math.max(0, tot - schol)));
-        };
+        const calcSelected = (map) =>
+          yearItems.reduce((s,i) => s + (map[i.id] ? i.yearAmt : 0), 0);
 
         const selectAll = () => {
-          if (!course || curSi < 0) return;
           const m = {};
-          course.items.forEach(i => { if ((i.s[curSi]||0) > 0) m[i.id] = true; });
+          yearItems.forEach(i => { m[i.id] = true; });
           setSelectedFeeItems(m);
-          const tot = calcTotal(m, curSi);
-          setAdmFeeAmt(String(Math.max(0, tot - schol)));
+          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol)));
         };
 
         const clearAll = () => { setSelectedFeeItems({}); setAdmFeeAmt('0'); };
 
-        const selGross  = calcTotal(selectedFeeItems, curSi);
-        const netPayable = Math.max(0, selGross - schol);
-        const amtPaid   = Number(admFeeAmt||0);
-        const balance   = Math.max(0, netPayable - amtPaid);
+        const toggleItem = (id) => {
+          const m = { ...selectedFeeItems, [id]: !selectedFeeItems[id] };
+          setSelectedFeeItems(m);
+          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol)));
+        };
 
-        const uItems = course && curSi >= 0 ? course.items.filter(i => i.section==='University' && (i.s[curSi]||0)>0) : [];
-        const cItems = course && curSi >= 0 ? course.items.filter(i => i.section==='College'    && (i.s[curSi]||0)>0) : [];
+        const selGross   = calcSelected(selectedFeeItems);
+        const netPayable = Math.max(0, selGross - schol);
+        const amtPaid    = Number(admFeeAmt||0);
+        const balance    = Math.max(0, netPayable - amtPaid);
+
+        const uItems = yearItems.filter(i => i.section === 'University');
+        const cItems = yearItems.filter(i => i.section === 'College');
 
         return (
-          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-            onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); }}>
-            <div style={{ background:'#fff', borderRadius:16, padding:24, maxWidth:600, width:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+            onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); }}>
+            <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:620, width:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}
               onClick={e => e.stopPropagation()}>
 
-              <h2 style={{ color:'#1565C0', marginBottom:4 }}>💰 Collect Fees</h2>
-              <p style={{ color:'#666', fontSize:13, marginBottom:16 }}>{selectedAdm.applicantName} — {selectedAdm.courseType} {selectedAdm.admissionYear}</p>
+              {/* Header */}
+              <h2 style={{ color:'#1565C0', marginBottom:2 }}>💰 Fee Collection</h2>
+              <p style={{ color:'#666', fontSize:13, marginBottom:16 }}>{selectedAdm.applicantName} — {selectedAdm.courseType} · {admYear} · ID: {selectedAdm.studentId||'—'}</p>
 
-              {/* Step 1 — Semester */}
-              <div style={{ marginBottom:16 }}>
-                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#1565C0', marginBottom:8 }}>1. Semester Select Karo *</label>
-                <div style={{ display:'flex', gap:8 }}>
-                  {semIndices.map(semI => (
-                    <button key={semI} onClick={() => doAutoSelect(semI)}
-                      style={{ flex:1, padding:'10px 8px', borderRadius:9, border:`2px solid ${admSelectedSem===SEM_LABELS[semI]?'#1565C0':'#ddd'}`, background:admSelectedSem===SEM_LABELS[semI]?'#1565C0':'#fff', color:admSelectedSem===SEM_LABELS[semI]?'#fff':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                      {SEM_LABELS[semI]}<br/>
-                      <span style={{ fontSize:11, fontWeight:400 }}>₹{course ? course.items.reduce((s,i)=>s+(i.s[semI]||0),0).toLocaleString('en-IN') : '—'}</span>
-                    </button>
-                  ))}
-                </div>
+              {/* Year total info */}
+              <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Annual Fee ({admYear})</span>
+                <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{yearTotal.toLocaleString('en-IN')}</span>
               </div>
 
-              {/* Step 2 — Fee items */}
-              {admSelectedSem && (
-                <div style={{ marginBottom:16 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                    <label style={{ fontSize:12, fontWeight:700, color:'#1565C0' }}>2. Fees Select Karo *</label>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <button onClick={selectAll}
-                        style={{ fontSize:11, padding:'4px 12px', background:'#1565C0', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontWeight:700 }}>✅ Sabhi</button>
-                      <button onClick={clearAll}
-                        style={{ fontSize:11, padding:'4px 12px', background:'#ffebee', color:'#C62828', border:'none', borderRadius:6, cursor:'pointer', fontWeight:700 }}>❌ Clear</button>
-                    </div>
+              {/* Step 1 — Select fee items */}
+              <div style={{ marginBottom:16 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <label style={{ fontSize:13, fontWeight:700, color:'#1565C0' }}>Select Fee Items</label>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={selectAll}
+                      style={{ padding:'5px 14px', background:'#1565C0', color:'#fff', border:'none', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☑ Select All</button>
+                    <button onClick={clearAll}
+                      style={{ padding:'5px 14px', background:'#f5f5f5', color:'#555', border:'1px solid #ddd', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☐ Clear</button>
                   </div>
+                </div>
 
-                  {!course ? (
-                    <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ Course detect nahi hua — manually amount daalo</div>
-                  ) : (uItems.length === 0 && cItems.length === 0) ? (
-                    <div style={{ background:'#f5f5f5', padding:'10px', borderRadius:8, fontSize:13, color:'#888' }}>Is semester mein koi fees nahi hain.</div>
-                  ) : (
-                    <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:250, overflowY:'auto' }}>
-                      {uItems.length > 0 && <>
-                        <div style={{ background:'#e8eaf6', padding:'5px 12px', fontSize:11, fontWeight:800, color:'#1a237e' }}>🏛️ University Fees (A)</div>
-                        {uItems.map(item => (
-                          <div key={item.id} onClick={() => toggleItem(item.id)}
-                            style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 12px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'#fff', userSelect:'none' }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                              <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15 }}/>
-                              <span style={{ fontSize:13, color:selectedFeeItems[item.id]?'#1a237e':'#333' }}>{item.name}</span>
-                            </div>
-                            <span style={{ fontSize:13, fontWeight:700, color:'#1565C0', flexShrink:0 }}>₹{(item.s[curSi]||0).toLocaleString('en-IN')}</span>
+                {!course ? (
+                  <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ Course not detected. Enter amount manually below.</div>
+                ) : (
+                  <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:260, overflowY:'auto' }}>
+                    {uItems.length > 0 && <>
+                      <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e', letterSpacing:0.5 }}>UNIVERSITY FEES (A)</div>
+                      {uItems.map((item,idx) => (
+                        <div key={item.id} onClick={() => toggleItem(item.id)}
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'idx%2===0?#fafbff:#fff', userSelect:'none' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
+                            <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
                           </div>
-                        ))}
-                      </>}
-                      {cItems.length > 0 && <>
-                        <div style={{ background:'#e8f5e9', padding:'5px 12px', fontSize:11, fontWeight:800, color:'#1b5e20' }}>🏫 College Fees (B)</div>
-                        {cItems.map(item => (
-                          <div key={item.id} onClick={() => toggleItem(item.id)}
-                            style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 12px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#f0fff4':'#fff', userSelect:'none' }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                              <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15 }}/>
-                              <span style={{ fontSize:13, color:selectedFeeItems[item.id]?'#1b5e20':'#333' }}>{item.name}</span>
-                            </div>
-                            <span style={{ fontSize:13, fontWeight:700, color:'#2E7D32', flexShrink:0 }}>₹{(item.s[curSi]||0).toLocaleString('en-IN')}</span>
+                          <span style={{ fontSize:13, fontWeight:700, color:'#1565C0', flexShrink:0 }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </>}
+                    {cItems.length > 0 && <>
+                      <div style={{ background:'#e8f5e9', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1b5e20', letterSpacing:0.5 }}>COLLEGE FEES (B)</div>
+                      {cItems.map((item,idx) => (
+                        <div key={item.id} onClick={() => toggleItem(item.id)}
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#f0fff4':'#fff', userSelect:'none' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
+                            <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
                           </div>
-                        ))}
-                      </>}
-                    </div>
-                  )}
+                          <span style={{ fontSize:13, fontWeight:700, color:'#2E7D32', flexShrink:0 }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </>}
+                  </div>
+                )}
 
-                  {/* Summary box */}
-                  <div style={{ background:'#e3f2fd', borderRadius:10, padding:'12px 14px', marginTop:10 }}>
+                {/* Fee summary */}
+                {selGross > 0 && (
+                  <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 16px', marginTop:10 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4 }}>
-                      <span style={{ color:'#555' }}>Selected Total:</span>
+                      <span style={{ color:'#555' }}>Selected Total</span>
                       <span style={{ fontWeight:700 }}>₹{selGross.toLocaleString('en-IN')}</span>
                     </div>
                     {schol > 0 && (
                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#7B1FA2', marginBottom:4 }}>
-                        <span>− Scholarship:</span>
-                        <span style={{ fontWeight:700 }}>−₹{schol.toLocaleString('en-IN')}</span>
+                        <span>Scholarship Deduction</span>
+                        <span style={{ fontWeight:700 }}>− ₹{schol.toLocaleString('en-IN')}</span>
                       </div>
                     )}
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'1px solid #90CAF9', paddingTop:8, marginTop:4 }}>
-                      <span style={{ color:'#1565C0' }}>Net Payable:</span>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'2px solid #e0e7ef', paddingTop:8, marginTop:6 }}>
+                      <span style={{ color:'#1565C0' }}>Net Payable</span>
                       <span style={{ color:'#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Step 3 — Amount + Balance */}
+              {/* Step 2 — Amount */}
               <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>3. Student Ne Kitna Diya (₹) *</label>
-                <input type="number" placeholder="Amount enter karo" value={admFeeAmt}
+                <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Amount Collected (₹) *</label>
+                <input type="number" placeholder="Enter amount" value={admFeeAmt}
                   onChange={e => setAdmFeeAmt(e.target.value)} min="0"
-                  style={{ width:'100%', padding:'12px 14px', borderRadius:9, border:'2px solid #1565C0', fontSize:16, fontWeight:700, textAlign:'center', boxSizing:'border-box', outline:'none' }} />
-                {admFeeAmt && Number(admFeeAmt) > 0 && netPayable > 0 && (
-                  <div style={{ display:'flex', gap:10, marginTop:8 }}>
-                    <div style={{ flex:1, background:'#e8f5e9', borderRadius:8, padding:'8px 12px', textAlign:'center' }}>
-                      <div style={{ fontSize:11, color:'#2E7D32', fontWeight:600 }}>Paid</div>
-                      <div style={{ fontSize:15, fontWeight:800, color:'#2E7D32' }}>₹{amtPaid.toLocaleString('en-IN')}</div>
+                  style={{ width:'100%', padding:'13px 16px', borderRadius:10, border:'2px solid #1565C0', fontSize:18, fontWeight:700, textAlign:'center', boxSizing:'border-box', outline:'none' }} />
+                {admFeeAmt && Number(admFeeAmt) > 0 && (
+                  <div style={{ display:'flex', gap:10, marginTop:10 }}>
+                    <div style={{ flex:1, background:'#e8f5e9', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
+                      <div style={{ fontSize:11, color:'#2E7D32', fontWeight:600, marginBottom:2 }}>AMOUNT PAID</div>
+                      <div style={{ fontSize:16, fontWeight:800, color:'#1b5e20' }}>₹{amtPaid.toLocaleString('en-IN')}</div>
                     </div>
-                    <div style={{ flex:1, background: balance > 0 ? '#ffebee' : '#e8f5e9', borderRadius:8, padding:'8px 12px', textAlign:'center' }}>
-                      <div style={{ fontSize:11, color: balance > 0 ? '#C62828' : '#2E7D32', fontWeight:600 }}>Balance</div>
-                      <div style={{ fontSize:15, fontWeight:800, color: balance > 0 ? '#C62828' : '#2E7D32' }}>
-                        {balance > 0 ? `₹${balance.toLocaleString('en-IN')} baaki` : '✅ Full Paid'}
+                    <div style={{ flex:1, background: balance > 0 ? '#fff3e0' : '#e8f5e9', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
+                      <div style={{ fontSize:11, color: balance > 0 ? '#E65100' : '#2E7D32', fontWeight:600, marginBottom:2 }}>BALANCE DUE</div>
+                      <div style={{ fontSize:16, fontWeight:800, color: balance > 0 ? '#E65100' : '#1b5e20' }}>
+                        {balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : '✅ Fully Paid'}
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Step 4 — Payment Mode */}
-              <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:8 }}>4. Payment Mode *</label>
+              {/* Step 3 — Payment Mode */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Payment Mode *</label>
                 <div style={{ display:'flex', gap:10 }}>
-                  {[{k:'cash',l:'💵 Cash'},{k:'online',l:'🌐 Online/UPI'}].map(m => (
+                  {[{k:'cash',l:'💵 Cash'},{k:'online',l:'🌐 Online / UPI'}].map(m => (
                     <button key={m.k} onClick={() => setAdmPayMode(m.k)}
-                      style={{ flex:1, padding:'10px', borderRadius:9, border:`2px solid ${admPayMode===m.k?'#1565C0':'#ddd'}`, background:admPayMode===m.k?'#1565C0':'#fff', color:admPayMode===m.k?'#fff':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                      style={{ flex:1, padding:'11px', borderRadius:9, border:`2px solid ${admPayMode===m.k?'#1565C0':'#ddd'}`, background:admPayMode===m.k?'#1565C0':'#fff', color:admPayMode===m.k?'#fff':'#555', fontWeight:700, fontSize:14, cursor:'pointer' }}>
                       {m.l}
                     </button>
                   ))}
@@ -1548,20 +1532,20 @@ const AccountsSectionDashboard = () => {
 
               {admPayMode === 'online' && (
                 <div style={{ marginBottom:14 }}>
-                  <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Transaction ID *</label>
-                  <input type="text" placeholder="UPI/Transaction ID" value={admTxnId} onChange={e => setAdmTxnId(e.target.value)}
-                    style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'2px solid #1565C0', fontSize:14, boxSizing:'border-box' }} />
+                  <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:6 }}>Transaction ID *</label>
+                  <input type="text" placeholder="UPI / Transaction Reference ID" value={admTxnId} onChange={e => setAdmTxnId(e.target.value)}
+                    style={{ width:'100%', padding:'10px 14px', borderRadius:9, border:'2px solid #1565C0', fontSize:14, boxSizing:'border-box' }} />
                 </div>
               )}
 
               {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
 
               <button onClick={handleAdmFeeCollect} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
-                style={{ width:'100%', background:admLoading2||!admFeeAmt||Number(admFeeAmt)<=0?'#aaa':'#1565C0', color:'#fff', padding:14, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:admLoading2||!admFeeAmt?'not-allowed':'pointer' }}>
-                {admLoading2 ? '⏳ Processing...' : '🖨️ Collect & Generate Receipt'}
+                style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
+                {admLoading2 ? '⏳ Processing...' : '🖨️ Collect & Print Receipt'}
               </button>
               <button onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); }}
-                style={{ width:'100%', marginTop:10, background:'#f3f4f6', color:'#555', padding:12, borderRadius:10, border:'none', fontSize:14, cursor:'pointer' }}>
+                style={{ width:'100%', background:'#f3f4f6', color:'#555', padding:12, borderRadius:10, border:'none', fontSize:14, cursor:'pointer' }}>
                 Cancel
               </button>
             </div>
