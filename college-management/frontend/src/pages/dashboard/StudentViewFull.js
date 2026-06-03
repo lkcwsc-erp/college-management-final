@@ -301,16 +301,17 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                   <h4 style={{ color:'#2E7D32', marginBottom:14, fontSize:14 }}>🔑 Login Credentials</h4>
                   {[
                     ['Email (Username)', selected.email],
-                    ['Student ID',       selected.studentId],
-                    ['PRN (if set)',      selected.prnNumber||'Not set yet'],
+                    ['Password',         selected.plainPassword || selected.tempPassword || '(set during generation)'],
+                    ['Student ID',       selected.studentId || 'Not assigned yet'],
+                    ['PRN (if set)',      selected.prnNumber || 'Not set yet'],
                   ].map(([l,v])=>(
-                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #c8e6c9', fontSize:13 }}>
+                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #c8e6c9', fontSize:13 }}>
                       <span style={{ color:'#555', fontWeight:600, minWidth:140 }}>{l}</span>
-                      <span style={{ color:'#1b5e20', fontWeight:700, fontFamily:'monospace' }}>{v}</span>
+                      <span style={{ color:'#1b5e20', fontWeight:700, fontFamily:'monospace', background: l==='Password'?'#fff3e0':'transparent', padding: l==='Password'?'2px 8px':'0', borderRadius: l==='Password'?6:0 }}>{v}</span>
                     </div>
                   ))}
                   <div style={{ marginTop:10, background:'#fff', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#888' }}>
-                    💡 Student logs in with their email. Password was set during credential generation.
+                    💡 Student logs in with their email and password above.
                   </div>
                 </div>
               )}
