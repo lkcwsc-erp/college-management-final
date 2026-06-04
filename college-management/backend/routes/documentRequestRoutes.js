@@ -163,12 +163,18 @@ router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin'), 
     if (request.status !== 'pending_exam')
       return res.status(400).json({ success: false, message: 'Not pending in Exam Section' });
 
-    const isTC = request.documentType === 'TC';
-    request.status           = isTC ? 'pending_principal' : 'pending_generation';
+    const isTC       = request.documentType === 'TC';
+    const isMarksheet = request.documentType === 'MARKSHEET';
+    // TC → Principal, Marksheet → completed directly, others → pending_generation
+    request.status           = isTC ? 'pending_principal' : isMarksheet ? 'completed' : 'pending_generation';
     request.examVerifiedBy   = req.user.name || req.user.email;
     request.examVerifiedDate = new Date();
     request.examNotes        = notes || '';
     request.examResultStatus = resultStatus || '';
+    if (isMarksheet) {
+      request.generatedBy   = req.user.name || req.user.email;
+      request.generatedDate = new Date();
+    }
     await request.save();
 
     res.json({
