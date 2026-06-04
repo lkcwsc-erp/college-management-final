@@ -217,6 +217,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                 { key:'mahaDBTUsername',   label:'MahaDBT Username',        type:'text' },
                 { key:'mahaDBTPassword',   label:'MahaDBT Password',        type:'text' },
                 { key:'mahaDBTAppNo',      label:'MahaDBT App No.',         type:'text' },
+                { key:'mahaDBTMobile',     label:'MahaDBT Mobile No.',      type:'text' },
                 { key:'scholarshipNote',   label:'Notes',                   type:'text' },
               ].map(f => (
                 <div key={f.key}>
@@ -346,6 +347,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                     ['Amount',          selected.scholarshipAmount>0?`₹${Number(selected.scholarshipAmount).toLocaleString('en-IN')}`:'—'],
                     ['MahaDBT Username',selected.mahaDBTUsername],
                     ['MahaDBT App No.', selected.mahaDBTAppNo],
+                    ['MahaDBT Mobile',   selected.mahaDBTMobile],
                     ['Note',            selected.scholarshipNote],
                   ].map(([l,v])=>(
                     <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
