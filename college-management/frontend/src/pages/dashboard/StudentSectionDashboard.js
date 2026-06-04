@@ -3,351 +3,380 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
-import StudentViewFull from './StudentViewFull';
 
-// ─── Admission Detail Modal ───────────────────────────────────────────────────
-const AdmissionModal = ({ adm, onClose, onRefresh }) => {
-  const [notes, setNotes] = useState('');
-  const [rejectReason, setRejectReason] = useState('');
-  const [showReject, setShowReject] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState('');
+// Official fee structure 2025-26
 
-  const handleApprove = async () => {
-    setLoading(true); setMsg('');
-    try {
-      await API.put(`/admissions/staff-approve/${adm._id}`, { notes });
-      setMsg('✅ Approved! Forwarded to Principal.');
-      setTimeout(() => { onClose(); onRefresh(); }, 1500);
-    } catch (err) { setMsg('❌ ' + (err.response?.data?.message || 'Approval failed.')); }
-    setLoading(false);
-  };
 
-  const handleReject = async () => {
-    if (!rejectReason.trim()) { setMsg('❌ Please enter rejection reason.'); return; }
-    setLoading(true); setMsg('');
-    try {
-      await API.put(`/admissions/staff-reject/${adm._id}`, { reason: rejectReason });
-      setMsg('✅ Application rejected.');
-      setTimeout(() => { onClose(); onRefresh(); }, 1500);
-    } catch (err) { setMsg('❌ ' + (err.response?.data?.message || 'Rejection failed.')); }
-    setLoading(false);
-  };
+// ── Print receipt for student ────────────────────────────────────────────────
+const printStudentReceipt = (p, adm) => {
+  const logo = "data:image/jpeg;base64,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";
+  const acadYear = (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })();
+  const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  const amt = p.amount || 0;
+  const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const inW=(n)=>{if(n===0)return'';if(n<20)return a[n]+' ';if(n<100)return b[Math.floor(n/10)]+' '+(n%10?a[n%10]+' ':'');if(n<1000)return a[Math.floor(n/100)]+'Hundred '+(n%100?inW(n%100):'');return a[Math.floor(n/1000)]+'Thousand '+(n%1000?inW(n%1000):'');};
+  const amtWords = inW(amt).trim() + ' Only';
 
-  const Field = ({ label, value }) => (
-    <div style={{ display: 'flex', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-      <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', color: '#888', fontWeight: '600' }}>{label}</span>
-      <span style={{ fontSize: '13px', color: '#333' }}>{value || '—'}</span>
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#fff;padding:10px;font-size:12px}
+    .receipt{width:160mm;border:1px solid #999;margin:0 auto}
+    .hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1.5px solid #000}
+    .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+    .htxt{flex:1;text-align:center}
+    .htrust{font-size:8.5px;color:#555}
+    .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3;margin:2px 0}
+    .haddr{font-size:8.5px;color:#444;margin-top:1px}
+    .titlebar{text-align:center;padding:5px;border-bottom:1px solid #999;font-size:13px;font-weight:900;letter-spacing:2px;background:#f5f5f5}
+    .copyline{padding:4px 12px;font-size:10px;border-bottom:1px dashed #aaa}
+    .metarow{display:flex;justify-content:space-between;padding:4px 12px;font-size:11px;border-bottom:1px dashed #aaa}
+    .infobox{padding:4px 12px;border-bottom:1px dashed #aaa}
+    table.info{width:100%;border-collapse:collapse;font-size:11px}
+    table.info td{padding:2px 4px}
+    .lbl{font-weight:700;color:#444;width:95px}
+    .val{font-weight:600;color:#000}
+    table.fees{width:100%;border-collapse:collapse;margin-top:4px}
+    table.fees thead tr{background:#ddd}
+    table.fees th{padding:5px 8px;font-size:11px;font-weight:700;text-align:left;border:1px solid #aaa}
+    table.fees th:last-child{text-align:right}
+    table.fees td{padding:5px 8px;font-size:11px;border:1px solid #ccc}
+    table.fees td:first-child{text-align:center;width:32px}
+    table.fees td:last-child{text-align:right}
+    .totrow td{font-weight:800;font-size:12px;background:#f0f0f0;border-top:2px solid #555}
+    .amtline{padding:5px 12px;font-size:11px;border-top:1px dashed #aaa}
+    .payline{padding:4px 12px;font-size:11px}
+    .narrline{padding:4px 12px 6px;font-size:11px;border-top:1px dashed #aaa}
+    .sigrow{display:flex;justify-content:space-between;align-items:flex-end;padding:6px 12px 8px;border-top:1px dashed #aaa}
+    .sigsys{font-size:9px;color:#666;font-style:italic}
+    .sigbox{text-align:center;font-size:10px}
+    .sigline{border-top:1px solid #444;margin-top:22px;padding-top:3px;font-weight:700}
+    .erpline{padding:3px 12px;font-size:9px;color:#666;border-top:1px dashed #aaa;text-align:center}
+    @media print{body{padding:0}.receipt{width:100%}@page{size:A5;margin:5mm}}
+  </style></head><body>
+  <div class="receipt">
+    <div class="hdr">
+      <img src="${logo}" class="hlogo"/>
+      <div class="htxt">
+        <div class="htrust" style="font-weight:700">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+        <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
+        <div class="haddr">Gangakhed, Dist. Parbhani – 431514 &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
+      </div>
     </div>
-  );
-
-  const Section = ({ title, children }) => (
-    <div style={{ marginBottom: '20px' }}>
-      <h4 style={{ color: '#1565C0', borderBottom: '2px solid #e3f2fd', paddingBottom: '6px', marginBottom: '10px' }}>{title}</h4>
-      {children}
+    <div class="titlebar">FEE RECEIPT</div>
+    <div class="copyline">Fee Receipt (Student Copy)</div>
+    <div class="metarow">
+      <span><b>Receipt No. :</b> ${p.receiptNo||'—'}</span>
+      <span><b>Date :</b> ${dateStr}</span>
     </div>
-  );
+    <div class="infobox">
+      <table class="info">
+        <tr>
+          <td class="lbl">Student Name</td><td class="val">: ${adm?.applicantName||'—'}</td>
+          <td class="lbl" style="padding-left:16px">Student UID</td><td class="val">: ${adm?.studentId||'—'}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Course</td><td class="val">: ${(()=>{const ct=(adm?.courseType||'').toLowerCase();return ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')?'Bachelor of Science (B.Sc.)':ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')?'Bachelor of Arts (B.A.)':adm?.courseType||'—';})()} </td>
+          <td class="lbl" style="padding-left:16px">Academic Year</td><td class="val">: ${acadYear}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Class</td><td class="val">: ${adm?.admissionYear||'—'}</td>
+          <td class="lbl" style="padding-left:16px">Fee Type</td><td class="val">: ${p.feeTypeLabel||p.feeType||'—'}</td>
+        </tr>
+      </table>
+    </div>
+    <table class="fees">
+      <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>${p.feeTypeLabel||p.feeType||'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+        <tr class="totrow"><td colspan="2" style="text-align:right;padding-right:10px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+      </tbody>
+    </table>
+    <div class="amtline">Amt. in words (Rs.) : <b>${amtWords}</b></div>
+    <div class="payline">Paid by : <b>${p.paymentMode==='online'?'Online':'Cash'}</b> &nbsp;&nbsp; Rs. <b>${amt.toLocaleString('en-IN')}.00</b> &nbsp;&nbsp; Date : <b>${dateStr}</b></div>
+    <div class="narrline">Narration :</div>
+    <div class="sigrow">
+      <div class="sigsys">This is system generated receipt and does not require seal/stamp.</div>
+      <div class="sigbox"><div class="sigline">Accounts Section<br/>LKCWSC</div></div>
+    </div>
+  </div>
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=680,height=680');
+  w.document.write(html); w.document.close();
+};
+
+
+// ── Document Request Form ────────────────────────────────────────────────────
+const DocRequestForm = ({ myAdmission, onSubmitted }) => {
+  const [docType, setDocType]   = useState('');
+  const [reason, setReason]     = useState('');
+  const [urgency, setUrgency]   = useState('normal');
+  const [msSem, setMsSem]       = useState('');
+  const [msSession, setMsSession] = useState('');
+  const [msYear, setMsYear]     = useState(new Date().getFullYear().toString());
+  const [msAcadYear, setMsAcadYear] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg]           = useState('');
+
+  // Check if TC already issued
+  const tcAlreadyIssued = myAdmission?.tcIssued;
+
+  const handleSubmit = async () => {
+    if (!docType) { setMsg('❌ Please select document type.'); return; }
+    if (docType === 'TC' && tcAlreadyIssued) { setMsg('❌ TC has already been issued to you. Contact college for re-issue.'); return; }
+    if (docType === 'MARKSHEET' && (!msSem || !msSession || !msYear)) { setMsg('❌ Please select semester, session and year for marksheet.'); return; }
+    setSubmitting(true);
+    try {
+      await API.post('/document-requests', {
+        documentType: docType, reason, urgency,
+        marksheetSemester: docType === 'MARKSHEET' ? msSem : '',
+        marksheetSession:  docType === 'MARKSHEET' ? msSession : '',
+        marksheetYear:     docType === 'MARKSHEET' ? msYear : '',
+        marksheetAcadYear: docType === 'MARKSHEET' ? msAcadYear : '',
+      });
+      setMsg('✅ Request submitted successfully!');
+      setDocType(''); setReason(''); setUrgency('normal'); setMsSem(''); setMsSession(''); setMsYear(new Date().getFullYear().toString()); setMsAcadYear('');
+      setTimeout(() => setMsg(''), 3000);
+      if (onSubmitted) onSubmitted();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to submit')); }
+    finally { setSubmitting(false); }
+  };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ color: '#1565C0', margin: 0 }}>📋 Admission Form Details</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#555' }}>✕</button>
+    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+      <h4 style={{ color: '#1565C0', marginBottom: 16, fontSize: 14 }}>📋 Apply for a Document</h4>
+
+      {/* TC inactive warning */}
+      {tcAlreadyIssued && (
+        <div style={{ background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 10, padding: '12px 16px', marginBottom: 14, fontSize: 13, color: '#C62828', fontWeight: 600 }}>
+          ⚠️ Your Transfer Certificate has been issued. Your account is marked as <strong>Inactive</strong>. Contact the college for any queries.
         </div>
-        <div style={{ background: '#fff3e0', color: '#E65100', padding: '8px 16px', borderRadius: '20px', display: 'inline-block', fontSize: '13px', fontWeight: '600', marginBottom: '20px', borderLeft: '4px solid #E65100' }}>
-          ⏳ Pending Verification
+      )}
+
+      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{msg}</div>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Document Type *</label>
+          <select value={docType} onChange={e => setDocType(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+            <option value="">— Select —</option>
+            <option value="TC" disabled={tcAlreadyIssued}>🎓 Transfer Certificate (TC){tcAlreadyIssued?' — Already Issued':''}</option>
+            <option value="BONAFIDE">📋 Bonafide Certificate</option>
+            <option value="ID_CARD">🪪 ID Card</option>
+            <option value="MARKSHEET">📄 Marksheet</option>
+          </select>
         </div>
-
-        <Section title="👤 Personal Information">
-          <Field label="Full Name" value={adm.applicantName} />
-          <Field label="Date of Birth" value={adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN') : null} />
-          <Field label="Gender" value={adm.gender} />
-          <Field label="Blood Group" value={adm.bloodGroup} />
-          <Field label="Category" value={adm.category} />
-          <Field label="Caste" value={adm.caste} />
-          <Field label="Sub-Caste" value={adm.subCaste} />
-          <Field label="Religion" value={adm.religion} />
-          <Field label="Nationality" value={adm.nationality} />
-          <Field label="Aadhar No." value={adm.aadharNumber} />
-          <Field label="APAR / ABC ID" value={adm.aparIdNumber} />
-          <Field label="Is Married" value={adm.isMarried ? 'Yes' : 'No'} />
-        </Section>
-
-        <Section title="📞 Contact Information">
-          <Field label="Email" value={adm.email} />
-          <Field label="Phone" value={adm.phone} />
-          <Field label="House No." value={adm.houseNumber} />
-          <Field label="Street / Area" value={adm.streetArea} />
-          <Field label="Subdistrict" value={adm.subdistrict} />
-          <Field label="City / Town / Village" value={adm.cityTownVillage} />
-          <Field label="District" value={adm.district} />
-          <Field label="State" value={adm.state} />
-          <Field label="Pincode" value={adm.pincode} />
-        </Section>
-
-        <Section title="🎓 Academic Information">
-          <Field label="Course Type" value={adm.courseType} />
-          <Field label="Preferred Subject" value={adm.preferredSubject} />
-          <Field label="Admission Year" value={adm.admissionYear} />
-          <Field label="SSC Marks" value={adm.sscObtainedMarks ? `${adm.sscObtainedMarks}/${adm.sscTotalMarks} (${adm.sscPercentage}%)` : null} />
-          <Field label="HSC Marks" value={adm.hscObtainedMarks ? `${adm.hscObtainedMarks}/${adm.hscTotalMarks} (${adm.hscPercentage}%)` : null} />
-          <Field label="Previous Year Marks" value={adm.prevYearObtainedMarks ? `${adm.prevYearObtainedMarks}/${adm.prevYearTotalMarks} (${adm.prevYearPercentage}%)` : null} />
-          <Field label="Has Gap Year" value={adm.hasGap ? 'Yes' : 'No'} />
-          <Field label="Has Caste Validity" value={adm.hasCasteValidity ? 'Yes' : 'No'} />
-        </Section>
-
-        <Section title="👨‍👩‍👧 Parents Information">
-          <Field label="Father's Name" value={adm.fatherName} />
-          <Field label="Mother's Name" value={adm.motherName} />
-          <Field label="Guardian Name" value={adm.guardianFullName} />
-          <Field label="Guardian Phone" value={adm.guardianPhone} />
-          <Field label="Annual Income" value={adm.familyIncome} />
-        </Section>
-
-        <Section title="📄 Uploaded Documents">
-          {[
-            { label: 'Student Photo', key: 'studentPhoto' },
-            { label: 'Signature', key: 'signaturePhoto' },
-            { label: 'Aadhar Card', key: 'aadharPhoto' },
-            { label: 'SSC Marksheet', key: 'sscMarksheet' },
-            { label: 'HSC Marksheet', key: 'hscMarksheet' },
-            { label: 'Previous Year Marksheet', key: 'prevYearMarksheet' },
-            { label: 'Caste Certificate', key: 'casteCertificate' },
-            { label: 'Caste Validity', key: 'casteValidityCertificate' },
-            { label: 'Domicile Certificate', key: 'domicileCertificate' },
-            { label: 'Income Certificate', key: 'incomeCertificate' },
-            { label: 'Transfer Certificate', key: 'transferCertificate' },
-            { label: 'Gap Certificate', key: 'gapCertificate' },
-            { label: 'Bank Passbook', key: 'bankPassbook' },
-            { label: 'Marriage Certificate', key: 'marriageCertificate' },
-          ].map(doc => (
-            <div key={doc.key} style={{ display: 'flex', padding: '8px 0', borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
-              <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', color: '#888', fontWeight: '600' }}>{doc.label}</span>
-              {adm[doc.key] ? (
-                <a href={adm[doc.key].startsWith('http') ? adm[doc.key] : `https://college-management-nnve.onrender.com/uploads/${adm[doc.key]}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '13px', color: '#1565C0', textDecoration: 'underline' }}>
-                  📎 View Document
-                </a>
-              ) : (
-                <span style={{ fontSize: '13px', color: '#bbb' }}>Not uploaded</span>
-              )}
-            </div>
-          ))}
-        </Section>
-
-        <div style={{ background: '#f8faff', borderRadius: '8px', padding: '12px', marginBottom: '20px', fontSize: '13px', color: '#555' }}>
-          📅 Submitted on: <strong>{new Date(adm.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
-        </div>
-
-        <div style={{ borderTop: '2px solid #f0f0f0', paddingTop: '20px' }}>
-          <h4 style={{ marginBottom: '12px', color: '#333' }}>🔄 Take Action</h4>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '6px' }}>Staff Notes (Optional)</label>
-            <textarea rows="2" placeholder="Add any notes for principal..." value={notes} onChange={e => setNotes(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
-          </div>
-
-          {showReject && (
-            <div style={{ marginBottom: '16px', background: '#ffebee', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #C62828' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#C62828', display: 'block', marginBottom: '6px' }}>❌ Rejection Reason *</label>
-              <textarea rows="3" placeholder="Enter reason for rejection (student will see this)..." value={rejectReason} onChange={e => setRejectReason(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ffcdd2', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button onClick={handleReject} disabled={loading}
-                  style={{ flex: 1, padding: '10px', background: '#C62828', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
-                  {loading ? '⏳ Rejecting...' : '❌ Confirm Reject'}
-                </button>
-                <button onClick={() => { setShowReject(false); setRejectReason(''); setMsg(''); }}
-                  style={{ padding: '10px 18px', background: '#f5f5f5', color: '#555', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer' }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {msg && (
-            <div style={{ padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px', background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>
-              {msg}
-            </div>
-          )}
-
-          {!showReject && (
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={handleApprove} disabled={loading}
-                style={{ flex: 1, padding: '12px', background: '#2E7D32', color: '#fff', border: 'none', borderRadius: '9px', fontWeight: '600', fontSize: '14px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-                {loading ? '⏳ Processing...' : '✅ Approve & Forward to Principal'}
-              </button>
-              <button onClick={() => setShowReject(true)}
-                style={{ padding: '12px 20px', background: '#ffebee', color: '#C62828', border: '1px solid #C62828', borderRadius: '9px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>
-                ❌ Reject
-              </button>
-            </div>
-          )}
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Priority</label>
+          <select value={urgency} onChange={e => setUrgency(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+            <option value="normal">Normal</option>
+            <option value="urgent">⚡ Urgent</option>
+          </select>
         </div>
       </div>
+
+      {/* Marksheet extra fields */}
+      {docType === 'MARKSHEET' && (
+        <div style={{ background: '#e3f2fd', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#1565C0', marginBottom: 10 }}>📄 Marksheet Details</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Semester *</label>
+              <select value={msSem} onChange={e => setMsSem(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                <option value="">— Select —</option>
+                {['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Session *</label>
+              <select value={msSession} onChange={e => setMsSession(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                <option value="">— Select —</option>
+                <option value="mar_apr">March / April</option>
+                <option value="nov_dec">November / December</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Year *</label>
+              <select value={msYear} onChange={e => setMsYear(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                {[2023,2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Academic Year *</label>
+              <select value={msAcadYear} onChange={e => setMsAcadYear(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
+                <option value="">— Select —</option>
+                {['2022-23','2023-24','2024-25','2025-26','2026-27'].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Reason / Purpose</label>
+        <input type="text" placeholder="e.g. For job application, higher studies..." value={reason} onChange={e => setReason(e.target.value)}
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+      </div>
+
+      {/* Workflow info */}
+      {docType && (
+        <div style={{ marginBottom: 14, background: '#f8faff', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#555' }}>
+          {docType==='TC' && '📋 Workflow: You → Accounts (fee) → Exam Section (result verify) → Principal → Student Section (print)'}
+          {docType==='BONAFIDE' && '📋 Workflow: You → Accounts (fee) → Student Section (print)'}
+          {docType==='ID_CARD' && '📋 Workflow: You → Accounts (fee) → Student Section (issue)'}
+          {docType==='MARKSHEET' && '📋 Workflow: You → Exam Section (process) → Student Section (issue)'}
+        </div>
+      )}
+
+      <button onClick={handleSubmit} disabled={submitting || (docType==='TC' && tcAlreadyIssued)}
+        style={{ background: submitting||(!docType)||(docType==='TC'&&tcAlreadyIssued)?'#aaa':'#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
+        {submitting ? '⏳ Submitting...' : '📤 Submit Request'}
+      </button>
     </div>
   );
 };
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
-const StudentSectionDashboard = () => {
+
+// ─── Yearly fee structure for student view ───────────────────────────────────
+const OFFICIAL_FEES_YEARLY = {
+  'B.Sc.': {
+    label: 'B.Sc. (Un-aided)',
+    years: {
+      '1st Year': { total: 30677, sem1: 29927, sem2: 750  },
+      '2nd Year': { total: 28957, sem1: 28207, sem2: 750  },
+      '3rd Year': { total: 30692, sem1: 27842, sem2: 2850 },
+    }
+  },
+  'B.A.': {
+    label: 'B.A. (Un-aided)',
+    years: {
+      '1st Year': { total: 14627, sem1: 13877, sem2: 750  },
+      '2nd Year': { total: 12707, sem1: 11957, sem2: 750  },
+      '3rd Year': { total: 14542, sem1: 12092, sem2: 2450 },
+    }
+  },
+};
+
+// ── Course full name helper ──────────────────────────────────────────────────
+const getCourseFull = (ct) => {
+  const c = (ct||'').toLowerCase();
+  if (c.includes('b.sc')||c.includes('bsc')||c.includes('science')) return 'Bachelor of Science (B.Sc.)';
+  if (c.includes('b.a')||c.includes('ba')||c.includes('arts')) return 'Bachelor of Arts (B.A.)';
+  return ct||'—';
+};
+
+
+const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
+  const [notices, setNotices] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
+  const [myAdmission, setMyAdmission] = useState(null);
+  const [admissionLoading, setAdmissionLoading] = useState(true);
 
-  const [enquiries, setEnquiries] = useState([]);
-  const [admissions, setAdmissions] = useState([]);
-  const [admissionsLoading, setAdmissionsLoading] = useState(false);
-  const [enquiriesLoading, setEnquiriesLoading] = useState(false);
-  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
-  const [selectedAdmission, setSelectedAdmission] = useState(null);
-  const [statusUpdate, setStatusUpdate] = useState({ status: '', notes: '' });
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [updateMsg, setUpdateMsg] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [searchText, setSearchText] = useState('');
 
-  // Generate Credentials states
- const [credForm, setCredForm] = useState({ firstName: '', middleName: '', lastName: '', aadharNumber: '', email: '', phone: '', dateOfBirth: '' });
-  const [credLoading, setCredLoading] = useState(false);
-  const [credMsg, setCredMsg] = useState('');
-  const [generatedCreds, setGeneratedCreds] = useState(null);
+  const [results, setResults] = useState([]);
+  const [resultsLoading] = useState(false);
+  const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false });
+  const [examSubmitted, setExamSubmitted] = useState({ regular: false, backlog: false });
+
+  useEffect(() => {
+    API.get('/notices').then(res => setNotices(res.data.notices || []));
+    if (user?.email) {
+      API.get(`/admissions/by-email/${user.email}`)
+        .then(res => {
+          if (res.data.success) setMyAdmission(res.data.admission);
+          setAdmissionLoading(false);
+        })
+        .catch(() => setAdmissionLoading(false));
+    } else {
+      setAdmissionLoading(false);
+    }
+    // Fetch results
+    API.get('/results/my')
+      .then(res => setResults(res.data.results || []))
+      .catch(() => {});
+    API.get('/document-requests/my')
+      .then(r => setMyRequests(r.data.requests || []))
+      .catch(() => {});
+    // Fetch exam form settings
+    API.get('/results/exam-settings')
+      .then(res => setExamSettings(res.data.settings || {}))
+      .catch(() => {});
+  }, [user]);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const fetchEnquiries = async () => {
-    setEnquiriesLoading(true);
-    try {
-      const res = await API.get('/enquiries');
-      if (res.data.success) setEnquiries(res.data.enquiries || []);
-    } catch (err) { console.error('Failed to fetch enquiries:', err); }
-    finally { setEnquiriesLoading(false); }
-  };
-
-  const fetchAdmissions = async () => {
-    setAdmissionsLoading(true);
-    try {
-      const res = await API.get('/admissions/student-section/pending');
-      if (res.data.success) setAdmissions(res.data.admissions || []);
-    } catch (err) { console.error('Failed to fetch admissions:', err); }
-    finally { setAdmissionsLoading(false); }
-  };
-
-  useEffect(() => {
-    if (['home', 'enquiries', 'admissions'].includes(activeTab)) {
-      fetchEnquiries();
-      fetchAdmissions();
-    }
-  }, [activeTab]);
-
-  const handleStatusUpdate = async (id) => {
-    if (!statusUpdate.status) { setUpdateMsg('❌ Please select a status.'); return; }
-    setUpdateLoading(true); setUpdateMsg('');
-    try {
-      const res = await API.put(`/enquiries/${id}`, { status: statusUpdate.status, notes: statusUpdate.notes });
-      if (res.data.success) {
-        setUpdateMsg('✅ Status updated successfully!');
-        fetchEnquiries();
-        setTimeout(() => { setSelectedEnquiry(null); setStatusUpdate({ status: '', notes: '' }); setUpdateMsg(''); }, 1500);
-      }
-    } catch (err) { setUpdateMsg('❌ Failed to update. Please try again.'); }
-    finally { setUpdateLoading(false); }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this enquiry?')) return;
-    try { await API.delete(`/enquiries/${id}`); fetchEnquiries(); setSelectedEnquiry(null); }
-    catch (err) { alert('Failed to delete enquiry.'); }
-  };
-
-  const handleCreateStudent = async (e) => {
-    e.preventDefault(); setCredLoading(true); setCredMsg('');
-    try {
-      // Verify Aadhar against pending admissions
-      const admRes = await API.get('/admissions/staff-view/all');
-      const allAdm = admRes.data.admissions || [];
-      const matchedAdm = allAdm.find(a =>
-        a.aadharNumber && a.aadharNumber.replace(/\s/g,'') === credForm.aadharNumber.replace(/\s/g,'')
-      );
-      if (!matchedAdm) {
-        setCredMsg('❌ Aadhar number not found in any approved admission. Please verify the Aadhar number matches the admission form.');
-        setCredLoading(false);
-        return;
-      }
-      // Aadhar matched — auto-fill email and name from admission if empty
-      const enrichedForm = {
-        ...credForm,
-        email: credForm.email || matchedAdm.email,
-        firstName: credForm.firstName || (matchedAdm.applicantName||'').split(' ')[0],
-        dateOfBirth: credForm.dateOfBirth || (matchedAdm.dateOfBirth ? matchedAdm.dateOfBirth.split('T')[0] : ''),
-      };
-      setCredMsg('✅ Aadhar verified — matched with ' + matchedAdm.applicantName);
-
-      const res = await API.post('/auth/register-student', enrichedForm);
-      if (res.data.success) {
-        setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
-        setCredMsg('✅ Aadhar verified ✅ Student account created for ' + matchedAdm.applicantName + '!');
-        setCredForm({ firstName: '', middleName: '', lastName: '', aadharNumber: '', email: '', phone: '', dateOfBirth: '' });
-      }
-    } catch (err) { setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account')); }
-    finally { setCredLoading(false); }
-  };
-
-  const getStatusStyle = (status) => {
-    const styles = {
-      pending:            { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' },
-      contacted:          { bg: '#e3f2fd', color: '#1565C0', label: '📞 Contacted' },
-      credentials_issued: { bg: '#e8f5e9', color: '#2E7D32', label: '🔑 Credentials Issued' },
-      converted:          { bg: '#f3e5f5', color: '#6A1B9A', label: '🎓 Converted' },
-      rejected:           { bg: '#ffebee', color: '#C62828', label: '❌ Rejected' },
-    };
-    return styles[status] || { bg: '#f5f5f5', color: '#555', label: status };
-  };
-
-  const filteredEnquiries = enquiries.filter(e => {
-    const matchStatus = filterStatus === 'all' || e.status === filterStatus;
-    const matchSearch = !searchText || e.studentFullName?.toLowerCase().includes(searchText.toLowerCase()) || e.email?.toLowerCase().includes(searchText.toLowerCase()) || e.phone?.includes(searchText);
-    return matchStatus && matchSearch;
-  });
-
-  const pendingCount = enquiries.filter(e => e.status === 'pending').length;
-  const contactedCount = enquiries.filter(e => e.status === 'contacted').length;
-  const convertedCount = enquiries.filter(e => e.status === 'converted').length;
 
   const tabs = [
-    { id: 'home',         label: '🏠 Dashboard' },
-    { id: 'enquiries',    label: '📝 Admission Enquiries' },
-    { id: 'admissions',   label: '🎓 Pending Admissions' },
-    { id: 'credentials',  label: '👥 Generate Credentials' },
-    { id: 'generate_docs', label: '📄 Documents & Certificates' },
-    { id: 'carryforward', label: '🎓 SY/TY Carry Forward' },
-    { id: 'prn',          label: '🔢 Update PRN/ABC ID' },
-    { id: 'students',     label: '👩‍🎓 All Students' },
-    { id: 'receipts',     label: '🧾 Payment Receipts' },
+    { id: 'home', label: '🏠 Dashboard' },
+    { id: 'application', label: '📋 My Application' },
+    { id: 'profile', label: '👤 My Profile' },
+    { id: 'fees', label: '💰 My Fees' },
+    { id: 'documents', label: '📄 Request Documents' },
+    { id: 'results', label: '🎓 Results' },
+    { id: 'examform', label: '📝 Exam Form' },
+    { id: 'scholarship', label: '🏅 Scholarship' },
+    { id: 'attendance', label: '📊 Attendance' },
+    { id: 'academic_year', label: '📅 Academic Year' },
+    { id: 'notices', label: '📢 Notices' },
   ];
 
+  const getStatusStyle = (status) => {
+    if (status === 'approved') return { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Approved' };
+    if (status === 'rejected') return { bg: '#ffebee', color: '#C62828', label: '❌ Rejected' };
+    return { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' };
+  };
+
+  const getStatusMessage = (status) => {
+    if (status === 'approved') return 'Congratulations! Your admission has been approved.';
+    if (status === 'rejected') return 'Unfortunately your application was not approved. Please contact the college office.';
+    return 'Your application is being reviewed. Please check back later.';
+  };
+
+  const getStatusEmoji = (status) => {
+    if (status === 'approved') return '🎉';
+    if (status === 'rejected') return '😞';
+    return '⏳';
+  };
+
+  const docUrl = (f) => (f || '').startsWith('http')
+    ? f
+    : `https://college-management-nnve.onrender.com/uploads/${f}`;
+
+  const docList = [
+    { key: 'studentPhoto', label: '📸 Student Photo' },
+    { key: 'aadharPhoto', label: '🪪 Aadhar Card' },
+    { key: 'sscMarksheet', label: '📄 SSC Marksheet' },
+    { key: 'hscMarksheet', label: '📄 HSC Marksheet' },
+    { key: 'gapCertificate', label: '📅 Gap Certificate' },
+    { key: 'casteCertificate', label: '📋 Caste Certificate' },
+    { key: 'casteValidityCertificate', label: '✅ Caste Validity' },
+  ];
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="sidebar-logo">👩‍🎓</div>
-          <div>
-            <p className="sidebar-college">LKCWSC</p>
-            <p className="sidebar-role">Student Section</p>
+          <img src="/college-logo.png" alt="College Logo" className="sidebar-logo-img" />
+          <div className="sidebar-text">
+            <h3>Late Kalpana Chawla Women's Senior College</h3>
+            <p>Senior Science & Arts College, Gangakhed</p>
           </div>
         </div>
         <nav className="sidebar-nav">
           {tabs.map(tab => (
-            <button key={tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}>
+            <button key={tab.id} className={activeTab === tab.id ? 'active' : ''}
+              onClick={() => setActiveTab(tab.id)}>
               {tab.label}
-              {tab.id === 'enquiries' && pendingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#C62828', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700' }}>{pendingCount}</span>
-              )}
-              {tab.id === 'admissions' && admissions.length > 0 && (
-                <span style={{ marginLeft: '8px', background: '#E65100', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700' }}>{admissions.length}</span>
-              )}
             </button>
           ))}
         </nav>
@@ -357,237 +386,702 @@ const StudentSectionDashboard = () => {
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <h2>{tabs.find(t => t.id === activeTab)?.label}</h2>
-          <div className="user-info"><span>👋 {user?.name} (Student Section Staff)</span></div>
+          <div className="user-info"><span>👋 Welcome, {user?.name}</span></div>
         </div>
 
         <div className="dashboard-content">
 
-          {/* ── HOME ── */}
+          {/* ============ HOME TAB ============ */}
           {activeTab === 'home' && (
             <div>
-              <div style={{ background: '#e3f2fd', padding: '20px', borderRadius: '12px', marginBottom: '20px', borderLeft: '5px solid #1565C0' }}>
-                <h3 style={{ color: '#1565C0', marginBottom: '8px' }}>👋 Welcome to Student Section!</h3>
-                <p>Manage student admissions, verify documents, generate certificates, and maintain student records.</p>
+              {/* ── MIT/JUNO style Profile Card ── */}
+              <div style={{
+                background: '#fff', borderRadius: '16px', padding: '28px 24px',
+                marginBottom: '22px', boxShadow: '0 4px 18px rgba(0,0,0,0.08)',
+                textAlign: 'center', border: '1px solid #e3f2fd'
+              }}>
+                <div style={{
+                  width: '110px', height: '110px', borderRadius: '50%',
+                  margin: '0 auto 14px', overflow: 'hidden',
+                  border: '4px solid #1565C0', background: '#e3f2fd',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {myAdmission?.studentPhoto ? (
+                    <img src={docUrl(myAdmission.studentPhoto)} alt="Student"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.style.display = 'none'; }} />
+                  ) : (
+                    <span style={{ fontSize: '3rem' }}>👩‍🎓</span>
+                  )}
+                </div>
+
+                <h2 style={{ color: '#0d1b3e', margin: '0 0 4px', fontSize: '1.5rem' }}>
+                  {myAdmission?.applicantName || user?.name}
+                </h2>
+
+                {myAdmission?.studentId ? (
+                  <div style={{
+                    display: 'inline-block', background: '#e8f5e9', color: '#2E7D32',
+                    padding: '5px 16px', borderRadius: '20px', fontSize: '14px',
+                    fontWeight: '700', fontFamily: 'monospace', letterSpacing: '1px',
+                    margin: '4px 0 14px'
+                  }}>
+                    🎓 ID: {myAdmission.studentId}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'inline-block', background: '#fff3e0', color: '#E65100',
+                    padding: '5px 16px', borderRadius: '20px', fontSize: '13px',
+                    fontWeight: '600', margin: '4px 0 14px'
+                  }}>
+                    ⏳ Student ID Pending
+                  </div>
+                )}
+
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+                  gap: '10px', borderTop: '1px solid #f0f0f0', paddingTop: '16px'
+                }}>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>COURSE</p>
+                    <p style={{ fontSize: '14px', color: '#1565C0', fontWeight: '600', margin: '2px 0 0' }}>
+                      {myAdmission?.courseType || myAdmission?.hscStream || 'N/A'}
+                    </p>
+                  </div>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#e8f5e9', borderRadius: '10px', border: '1px solid #a5d6a7' }}>
+                    <p style={{ fontSize: '11px', color: '#2E7D32', margin: 0, fontWeight: '700' }}>CURRENT YEAR</p>
+                    <p style={{ fontSize: '14px', color: '#1b5e20', fontWeight: '700', margin: '2px 0 0' }}>
+                      {myAdmission?.admissionYear || 'N/A'}
+                    </p>
+                  </div>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>EMAIL</p>
+                    <p style={{ fontSize: '13px', color: '#333', fontWeight: '500', margin: '2px 0 0', wordBreak: 'break-all' }}>
+                      {myAdmission?.email || user?.email}
+                    </p>
+                  </div>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>PHONE</p>
+                    <p style={{ fontSize: '14px', color: '#333', fontWeight: '500', margin: '2px 0 0' }}>
+                      {myAdmission?.phone || user?.phone || 'N/A'}
+                    </p>
+                  </div>
+                  <div style={{ minWidth: '140px', padding: '8px 14px', background: '#f8faff', borderRadius: '10px' }}>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>STATUS</p>
+                    <p style={{ fontSize: '14px', fontWeight: '600', margin: '2px 0 0',
+                      color: myAdmission?.status === 'approved' ? '#2E7D32' : '#E65100' }}>
+                      {myAdmission?.status === 'approved' ? '✅ Approved' : '⏳ Under Review'}
+                    </p>
+                  </div>
+                </div>
               </div>
+
               <div className="dash-cards">
-                <div className="dash-card blue" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('enquiries')}>
-                  <div className="dash-card-icon">📝</div><div><h3>{pendingCount}</h3><p>Pending Enquiries</p></div>
+                <div className="dash-card blue">
+                  <div className="dash-card-icon">📋</div>
+                  <div>
+                    <h3>Application</h3>
+                    <p style={{ color: myAdmission ? getStatusStyle(myAdmission.status).color : '#888', fontWeight: '500', fontSize: '13px' }}>
+                      {myAdmission ? getStatusStyle(myAdmission.status).label : 'Not Applied'}
+                    </p>
+                  </div>
                 </div>
                 <div className="dash-card green">
-                  <div className="dash-card-icon">📞</div><div><h3>{contactedCount}</h3><p>Contacted</p></div>
+                  <div className="dash-card-icon">💰</div>
+                  <div>
+                    <h3>Fees</h3>
+                    <p>{myAdmission?.fees ? `₹${myAdmission.fees}` : 'Not Set'}</p>
+                  </div>
                 </div>
-                <div className="dash-card orange" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('admissions')}>
-                  <div className="dash-card-icon">🎓</div><div><h3>{admissions.length}</h3><p>Pending Admissions</p></div>
-                </div>
-                <div className="dash-card red">
-                  <div className="dash-card-icon">📊</div><div><h3>{enquiries.length}</h3><p>Total Enquiries</p></div>
+                <div className="dash-card orange">
+                  <div className="dash-card-icon">📢</div>
+                  <div>
+                    <h3>Notices</h3>
+                    <p>{notices.length} notices</p>
+                  </div>
                 </div>
               </div>
-              {pendingCount > 0 && (
-                <div className="recent-section" style={{ marginTop: '24px' }}>
-                  <h3>⏳ Recent Pending Enquiries</h3>
-                  {enquiries.filter(e => e.status === 'pending').slice(0, 5).map(enq => (
-                    <div key={enq._id} className="notice-row" style={{ cursor: 'pointer' }}
-                      onClick={() => { setActiveTab('enquiries'); setSelectedEnquiry(enq); setStatusUpdate({ status: enq.status, notes: enq.notes || '' }); }}>
-                      <span className="notice-dot"></span>
-                      <div><p className="notice-title">{enq.studentFullName}</p><p className="notice-date">{enq.phone} · {enq.email}</p></div>
-                      <span className="notice-tag">Pending</span>
+
+              {myAdmission && (
+                <div className="recent-section" style={{ marginTop: '20px' }}>
+                  <h3>My Application Status</h3>
+                  <div style={{ padding: '8px 0' }}>
+                    <div className="fees-info-row">
+                      <span className="fees-info-label">Applicant Name</span>
+                      <span className="fees-info-value">{myAdmission.applicantName}</span>
                     </div>
-                  ))}
-                  <button onClick={() => setActiveTab('enquiries')} style={{ marginTop: '12px', background: 'none', border: '1px solid #1565C0', color: '#1565C0', borderRadius: '8px', padding: '8px 18px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                    View All Enquiries →
+                    <div className="fees-info-row">
+                      <span className="fees-info-label">Course Applied</span>
+                      <span className="fees-info-value">{myAdmission.course?.name || getCourseFull(myAdmission.courseType) || 'N/A'}</span>
+                    </div>
+                    <div className="fees-info-row">
+                      <span className="fees-info-label">Status</span>
+                      <span style={{
+                        padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600',
+                        background: getStatusStyle(myAdmission.status).bg,
+                        color: getStatusStyle(myAdmission.status).color,
+                      }}>
+                        {getStatusStyle(myAdmission.status).label}
+                      </span>
+                    </div>
+                    <div className="fees-info-row">
+                      <span className="fees-info-label">Fees</span>
+                      <span className="fees-info-value">
+                        {myAdmission.fees ? `₹${myAdmission.fees}` : 'Not set by college yet'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {myAdmission && (
+                <div className="recent-section" style={{ marginTop: '20px' }}>
+                  <h3>📊 Admission Approval Progress</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '12px 0', fontSize: '14px' }}>
+                    <span style={{ fontWeight: '600' }}>📝 Submitted</span>
+                    <span>→</span>
+                    <span style={{
+                      color: (myAdmission.studentSectionStatus === 'verified' || myAdmission.status === 'approved') ? '#2E7D32' : '#999',
+                      fontWeight: (myAdmission.studentSectionStatus === 'verified' || myAdmission.status === 'approved') ? '600' : '400'
+                    }}>
+                      {(myAdmission.studentSectionStatus === 'verified' || myAdmission.status === 'approved') ? '✅' : '⏳'} Student Section
+                    </span>
+                    <span>→</span>
+                    <span style={{
+                      color: myAdmission.status === 'approved' ? '#2E7D32' : '#999',
+                      fontWeight: myAdmission.status === 'approved' ? '600' : '400'
+                    }}>
+                      {myAdmission.status === 'approved' ? '✅' : '⏳'} Principal
+                    </span>
+                    <span>→</span>
+                    <span style={{
+                      color: myAdmission.status === 'approved' ? '#2E7D32' : '#999',
+                      fontWeight: myAdmission.status === 'approved' ? '600' : '400'
+                    }}>
+                      {myAdmission.status === 'approved' ? '✅ Approved' : '⏳ Approved'}
+                    </span>
+                  </div>
+                  {myAdmission.rejectionReason && (
+                    <div style={{ background: '#ffebee', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', color: '#C62828' }}>
+                      <strong>❌ Rejection Reason:</strong> {myAdmission.rejectionReason}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!myAdmission && !admissionLoading && (
+                <div className="recent-section" style={{ marginTop: '20px', textAlign: 'center' }}>
+                  <h3>📝 Complete Your Admission</h3>
+                  <p style={{ color: '#666', margin: '12px 0' }}>You haven't submitted your admission form yet.</p>
+                  <button onClick={() => navigate('/admissions?tab=apply')}
+                    style={{ background: 'linear-gradient(135deg, #1565C0, #1976D2)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 28px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
+                    📝 Complete Your Form
                   </button>
                 </div>
               )}
-              <h3 style={{ margin: '30px 0 16px' }}>🚀 Quick Actions</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-                {[
-                  { label: '📝 Admission Enquiries', sub: 'View & manage student enquiries', tab: 'enquiries', tag: 'Most Used' },
-                  { label: '🎓 Pending Admissions', sub: 'Verify admission forms', tab: 'admissions', tag: 'Important' },
-                  { label: '👥 Generate Login', sub: 'Create student login credentials', tab: 'credentials', tag: 'Quick' },
-                  { label: '📋 Verify Documents', sub: 'Review uploaded student documents', tab: 'documents', tag: 'Important' },
-                ].map((item, i) => (
-                  <div key={i} className="event-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab(item.tab)}>
-                    <span className="notice-tag">{item.tag}</span><h4>{item.label}</h4><p>{item.sub}</p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
-          {/* ── ENQUIRIES ── */}
-          {activeTab === 'enquiries' && (
+          {/* ============ APPLICATION TAB ============ */}
+          {activeTab === 'application' && (
             <div>
-              {selectedEnquiry && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-                  <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                      <h3 style={{ color: '#1565C0', margin: 0 }}>📋 Enquiry Details</h3>
-                      <button onClick={() => { setSelectedEnquiry(null); setStatusUpdate({ status: '', notes: '' }); setUpdateMsg(''); }}
-                        style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#555' }}>✕</button>
+              <h3 style={{ marginBottom: '20px', color: '#1565C0' }}>My Application Details</h3>
+
+              {admissionLoading && (
+                <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
+              )}
+
+              {!admissionLoading && !myAdmission && (
+                <div style={{ background: 'linear-gradient(135deg, #1565C0 0%, #1976D2 100%)', borderRadius: '16px', padding: '40px 30px', textAlign: 'center', color: 'white' }}>
+                  <div style={{ fontSize: '4rem', marginBottom: '12px' }}>📝</div>
+                  <h2 style={{ color: 'white', marginBottom: '12px' }}>Complete Your Profile</h2>
+                  <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '15px', marginBottom: '24px' }}>
+                    Welcome to LKCWSC! Please complete your admission profile.
+                  </p>
+                  <a href="/admissions?tab=apply" onClick={(e) => { e.preventDefault(); navigate('/admissions?tab=apply'); }}
+                    style={{ display: 'inline-block', background: 'white', color: '#1565C0', padding: '14px 36px', borderRadius: '30px', textDecoration: 'none', fontSize: '16px', fontWeight: '700' }}>
+                    ✨ Complete Your Profile →
+                  </a>
+                </div>
+              )}
+
+              {!admissionLoading && myAdmission && (
+                <div>
+                  <div style={{ padding: '20px 24px', borderRadius: '12px', marginBottom: '24px', background: getStatusStyle(myAdmission.status).bg, border: `2px solid ${getStatusStyle(myAdmission.status).color}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ fontSize: '2.5rem' }}>{getStatusEmoji(myAdmission.status)}</div>
+                    <div>
+                      <h3 style={{ color: getStatusStyle(myAdmission.status).color }}>
+                        Application {myAdmission.status === 'approved' ? 'Approved!' : myAdmission.status === 'rejected' ? 'Rejected' : 'Under Review'}
+                      </h3>
+                      <p style={{ fontSize: '14px', color: '#555' }}>{getStatusMessage(myAdmission.status)}</p>
                     </div>
-                    <div style={{ background: '#f8faff', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-                      {[
-                        { label: 'Full Name', value: selectedEnquiry.studentFullName },
-                        { label: 'Gender', value: selectedEnquiry.gender?.charAt(0).toUpperCase() + selectedEnquiry.gender?.slice(1) },
-                        { label: 'Email', value: selectedEnquiry.email },
-                        { label: 'Mobile', value: selectedEnquiry.phone },
-                        { label: 'Submitted On', value: new Date(selectedEnquiry.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
-                      ].map((row, i) => (
-                        <div key={i} className="fees-info-row">
-                          <span className="fees-info-label">{row.label}</span>
-                          <span className="fees-info-value">{row.value || '—'}</span>
-                        </div>
-                      ))}
-                      <div className="fees-info-row">
-                        <span className="fees-info-label">Current Status</span>
-                        <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', background: getStatusStyle(selectedEnquiry.status).bg, color: getStatusStyle(selectedEnquiry.status).color }}>
-                          {getStatusStyle(selectedEnquiry.status).label}
+                  </div>
+
+                  {myAdmission.studentId && (
+                    <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '2px solid #2E7D32' }}>
+                      <p style={{ fontSize: '13px', color: '#2E7D32', marginBottom: '4px' }}>🎓 Your Student ID:</p>
+                      <h3 style={{ color: '#2E7D32', fontFamily: 'monospace', letterSpacing: '1px' }}>{myAdmission.studentId}</h3>
+                    </div>
+                  )}
+
+                  <div className="fees-card">
+                    <h3>Personal Information</h3>
+                    <div className="fees-info-row"><span className="fees-info-label">Full Name</span><span className="fees-info-value">{myAdmission.applicantName}</span></div>
+                    <div className="fees-info-row"><span className="fees-info-label">Email</span><span className="fees-info-value">{myAdmission.email}</span></div>
+                    <div className="fees-info-row"><span className="fees-info-label">Phone</span><span className="fees-info-value">{myAdmission.phone}</span></div>
+                    <div className="fees-info-row"><span className="fees-info-label">Category</span><span className="fees-info-value">{myAdmission.category ? myAdmission.category.toUpperCase() : 'N/A'}</span></div>
+                    <div className="fees-info-row"><span className="fees-info-label">Course Applied</span><span className="fees-info-value">{myAdmission.course?.name || getCourseFull(myAdmission.courseType) || 'N/A'}</span></div>
+                    <div className="fees-info-row"><span className="fees-info-label">SSC Percentage</span><span className="fees-info-value">{myAdmission.sscPercentage ? `${myAdmission.sscPercentage}%` : 'N/A'}</span></div>
+                    <div className="fees-info-row"><span className="fees-info-label">HSC Percentage</span><span className="fees-info-value">{myAdmission.hscPercentage ? `${myAdmission.hscPercentage}%` : 'N/A'}</span></div>
+                  </div>
+
+                  <div className="fees-card" style={{ marginTop: '20px' }}>
+                    <h3>Uploaded Documents</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                      {docList.map(doc => {
+                        if (!myAdmission[doc.key]) return null;
+                        return (
+                          <div key={doc.key} style={{ background: '#f8faff', border: '1px solid #e3f2fd', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                            <img src={docUrl(myAdmission[doc.key])} alt={doc.label}
+                              style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }}
+                              onError={(e) => { e.target.style.display = 'none'; }} />
+                            <p style={{ fontSize: '11px', color: '#1565C0', fontWeight: '500', marginBottom: '6px' }}>{doc.label}</p>
+                            <a href={docUrl(myAdmission[doc.key])} target="_blank" rel="noreferrer"
+                              style={{ fontSize: '11px', color: '#1565C0', textDecoration: 'underline' }}>View Full</a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {docList.every(doc => !myAdmission[doc.key]) && (
+                      <p className="empty-msg">No documents uploaded</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ============ PROFILE TAB ============ */}
+          {activeTab === 'profile' && (
+            <div>
+              <h3 style={{ marginBottom: 20, color: '#1565C0' }}>👤 My Profile</h3>
+              {!myAdmission ? (
+                <div className="empty-state"><div className="empty-icon">👤</div><h3>No profile data</h3></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                  {/* Top card — photo + name + ID */}
+                  <div style={{ background: 'linear-gradient(135deg,#1565C0,#0d47a1)', borderRadius: 16, padding: '24px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                    <div style={{ width: 90, height: 90, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', overflow: 'hidden', background: '#e3f2fd', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {myAdmission.studentPhoto
+                        ? <img src={docUrl(myAdmission.studentPhoto)} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display='none'} />
+                        : <span style={{ fontSize: '2.5rem' }}>👩‍🎓</span>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <h2 style={{ color: '#fff', margin: '0 0 4px', fontSize: '1.4rem' }}>{myAdmission.applicantName || user?.name}</h2>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                        {myAdmission.studentId
+                          ? <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>🎓 {myAdmission.studentId}</span>
+                          : <span style={{ background: '#fff3e0', color: '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>⏳ ID Pending</span>}
+                        <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12 }}>{getCourseFull(myAdmission.courseType)} · {myAdmission.admissionYear}</span>
+                        <span style={{ background: myAdmission.status === 'approved' ? '#e8f5e9' : '#fff3e0', color: myAdmission.status === 'approved' ? '#2E7D32' : '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                          {myAdmission.status === 'approved' ? '✅ Approved' : '⏳ Under Review'}
                         </span>
                       </div>
                     </div>
-                    {selectedEnquiry.notes && (
-                      <div style={{ background: '#fffde7', borderRadius: '8px', padding: '12px', marginBottom: '16px', borderLeft: '4px solid #f59e0b' }}>
-                        <p style={{ fontSize: '13px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>💬 Student Message:</p>
-                        <p style={{ fontSize: '13px', color: '#555' }}>{selectedEnquiry.notes}</p>
+                  </div>
+
+                  {/* Details grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+
+                    {/* Personal */}
+                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
+                      <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>👤 Personal Details</h4>
+                      {[
+                        ['Full Name',      myAdmission.applicantName],
+                        ["Father's Name",  myAdmission.fatherName],
+                        ["Mother's Name",  myAdmission.motherName],
+                        ['Date of Birth',  myAdmission.dateOfBirth ? new Date(myAdmission.dateOfBirth).toLocaleDateString('en-IN') : '—'],
+                        ['Gender',         myAdmission.gender],
+                        ['Blood Group',    myAdmission.bloodGroup],
+                        ['Religion',       myAdmission.religion],
+                        ['Category',       myAdmission.category?.toUpperCase()],
+                        ['Caste',          myAdmission.caste],
+                        ['Marital Status', myAdmission.isMarried ? 'Married' : 'Unmarried'],
+                        ['Mobile',         myAdmission.phone],
+                        ['Email',          myAdmission.email],
+                        ['Aadhar No.',     myAdmission.aadharNumber],
+                        ['Family Income',  myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'],
+                        ['Guardian Name',  myAdmission.guardianName],
+                        ['Guardian Phone', myAdmission.guardianPhone],
+                      ].map(([l, v]) => v && v !== '—' ? (
+                        <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
+                          <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
+                          <span style={{ color: '#222', textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+
+                    {/* Academic + Address */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
+                        <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🎓 Academic Details</h4>
+                        {[
+                          ['Student ID',    myAdmission.studentId],
+                          ['PRN Number',    myAdmission.prnNumber],
+                          ['ABC / APAR ID', myAdmission.aparIdNumber],
+                          ['Course',        getCourseFull(myAdmission.courseType)],
+                          ['Subject',       myAdmission.preferredSubject],
+                          ['Year',          myAdmission.admissionYear],
+                          ['SSC School',    myAdmission.sscSchoolName],
+                          ['SSC %',         myAdmission.sscPercentage ? `${myAdmission.sscPercentage}%` : '—'],
+                          ['HSC College',   myAdmission.hscCollegeName],
+                          ['HSC Stream',    myAdmission.hscStream],
+                          ['HSC %',         myAdmission.hscPercentage ? `${myAdmission.hscPercentage}%` : '—'],
+                        ].map(([l, v]) => v && v !== '—' ? (
+                          <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
+                            <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
+                            <span style={{ color: '#222', textAlign: 'right' }}>{v}</span>
+                          </div>
+                        ) : null)}
                       </div>
-                    )}
-                    <div style={{ borderTop: '1px solid #eee', paddingTop: '16px' }}>
-                      <h4 style={{ color: '#333', marginBottom: '12px' }}>🔄 Update Status</h4>
-                      <div className="form-group" style={{ marginBottom: '12px' }}>
-                        <label style={{ fontSize: '13px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '6px' }}>New Status *</label>
-                        <select value={statusUpdate.status} onChange={e => setStatusUpdate({ ...statusUpdate, status: e.target.value })}
-                          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px' }}>
-                          <option value="">Select Status</option>
-                          <option value="pending">⏳ Pending</option>
-                          <option value="contacted">📞 Contacted</option>
-                          <option value="credentials_issued">🔑 Credentials Issued</option>
-                          <option value="converted">🎓 Converted (Admission Done)</option>
-                          <option value="rejected">❌ Rejected</option>
-                        </select>
-                      </div>
-                      <div className="form-group" style={{ marginBottom: '16px' }}>
-                        <label style={{ fontSize: '13px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '6px' }}>Staff Notes</label>
-                        <textarea rows="3" placeholder="Add internal notes..." value={statusUpdate.notes} onChange={e => setStatusUpdate({ ...statusUpdate, notes: e.target.value })}
-                          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
-                      </div>
-                      {updateMsg && (
-                        <div style={{ padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px', background: updateMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: updateMsg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{updateMsg}</div>
-                      )}
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => handleStatusUpdate(selectedEnquiry._id)} disabled={updateLoading}
-                          style={{ flex: 1, padding: '11px', background: '#1565C0', color: '#fff', border: 'none', borderRadius: '9px', fontWeight: '600', fontSize: '14px', cursor: updateLoading ? 'not-allowed' : 'pointer', opacity: updateLoading ? 0.7 : 1 }}>
-                          {updateLoading ? '⏳ Saving...' : '💾 Save Changes'}
-                        </button>
-                        <button onClick={() => handleDelete(selectedEnquiry._id)}
-                          style={{ padding: '11px 18px', background: '#ffebee', color: '#C62828', border: '1px solid #C62828', borderRadius: '9px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>
-                          🗑️ Delete
-                        </button>
+
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
+                        <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🏠 Address</h4>
+                        {[
+                          ['House No.',     myAdmission.houseNumber],
+                          ['Street/Area',   myAdmission.streetArea],
+                          ['City/Village',  myAdmission.cityTownVillage],
+                          ['District',      myAdmission.district],
+                          ['State',         myAdmission.state],
+                          ['Pin Code',      myAdmission.pinCode],
+                        ].map(([l, v]) => v && v !== '—' ? (
+                          <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
+                            <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
+                            <span style={{ color: '#222', textAlign: 'right' }}>{v}</span>
+                          </div>
+                        ) : null)}
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <input type="text" placeholder="🔍 Search by name, email or phone..." value={searchText} onChange={e => setSearchText(e.target.value)}
-                  style={{ flex: 1, minWidth: '200px', padding: '10px 14px', borderRadius: '9px', border: '1px solid #ddd', fontSize: '14px' }} />
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-                  style={{ padding: '10px 14px', borderRadius: '9px', border: '1px solid #ddd', fontSize: '14px' }}>
-                  <option value="all">All Status</option>
-                  <option value="pending">⏳ Pending</option>
-                  <option value="contacted">📞 Contacted</option>
-                  <option value="credentials_issued">🔑 Credentials Issued</option>
-                  <option value="converted">🎓 Converted</option>
-                  <option value="rejected">❌ Rejected</option>
-                </select>
-                <button onClick={fetchEnquiries} style={{ padding: '10px 18px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: '9px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>🔄 Refresh</button>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                {[
-                  { label: 'Total', count: enquiries.length, color: '#1565C0', bg: '#e3f2fd' },
-                  { label: 'Pending', count: pendingCount, color: '#E65100', bg: '#fff3e0' },
-                  { label: 'Contacted', count: contactedCount, color: '#1565C0', bg: '#e3f2fd' },
-                  { label: 'Converted', count: convertedCount, color: '#2E7D32', bg: '#e8f5e9' },
-                ].map((pill, i) => (
-                  <div key={i} style={{ background: pill.bg, color: pill.color, borderRadius: '20px', padding: '6px 16px', fontSize: '13px', fontWeight: '600' }}>
-                    {pill.label}: {pill.count}
-                  </div>
-                ))}
-              </div>
-
-              {enquiriesLoading ? (
-                <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading enquiries...</h3></div>
-              ) : filteredEnquiries.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📭</div>
-                  <h3>No Enquiries Found</h3>
-                  <p>{searchText || filterStatus !== 'all' ? 'Try changing your search or filter.' : 'No student enquiries submitted yet.'}</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {filteredEnquiries.map(enq => {
-                    const s = getStatusStyle(enq.status);
-                    return (
-                      <div key={enq._id} onClick={() => { setSelectedEnquiry(enq); setStatusUpdate({ status: enq.status, notes: enq.notes || '' }); setUpdateMsg(''); }}
-                        style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: `4px solid ${s.color}` }}
-                        onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'}
-                        onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}>
-                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                          {enq.gender === 'female' ? '👩' : enq.gender === 'male' ? '👨' : '🧑'}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <h4 style={{ margin: 0, fontSize: '15px', color: '#222' }}>{enq.studentFullName}</h4>
-                            <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', background: s.bg, color: s.color }}>{s.label}</span>
+                  {/* Issued Documents */}
+                  <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16 }}>
+                      <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>📦 Documents Collected from College</h4>
+                      {myRequests.filter(r => r.status === 'completed').length === 0 && (
+                        <p style={{ fontSize: 13, color: '#555' }}>No documents collected yet.</p>
+                      )}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                        {myRequests.filter(r => r.status === 'completed').map((r, i) => (
+                          <div key={i} style={{ background: '#fff', borderRadius: 10, border: '1px solid #c8e6c9', padding: '10px 16px', fontSize: 12, minWidth: 170 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontSize: 18 }}>
+                                {r.documentType==='TC'?'📄':r.documentType==='BONAFIDE'?'📋':r.documentType==='ID_CARD'?'🪪':r.documentType==='MARKSHEET'?'📝':'📃'}
+                              </span>
+                              <span style={{ fontWeight: 800, color: '#1b5e20', fontSize: 13 }}>{r.documentTypeLabel || r.documentType}</span>
+                            </div>
+                            {r.documentType === 'MARKSHEET' && r.marksheetSemester && (
+                              <div style={{ color: '#1565C0', fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
+                                {r.marksheetSemester} · {r.marksheetSession === 'mar_apr' ? 'March / April' : 'Nov / December'} {r.marksheetYear}
+                              </div>
+                            )}
+                            {r.reason && <div style={{ color: '#666', fontSize: 11, marginBottom: 2 }}>Purpose: {r.reason}</div>}
+                            <div style={{ color: '#888', fontSize: 10 }}>
+                              Issued: {new Date(r.updatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+                            </div>
                           </div>
-                          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>📧 {enq.email} · 📱 {enq.phone}</p>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <p style={{ fontSize: '11px', color: '#aaa', margin: 0 }}>{new Date(enq.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                          <p style={{ fontSize: '12px', color: '#1565C0', marginTop: '4px', fontWeight: '600' }}>View →</p>
-                        </div>
+                        ))}
                       </div>
-                    );
-                  })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* ── ADMISSIONS ── */}
-          {activeTab === 'admissions' && (
+          {activeTab === 'fees' && (
             <div>
-              {selectedAdmission && (
-                <AdmissionModal adm={selectedAdmission} onClose={() => setSelectedAdmission(null)} onRefresh={fetchAdmissions} />
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: 0 }}>🎓 Pending Admission Forms ({admissions.length})</h3>
-                <button onClick={fetchAdmissions} style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>🔄 Refresh</button>
-              </div>
-              {admissionsLoading ? (
-                <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading admissions...</h3></div>
-              ) : admissions.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">📭</div><h3>No Pending Admissions</h3><p>All admission forms have been processed.</p></div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>💰 My Fees</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>View your fee structure and payment history.</p>
+
+              {!myAdmission ? (
+                <div className="empty-state"><div className="empty-icon">💰</div><h3>No Fee Information</h3></div>
+              ) : (() => {
+                const ct = (myAdmission.courseType || '').toLowerCase();
+                const courseKey = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
+                const schol = myAdmission.scholarshipAmount || 0;
+                const ledger = myAdmission.feeLedger || [];
+                const paidTotal = ledger.reduce((s, p) => s + (p.amount || 0), 0) || myAdmission.fees || 0;
+
+                return (
+                  <div>
+                    {/* ── Fee Structure Details Table ── */}
+                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                      <div style={{ background: '#009688', padding: '10px 16px', textAlign: 'center' }}>
+                        <span style={{ color: '#fff', fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>Fee Structure Details</span>
+                      </div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: '#f5f5f5' }}>
+                              {['Fee Structure Name','Year','Total Fees','Scholarship','Net Payable','Paid Amount','Balance Due','Receipt'].map(h => (
+                                <th key={h} style={{ padding: '9px 12px', fontWeight: 700, color: '#009688', textAlign: 'center', borderBottom: '2px solid #009688', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {courseKey ? Object.entries(OFFICIAL_FEES_YEARLY[courseKey]?.years || {}).map(([yr, data], i) => {
+                              const isCurrent = yr === myAdmission.admissionYear;
+                              const netPay = Math.max(0, data.total - schol);
+                              const yrPaid = isCurrent ? paidTotal : 0;
+                              const balance = Math.max(0, netPay - yrPaid);
+                              return (
+                                <tr key={yr} style={{ background: isCurrent ? '#e0f7fa' : i%2===0?'#fafafa':'#fff', fontWeight: isCurrent ? 700 : 400 }}>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                                    {OFFICIAL_FEES_YEARLY[courseKey]?.label} {isCurrent && <span style={{ background: '#009688', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 8, marginLeft: 4 }}>Current</span>}
+                                  </td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#009688', fontWeight: 700 }}>{yr}</td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>₹{data.total.toLocaleString('en-IN')}.00</td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: schol>0?'#7B1FA2':'#999' }}>{schol>0?`₹${schol.toLocaleString('en-IN')}.00`:'₹0.00'}</td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 700 }}>₹{netPay.toLocaleString('en-IN')}.00</td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#2E7D32', fontWeight: 700 }}>{isCurrent ? `₹${yrPaid.toLocaleString('en-IN')}.00` : '₹0.00'}</td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: balance>0?'#C62828':'#2E7D32', fontWeight: 700 }}>{isCurrent ? `₹${balance.toLocaleString('en-IN')}.00` : `₹${netPay.toLocaleString('en-IN')}.00`}</td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                                    {isCurrent && ledger.length > 0 && <span style={{ color: '#009688', fontSize: 11, fontWeight: 600 }}>↓ Below</span>}
+                                  </td>
+                                </tr>
+                              );
+                            }) : (
+                              <tr>
+                                <td colSpan="8" style={{ padding: 16, textAlign: 'center', color: '#888' }}>Course not detected — contact Student Section</td>
+                              </tr>
+                            )}
+                            {/* Total row */}
+                            {courseKey && (
+                              <tr style={{ background: '#e0f7fa', fontWeight: 800 }}>
+                                <td colSpan="2" style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 800 }}>Total</td>
+                                <td style={{ padding: '9px 12px', textAlign: 'center' }}>₹{Object.values(OFFICIAL_FEES_YEARLY[courseKey]?.years||{}).reduce((s,d)=>s+d.total,0).toLocaleString('en-IN')}.00</td>
+                                <td style={{ padding: '9px 12px', textAlign: 'center', color: '#7B1FA2' }}>{schol>0?`₹${(schol*3).toLocaleString('en-IN')}.00`:'₹0.00'}</td>
+                                <td style={{ padding: '9px 12px', textAlign: 'center' }}>₹{Object.values(OFFICIAL_FEES_YEARLY[courseKey]?.years||{}).reduce((s,d)=>s+Math.max(0,d.total-schol),0).toLocaleString('en-IN')}.00</td>
+                                <td style={{ padding: '9px 12px', textAlign: 'center', color: '#2E7D32' }}>₹{paidTotal.toLocaleString('en-IN')}.00</td>
+                                <td colSpan="2" style={{ padding: '9px 12px', textAlign: 'center' }}></td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* ── Installment / Receipt Details ── */}
+                    {ledger.length > 0 && (
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                        <div style={{ background: '#009688', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#fff', fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>Payment Receipts</span>
+                          <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{ledger.length} payment(s)</span>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                            <thead>
+                              <tr style={{ background: '#f5f5f5' }}>
+                                {['Receipt No','Date','Fee Type','Amount','Mode','Status'].map(h => (
+                                  <th key={h} style={{ padding: '8px 12px', fontWeight: 700, color: '#009688', textAlign: 'center', borderBottom: '2px solid #009688', fontSize: 12 }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ledger.map((p, i) => (
+                                <tr key={i} style={{ background: i%2===0?'#fafafa':'#fff' }}>
+                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontFamily: 'monospace', color: '#1565C0', fontWeight: 600 }}>{p.receiptNo||'—'}</td>
+                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>{p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>{p.feeTypeLabel||p.feeType||'—'}</td>
+                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 700, color: '#2E7D32' }}>₹{(p.amount||0).toLocaleString('en-IN')}.00</td>
+                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>{p.paymentMode==='online'?'🌐 Online':'💵 Cash'}</td>
+                                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                                    <span style={{ background: '#e8f5e9', color: '#2E7D32', padding: '2px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>PAID ✓</span>
+                                    <button onClick={() => printStudentReceipt(p, myAdmission)}
+                                      style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>🖨️ Print</button>
+                                  </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {ledger.length === 0 && (
+                      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '14px 20px', fontSize: 13, color: '#7c5e00', textAlign: 'center' }}>
+                        No payments recorded yet. Contact Accounts Section.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+
+          {/* ============ DOCUMENTS TAB ============ */}
+          {activeTab === 'documents' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📄 Request Documents</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Apply for Transfer Certificate, Bonafide, ID Card or Marksheet.</p>
+
+              {/* Apply form */}
+              <DocRequestForm myAdmission={myAdmission} onSubmitted={() => {
+                API.get('/document-requests/my').then(r => setMyRequests(r.data.requests || [])).catch(() => {});
+              }} />
+
+              {/* My Requests */}
+              <div style={{ marginTop: 24 }}>
+                {/* Issued Documents summary */}
+                {myRequests.filter(r => r.status === 'completed').length > 0 && (
+                  <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16, marginBottom: 20 }}>
+                    <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>📦 Documents Collected from College</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {myRequests.filter(r => r.status === 'completed').map((r, i) => (
+                        <div key={i} style={{ background: '#fff', borderRadius: 10, border: '1px solid #c8e6c9', padding: '10px 16px', fontSize: 13 }}>
+                          <div style={{ fontWeight: 700, color: '#1b5e20', fontSize: 14 }}>{r.documentTypeLabel || r.documentType}</div>
+                          {r.documentType === 'MARKSHEET' && r.marksheetSemester && (
+                            <div style={{ color: '#555', fontSize: 12, marginTop: 2 }}>{r.marksheetSemester} · {r.marksheetSession === 'mar_apr' ? 'Mar / Apr' : 'Nov / Dec'} {r.marksheetYear}</div>
+                          )}
+                          <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>Issued: {new Date(r.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                  <h4 style={{ color: '#1565C0', marginBottom: 14 }}>📋 My Requests ({myRequests.length})</h4>
+                  {myRequests.length === 0 ? (
+                    <div style={{ background: '#f8faff', borderRadius: 10, padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>
+                      No document requests yet. Apply above.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {myRequests.map((req, i) => {
+                        const statusMap = {
+                          pending_accounts:      { bg: '#fff3e0', color: '#E65100', label: '⏳ At Accounts (Fee Verification)' },
+                          rejected_by_accounts:  { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' },
+                          pending_exam:          { bg: '#e3f2fd', color: '#1565C0', label: '⏳ At Exam Section' },
+                          rejected_by_exam:      { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Exam Section' },
+                          pending_principal:     { bg: '#fff3e0', color: '#E65100', label: '⏳ At Principal' },
+                          rejected_by_principal: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' },
+                          pending_generation:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Collect' },
+                          completed:             { bg: '#e8f5e9', color: '#1b5e20', label: '🏁 Issued — Collect from office' },
+                        };
+                        const ss = statusMap[req.status] || { bg: '#f5f5f5', color: '#888', label: req.status };
+                        return (
+                          <div key={i} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: `4px solid ${ss.color}`, boxShadow: '0 1px 6px rgba(0,0,0,.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <h4 style={{ fontSize: 14, color: '#1a1a2e', margin: 0 }}>{req.documentTypeLabel || req.documentType}</h4>
+                                {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600 }}>⚡ Urgent</span>}
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: ss.bg, color: ss.color }}>{ss.label}</span>
+                            </div>
+                            {req.reason && <p style={{ fontSize: 12, color: '#666', margin: '0 0 6px' }}>Reason: {req.reason}</p>}
+                            <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>Applied: {new Date(req.createdAt).toLocaleDateString('en-IN')}</p>
+                            {/* Workflow progress */}
+                            <div style={{ background: '#f8faff', padding: '10px 12px', borderRadius: 8, marginTop: 10, fontSize: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span>📝 Submitted</span>
+                                {req.documentType === 'MARKSHEET' ? (
+                                  <>
+                                    <span>→</span>
+                                    <span style={{ color: req.examVerifiedDate ? '#2E7D32' : '#999', fontWeight: req.examVerifiedDate ? 600 : 400 }}>{req.examVerifiedDate ? '✅' : '⏳'} Exam Section</span>
+                                    <span>→</span>
+                                    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? 600 : 400 }}>{req.status === 'completed' ? '✅' : '⏳'} Student Section</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>→</span>
+                                    <span style={{ color: req.accountsApprovedDate ? '#2E7D32' : '#999', fontWeight: req.accountsApprovedDate ? 600 : 400 }}>{req.accountsApprovedDate ? '✅' : '⏳'} Accounts</span>
+                                    {req.documentType === 'TC' && (<>
+                                      <span>→</span>
+                                      <span style={{ color: req.examVerifiedDate ? '#2E7D32' : '#999', fontWeight: req.examVerifiedDate ? 600 : 400 }}>{req.examVerifiedDate ? '✅' : '⏳'} Exam Section</span>
+                                      <span>→</span>
+                                      <span style={{ color: req.principalApprovedDate ? '#2E7D32' : '#999', fontWeight: req.principalApprovedDate ? 600 : 400 }}>{req.principalApprovedDate ? '✅' : '⏳'} Principal</span>
+                                    </>)}
+                                    <span>→</span>
+                                    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? 600 : 400 }}>{req.status === 'completed' ? '✅' : '⏳'} Student Section</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              }
+            </div>
+          )}
+
+          {/* ============ RESULTS TAB ============ */}
+          {activeTab === 'results' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>🎓 My Exam Results</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>All semester results published by the Examination Section.</p>
+
+              {resultsLoading ? (
+                <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading results...</h3></div>
+              ) : results.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🎓</div>
+                  <h3>No Results Yet</h3>
+                  <p>Your results will appear here once published by the Examination Section.</p>
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {admissions.map(adm => (
-                    <div key={adm._id} onClick={() => setSelectedAdmission(adm)}
-                      style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #E65100' }}
-                      onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'}
-                      onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}>
-                      <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff3e0', color: '#E65100', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🎓</div>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: 0, fontSize: '15px', color: '#222' }}>{adm.applicantName}</h4>
-                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>📧 {adm.email} · 📱 {adm.phone}</p>
-                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#888' }}>🎓 {adm.preferredSubject || adm.courseType || 'Course not specified'}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {results.map(r => (
+                    <div key={r._id} style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+                      {/* Result header */}
+                      <div style={{ background: r.result === 'pass' || r.result === 'distinction' ? 'linear-gradient(135deg,#1b5e20,#2E7D32)' : 'linear-gradient(135deg,#b71c1c,#C62828)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                        <div>
+                          <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>
+                            {r.course?.name || 'Course'} — Semester {r.semester} ({r.year})
+                          </h4>
+                          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
+                            Published: {new Date(r.createdAt).toLocaleDateString('en-IN')}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>{r.percentage ? `${r.percentage}%` : '—'}</div>
+                          <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+                            {r.result === 'distinction' ? '🏅 Distinction' : r.result === 'pass' ? '✅ Pass' : '❌ Fail'}
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <span style={{ background: '#fff3e0', color: '#E65100', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>⏳ Pending</span>
-                        <p style={{ fontSize: '11px', color: '#aaa', margin: '6px 0 0' }}>{new Date(adm.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                        <p style={{ fontSize: '12px', color: '#1565C0', marginTop: '4px', fontWeight: '600' }}>View Details →</p>
+
+                      {/* Summary */}
+                      <div style={{ padding: '14px 20px', background: '#f8faff', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}>
+                        <span><strong>Total Marks:</strong> {r.obtainedMarks}/{r.totalMarks}</span>
+                        <span><strong>Percentage:</strong> {r.percentage ? `${r.percentage}%` : '—'}</span>
+                        <span><strong>Semester:</strong> {r.semester}</span>
+                        <span><strong>Year:</strong> {r.year}</span>
                       </div>
+
+                      {/* Subject-wise marks */}
+                      {r.subjects && r.subjects.length > 0 && (
+                        <div style={{ padding: '14px 20px' }}>
+                          <p style={{ fontWeight: 700, color: '#1565C0', marginBottom: 10, fontSize: 13 }}>Subject-wise Marks:</p>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+                            {r.subjects.map((sub, i) => (
+                              <div key={i} style={{ background: '#f0f9ff', borderRadius: 8, padding: '10px 14px', border: '1px solid #bae6fd' }}>
+                                <p style={{ fontWeight: 600, color: '#0c4a6e', fontSize: 13, margin: '0 0 4px' }}>{sub.name}</p>
+                                <p style={{ fontSize: 14, color: '#1565C0', fontWeight: 700, margin: 0 }}>
+                                  {sub.obtainedMarks}/{sub.maxMarks}
+                                  {sub.grade && <span style={{ marginLeft: 8, background: '#e3f2fd', padding: '1px 8px', borderRadius: 10, fontSize: 11 }}>{sub.grade}</span>}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -595,104 +1089,241 @@ const StudentSectionDashboard = () => {
             </div>
           )}
 
-          {/* ── GENERATE CREDENTIALS ── */}
-          {activeTab === 'credentials' && (
+          {/* ============ EXAM FORM TAB ============ */}
+          {activeTab === 'examform' && (
             <div>
-              <h3 style={{ marginBottom: '8px', color: '#1565C0' }}>👥 Generate Student Login</h3>
-              <p style={{ color: '#666', marginBottom: '20px' }}>Create login credentials for a new student. Password is auto-generated from name + date of birth.</p>
-              {credMsg && (
-                <div style={{ padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', background: credMsg.includes('✅') ? '#e8f5e9' : '#ffebee', color: credMsg.includes('✅') ? '#2E7D32' : '#C62828', fontWeight: '500' }}>{credMsg}</div>
-              )}
-              {generatedCreds && (
-                <div style={{ background: '#e8f5e9', border: '2px solid #2E7D32', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-                  <h3 style={{ color: '#2E7D32', marginBottom: '14px' }}>✅ Student Account Created!</h3>
-                  <p style={{ color: '#555', marginBottom: '14px', fontSize: '14px' }}>Share these login details with the student:</p>
-                  <div style={{ background: 'white', padding: '16px', borderRadius: '8px', fontSize: '15px' }}>
-                    <p style={{ marginBottom: '8px' }}><strong>👤 Name:</strong> {generatedCreds.name}</p>
-                    <p style={{ marginBottom: '8px' }}><strong>📧 Email:</strong> {generatedCreds.email}</p>
-                    <p><strong>🔑 Password:</strong> <code style={{ background: '#fff3e0', padding: '4px 12px', borderRadius: '6px', fontFamily: 'monospace', fontSize: '16px', color: '#E65100', fontWeight: '700' }}>{generatedCreds.password}</code></p>
-                  </div>
-                  <div style={{ background: '#fff3cd', padding: '12px', borderRadius: '8px', marginTop: '14px', fontSize: '13px', color: '#856404' }}>
-                    ⚠️ Note this password! Student will use it to login at the student portal.
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, marginTop: '14px', flexWrap: 'wrap' }}>
-                    <button onClick={async () => {
-                      try {
-                        await API.post('/auth/send-credentials', {
-                          studentEmail: generatedCreds.email,
-                          studentName: generatedCreds.name,
-                          username: generatedCreds.username || generatedCreds.email,
-                          password: generatedCreds.password,
-                        });
-                        alert('✅ Credentials sent to ' + generatedCreds.email);
-                      } catch (e) { alert('❌ Failed: ' + (e.response?.data?.message || 'Error')); }
-                    }} style={{ background: '#1565C0', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                      📧 Send Credentials via Email
-                    </button>
-                    <button onClick={() => setGeneratedCreds(null)} style={{ background: '#2E7D32', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>✓ Got It, Close</button>
-                  </div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📝 Exam Form</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+                Fill your examination form when enabled by the Examination Section.
+              </p>
+
+              {/* Regular Exam */}
+              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                <div style={{ background: examSettings.regularEnabled ? 'linear-gradient(135deg,#0D47A1,#1565C0)' : '#9e9e9e', padding: '16px 20px' }}>
+                  <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>📋 Regular Examination Form</h4>
+                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
+                    {examSettings.regularEnabled ? '✅ Currently Open' : '🔒 Not yet opened by Examination Section'}
+                  </p>
                 </div>
-              )}
-              <div className="form-card">
-                <h3 style={{ marginBottom: '16px' }}>📝 New Student Details</h3>
-                <form onSubmit={handleCreateStudent}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                    <div className="form-group"><label>First Name *</label><input type="text" placeholder="e.g. Tejas" value={credForm.firstName} onChange={e => setCredForm({ ...credForm, firstName: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
-                    <div className="form-group"><label>Middle Name</label><input type="text" placeholder="e.g. Sanjay" value={credForm.middleName} onChange={e => setCredForm({ ...credForm, middleName: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
-                    <div className="form-group"><label>Last Name</label><input type="text" placeholder="e.g. Bargal" value={credForm.lastName} onChange={e => setCredForm({ ...credForm, lastName: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
-                  </div>
-                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div className="form-group"><label>Aadhar Number *</label><input type="text" placeholder="123456789012" maxLength="12" value={credForm.aadharNumber} onChange={e => { if (/^\d{0,12}$/.test(e.target.value)) setCredForm({ ...credForm, aadharNumber: e.target.value }); }} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${credForm.aadharNumber.length===12?'#2E7D32':'#ddd'}` }} />
-                    <small style={{ color: credForm.aadharNumber.length===12?'#2E7D32':'#666', display: 'block', marginTop: '4px', fontWeight: credForm.aadharNumber.length===12?700:400 }}>
-                      {credForm.aadharNumber.length===12 ? '✅ 12 digits — will be verified against admission form' : `${credForm.aadharNumber.length}/12 digits`}
-                    </small></div>
-                    <div className="form-group"><label>Email Address *</label><input type="email" placeholder="student@example.com" value={credForm.email} onChange={e => setCredForm({ ...credForm, email: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /><small style={{ color: '#666', display: 'block', marginTop: '4px' }}>Student will login with this email</small></div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div className="form-group"><label>Phone Number</label><input type="text" placeholder="9876543210" maxLength="10" value={credForm.phone} onChange={e => { if (/^\d{0,10}$/.test(e.target.value)) setCredForm({ ...credForm, phone: e.target.value }); }} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
-                    <div className="form-group"></div>
-                  </div>
-                  <div className="form-group">
-                    <label>Date of Birth *</label>
-                    <input type="date" value={credForm.dateOfBirth} onChange={e => setCredForm({ ...credForm, dateOfBirth: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-                    <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>💡 Password will be auto-generated: first 4 letters of name + @ + DD + YY</small>
-                  </div>
-                  <button type="submit" disabled={credLoading} style={{ background: '#1565C0', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '8px', cursor: credLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: credLoading ? 0.6 : 1 }}>
-                    {credLoading ? '⏳ Creating...' : '➕ Create Student Account'}
-                  </button>
-                </form>
+                <div style={{ padding: 20 }}>
+                  {!examSettings.regularEnabled ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>
+                      <p style={{ fontSize: '2.5rem', margin: 0 }}>🔒</p>
+                      <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Form Not Open Yet</p>
+                      <p style={{ fontSize: 13 }}>The Examination Section will open this form when the time comes. Check back later.</p>
+                    </div>
+                  ) : examSubmitted.regular ? (
+                    <div style={{ background: '#e8f5e9', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #2E7D32' }}>
+                      <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
+                      <h4 style={{ color: '#2E7D32', margin: '8px 0 4px' }}>Regular Exam Form Submitted!</h4>
+                      <p style={{ fontSize: 13, color: '#555' }}>Your form has been submitted. The Examination Section will process it.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ background: '#e3f2fd', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#0c4a6e' }}>
+                        <strong>ℹ️ Student Details (auto-attached):</strong><br />
+                        Name: {myAdmission?.applicantName || user?.name} | Course: {myAdmission?.courseType || 'N/A'} | Year: {myAdmission?.admissionYear || 'N/A'}
+                      </div>
+                      <p style={{ fontSize: 13, color: '#555', marginBottom: 16 }}>
+                        By submitting this form, you confirm that your fees are paid and you wish to appear for the regular examination.
+                      </p>
+                      <button
+                        onClick={() => setExamSubmitted(prev => ({ ...prev, regular: true }))}
+                        style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                        📝 Submit Regular Exam Form
+                      </button>
+                      <p style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>* Ensure fees are paid before submitting.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Backlog Exam */}
+              <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                <div style={{ background: examSettings.backlogEnabled ? 'linear-gradient(135deg,#e65100,#f57c00)' : '#9e9e9e', padding: '16px 20px' }}>
+                  <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>📋 Backlog / KT Examination Form</h4>
+                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
+                    {examSettings.backlogEnabled ? '✅ Currently Open' : '🔒 Not yet opened by Examination Section'}
+                  </p>
+                </div>
+                <div style={{ padding: 20 }}>
+                  {!examSettings.backlogEnabled ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>
+                      <p style={{ fontSize: '2.5rem', margin: 0 }}>🔒</p>
+                      <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Backlog Form Not Open</p>
+                      <p style={{ fontSize: 13 }}>The Examination Section will open the KT/backlog form when required.</p>
+                    </div>
+                  ) : examSubmitted.backlog ? (
+                    <div style={{ background: '#fff3e0', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #E65100' }}>
+                      <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
+                      <h4 style={{ color: '#E65100', margin: '8px 0 4px' }}>Backlog Form Submitted!</h4>
+                      <p style={{ fontSize: 13, color: '#555' }}>Your backlog form has been submitted successfully.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ background: '#fff3e0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#7c3d00' }}>
+                        <strong>⚠️ Backlog/KT Form:</strong> Only for students who have failed subjects in previous semesters. Ensure your KT exam fees are paid.
+                      </div>
+                      <button
+                        onClick={() => setExamSubmitted(prev => ({ ...prev, backlog: true }))}
+                        style={{ background: '#E65100', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                        📝 Submit Backlog Exam Form
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* ✅ NEW: ALL STUDENTS TAB */}
-          {activeTab === 'receipts' && <PaymentReceiptsTab themeColor="#1565C0" />}
-
-          {/* ══ ALL STUDENTS ══ */}
-          {activeTab === 'students' && (
+          {/* ============ SCHOLARSHIP TAB ============ */}
+          {activeTab === 'scholarship' && (
             <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
-              <p style={{ color: '#666', fontSize: 13, marginBottom: 16 }}>View, edit, correct documents, and manage all enrolled students. Click 👁️ to open a student record, then use ✏️ Edit to correct any information.</p>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Student Section Staff can view, edit, and delete student records.</p>
-              <StudentViewFull canEdit={true} themeColor="#1565C0" role="student_section" />
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>🏅 Scholarship Status</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+                Track your scholarship application status on the MahaDBT portal.
+              </p>
+
+              {!myAdmission ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🏅</div>
+                  <h3>Application Required</h3>
+                  <p>Please complete your admission application first.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Status card */}
+                  {(() => {
+                    const statusMap = {
+                      not_filled: { bg: '#fff3e0', color: '#E65100', icon: '📝', label: 'Not Filled', desc: 'You have not yet filled the scholarship form on MahaDBT portal.' },
+                      filled:     { bg: '#e3f2fd', color: '#1565C0', icon: '📋', label: 'Form Filled', desc: 'Your scholarship form has been submitted on MahaDBT portal.' },
+                      approved:   { bg: '#e8f5e9', color: '#2E7D32', icon: '✅', label: 'Approved', desc: 'Your scholarship has been approved! Disbursement is pending.' },
+                      rejected:   { bg: '#ffebee', color: '#C62828', icon: '❌', label: 'Rejected', desc: 'Your scholarship was rejected. Please contact the Scholarship Section.' },
+                      disbursed:  { bg: '#e8f5e9', color: '#1b5e20', icon: '💰', label: 'Disbursed', desc: 'Scholarship amount has been credited to your bank account.' },
+                    };
+                    const s = statusMap[myAdmission.scholarshipStatus || 'not_filled'];
+                    return (
+                      <div style={{ background: s.bg, border: `2px solid ${s.color}`, borderRadius: 14, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: '3rem' }}>{s.icon}</div>
+                        <div>
+                          <h3 style={{ color: s.color, margin: '0 0 6px', fontSize: 20 }}>Scholarship Status: {s.label}</h3>
+                          <p style={{ color: '#555', fontSize: 14, margin: 0 }}>{s.desc}</p>
+                          {myAdmission.scholarshipNote && (
+                            <p style={{ color: '#777', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>Note: {myAdmission.scholarshipNote}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Student eligibility info */}
+                  <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                    <h4 style={{ color: '#1565C0', marginBottom: 14, fontSize: 15 }}>📋 Your Details for Scholarship</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13 }}>
+                      {[
+                        { label: 'Name', value: myAdmission.applicantName },
+                        { label: 'Category', value: myAdmission.category ? myAdmission.category.toUpperCase() : '—' },
+                        { label: 'Caste', value: myAdmission.caste || '—' },
+                        { label: 'Annual Income', value: myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—' },
+                        { label: 'Course', value: myAdmission.courseType || '—' },
+                        { label: 'Year', value: myAdmission.admissionYear || '—' },
+                        { label: 'PRN Number', value: myAdmission.prnNumber || '⚠️ Not assigned yet' },
+                        { label: 'ABC / APAR ID', value: myAdmission.aparIdNumber || '⚠️ Not assigned yet' },
+                      ].map((item, i) => (
+                        <div key={i} style={{ background: '#f8faff', borderRadius: 8, padding: '8px 12px', border: '1px solid #e3f2fd' }}>
+                          <p style={{ fontSize: 11, color: '#888', margin: '0 0 2px', fontWeight: 600 }}>{item.label}</p>
+                          <p style={{ fontSize: 13, color: '#222', fontWeight: 600, margin: 0 }}>{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* MahaDBT instructions */}
+                  <div style={{ background: '#f3e5f5', border: '1px solid #ce93d8', borderRadius: 14, padding: 20, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
+                    <h4 style={{ color: '#6A1B9A', marginBottom: 12, fontSize: 15 }}>🌐 How to Fill Scholarship on MahaDBT</h4>
+                    <ol style={{ paddingLeft: 20, fontSize: 13, color: '#444', lineHeight: 2 }}>
+                      <li>Visit <a href="https://mahadbt.maharashtra.gov.in" target="_blank" rel="noreferrer" style={{ color: '#6A1B9A', fontWeight: 600 }}>mahadbt.maharashtra.gov.in</a></li>
+                      <li>Login with your registered mobile number and Aadhar</li>
+                      <li>Select your scholarship scheme (e.g. GOI, State, EBC, OBC, SBC etc.)</li>
+                      <li>Fill all required details — ensure PRN and ABC ID are correct</li>
+                      <li>Upload required documents (caste certificate, income certificate, marksheet)</li>
+                      <li>Submit the form and note down your application number</li>
+                      <li>Inform the <strong>Scholarship Section</strong> of your college after submitting</li>
+                    </ol>
+                    <div style={{ background: '#fff', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#6A1B9A', fontWeight: 500 }}>
+                      ⚠️ Make sure your <strong>PRN Number</strong> and <strong>ABC ID</strong> are updated before filling the form. Contact the Student Section if they are missing.
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
 
+          {/* ============ ACADEMIC YEAR TAB ============ */}
+          {activeTab === 'academic_year' && (
+            <div>
+              <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📅 Academic Year</h3>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Your academic year details and examination schedule.</p>
+              {myAdmission ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
+                    <h4 style={{ color: '#1565C0', marginBottom: 14 }}>🎓 Current Academic Details</h4>
+                    {[
+                      ['Course', (() => { const ct=(myAdmission.courseType||'').toLowerCase(); return ct.includes('b.sc')||ct.includes('bsc')?'Bachelor of Science (B.Sc.)':ct.includes('b.a')||ct.includes('ba')?'Bachelor of Arts (B.A.)':myAdmission.courseType||'—'; })()],
+                      ['Current Year', myAdmission.admissionYear || '—'],
+                      ['Academic Year', (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })()],
+                      ['Student ID', myAdmission.studentId || '—'],
+                      ['PRN Number', myAdmission.prnNumber || 'Not assigned yet'],
+                      ['Admission Year', myAdmission.createdAt ? new Date(myAdmission.createdAt).getFullYear() : '—'],
+                    ].map(([l,v]) => (
+                      <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
+                        <span style={{ color:'#888', fontWeight:600 }}>{l}</span>
+                        <span style={{ color:'#1a1a2e', fontWeight:600 }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
+                    <h4 style={{ color: '#1565C0', marginBottom: 14 }}>📋 Exam Schedule (SNDT Pattern)</h4>
+                    {[
+                      ['Odd Semesters (I, III, V)', 'November – December'],
+                      ['Even Semesters (II, IV, VI)', 'March – April'],
+                      ['Result Declaration', '45-60 days after exam'],
+                      ['Marksheet Collection', 'Student Section after result'],
+                    ].map(([l,v]) => (
+                      <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
+                        <span style={{ color:'#888', fontWeight:600, maxWidth:200 }}>{l}</span>
+                        <span style={{ color:'#1565C0', fontWeight:600 }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop:14, background:'#e3f2fd', borderRadius:9, padding:'10px 14px', fontSize:12, color:'#1565C0' }}>
+                      💡 Current Semester: <strong>{(() => { const yr=myAdmission.admissionYear||''; const m=new Date().getMonth()+1; const odd=m>=6&&m<=12; return yr==='1st Year'?(odd?'Sem I':'Sem II'):yr==='2nd Year'?(odd?'Sem III':'Sem IV'):yr==='3rd Year'?(odd?'Sem V':'Sem VI'):'—'; })()}</strong>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state"><div className="empty-icon">📅</div><h3>No admission data found</h3></div>
+              )}
+            </div>
+          )}
 
-
-
-
-          {/* ══════════════ UPDATE PRN / ABC ID ══════════════ */}
-          {activeTab === 'prn' && <UpdatePrnTab />}
-
-          {/* ══════════════ CORRECT DOCUMENTS ══════════════ */}
-
-          {/* ══════════════ DOCUMENTS & CERTIFICATES ══════════════ */}
-          {activeTab === 'generate_docs' && <AllDocumentsTab user={user} />}
-
-          {/* ══════════════ CARRY FORWARD ══════════════ */}
-          {activeTab === 'carryforward' && <CarryForwardTab />}
+          {/* ============ NOTICES TAB ============ */}
+          {activeTab === 'notices' && (
+            <div>
+              <h3 style={{ marginBottom: '20px', color: '#1565C0' }}>All Notices ({notices.length})</h3>
+              {notices.map(notice => (
+                <div className="notice-full-card" key={notice._id}>
+                  <div className="notice-full-header">
+                    <h4>{notice.title}</h4>
+                    <span className="notice-tag">{notice.category}</span>
+                  </div>
+                  <p>{notice.content}</p>
+                  <small>{new Date(notice.createdAt).toLocaleDateString()}</small>
+                </div>
+              ))}
+              {notices.length === 0 && <p className="empty-msg">No notices available</p>}
+            </div>
+          )}
 
         </div>
       </main>
@@ -700,1163 +1331,4 @@ const StudentSectionDashboard = () => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DOCUMENT VERIFICATION TAB
-// Shows all doc requests that are pending_generation → student section marks complete
-// ─────────────────────────────────────────────────────────────────────────────
-
-const printTC = (adm) => {
-
-  const today   = new Date();
-  const dateStr = String(today.getDate()).padStart(2,'0') + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + today.getFullYear();
-
-  const dobObj  = adm.dateOfBirth ? new Date(adm.dateOfBirth) : null;
-  const dobStr  = dobObj ? String(dobObj.getDate()).padStart(2,'0')+'/'+String(dobObj.getMonth()+1).padStart(2,'0')+'/'+dobObj.getFullYear() : '';
-
-  // DOB in words
-  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
-    'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen',
-    'Twenty','Twenty-One','Twenty-Two','Twenty-Three','Twenty-Four','Twenty-Five','Twenty-Six',
-    'Twenty-Seven','Twenty-Eight','Twenty-Nine','Thirty','Thirty-One'];
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-  const yearToWords = (y) => {
-    if (y>=1000){const th=Math.floor(y/1000),rem=y%1000,thW=ones[th]+' Thousand';if(rem===0)return thW;if(rem<100)return thW+' '+(rem<ones.length?ones[rem]:tens[Math.floor(rem/10)]+(rem%10?'-'+ones[rem%10]:''));const h=Math.floor(rem/100),r=rem%100,hw=ones[h]+' Hundred',rw=r===0?'':(r<ones.length?ones[r]:tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:''));return thW+' '+hw+(rw?' '+rw:'');}
-    const h=Math.floor(y/100),r=y%100;return(ones[h]+' Hundred'+(r===0?'':(r<ones.length?' '+ones[r]:' '+tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:'')))).trim();
-  };
-  const dobWords = dobObj ? ones[dobObj.getDate()]+' '+monthNames[dobObj.getMonth()]+' '+yearToWords(dobObj.getFullYear()) : '';
-
-  const ct = (adm.courseType||'').toLowerCase();
-  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
-    ? 'Bachelor of Science (B.Sc.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
-    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')
-    ? 'Bachelor of Arts (B.A.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
-    : (adm.courseType||'') + (adm.preferredSubject?' — '+adm.preferredSubject:'');
-
-  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px;font-size:13px}
-    .page{background:white;width:720px;border:1.5px solid #000;padding:0;box-shadow:0 4px 20px rgba(0,0,0,.15)}
-    .hdr{display:flex;align-items:center;gap:8px;border-bottom:1.5px solid #000;padding:8px 12px}
-    .logo{width:72px;height:72px;object-fit:contain;flex-shrink:0}
-    .htxt{flex:1;text-align:center}
-    .h1{font-size:11px}
-    .h2{font-size:14px;font-weight:900;text-transform:uppercase;line-height:1.3;margin:2px 0}
-    .h3{font-size:11px}
-    .h4{font-size:10px;color:#444;margin-top:1px}
-    .titlesec{text-align:center;padding:6px 0 2px;border-bottom:1px solid #000}
-    .title{font-size:15px;font-weight:bold;letter-spacing:2px;text-decoration:underline;text-underline-offset:3px}
-    .subtitle{font-size:11px;font-style:italic;margin-top:1px}
-    .disclaimer{font-size:9.5px;font-style:italic;padding:5px 14px;border-bottom:1px solid #ccc;color:#333;line-height:1.4}
-    .regrow{display:flex;justify-content:space-between;padding:5px 14px;border-bottom:1px solid #ccc;font-size:12px}
-    .reglabel{font-weight:600}
-    .regval{font-weight:bold}
-    /* Editable fields */
-    input[type=text]{border:none;border-bottom:1px dotted #555;outline:none;font-family:'Times New Roman',serif;font-size:13px;background:transparent;padding:1px 4px;min-width:180px;font-weight:bold}
-    input[type=text]:focus{border-bottom:1.5px solid #000;background:#fffde7}
-    /* Table rows */
-    .rows{padding:2px 14px}
-    .row{display:flex;align-items:baseline;padding:5px 0;border-bottom:1px dotted #ccc;font-size:13px}
-    .rnum{width:22px;flex-shrink:0;font-weight:600}
-    .rlabel{width:210px;flex-shrink:0}
-    .rcolon{width:16px;flex-shrink:0}
-    .rval{flex:1;font-weight:bold}
-    .rval input{width:100%;min-width:unset}
-    /* Footer */
-    .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:12px 14px 10px}
-    .fsign{text-align:center;min-width:100px}
-    .fsign-line{border-top:1px solid #000;margin-top:32px;padding-top:4px;font-size:12px;font-weight:bold}
-    /* Print button */
-    .print-btn{display:block;margin:10px auto;padding:8px 28px;background:#1a237e;color:white;border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer}
-    @media print{
-      body{background:white;padding:0}
-      .page{box-shadow:none}
-      .print-btn{display:none}
-      input[type=text]{border-bottom:1px dotted #555}
-    }
-  </style></head><body>
-  <div class="page">
-
-    <div class="hdr">
-      <img src="data:image/jpeg;base64,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" class="logo"/>
-      <div class="htxt">
-        <div class="h1">Vidya Niketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-        <div class="h2">Late Kalpana Chawala Arts &amp; Science Mahila Senior College Gangakhed,</div>
-        <div class="h3">Lecturer Colony Gangakhed, Dist Parbhani - 431514</div>
-        <div class="h4">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
-      </div>
-    </div>
-
-    <div class="titlesec">
-      <div class="title">TRANSFER CERTIFICATE</div>
-      <div class="subtitle">(vide Rule 17)</div>
-    </div>
-
-    <div class="disclaimer">
-      <em>(No Change in any entry in this certificate shall be made except by the authority issuing it and any infringement of this requirement is liable to involve the imposition of penalty of such as that of Rustication)</em>
-    </div>
-
-    <div class="regrow">
-      <span><span class="reglabel">Register No. : </span><input type="text" value="" style="min-width:100px"/></span>
-      <span><span class="reglabel">T.C. No. : </span><span class="regval">TC${String(new Date().getFullYear()).slice(-2)}-${Date.now().toString().slice(-5)}</span></span>
-    </div>
-
-    <div class="rows">
-      <div class="row"><span class="rnum">1.</span><span class="rlabel">Name of Student in Full</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.applicantName||''}"/></span></div>
-      <div class="row"><span class="rnum">2.</span><span class="rlabel">Mother's Name</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.motherName||''}"/></span></div>
-      <div class="row"><span class="rnum">3.</span><span class="rlabel">Caste &amp; Sub-Caste</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.caste||''}"/></span></div>
-      <div class="row"><span class="rnum">4.</span><span class="rlabel">Place of Birth</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/><strong style="margin-left:20px">Nationality :</strong> <input type="text" value="Indian" style="min-width:80px"/></span></div>
-      <div class="row">
-        <span class="rnum">5.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
-        <span class="rval">
-          <input type="text" value="${dobStr}" style="min-width:100px"/>
-          <br/><span style="font-size:12px">(In word) : ( <input type="text" value="${dobWords}" style="min-width:260px"/> )</span>
-        </span>
-      </div>
-      <div class="row"><span class="rnum">6.</span><span class="rlabel">Last School / College attended</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">7.</span><span class="rlabel">Date of Admission</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">8.</span><span class="rlabel">Progress</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Satisfactory"/></span></div>
-      <div class="row"><span class="rnum">9.</span><span class="rlabel">Conduct</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Good"/></span></div>
-      <div class="row"><span class="rnum">10.</span><span class="rlabel">Date of Leaving</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${dateStr}"/></span></div>
-      <div class="row"><span class="rnum">11.</span><span class="rlabel">Standard in which studying and since when</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${courseFull + (adm.admissionYear?' ('+adm.admissionYear+')':'')}"/></span></div>
-      <div class="row"><span class="rnum">12.</span><span class="rlabel">Reason of Leaving College</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">13.</span><span class="rlabel">Remarks</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row" style="border-bottom:none;padding-top:8px"><span class="rnum">14.</span><span style="flex:1;font-weight:bold">Certified that the above information is in accordance with the college record.</span></div>
-    </div>
-
-    <div class="foot">
-      <div class="fsign">
-        <div style="font-size:12px;margin-bottom:2px">Date : ${dateStr}</div>
-      </div>
-      <div class="fsign">
-        <div class="fsign-line">Clark</div>
-      </div>
-      <div class="fsign">
-        <div class="fsign-line">Principal</div>
-      </div>
-    </div>
-
-    <button class="print-btn" onclick="window.print()">🖨️ Print TC</button>
-  </div>
-  </body></html>`;
-
-  const w = window.open('','_blank','width=800,height=900');
-  w.document.write(html);
-  w.document.close();
-};
-
-
-const printBonafide = (adm) => {
-  const certNo  = 'BON' + new Date().getFullYear().toString().slice(-2) + '-' + Date.now().toString().slice(-4);
-  const now     = new Date();
-  const day     = String(now.getDate()).padStart(2,'0');
-  const month   = String(now.getMonth()+1).padStart(2,'0');
-  const fullYear= now.getFullYear();
-  const acadY1  = now.getMonth()+1 >= 6 ? fullYear : fullYear-1;
-  const acadYear= acadY1 + '-' + String(acadY1+1).slice(-2);
-
-  const dobObj  = adm.dateOfBirth ? new Date(adm.dateOfBirth) : null;
-  const dobDD   = dobObj ? String(dobObj.getDate()).padStart(2,'0') : '____';
-  const dobMM   = dobObj ? String(dobObj.getMonth()+1).padStart(2,'0') : '____';
-  const dobYYYY = dobObj ? String(dobObj.getFullYear()) : '______';
-
-  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen','Twenty','Twenty-One','Twenty-Two','Twenty-Three','Twenty-Four','Twenty-Five','Twenty-Six','Twenty-Seven','Twenty-Eight','Twenty-Nine','Thirty','Thirty-One'];
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-  const yearToWords = (y) => {
-    if (y>=1000){const th=Math.floor(y/1000),rem=y%1000,thW=ones[th]+' Thousand';if(rem===0)return thW;if(rem<100)return thW+' '+(rem<ones.length?ones[rem]:tens[Math.floor(rem/10)]+(rem%10?'-'+ones[rem%10]:''));const h=Math.floor(rem/100),r=rem%100,hw=ones[h]+' Hundred',rw=r===0?'':(r<ones.length?ones[r]:tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:''));return thW+' '+hw+(rw?' '+rw:'');}
-    const h=Math.floor(y/100),r=y%100;return(ones[h]+' Hundred'+(r===0?'':(r<ones.length?' '+ones[r]:' '+tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:'')))).trim();
-  };
-  const dobWords = dobObj ? ones[dobObj.getDate()]+' '+monthNames[dobObj.getMonth()]+' '+yearToWords(dobObj.getFullYear()) : '________________';
-
-  const ct = (adm.courseType||'').toLowerCase();
-  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
-    ? 'Bachelor of Science (B.Sc.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
-    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')
-    ? 'Bachelor of Arts (B.A.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
-    : (adm.courseType||'') + (adm.preferredSubject?' — '+adm.preferredSubject:'');
-
-  const logo = "data:image/jpeg;base64,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";
-
-  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px}
-    .page{background:white;width:730px;border:2px solid #000}
-    /* Header */
-    .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
-    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0}
-    .htxt{flex:1;text-align:center}
-    .h1{font-size:11px;color:#333}
-    .h2{font-size:11px;color:#333}
-    .h3{font-size:21px;font-weight:900;color:#000;margin:3px 0 2px}
-    .h4{font-size:11px;color:#000;margin-bottom:1px}
-    .h5{font-size:10px;color:#555}
-    /* Title */
-    .titlebar{text-align:center;padding:8px 0;border-bottom:1px solid #000}
-    .titletxt{font-size:17px;font-weight:900;letter-spacing:5px;text-decoration:underline;text-underline-offset:4px}
-    /* Meta */
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;padding:6px 18px;border-bottom:1px solid #ccc;font-size:12.5px}
-    .mrow{display:flex;gap:4px;align-items:baseline}
-    .ml{font-weight:700}
-    .mv{border-bottom:1px solid #000;flex:1;min-width:80px;padding-left:3px;font-weight:bold}
-    /* Body */
-    .body{padding:10px 20px 8px;font-size:14px;line-height:1.5}
-    .body p{margin:0 0 6px 0}
-    .ul{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;min-width:200px;text-align:center}
-    .ul-sm{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;min-width:44px;text-align:center}
-    .ul-lg{border-bottom:1.5px solid #000;display:inline-block;min-width:340px;font-weight:bold}
-    /* Footer */
-    .foot{display:flex;justify-content:flex-end;align-items:flex-end;padding:10px 20px 12px}
-    .signbox{text-align:center;min-width:120px}
-    .signline{border-top:1px solid #000;padding-top:5px;font-size:13px;font-weight:bold;margin-top:36px}
-    /* ERP */
-    .erp{border-top:1px dashed #aaa;padding:5px 18px;font-size:9.5px;color:#666;display:flex;justify-content:space-between}
-    .sysgen{padding:3px 18px 5px;font-size:9px;color:#888;text-align:center}
-    @media print{body{background:white;padding:0}.page{box-shadow:none}}
-  </style></head><body><div class="page">
-    <div class="hdr">
-      <img src="${logo}" class="logo"/>
-      <div class="htxt">
-        <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-        <div class="h2">Affiliated to S.N.D.T. Women's University, Mumbai</div>
-        <div class="h3">Late Kalpana Chawla Women's Senior College</div>
-        <div class="h4">Lecture Colony, Gangakhed, Tq. Gangakhed, Dist. Parbhani – 431514</div>
-        <div class="h5">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
-      </div>
-    </div>
-    <div class="titlebar"><span class="titletxt">BONAFIDE &nbsp; CERTIFICATE</span></div>
-    <div class="meta">
-      <div class="mrow"><span class="ml">Certificate No.:</span><span class="mv">&nbsp;${certNo}</span></div>
-      <div class="mrow"><span class="ml">Date:</span><span class="mv">&nbsp;${day} / ${month} / ${fullYear}</span></div>
-      <div class="mrow"><span class="ml">Student ID:</span><span class="mv">&nbsp;${adm.studentId||'____________________'}</span></div>
-      <div class="mrow"><span class="ml">Academic Year:</span><span class="mv">&nbsp;${acadYear}</span></div>
-    </div>
-    <div class="body">
-      <p>This is to certify that Miss &nbsp;<span class="ul">&nbsp;${adm.applicantName||''}&nbsp;</span>&nbsp; is a bonafide student of Late Kalpana Chawla Women's Senior College, Gangakhed. She is studying in <span class="ul" style="min-width:280px">&nbsp;${courseFull||'__________________________________'}&nbsp;</span> Course during the Academic Year &nbsp;<strong>${acadYear}</strong>.</p>
-      <p>As per college records, her Date of Birth is &nbsp;<span class="ul-sm">&nbsp;${dobDD}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm">&nbsp;${dobMM}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm" style="min-width:60px">&nbsp;${dobYYYY}&nbsp;</span></p>
-      <p>(In Words): &nbsp;<span class="ul-lg">&nbsp;${dobWords}&nbsp;</span></p>
-      <p>To the best of my knowledge and belief, her conduct and moral character are <strong>good</strong>. This certificate is issued on her request for official purpose.</p>
-    </div>
-    <div class="foot">
-      <div class="signbox">
-        <div class="signline">Principal</div>
-      </div>
-    </div>
-    <div class="erp"><span>ERP Verification ID: <strong>ERP${certNo}</strong></span><span>Generated Through College ERP System</span></div>
-    <div class="sysgen">This is a system generated certificate.</div>
-  </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
-  const w = window.open('','_blank','width=800,height=700'); w.document.write(html); w.document.close();
-};
-
-
-const printIDCard = (adm) => {
-  const logo = "data:image/jpeg;base64,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";
-  const validYear = new Date().getFullYear();
-  const dobStr = adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}) : '--';
-  const ct = (adm.courseType||'').toLowerCase();
-  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
-    ? 'Bachelor of Science (B.Sc.)'
-    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')
-    ? 'Bachelor of Arts (B.A.)' : adm.courseType||'--';
-
-  const html = `<!DOCTYPE html><html><head><title>ID Card</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:270px;background:#fff;font-family:Roboto,Arial,sans-serif}
-    .card{width:270px;background:#fff;border:2px solid #1a237e}
-    .hdr{background:#fff;padding:8px 8px 6px;text-align:center;border-bottom:3px solid #1a237e}
-    .logo{width:55px;height:55px;object-fit:contain;border-radius:50%;border:2px solid #1a237e}
-    .h1{font-size:7px;color:#555;margin-top:3px;font-style:italic}
-    .h2{font-size:10px;font-weight:900;color:#1a237e;margin:2px 0;line-height:1.3}
-    .h3{font-size:7.5px;color:#333;margin-bottom:1px}
-    .h4{font-size:7px;color:#888}
-    .title{background:#1a237e;padding:6px;text-align:center}
-    .titletext{color:#FFD700;font-size:9px;font-weight:700;letter-spacing:2.5px}
-    .photowrap{background:linear-gradient(180deg,#e8eaf6 0%,#fff 100%);padding:12px 0 8px;text-align:center}
-    .photobox{width:78px;height:92px;border:2px solid #1a237e;margin:0 auto 7px;overflow:hidden;background:#c5cae9;display:flex;align-items:center;justify-content:center;border-radius:3px}
-    .photobox img{width:100%;height:100%;object-fit:cover}
-    .stuname{font-size:13px;font-weight:700;color:#1a237e;padding:0 6px}
-    .body{padding:8px 14px 6px;border-top:1px solid #e8eaf6}
-    .row{display:flex;align-items:center;padding:3.5px 0;border-bottom:1px dashed #e0e0e0}
-    .lbl{font-size:9px;font-weight:700;color:#555;width:62px;flex-shrink:0}
-    .val{font-size:9px;font-weight:700;color:#1a237e;flex:1}
-    .chip{background:#1a237e;color:#FFD700;text-align:center;padding:6px;font-size:11px;font-weight:700;letter-spacing:1px}
-    .sig{display:grid;grid-template-columns:1fr 1fr;padding:8px 14px 6px;gap:10px;border-top:1px solid #e8eaf6}
-    .sigbox{text-align:center}
-    .sigline{border-top:1px solid #333;padding-top:3px;font-size:7.5px;color:#333;font-weight:700}
-    .foot{background:#1a237e;padding:5px 10px}
-    .footrow{display:flex;justify-content:space-between;font-size:7px;color:rgba(255,255,255,0.9)}
-    .footaddr{font-size:6.5px;color:rgba(255,255,255,0.7);text-align:center;margin-top:2px}
-    .principal-sig{text-align:right;padding:4px 14px 6px;font-size:8px;font-weight:700;color:#1a237e;border-top:1px solid #e8eaf6}
-    @media print{@page{size:270px 430px;margin:0}html,body{width:270px}}
-  </style></head><body>
-  <div class="card">
-    <div class="hdr">
-      <img src="${logo}" class="logo"/>
-      <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-      <div class="h2">Late Kalpana Chawla Women's Senior College</div>
-      <div class="h3">Lecture Colony, Gangakhed, Dist. Parbhani – 431514</div>
-      <div class="h4">Affiliated to S.N.D.T. Women's University, Mumbai</div>
-    </div>
-    <div class="title"><span class="titletext">STUDENT IDENTITY CARD</span></div>
-    <div class="photowrap">
-      <div class="photobox">
-        ${adm.studentPhoto ? `<img src="${adm.studentPhoto}" alt="photo"/>` : '<div style="font-size:36px;padding-top:20px;text-align:center">👩</div>'}
-      </div>
-      <div class="stuname">${adm.applicantName||'--'}</div>
-    </div>
-    <div class="body">
-      <div class="row"><span class="lbl">Course</span><span class="val">${courseFull}</span></div>
-      <div class="row"><span class="lbl">Year</span><span class="val">${adm.admissionYear||'--'}</span></div>
-      <div class="row"><span class="lbl">Date of Birth</span><span class="val">${dobStr}</span></div>
-      <div class="row"><span class="lbl">Mobile No.</span><span class="val">${adm.phone||'--'}</span></div>
-      <div class="row"><span class="lbl">Blood Group</span><span class="val">${adm.bloodGroup||'--'}</span></div>
-      <div class="row" style="border:none"><span class="lbl">Valid</span><span class="val">${validYear} – ${validYear+1}</span></div>
-    </div>
-    <div class="chip">${adm.studentId || 'ID PENDING'}</div>
-    <div class="sig">
-      <div class="sigbox"><div style="height:20px"></div><div class="sigline">Student Signature</div></div>
-      <div class="sigbox"><div style="height:20px"></div><div class="sigline">Principal</div></div>
-    </div>
-    <div class="foot">
-      <div class="footrow"><span>lkcwsc.vnssorg.com</span><span>+91 9307162914</span></div>
-      <div class="footaddr">Lecture Colony, Gangakhed, Dist. Parbhani – 431514</div>
-    </div>
-  </div>
-  <scri${'pt'}>
-  window.onload = () => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload = () => {
-      html2canvas(document.querySelector('.card'), {scale:3, useCORS:true, allowTaint:true, backgroundColor:'#ffffff'}).then(canvas => {
-        const a = document.createElement('a');
-        a.download = 'IDCard_${(adm.applicantName||"student").replace(/\s+/g,"_")}.jpg';
-        a.href = canvas.toDataURL('image/jpeg', 0.96);
-        a.click();
-        setTimeout(()=>window.close(), 800);
-      });
-    };
-    document.head.appendChild(s);
-  };
-  </scri${'pt'}></body></html>`;
-  const w = window.open('','_blank','width=310,height=500');
-  w.document.write(html); w.document.close();
-};
-
-
-const DOC_CONFIG = {
-  TC:        { label: 'Transfer Certificate', icon: '📄', color: '#1565C0', bg: '#e3f2fd' },
-  BONAFIDE:  { label: 'Bonafide Certificate',  icon: '📜', color: '#7B1FA2', bg: '#f3e5f5' },
-  ID_CARD:   { label: 'ID Card',               icon: '🪪', color: '#2E7D32', bg: '#e8f5e9' },
-  MARKSHEET: { label: 'Marksheet',             icon: '📋', color: '#E65100', bg: '#fff3e0' },
-  MIGRATION: { label: 'Migration Certificate', icon: '📜', color: '#795548', bg: '#efebe9' },
-};
-
-const AllDocumentsTab = ({ user }) => {
-  const [requests, setRequests]   = useState([]);
-  const [loading, setLoading]     = useState(false);
-  const [admMap, setAdmMap]       = useState({});
-  const [search, setSearch]       = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [completing, setCompleting] = useState('');
-  const [rejecting, setRejecting]   = useState('');
-  const [rejectModal, setRejectModal] = useState(null);
-  const [rejectNote, setRejectNote]   = useState('');
-  const [msg, setMsg]               = useState('');
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [reqRes, admRes] = await Promise.all([
-        API.get('/document-requests/student-section/all'),
-        API.get('/admissions/staff-view/all'),
-      ]);
-      setRequests(reqRes.data.requests || []);
-      const map = {};
-      (admRes.data.admissions || []).forEach(a => { map[a.email] = a; });
-      setAdmMap(map);
-    } catch { }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  const handlePrint = (req) => {
-    const adm = admMap[req.studentEmail] || {};
-    const merged = {
-      applicantName: req.studentName, email: req.studentEmail,
-      studentId: adm.studentId||'', prnNumber: adm.prnNumber||'',
-      aparIdNumber: adm.aparIdNumber||'', dateOfBirth: adm.dateOfBirth||'',
-      gender: adm.gender||'Female', fatherName: adm.fatherName||'',
-      motherName: adm.motherName||'', category: adm.category||'',
-      caste: adm.caste||'',
-      courseType: req.branch||adm.courseType||adm.course||adm.hscStream||'',
-      preferredSubject: adm.preferredSubject||adm.subject||'',
-      admissionYear: req.admissionYear||adm.admissionYear||'',
-      address: adm.address||'', religion: adm.religion||'',
-    };
-    if (req.documentType === 'TC') printTC(merged);
-    else if (req.documentType === 'BONAFIDE') printBonafide(merged);
-    else printIDCard(merged);
-  };
-
-  const handleComplete = async (req) => {
-    setCompleting(req._id);
-    try {
-      await API.put(`/document-requests/student-section/complete/${req._id}`, {
-        notes: `${DOC_CONFIG[req.documentType]?.label || req.documentType} generated and issued.`
-      });
-      setMsg('✅ Marked as issued!');
-      setTimeout(() => setMsg(''), 3000);
-      fetchData();
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-    finally { setCompleting(''); }
-  };
-
-  const handleReject = async () => {
-    if (!rejectNote.trim()) return;
-    setRejecting(rejectModal._id);
-    try {
-      await API.put(`/document-requests/accounts/reject/${rejectModal._id}`, { reason: rejectNote });
-      setMsg('✅ Request rejected.');
-      setRejectModal(null); setRejectNote('');
-      setTimeout(() => setMsg(''), 3000);
-      fetchData();
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-    finally { setRejecting(''); }
-  };
-
-  const filtered = requests.filter(r => {
-    const mt = typeFilter === 'all' || r.documentType === typeFilter;
-    const ms = statusFilter === 'all' || r.status === statusFilter;
-    const q  = search.toLowerCase();
-    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
-    return mt && ms && mq;
-  });
-
-  const pending = requests.filter(r => r.status === 'pending_generation').length;
-
-  const statusStyle = (s) => ({
-    pending_accounts:      { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Accounts' },
-    rejected_by_accounts:  { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' },
-    pending_exam:          { bg: '#e3f2fd', color: '#1565C0', label: '🔍 At Exam Section' },
-    rejected_by_exam:      { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Exam' },
-    pending_principal:     { bg: '#fff3e0', color: '#E65100', label: '🔄 At Principal' },
-    rejected_by_principal: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' },
-    pending_generation:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Issue' },
-    completed:             { bg: '#f3e5f5', color: '#7B1FA2', label: '🏁 Issued' },
-  }[s] || { bg: '#f5f5f5', color: '#888', label: s });
-
-  return (
-    <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📄 Documents & Certificates</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Print TC, Bonafide, ID Card and mark as issued. All document types in one place.</p>
-
-      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending}</div>
-        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Issued: {requests.filter(r=>r.status==='completed').length}</div>
-        {Object.entries(DOC_CONFIG).map(([k,v]) => {
-          const c = requests.filter(r=>r.documentType===k).length;
-          return c > 0 ? <div key={k} style={{ background: v.bg, color: v.color, borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: 600 }}>{v.icon} {v.label}: {c}</div> : null;
-        })}
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-          <option value="all">All Types</option>
-          {Object.entries(DOC_CONFIG).map(([k,v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
-        </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-          <option value="all">All Status</option>
-          <option value="pending_generation">✅ Ready to Issue</option>
-          <option value="completed">🏁 Issued</option>
-          <option value="pending_accounts">⏳ At Accounts</option>
-          <option value="pending_exam">🔍 At Exam Section</option>
-          <option value="pending_principal">🔄 At Principal</option>
-          <option value="rejected_by_accounts">❌ Rejected</option>
-        </select>
-        <button onClick={fetchData}
-          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      {rejectModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: 26, maxWidth: 440, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ color: '#C62828', marginBottom: 12 }}>❌ Reject Request</h3>
-            <p style={{ fontSize: 13, color: '#555', marginBottom: 14 }}>Student: <strong>{rejectModal.studentName}</strong> — {DOC_CONFIG[rejectModal.documentType]?.label}</p>
-            <textarea rows="3" placeholder="Reason for rejection..." value={rejectNote} onChange={e => setRejectNote(e.target.value)}
-              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
-            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button onClick={handleReject} disabled={!rejectNote.trim() || rejecting === rejectModal._id}
-                style={{ background: '#C62828', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                {rejecting === rejectModal._id ? '⏳...' : '❌ Confirm Reject'}
-              </button>
-              <button onClick={() => { setRejectModal(null); setRejectNote(''); }}
-                style={{ background: '#eee', color: '#333', padding: '10px 18px', borderRadius: 8, border: 'none', fontSize: 14, cursor: 'pointer' }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p><h3>Loading...</h3></div>
-      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">📭</div><h3>No requests found</h3><p>Document requests will appear here after Accounts section approves them.</p></div>
-      : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filtered.map(req => {
-            const cfg = DOC_CONFIG[req.documentType] || { label: req.documentType, icon: '📄', color: '#555', bg: '#f5f5f5' };
-            const ss  = statusStyle(req.status);
-            const isReady = req.status === 'pending_generation';
-            const canPrint = ['TC','BONAFIDE','ID_CARD'].includes(req.documentType);
-            const adm = admMap[req.studentEmail] || {};
-            return (
-              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isReady ? cfg.color+'55' : '#e0e7ef'}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${cfg.color}` }}>
-                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: isReady ? cfg.bg+'aa' : '#fafbff' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 22 }}>{cfg.icon}</span>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <h4 style={{ color: cfg.color, fontSize: 15, margin: 0 }}>{cfg.label}</h4>
-                        {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600 }}>⚡ Urgent</span>}
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 12, background: ss.bg, color: ss.color }}>{ss.label}</span>
-                      </div>
-                      <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>{new Date(req.createdAt).toLocaleString('en-IN')}</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {canPrint && (
-                      <button onClick={() => handlePrint(req)}
-                        style={{ background: cfg.color, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        🖨️ Print {cfg.label}
-                      </button>
-                    )}
-                    {isReady && (
-                      <button onClick={() => handleComplete(req)} disabled={completing === req._id}
-                        style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: completing===req._id?'not-allowed':'pointer', opacity: completing===req._id?0.7:1 }}>
-                        {completing === req._id ? '⏳...' : '✅ Mark Issued'}
-                      </button>
-                    )}
-                    {isReady && (
-                      <button onClick={() => { setRejectModal(req); setRejectNote(''); }}
-                        style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        ❌ Reject
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div style={{ padding: '10px 18px 14px', fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, borderTop: '1px solid #f0f4f8' }}>
-                  <span><strong>Student:</strong> {req.studentName}</span>
-                  <span><strong>Email:</strong> {req.studentEmail}</span>
-                  <span><strong>Branch:</strong> {req.branch||'—'}</span>
-                  <span><strong>Year:</strong> {req.admissionYear||'—'}</span>
-                  {adm.studentId && <span><strong>Student ID:</strong> {adm.studentId}</span>}
-                  {adm.prnNumber && <span><strong>PRN:</strong> {adm.prnNumber}</span>}
-                  {req.reason && <span style={{gridColumn:'1/-1'}}><strong>Reason:</strong> {req.reason}</span>}
-                  {req.accountsNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Accounts: {req.accountsNotes}</span>}
-                  {req.principalNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Principal: {req.principalNotes}</span>}
-                </div>
-                {req.status === 'completed' && req.generatedBy && (
-                  <div style={{ padding: '6px 18px 10px', fontSize: 12, color: '#7B1FA2', fontWeight: 600, borderTop: '1px solid #f0f4f8' }}>
-                    🏁 Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-
-const UpdatePrnTab = () => {
-  const [admissions, setAdmissions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState(null); // { _id, prnNumber, aparIdNumber }
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-
-  const fetchAdmissions = async () => {
-    setLoading(true);
-    try {
-      const res = await API.get('/admissions/student-section/approved');
-      setAdmissions(res.data.admissions || []);
-    } catch { }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchAdmissions(); }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await API.put(`/admissions/update-prn/${editing._id}`, {
-        prnNumber: editing.prnNumber,
-        aparIdNumber: editing.aparIdNumber,
-      });
-      setMsg('✅ PRN / ABC ID updated successfully!');
-      setTimeout(() => setMsg(''), 3000);
-      setEditing(null);
-      fetchAdmissions();
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to update')); }
-    finally { setSaving(false); }
-  };
-
-  const filtered = admissions.filter(a => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
-  });
-
-  return (
-    <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🔢 Update PRN / ABC ID</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Add or update the PRN Number and ABC (APAR) ID for enrolled students.</p>
-
-      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center' }}>
-        <input type="text" placeholder="🔍 Search by name, student ID or email..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
-        <button onClick={fetchAdmissions}
-          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      {/* Edit modal */}
-      {editing && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ color: '#1565C0', marginBottom: 4 }}>🔢 Update PRN / ABC ID</h3>
-            <p style={{ color: '#666', fontSize: 13, marginBottom: 18 }}>Student: <strong>{editing.applicantName}</strong> ({editing.studentId || 'No ID'})</p>
-            <div className="form-group" style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>PRN Number</label>
-              <input type="text" placeholder="Enter PRN Number" value={editing.prnNumber}
-                onChange={e => setEditing({ ...editing, prnNumber: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #1565C0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>ABC ID (APAR ID)</label>
-              <input type="text" placeholder="Enter ABC / APAR ID" value={editing.aparIdNumber}
-                onChange={e => setEditing({ ...editing, aparIdNumber: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #1565C0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
-            </div>
-            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={handleSave} disabled={saving}
-                style={{ flex: 1, background: '#1565C0', color: '#fff', padding: 12, borderRadius: 9, border: 'none', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? '⏳ Saving...' : '💾 Save Changes'}
-              </button>
-              <button onClick={() => { setEditing(null); setMsg(''); }}
-                style={{ padding: '12px 20px', background: '#eee', color: '#333', borderRadius: 9, border: 'none', fontSize: 14, cursor: 'pointer' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading students...</h3></div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">🔢</div><h3>No students found</h3><p>Approved students will appear here.</p></div>
-      ) : (
-        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.3fr 1.4fr 0.8fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
-            {['Student', 'Student ID', 'PRN Number', 'ABC / APAR ID', 'Action'].map(h => (
-              <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
-            ))}
-          </div>
-          {filtered.map((adm, idx) => (
-            <div key={adm._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.3fr 1.4fr 0.8fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-              <div>
-                <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{adm.applicantName}</p>
-                <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.courseType} · {adm.admissionYear}</p>
-              </div>
-              <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#1565C0', fontWeight: 600 }}>{adm.studentId || '—'}</span>
-              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.prnNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>
-                {adm.prnNumber || '⚠️ Not set'}
-              </span>
-              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.aparIdNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>
-                {adm.aparIdNumber || '⚠️ Not set'}
-              </span>
-              <button onClick={() => setEditing({ _id: adm._id, applicantName: adm.applicantName, studentId: adm.studentId, prnNumber: adm.prnNumber || '', aparIdNumber: adm.aparIdNumber || '' })}
-                style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                ✏️ Edit
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CARRY FORWARD TAB
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// CARRY FORWARD TAB — with result check
-// ─────────────────────────────────────────────────────────────────────────────
-const CarryForwardTab = () => {
-  const [admissions, setAdmissions]       = useState([]);
-  const [loading, setLoading]             = useState(false);
-  const [search, setSearch]               = useState('');
-  const [yearFilter, setYearFilter]       = useState('all');
-  const [promoting, setPromoting]         = useState('');
-  const [msg, setMsg]                     = useState('');
-  const [results, setResults]             = useState({});
-  const [loadingResult, setLoadingResult] = useState('');
-  const [expandedResult, setExpandedResult] = useState(null); // admissionId to show full marksheet
-
-  const fetchAdmissions = async () => {
-    setLoading(true);
-    try {
-      const res = await API.get('/admissions/student-section/approved');
-      setAdmissions(res.data.admissions || []);
-    } catch { }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchAdmissions(); }, []);
-
-  const fetchResult = async (adm) => {
-    setLoadingResult(adm._id);
-    try {
-      const res = await API.get(`/results/by-email/${encodeURIComponent(adm.email)}`);
-      const allResults = res.data.results || [];
-      if (allResults.length === 0) {
-        setResults(prev => ({ ...prev, [adm._id]: { status: 'no_result', allResults: [] } }));
-        return;
-      }
-      // Sort by year desc, semester desc → latest first
-      allResults.sort((a, b) => b.year - a.year || b.semester - a.semester);
-      const latest = allResults[0];
-      const subjects = latest.subjects || [];
-      const atktSubs = subjects.filter(s => Number(s.obtainedMarks) < Number(s.maxMarks) * 0.35);
-      const status = latest.result ||
-        (atktSubs.length === subjects.length && subjects.length > 0 ? 'fail' :
-         atktSubs.length > 0 ? 'atkt' :
-         (latest.percentage >= 75 ? 'distinction' : 'pass'));
-      setResults(prev => ({
-        ...prev,
-        [adm._id]: {
-          status,
-          percentage: latest.percentage,
-          semester: latest.semester,
-          year: latest.year,
-          subjects,
-          atktSubjects: atktSubs.map(s => s.name),
-          totalSubjects: subjects.length,
-          allResults,
-        }
-      }));
-    } catch {
-      setResults(prev => ({ ...prev, [adm._id]: { status: 'error', allResults: [] } }));
-    }
-    finally { setLoadingResult(''); }
-  };
-
-  const handlePromote = async (adm, newYear) => {
-    const r = results[adm._id];
-    if (!r || r.status === 'no_result') {
-      alert('⚠️ Please check the result first before promoting.'); return;
-    }
-    if (r.status === 'fail') {
-      if (!window.confirm(`⚠️ ${adm.applicantName} has FAILED all subjects (${r.percentage}%).
-Are you sure you want to promote?`)) return;
-    } else if (r.status === 'atkt') {
-      if (!window.confirm(`⚠️ ${adm.applicantName} has ATKT in: ${r.atktSubjects.join(', ')}.
-Promote to ${newYear} with ATKT?`)) return;
-    } else {
-      if (!window.confirm(`Promote ${adm.applicantName} (${r.percentage}%) to ${newYear}?`)) return;
-    }
-    setPromoting(adm._id);
-    try {
-      await API.put(`/admissions/carry-forward/${adm._id}`, { newYear });
-      setMsg(`✅ ${adm.applicantName} promoted to ${newYear}!`);
-      setTimeout(() => setMsg(''), 4000);
-      fetchAdmissions();
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-    finally { setPromoting(''); }
-  };
-
-  const nextYear = (current) => {
-    if (current === '1st Year') return '2nd Year';
-    if (current === '2nd Year') return '3rd Year';
-    return null;
-  };
-
-  const statusColor = (s) => ({
-    pass:        { bg: '#e8f5e9', color: '#2E7D32', border: '#a5d6a7' },
-    distinction: { bg: '#e8f5e9', color: '#1b5e20', border: '#66bb6a' },
-    atkt:        { bg: '#fff3e0', color: '#E65100', border: '#ffb74d' },
-    fail:        { bg: '#ffebee', color: '#C62828', border: '#ef9a9a' },
-    no_result:   { bg: '#f5f5f5', color: '#888',    border: '#e0e0e0' },
-    error:       { bg: '#ffebee', color: '#C62828', border: '#ef9a9a' },
-  }[s] || { bg: '#f5f5f5', color: '#888', border: '#e0e0e0' });
-
-  const statusLabel = (r) => {
-    if (!r) return null;
-    const sc = statusColor(r.status);
-    const labels = {
-      no_result:   'No Result Uploaded',
-      error:       'Fetch Error',
-      pass:        `✅ PASS — ${r.percentage}%`,
-      distinction: `🏅 DISTINCTION — ${r.percentage}%`,
-      atkt:        `⚠️ ATKT — ${r.atktSubjects?.length} subject(s) failed`,
-      fail:        `❌ FAIL — All subjects failed`,
-    };
-    return (
-      <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
-        {labels[r.status] || r.status}
-      </span>
-    );
-  };
-
-  const gradeColor = (obtained, max) => {
-    const pct = max > 0 ? (obtained / max) * 100 : 0;
-    if (pct < 35) return { bg: '#ffebee', color: '#C62828', label: 'F' };
-    if (pct < 45) return { bg: '#fff3e0', color: '#E65100', label: 'B' };
-    if (pct < 55) return { bg: '#fff8e1', color: '#F57F17', label: 'B+' };
-    if (pct < 65) return { bg: '#f3e5f5', color: '#7B1FA2', label: 'A' };
-    if (pct < 75) return { bg: '#e3f2fd', color: '#1565C0', label: 'A+' };
-    return { bg: '#e8f5e9', color: '#2E7D32', label: 'O' };
-  };
-
-  const filtered = admissions.filter(a => {
-    const mf = yearFilter === 'all' || a.admissionYear === yearFilter;
-    const q = search.toLowerCase();
-    const ms = !q || a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q);
-    return mf && ms;
-  });
-
-  const counts = {
-    first:  admissions.filter(a => a.admissionYear === '1st Year').length,
-    second: admissions.filter(a => a.admissionYear === '2nd Year').length,
-    third:  admissions.filter(a => a.admissionYear === '3rd Year').length,
-  };
-
-  return (
-    <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 SY / TY Carry Forward</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-        Check last semester marksheet first, then promote student to next year.
-      </p>
-
-      {msg && (
-        <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14,
-          background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee',
-          color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>
-          {msg}
-        </div>
-      )}
-
-      {/* Stats */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[
-          { label: '1st Year', count: counts.first,  color: '#1565C0', bg: '#e3f2fd' },
-          { label: '2nd Year', count: counts.second, color: '#7B1FA2', bg: '#f3e5f5' },
-          { label: '3rd Year', count: counts.third,  color: '#2E7D32', bg: '#e8f5e9' },
-          { label: 'Total',    count: admissions.length, color: '#555', bg: '#f5f5f5' },
-        ].map((p, i) => (
-          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600 }}>
-            {p.label}: {p.count}
-          </div>
-        ))}
-      </div>
-
-      {/* Warning */}
-      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#7c5e00' }}>
-        📌 <strong>Step 1:</strong> Click <strong>📊 Check Marksheet</strong> to view last semester result.
-        &nbsp;&nbsp;<strong>Step 2:</strong> Review marks/status. &nbsp;&nbsp;<strong>Step 3:</strong> Click promote if eligible.
-        <br/>Result must be checked before promoting. Pass / ATKT / Fail determines eligibility.
-      </div>
-
-      {/* Search + Filter */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input type="text" placeholder="🔍 Search by name or student ID..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
-        <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-          <option value="all">All Years</option>
-          <option value="1st Year">1st Year (→ 2nd Year)</option>
-          <option value="2nd Year">2nd Year (→ 3rd Year)</option>
-          <option value="3rd Year">3rd Year (Completed)</option>
-        </select>
-        <button onClick={fetchAdmissions}
-          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">🎓</div><h3>No students found</h3></div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {filtered.map((adm) => {
-            const ny = nextYear(adm.admissionYear);
-            const r  = results[adm._id];
-            const sc = r ? statusColor(r.status) : { bg: '#fff', color: '#888', border: '#e0e7ef' };
-            const isExpanded = expandedResult === adm._id;
-
-            return (
-              <div key={adm._id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${r ? sc.border : '#e0e7ef'}`, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${r ? sc.color : '#bbb'}` }}>
-
-                {/* Student header row */}
-                <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <h4 style={{ color: '#1565C0', fontSize: 15, margin: 0 }}>{adm.applicantName}</h4>
-                      <span style={{ fontSize: 11, background: '#e3f2fd', color: '#1565C0', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>{adm.admissionYear}</span>
-                      {statusLabel(r)}
-                    </div>
-                    <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>
-                      {adm.email} · {adm.courseType || '—'} · ID: {adm.studentId || '—'}
-                    </p>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      onClick={() => { fetchResult(adm); setExpandedResult(adm._id); }}
-                      disabled={loadingResult === adm._id}
-                      style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: loadingResult === adm._id ? 'not-allowed' : 'pointer', opacity: loadingResult === adm._id ? 0.7 : 1 }}>
-                      {loadingResult === adm._id ? '⏳ Loading...' : '📊 Check Marksheet'}
-                    </button>
-                    {r && (
-                      <button
-                        onClick={() => setExpandedResult(isExpanded ? null : adm._id)}
-                        style={{ background: '#f0f4ff', color: '#1565C0', border: '1px solid #c7d7f9', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        {isExpanded ? '▲ Hide' : '▼ View Details'}
-                      </button>
-                    )}
-                    {ny && r && r.status !== 'no_result' && r.status !== 'error' && (
-                      <button
-                        onClick={() => handlePromote(adm, ny)}
-                        disabled={promoting === adm._id}
-                        style={{
-                          background: r.status === 'fail' ? '#ffebee' : r.status === 'atkt' ? '#fff3e0' : '#2E7D32',
-                          color: r.status === 'fail' ? '#C62828' : r.status === 'atkt' ? '#E65100' : '#fff',
-                          border: `2px solid ${r.status === 'fail' ? '#ef9a9a' : r.status === 'atkt' ? '#ffb74d' : '#2E7D32'}`,
-                          borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700,
-                          cursor: promoting === adm._id ? 'not-allowed' : 'pointer',
-                          opacity: promoting === adm._id ? 0.7 : 1,
-                        }}>
-                        {promoting === adm._id ? '⏳...' : `→ Promote to ${ny}`}
-                      </button>
-                    )}
-                    {!ny && <span style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ Course Completed</span>}
-                  </div>
-                </div>
-
-                {/* Expanded marksheet */}
-                {isExpanded && r && r.status !== 'no_result' && r.status !== 'error' && r.subjects?.length > 0 && (
-                  <div style={{ borderTop: `1px solid ${sc.border}`, background: r.status === 'fail' ? '#fff8f8' : r.status === 'atkt' ? '#fffaf5' : '#f8fff8' }}>
-                    {/* Result summary bar */}
-                    <div style={{ padding: '10px 20px', background: sc.bg, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${sc.border}` }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: sc.color }}>
-                        📋 Sem {r.semester} — {r.year} Result
-                      </span>
-                      <span style={{ fontSize: 13, color: '#555' }}>
-                        Total: <strong>{r.subjects.reduce((s, sub) => s + (sub.obtainedMarks || 0), 0)}</strong>
-                        /{r.subjects.reduce((s, sub) => s + (sub.maxMarks || 0), 0)}
-                      </span>
-                      <span style={{ fontSize: 13, color: '#555' }}>
-                        Percentage: <strong style={{ color: sc.color }}>{r.percentage}%</strong>
-                      </span>
-                      {r.status === 'atkt' && (
-                        <span style={{ fontSize: 13, color: '#E65100', fontWeight: 600 }}>
-                          ATKT: {r.atktSubjects.length} subject(s)
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Subject-wise table */}
-                    <div style={{ padding: '14px 20px' }}>
-                      <div style={{ background: '#1565C0', display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '8px 14px', borderRadius: '8px 8px 0 0', gap: 8 }}>
-                        {['Subject', 'Max Marks', 'Obtained', 'Grade', 'Status'].map(h => (
-                          <span key={h} style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{h}</span>
-                        ))}
-                      </div>
-                      {r.subjects.map((sub, i) => {
-                        const gc = gradeColor(sub.obtainedMarks, sub.maxMarks);
-                        const pct = sub.maxMarks > 0 ? Math.round((sub.obtainedMarks / sub.maxMarks) * 100) : 0;
-                        const isFail = sub.obtainedMarks < sub.maxMarks * 0.35;
-                        return (
-                          <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '9px 14px', gap: 8, alignItems: 'center', background: isFail ? '#fff5f5' : i % 2 === 0 ? '#fafbff' : '#fff', borderBottom: '1px solid #f0f4f8' }}>
-                            <span style={{ fontSize: 13, fontWeight: isFail ? 700 : 500, color: isFail ? '#C62828' : '#222' }}>
-                              {isFail ? '⚠️ ' : ''}{sub.name || `Subject ${i + 1}`}
-                            </span>
-                            <span style={{ fontSize: 13, color: '#555' }}>{sub.maxMarks}</span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: isFail ? '#C62828' : '#1565C0' }}>
-                              {sub.obtainedMarks} <span style={{ fontSize: 10, color: '#888' }}>({pct}%)</span>
-                            </span>
-                            <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: gc.bg, color: gc.color, textAlign: 'center' }}>
-                              {sub.grade || gc.label}
-                            </span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: isFail ? '#C62828' : '#2E7D32' }}>
-                              {isFail ? '❌ ATKT' : '✅ Pass'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {/* Summary row */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '10px 14px', gap: 8, alignItems: 'center', background: sc.bg, borderRadius: '0 0 8px 8px', borderTop: `2px solid ${sc.color}` }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: sc.color }}>TOTAL</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{r.subjects.reduce((s, sub) => s + (sub.maxMarks || 0), 0)}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: sc.color }}>{r.subjects.reduce((s, sub) => s + (sub.obtainedMarks || 0), 0)} <span style={{ fontSize: 10 }}>({r.percentage}%)</span></span>
-                        <span></span>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: sc.color }}>{r.status.toUpperCase()}</span>
-                      </div>
-                    </div>
-
-                    {/* ATKT summary */}
-                    {r.status === 'atkt' && (
-                      <div style={{ margin: '0 20px 14px', background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
-                        <strong style={{ color: '#E65100' }}>⚠️ ATKT in {r.atktSubjects.length} Subject(s):</strong>
-                        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {r.atktSubjects.map((s, i) => (
-                            <span key={i} style={{ background: '#ffebee', color: '#C62828', padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600 }}>{s}</span>
-                          ))}
-                        </div>
-                        <p style={{ fontSize: 12, color: '#555', marginTop: 8, marginBottom: 0 }}>
-                          Student must clear these subjects. Can be promoted with ATKT pending.
-                        </p>
-                      </div>
-                    )}
-
-                    {r.status === 'fail' && (
-                      <div style={{ margin: '0 20px 14px', background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C62828' }}>
-                        ❌ <strong>All subjects failed.</strong> Promotion is not recommended. Staff must approve manually if promoting.
-                      </div>
-                    )}
-
-                    {(r.status === 'pass' || r.status === 'distinction') && (
-                      <div style={{ margin: '0 20px 14px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#2E7D32' }}>
-                        ✅ <strong>All subjects cleared.</strong> Student is eligible for promotion to {ny || 'next year'}.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* No result message */}
-                {isExpanded && r && r.status === 'no_result' && (
-                  <div style={{ padding: '16px 20px', background: '#f9f9f9', borderTop: '1px solid #eee', fontSize: 13, color: '#888', textAlign: 'center' }}>
-                    📭 No marksheet found for this student. Ask the Examination Section to upload the result first.
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-
-const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
-  const [receipts, setReceipts]     = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [search, setSearch]         = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [errMsg, setErrMsg]         = useState("");
-
-  const fetchReceipts = async () => {
-    setLoading(true); setErrMsg("");
-    try {
-      const res = await API.get("/admissions/receipts/all");
-      setReceipts(res.data.receipts || []);
-    } catch (e) { setErrMsg("Failed to load: " + (e.response?.data?.message || "Error")); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchReceipts(); }, []);
-
-  const filtered = receipts.filter(r => {
-    const q  = search.toLowerCase();
-    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q) || r.studentId?.toLowerCase().includes(q) || r.receiptNo?.toLowerCase().includes(q);
-    const mt = typeFilter === "all" || r.feeType === typeFilter;
-    const now = new Date(); let md = true;
-    if (dateFilter === "today") { const d = new Date(r.paidAt); md = d.toDateString() === now.toDateString(); }
-    else if (dateFilter === "week") { const d = new Date(r.paidAt); md = (now - d) <= 7*24*60*60*1000; }
-    else if (dateFilter === "month") { const d = new Date(r.paidAt); md = d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
-    return mq && mt && md;
-  });
-
-  const totalAmount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
-  const feeTypes = [...new Set(receipts.map(r => r.feeType).filter(Boolean))];
-
-  return (
-    <div>
-      <h2 style={{ color: themeColor, marginBottom: 4 }}>🧾 Payment Receipts</h2>
-      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>All fee receipts collected by Accounts Section.</p>
-      {errMsg && <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 14, fontSize: 14, background: "#ffebee", color: "#C62828" }}>{errMsg}</div>}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <div style={{ background: "#e8f5e9", color: "#2E7D32", borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>💰 Total: ₹{totalAmount.toLocaleString("en-IN")}</div>
-        <div style={{ background: "#e3f2fd", color: themeColor, borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>🧾 Count: {filtered.length}</div>
-      </div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <input type="text" placeholder="🔍 Name, ID, receipt no..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 9, border: "1px solid #ddd", fontSize: 14 }} />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
-          <option value="all">All Fee Types</option>
-          {feeTypes.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}
-          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
-          <option value="all">All Time</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-        </select>
-        <button onClick={fetchReceipts} style={{ padding: "9px 14px", background: "#f0f4ff", color: themeColor, border: "1px solid #ddd", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🔄</button>
-      </div>
-      {loading ? <div className="empty-state"><p style={{fontSize:"2rem"}}>⏳</p><h3>Loading...</h3></div>
-      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts found</h3></div>
-      : (
-        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e0e7ef", boxShadow: "0 2px 10px rgba(0,0,0,.06)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", background: themeColor, padding: "12px 16px", gap: 8 }}>
-            {["Receipt No","Student","Email","Fee Type","Amount","Mode","Date"].map(h => <span key={h} style={{color:"#fff",fontWeight:700,fontSize:12}}>{h}</span>)}
-          </div>
-          {filtered.map((r, idx) => (
-            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", padding: "11px 16px", gap: 8, alignItems: "center", borderBottom: "1px solid #f0f4f8", background: idx%2===0?"#fafbff":"#fff" }}>
-              <span style={{fontSize:11,fontFamily:"monospace",color:themeColor,fontWeight:700}}>{r.receiptNo||"—"}</span>
-              <div><p style={{fontWeight:600,fontSize:13,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:"#888",margin:0}}>{r.studentId||""} · {r.admissionYear||""}</p></div>
-              <span style={{fontSize:11,color:"#555"}}>{r.studentEmail}</span>
-              <span style={{fontSize:12}}>{r.feeTypeLabel||r.feeType||"—"}</span>
-              <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>₹{(r.amount||0).toLocaleString("en-IN")}</span>
-              <span style={{fontSize:11,background:r.paymentMode==="online"?"#e3f2fd":"#e8f5e9",color:r.paymentMode==="online"?"#1565C0":"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:600}}>{r.paymentMode==="online"?"🌐 Online":"💵 Cash"}</span>
-              <span style={{fontSize:11,color:"#888"}}>{r.paidAt?new Date(r.paidAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}</span>
-            </div>
-          ))}
-          <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
-            <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default StudentSectionDashboard;
+export default StudentDashboard;
