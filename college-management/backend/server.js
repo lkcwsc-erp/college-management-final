@@ -1,4 +1,3 @@
-
 //Server.js
 
 
@@ -43,7 +42,6 @@ app.use('/api/staff', require('./routes/staffRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/results', require('./routes/resultRoutes'));
 app.use('/api/about', require('./routes/aboutRoutes'));
-app.use('/api/fee-approvals', require('./routes/feeStructureApprovalRoutes'));
 
 app.get('/', (req, res) => {
   res.json({ message: '🎓 Late Kalpana Chawla Mahila College API Running!' });
