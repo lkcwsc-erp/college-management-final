@@ -84,7 +84,7 @@ const historyText = historyExpanded
             </Link>
           </div>
           <p className="vnss-hero-line">
-            Under the aegis of &nbsp;<strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon
+            <strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargav(She.)
           </p>
         </div>
       </section>
