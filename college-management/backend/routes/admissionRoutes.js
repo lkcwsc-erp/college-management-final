@@ -678,4 +678,42 @@ router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
   }
 });
 
+
+// ── Delete request from Student Section (goes to Admin) ───────────────────
+router.post('/request-delete', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+  try {
+    const { admissionId, studentName, studentEmail, studentId, reason, requestedBy } = req.body;
+    // Store as a pending delete request in the admission record
+    await Admission.findByIdAndUpdate(admissionId, {
+      deleteRequested: true,
+      deleteReason: reason,
+      deleteRequestedBy: requestedBy || req.user.name,
+      deleteRequestedAt: new Date(),
+    });
+    res.json({ success: true, message: 'Delete request sent to Admin.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ── Admin approves delete ──────────────────────────────────────────────────
+router.delete('/admin-delete/:id', protect, authorizeRoles('admin'), async (req, res) => {
+  try {
+    await Admission.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Student record deleted by Admin.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ── Get pending delete requests (Admin) ───────────────────────────────────
+router.get('/pending-deletes', protect, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const pending = await Admission.find({ deleteRequested: true }).select('applicantName email studentId deleteReason deleteRequestedBy deleteRequestedAt');
+    res.json({ success: true, pending });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
