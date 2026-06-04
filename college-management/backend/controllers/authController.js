@@ -571,10 +571,11 @@ exports.updateStaff = async (req, res) => {
     const updated = await User.findByIdAndUpdate(
       req.params.id,
       {
-        name: name || staff.name,
+        name:     name     || staff.name,
         username: username ? username.toLowerCase() : staff.username,
-        email: email || staff.email,
-        phone: phone || staff.phone,
+        email:    email    || staff.email,
+        phone:    phone    || staff.phone,
+        role:     req.body.role || staff.role,
       },
       { new: true }
     ).select('-password');
