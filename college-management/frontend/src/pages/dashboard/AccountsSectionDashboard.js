@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
 import StudentViewFull from './StudentViewFull';
- 
- 
+
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
 const COLLEGE_NAME = 'Late Kalpana Chawla Women\'s Senior College (LKCWSC)';
 // eslint-disable-next-line no-unused-vars
 const COLLEGE_SUBTITLE = 'Senior Science & Arts College, Gangakhed';
 const COLLEGE_UPI = 'lkcwsc@upi';
- 
+
 // ─── Full itemized fee structure from SNDT 2025-26 ────────────────────────────
 const DETAILED_FEES = {
   'B.Sc.': {
@@ -101,7 +101,7 @@ const DETAILED_FEES = {
     ],
   },
 };
- 
+
 // Helper: get fee items for a student's course + semester
 // eslint-disable-next-line no-unused-vars
 const getDetailedFeeItems = (courseType, semIndex) => {
@@ -111,14 +111,14 @@ const getDetailedFeeItems = (courseType, semIndex) => {
   if (!courseKey) return [];
   return DETAILED_FEES[courseKey].items.filter(item => item.s[semIndex] > 0);
 };
- 
+
 // Helper: semester index from year+sem
 // eslint-disable-next-line no-unused-vars
 const getSemIndex = (admYear, semNum) => {
   const yearOffset = admYear === '1st Year' ? 0 : admYear === '2nd Year' ? 2 : 4;
   return yearOffset + (semNum === 2 ? 1 : 0);
 };
- 
+
 // Helper: document fees
 // eslint-disable-next-line no-unused-vars
 const DOC_FEES = {
@@ -129,8 +129,8 @@ const DOC_FEES = {
   migration: { label: '📜 Migration Certificate',        amount: 500 },
   degree:    { label: '🎓 Degree Certificate',           amount: 500 },
 };
- 
- 
+
+
 const YEARLY_FEES = {
   'B.Sc.': {
     label: 'B.Sc. (Un-aided)',
@@ -149,7 +149,7 @@ const YEARLY_FEES = {
     }
   },
 };
- 
+
 // Helper — detect course type from admission data
 const detectCourse = (adm) => {
   const ct = (adm.courseType || adm.course?.name || '').toLowerCase();
@@ -157,7 +157,7 @@ const detectCourse = (adm) => {
   if (ct.includes('b.a') || ct.includes('ba') || ct.includes('arts')) return 'B.A.';
   return null;
 };
- 
+
 // Map admissionYear to semesters
 // eslint-disable-next-line no-unused-vars
 const getSemesters = (courseKey, year) => {
@@ -170,7 +170,7 @@ const getSemesters = (courseKey, year) => {
   if (year === '3rd Year') return allSems.slice(4, 6);
   return allSems;
 };
- 
+
 const DEFAULT_DOC_FEES = {
   BONAFIDE:  { label: '📋 Bonafide Certificate',      price: 30 },
   ID_CARD:   { label: '🪪 ID Card',                   price: 100 },
@@ -178,7 +178,7 @@ const DEFAULT_DOC_FEES = {
   MIGRATION: { label: '📜 Migration Certificate',     price: 200 },
   TC:        { label: '🎓 Transfer Certificate (TC)', price: 150 },
 };
- 
+
 const FEE_TYPES = [
   { key: 'admission',    label: '💰 Collect Fees' },
   { key: 'exam',         label: '📝 Exam Fee' },
@@ -192,7 +192,7 @@ const FEE_TYPES = [
   { key: 'dues',         label: '💸 Dues / Arrears' },
   { key: 'other',        label: '➕ Other Fee' },
 ];
- 
+
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 const loadDocFees = () => {
   try {
@@ -202,7 +202,7 @@ const loadDocFees = () => {
   return { ...DEFAULT_DOC_FEES };
 };
 const saveDocFees = (fees) => localStorage.setItem('lkcwsc_doc_fees', JSON.stringify(fees));
- 
+
 // ─── Receipt printer (official format per LKCWSC document) ───────────────────
 const printReceipt = (data) => {
   const acadYear = data.academicYear || (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })();
@@ -211,17 +211,17 @@ const printReceipt = (data) => {
   const payMode  = data.paymentMode === 'online' ? 'Online' : 'Cash';
   const txnId    = data.transactionId || '';
   const logo     = "data:image/jpeg;base64,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";
- 
+
   // Amount in words
   const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
   const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
   const inW=(n)=>{if(n===0)return'';if(n<20)return a[n]+' ';if(n<100)return b[Math.floor(n/10)]+' '+(n%10?a[n%10]+' ':'');if(n<1000)return a[Math.floor(n/100)]+'Hundred '+(n%100?inW(n%100):'');return a[Math.floor(n/1000)]+'Thousand '+(n%1000?inW(n%1000):'');};
   const amtWords = inW(amt).trim() + ' Only';
- 
+
   const rows = (data.feeBreakdown && data.feeBreakdown.length > 0)
     ? data.feeBreakdown.map((r,i) => `<tr><td>${i+1}</td><td>${r.particular||r.label||r.name||'Fee'}</td><td>₹${Number(r.amount||0).toLocaleString('en-IN')}.00</td></tr>`).join('')
     : `<tr><td>1</td><td>${data.feeTypeLabel||data.feeLabel||'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>`;
- 
+
   const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -263,21 +263,21 @@ const printReceipt = (data) => {
     <div class="hdr">
       <img src="${logo}" class="hlogo"/>
       <div class="htxt">
-        <div class="htrust">Vidya-Niketan Sevabhavi Sanstha's</div>
+        <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
         <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
         <div class="haddr">Gangakhed, Dist. Parbhani – 431514 &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
       </div>
     </div>
- 
+
     <div class="titlebar">FEE RECEIPT</div>
     <div class="copyline">Fee Receipt (Student Copy)</div>
- 
+
     <div class="metarow">
       <span><b>Receipt No. :</b> ${data.receiptNo}</span>
       <span><b>Date :</b> ${dateStr}</span>
     </div>
- 
+
     <div class="infobox">
       <table class="info">
         <tr>
@@ -290,7 +290,7 @@ const printReceipt = (data) => {
         </tr>
       </table>
     </div>
- 
+
     <table class="fees">
       <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
       <tbody>
@@ -298,38 +298,38 @@ const printReceipt = (data) => {
         <tr class="totrow"><td colspan="2" style="text-align:right;padding-right:10px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
       </tbody>
     </table>
- 
+
     <div class="amtline">Amt. in words (Rs.) : <b>${amtWords}</b></div>
- 
+
     <div class="payline">
       Paid by : <b>${payMode}</b> &nbsp;&nbsp;
       Rs. <b>${amt.toLocaleString('en-IN')}.00</b>
       ${txnId ? ` &nbsp;&nbsp; Transaction ID : <b>${txnId}</b>` : ''}
       &nbsp;&nbsp; Date : <b>${dateStr}</b>
     </div>
- 
+
     <div class="narrline">Narration :</div>
- 
+
     <div class="sigrow">
       <div class="sigsys">This is system generated receipt and<br/>does not require seal/stamp.</div>
       <div class="sigbox"><div class="sigline">Accounts Section<br/>LKCWSC</div></div>
     </div>
- 
+
     <div class="erpline">ERP Verification No: <b>${data.verificationNo||'ERP'+data.receiptNo}</b> &nbsp;|&nbsp; Collected by: <b>${data.collectedBy||'—'}</b></div>
   </div>
   <scr${'ipt'}>window.onload=()=>{window.print()}</scr${'ipt'}></body></html>`;
- 
+
   const w = window.open('','_blank','width=680,height=680');
   w.document.write(html); w.document.close();
 };
- 
- 
+
+
 const genReceiptNo = () => {
   const y = new Date().getFullYear();
   const seq = Date.now().toString().slice(-4);
   return `REC${y}-${seq}`;
 };
- 
+
 // ─── Status helpers ───────────────────────────────────────────────────────────
 const docStatusStyle = (status) => {
   const map = {
@@ -344,7 +344,7 @@ const docStatusStyle = (status) => {
   };
   return map[status] || { bg: '#f5f5f5', color: '#666', label: status };
 };
- 
+
 // ─── Small reusable Field ─────────────────────────────────────────────────────
 const F = ({ label, value }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f0f0f0', fontSize: '13px' }}>
@@ -352,12 +352,7 @@ const F = ({ label, value }) => (
     <span style={{ color: '#222', fontWeight: 500 }}>{value || '—'}</span>
   </div>
 );
- 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── Fee Structure Tab Component ─────────────────────────────────────────────
- 
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -369,122 +364,85 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [customFees, setCustomFees]     = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_custom_fees') || '{}'); } catch { return {}; }
   });
-  const [approvals, setApprovals]       = useState([]);
-  const [loadingApprovals, setLoadingApprovals] = useState(false);
+  const [pendingEdits, setPendingEdits] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lkcwsc_fee_pending') || '{}'); } catch { return {}; }
+  });
   const [addingItem, setAddingItem]     = useState(false);
   const [newItem, setNewItem]           = useState({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
-  const [editingItem, setEditingItem]   = useState(null);
+  const [editingItem, setEditingItem]   = useState(null); // item being edited
   const [editAmounts, setEditAmounts]   = useState({});
-  const [submitting, setSubmitting]     = useState(false);
- 
+
   const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
-  const course    = DETAILED_FEES[courseKey];
+  const course = DETAILED_FEES[courseKey];
   const customItems = customFees[courseKey] || [];
-  const allItems  = course ? [...course.items, ...customItems.filter(ci => !course.items.find(i=>i.id===ci.id))] : [];
-  const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
- 
+  const allItems = course ? [...course.items, ...customItems.filter(ci => !course.items.find(i=>i.id===ci.id))] : [];
+
   const saveCustomFees = (cf) => {
     localStorage.setItem('lkcwsc_custom_fees', JSON.stringify(cf));
     setCustomFees(cf);
   };
- 
-  // Fetch my approval requests from API
-  const fetchApprovals = async () => {
-    setLoadingApprovals(true);
-    try {
-      const res = await API.get('/fee-approvals/all?myOnly=true');
-      setApprovals(res.data.approvals || []);
-    } catch { /* silent */ }
-    finally { setLoadingApprovals(false); }
+
+  const savePending = (p) => {
+    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(p));
+    setPendingEdits(p);
   };
- 
-  useEffect(() => { fetchApprovals(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
- 
-  // Submit edit for approval via API
-  const submitEdit = async (itemId, itemName, itemSection, oldAmts, newAmts, isNewItem = false) => {
-    setSubmitting(true);
-    try {
-      await API.post('/fee-approvals/submit', {
-        courseKey,
-        itemId,
-        itemName,
-        itemSection: itemSection || 'College',
-        oldAmounts: oldAmts || [],
-        newAmounts: newAmts,
-        isNewItem,
-      });
-      showToast('✅ Edit submitted! Waiting for Principal approval.');
-      setEditingItem(null);
-      fetchApprovals();
-    } catch (e) {
-      showToast(e.response?.data?.message || 'Failed to submit.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
+
+  const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
+
+  // Submit edit for approval
+  const submitEdit = (itemId, newAmounts) => {
+    const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
+    savePending(pending);
+    setEditingItem(null);
+    showToast('✅ Edit submitted for Principal/Admin approval!');
   };
- 
-  // Pending counts from approvals
-  const pendingCount   = approvals.filter(a => ['pending_principal','approved_by_principal','pending_admin'].includes(a.status)).length;
-  const approvedCount  = approvals.filter(a => a.status === 'approved').length;
-  const rejectedCount  = approvals.filter(a => a.status.startsWith('rejected')).length;
- 
-  // Status label helper
-  const approvalStatusLabel = (status) => ({
-    pending_principal:      { label:'⏳ Waiting Principal', color:'#E65100', bg:'#fff3e0' },
-    approved_by_principal:  { label:'✅ Principal Approved', color:'#1565C0', bg:'#e3f2fd' },
-    pending_admin:          { label:'⏳ Waiting Admin', color:'#7B1FA2', bg:'#f3e5f5' },
-    approved:               { label:'✅ Fully Approved', color:'#2E7D32', bg:'#e8f5e9' },
-    rejected_by_principal:  { label:'❌ Rejected by Principal', color:'#C62828', bg:'#ffebee' },
-    rejected_by_admin:      { label:'❌ Rejected by Admin', color:'#C62828', bg:'#ffebee' },
-  }[status] || { label: status, color:'#888', bg:'#f5f5f5' });
- 
-  // Check if an item has approved changes
-  const getApprovedAmounts = (itemId) => {
-    const approved = approvals.find(a => a.itemId === itemId && a.status === 'approved');
-    return approved ? approved.newAmounts : null;
-  };
- 
+
+  const pendingForCourse = pendingEdits[courseKey] || {};
+  const hasPending = Object.values(pendingForCourse).some(p => p.status === 'pending');
+
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <div>
           <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure 2025-26</h2>
-          <p style={{ color:'#666', fontSize:14 }}>SNDT University fee structure. View all items, edit amounts, and add custom fees.</p>
+          <p style={{ color:'#666', fontSize:14 }}>View and edit fee amounts. Changes require Principal/Admin approval.</p>
         </div>
-        {pendingCount > 0 && (
+        {hasPending && (
           <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'8px 14px', fontSize:13, color:'#E65100', fontWeight:600 }}>
-            ⏳ {pendingCount} edit(s) pending approval
+            ⏳ {Object.values(pendingForCourse).filter(p=>p.status==='pending').length} edit(s) pending approval
           </div>
         )}
       </div>
- 
+
       {/* Tab toggle */}
       <div style={{ display:'flex', gap:0, marginBottom:20, background:'#f0f4f8', borderRadius:10, padding:4, width:'fit-content' }}>
-        {[{id:'bsc',label:'📗 B.Sc.'},{id:'ba',label:'📘 B.A.'},{id:'doc',label:'📄 Document Fees'},{id:'approvals',label:'📋 My Requests'}].map(t => (
+        {[{id:'bsc',label:'📗 B.Sc.'},{id:'ba',label:'📘 B.A.'},{id:'doc',label:'📄 Document Fees'}].map(t => (
           <button key={t.id} onClick={() => setFeeView(t.id)}
             style={{ padding:'9px 22px', borderRadius:8, border:'none', fontSize:13, fontWeight:700, cursor:'pointer', background:feeView===t.id?'#1565C0':'transparent', color:feeView===t.id?'#fff':'#555' }}>
             {t.label}
           </button>
         ))}
       </div>
- 
-      {/* ── B.Sc / B.A table ── */}
+
+      {/* B.Sc / B.A table */}
       {(feeView==='bsc'||feeView==='ba') && (
         <div>
           {/* Sem totals */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8, marginBottom:16 }}>
             {semLabels.map((sl,si) => {
               const total = allItems.reduce((s,i)=>s+(i.s[si]||0),0);
+              const pend  = Object.values(pendingForCourse).filter(p=>p.status==='pending').length;
               return (
                 <div key={sl} style={{ background:si%2===0?'#e3f2fd':'#f3e5f5', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
                   <div style={{ fontSize:10, color:'#888' }}>{'1st 1st 2nd 2nd 3rd 3rd'.split(' ')[si]} Yr</div>
                   <div style={{ fontSize:11, color:'#555', fontWeight:600 }}>{sl}</div>
                   <div style={{ fontSize:15, fontWeight:800, color:'#1565C0' }}>₹{total.toLocaleString('en-IN')}</div>
+                  {pend>0 && si===0 && <div style={{ fontSize:9, color:'#E65100', fontWeight:600 }}>⏳ pending</div>}
                 </div>
               );
             })}
           </div>
- 
+
           {/* Table */}
           <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
             <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', background:'#1565C0', padding:'10px 14px', gap:6 }}>
@@ -492,17 +450,16 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                 <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:11 }}>{h}</span>
               ))}
             </div>
- 
+
             <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e' }}>🏛️ UNIVERSITY FEES (A)</div>
             {allItems.filter(i=>i.section==='University').map((item,idx) => {
-              const approvedAmts = getApprovedAmounts(item.id);
-              const pendingApproval = approvals.find(a => a.itemId === item.id && ['pending_principal','pending_admin','approved_by_principal'].includes(a.status));
-              const displayAmts = approvedAmts || item.s;
+              const isPending = pendingForCourse[item.id]?.status === 'pending';
+              const pendAmts  = pendingForCourse[item.id]?.amounts || null;
               return (
-                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:pendingApproval?'#fff8e1':idx%2===0?'#fafeff':'#fff' }}>
-                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{pendingApproval&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
+                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafeff':'#fff' }}>
+                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
                   <span style={{ fontSize:10, color:'#888', background:'#e8eaf6', padding:'2px 5px', borderRadius:5 }}>Univ.</span>
-                  {displayAmts.map((amt,si)=>(
+                  {(pendAmts||item.s).map((amt,si)=>(
                     <span key={si} style={{ fontSize:11, fontWeight:amt>0?700:400, color:amt>0?'#1565C0':'#ddd', textAlign:'right' }}>
                       {amt>0?`₹${amt}`:'—'}
                     </span>
@@ -512,17 +469,16 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                 </div>
               );
             })}
- 
+
             <div style={{ background:'#e8f5e9', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1b5e20' }}>🏫 COLLEGE FEES (B)</div>
             {allItems.filter(i=>i.section==='College').map((item,idx) => {
-              const approvedAmts = getApprovedAmounts(item.id);
-              const pendingApproval = approvals.find(a => a.itemId === item.id && ['pending_principal','pending_admin','approved_by_principal'].includes(a.status));
-              const displayAmts = approvedAmts || item.s;
+              const isPending = pendingForCourse[item.id]?.status === 'pending';
+              const pendAmts  = pendingForCourse[item.id]?.amounts || null;
               return (
-                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:pendingApproval?'#fff8e1':idx%2===0?'#fafff8':'#fff' }}>
-                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{pendingApproval&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
+                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafff8':'#fff' }}>
+                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
                   <span style={{ fontSize:10, color:'#888', background:'#e8f5e9', padding:'2px 5px', borderRadius:5 }}>College</span>
-                  {displayAmts.map((amt,si)=>(
+                  {(pendAmts||item.s).map((amt,si)=>(
                     <span key={si} style={{ fontSize:11, fontWeight:amt>0?700:400, color:amt>0?'#2E7D32':'#ddd', textAlign:'right' }}>
                       {amt>0?`₹${amt}`:'—'}
                     </span>
@@ -532,7 +488,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                 </div>
               );
             })}
- 
+
             {/* Total */}
             <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'10px 14px', gap:6, background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
               <span style={{ fontWeight:800, fontSize:13, color:'#1a237e' }}>TOTAL</span><span></span>
@@ -540,7 +496,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
               <span></span>
             </div>
           </div>
- 
+
           {/* Add item */}
           <div style={{ marginTop:16 }}>
             {!addingItem ? (
@@ -575,29 +531,27 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                     </div>
                   ))}
                 </div>
-                <div style={{ background:'#fff3e0', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#E65100', marginBottom:12 }}>
-                  ⚠️ New item will be sent to <strong>Principal → Admin</strong> for approval before it becomes active.
-                </div>
+                <p style={{ fontSize:11, color:'#E65100', marginBottom:10 }}>⚠️ New items will be sent for Principal/Admin approval before appearing in fee collection.</p>
                 <div style={{ display:'flex', gap:10 }}>
-                  <button onClick={async ()=>{
+                  <button onClick={()=>{
                     if (!newItem.name.trim()) return;
                     const id = 'custom_'+Date.now();
                     const item = { id, name:newItem.name.trim(), section:newItem.section, s:[0,1,2,3,4,5].map(i=>newItem[`s${i}`]||0) };
                     const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
                     saveCustomFees(cf);
-                    await submitEdit(id, item.name, item.section, [], item.s, true);
+                    // Auto-submit for approval
+                    submitEdit(id, item.s);
                     setAddingItem(false);
                     setNewItem({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
-                  }} disabled={submitting}
-                    style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer', opacity:submitting?0.6:1 }}>
-                    {submitting ? '⏳ Submitting...' : '📤 Add & Send for Approval'}
+                  }} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                    ✅ Add & Send for Approval
                   </button>
                   <button onClick={()=>setAddingItem(false)} style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
                 </div>
               </div>
             )}
           </div>
- 
+
           {/* Edit modal */}
           {editingItem && (
             <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
@@ -614,13 +568,12 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                   ))}
                 </div>
                 <div style={{ background:'#fff3e0', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#E65100', marginBottom:16 }}>
-                  ⚠️ Changes will be sent to <strong>Principal → Admin</strong> for approval. Applied only after both approve.
+                  ⚠️ Changes will be sent to <strong>Principal / Admin</strong> for approval. They will be applied only after approval.
                 </div>
                 <div style={{ display:'flex', gap:10 }}>
-                  <button onClick={()=>submitEdit(editingItem.id, editingItem.name, editingItem.section, editingItem.s, [0,1,2,3,4,5].map(i=>editAmounts[i]||0))}
-                    disabled={submitting}
-                    style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer', opacity:submitting?0.6:1 }}>
-                    {submitting ? '⏳ Submitting...' : '📤 Submit for Approval'}
+                  <button onClick={()=>submitEdit(editingItem.id, [0,1,2,3,4,5].map(i=>editAmounts[i]||0))}
+                    style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+                    📤 Submit for Approval
                   </button>
                   <button onClick={()=>setEditingItem(null)} style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
                 </div>
@@ -629,8 +582,8 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           )}
         </div>
       )}
- 
-      {/* ── Document Fees ── */}
+
+      {/* Document Fees */}
       {feeView==='doc' && (
         <div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
@@ -671,65 +624,16 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           </div>
         </div>
       )}
- 
-      {/* ── My Approval Requests ── */}
-      {feeView==='approvals' && (
-        <div>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <div>
-              <h3 style={{ color:'#1565C0', margin:0 }}>📋 My Fee Structure Change Requests</h3>
-              <p style={{ color:'#666', fontSize:13, marginTop:4 }}>Track status of all submitted changes.</p>
-            </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <div style={{ background:'#fff3e0', color:'#E65100', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>⏳ Pending: {pendingCount}</div>
-              <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>✅ Approved: {approvedCount}</div>
-              <div style={{ background:'#ffebee', color:'#C62828', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>❌ Rejected: {rejectedCount}</div>
-            </div>
-          </div>
- 
-          {loadingApprovals ? (
-            <div style={{ textAlign:'center', padding:30, color:'#888' }}>⏳ Loading...</div>
-          ) : approvals.length === 0 ? (
-            <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>
-              <div style={{ fontSize:40, marginBottom:10 }}>📋</div>
-              <p>No requests submitted yet.</p>
-            </div>
-          ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {approvals.map(a => {
-                const s = approvalStatusLabel(a.status);
-                return (
-                  <div key={a._id} style={{ background:'#fff', border:`1px solid ${s.color}44`, borderLeft:`4px solid ${s.color}`, borderRadius:12, padding:'14px 18px' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', flexWrap:'wrap', gap:10 }}>
-                      <div>
-                        <div style={{ fontWeight:700, fontSize:14, color:'#222' }}>{a.itemName} <span style={{ fontSize:11, color:'#888', fontWeight:400 }}>({a.courseKey})</span></div>
-                        <div style={{ fontSize:12, color:'#888', marginTop:3 }}>Submitted: {new Date(a.createdAt).toLocaleString('en-IN')}</div>
-                        {a.isNewItem && <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', borderRadius:10, padding:'2px 8px', marginTop:4, display:'inline-block' }}>🆕 New Item</span>}
-                      </div>
-                      <span style={{ padding:'4px 14px', borderRadius:20, fontSize:12, fontWeight:700, background:s.bg, color:s.color }}>{s.label}</span>
-                    </div>
-                    {(a.principalNote || a.adminNote) && (
-                      <div style={{ marginTop:10, background:'#f8faff', borderRadius:8, padding:'8px 12px', fontSize:12 }}>
-                        {a.principalNote && <p style={{ margin:'0 0 4px', color:'#1565C0' }}><strong>Principal Note:</strong> {a.principalNote}</p>}
-                        {a.adminNote && <p style={{ margin:0, color:'#7B1FA2' }}><strong>Admin Note:</strong> {a.adminNote}</p>}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };
- 
+
+
 const AccountsStudentFeeView = ({ themeColor }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [search, setSearch]     = useState('');
- 
+
   useEffect(() => {
     setLoading(true);
     API.get('/admissions/staff-view/all')
@@ -737,28 +641,28 @@ const AccountsStudentFeeView = ({ themeColor }) => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
- 
+
   const getCourseKey = (courseType) => {
     const ct = (courseType||'').toLowerCase();
     return ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
   };
- 
+
   const getYearFee = (s) => {
     const ck = getCourseKey(s.courseType);
     if (!ck || !YEARLY_FEES[ck]) return 0;
     const yr = s.admissionYear;
     return YEARLY_FEES[ck].years?.[yr]?.total || YEARLY_FEES[ck][yr] || 0;
   };
- 
+
   const filtered = students.filter(s => {
     const q = search.toLowerCase();
     return !q || s.applicantName?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
   });
- 
+
   const totalFees    = filtered.reduce((s,st) => s + getYearFee(st), 0);
   const totalPaid    = filtered.reduce((s,st) => s + (st.feeLedger||[]).reduce((a,p)=>a+(p.amount||0),0), 0);
   const totalPending = Math.max(0, totalFees - totalPaid);
- 
+
   return (
     <div>
       {/* Summary cards */}
@@ -776,10 +680,10 @@ const AccountsStudentFeeView = ({ themeColor }) => {
           <div style={{ fontSize:20, fontWeight:800, color:'#b71c1c' }}>₹{totalPending.toLocaleString('en-IN')}</div>
         </div>
       </div>
- 
+
       <input type="text" placeholder="🔍 Search student..." value={search} onChange={e=>setSearch(e.target.value)}
         style={{ width:'100%', padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14, marginBottom:14, boxSizing:'border-box' }} />
- 
+
       {loading ? <div style={{textAlign:'center',padding:20}}>⏳</div> : (
         <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr', background:themeColor, padding:'10px 14px', gap:8 }}>
@@ -812,22 +716,22 @@ const AccountsStudentFeeView = ({ themeColor }) => {
     </div>
   );
 };
- 
- 
+
+
 const AccountsSectionDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
- 
+
   // ── Tab state ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('home');
- 
+
   // ── Global message ─────────────────────────────────────────────────────────
   const [toast, setToast] = useState({ msg: '', type: '' }); // type: 'success'|'error'
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: '', type: '' }), 4000);
   };
- 
+
   // ── Document requests ──────────────────────────────────────────────────────
   const [docRequests, setDocRequests]     = useState([]);
   const [docLoading, setDocLoading]       = useState(false);
@@ -840,7 +744,7 @@ const AccountsSectionDashboard = () => {
   const [payMode, setPayMode]             = useState('cash');
   const [txnId, setTxnId]                = useState('');
   const [docFees, setDocFees]             = useState(loadDocFees());
- 
+
   // ── Admission fees ─────────────────────────────────────────────────────────
   const [admissions, setAdmissions]         = useState([]);
   const [admLoading, setAdmLoading]         = useState(false);
@@ -858,21 +762,21 @@ const AccountsSectionDashboard = () => {
   const [selectedFeeItems, setSelectedFeeItems] = useState({}); // {itemId: true/false}
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
   const [admLoading2, setAdmLoading2]       = useState(false);
- 
- 
- 
+
+
+
   // ── College expenses ───────────────────────────────────────────────────────
   const [expenses, setExpenses]             = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_expenses') || '[]'); } catch { return []; }
   });
   const [expForm, setExpForm]               = useState({ description: '', amount: '', date: '', category: 'other', paidTo: '' });
   const [expMsg, setExpMsg]                 = useState('');
- 
+
   // ── Payment history (from localStorage) ──────────────────────────────────
   const [payHistory, setPayHistory]         = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_pay_history') || '[]'); } catch { return []; }
   });
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // Data fetchers
   // ─────────────────────────────────────────────────────────────────────────
@@ -884,7 +788,7 @@ const AccountsSectionDashboard = () => {
     } catch { /* silent */ }
     finally { setDocLoading(false); }
   }, []);
- 
+
   const fetchAdmissions = useCallback(async () => {
     setAdmLoading(true);
     try {
@@ -893,14 +797,14 @@ const AccountsSectionDashboard = () => {
     } catch { /* silent */ }
     finally { setAdmLoading(false); }
   }, []);
- 
+
   useEffect(() => {
     fetchDocRequests();
     fetchAdmissions();
   }, [fetchDocRequests, fetchAdmissions]);
- 
+
   const handleLogout = () => { logout(); navigate('/'); };
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // Document request actions
   // ─────────────────────────────────────────────────────────────────────────
@@ -908,7 +812,7 @@ const AccountsSectionDashboard = () => {
     setSelectedDoc(null); setDocAction(''); setDocNotes('');
     setPayMode('cash'); setTxnId('');
   };
- 
+
   const handleDocReject = async () => {
     if (!docNotes.trim()) { showToast('Please enter rejection reason.', 'error'); return; }
     setDocLoading2(true);
@@ -919,7 +823,7 @@ const AccountsSectionDashboard = () => {
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); setAdmMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
     finally { setDocLoading2(false); }
   };
- 
+
   const handleDocCollect = async () => {
     if (payMode === 'online' && !txnId.trim()) {
       showToast('Please enter Transaction ID for online payment.', 'error'); return;
@@ -931,7 +835,7 @@ const AccountsSectionDashboard = () => {
       });
       const fee = docFees[selectedDoc.documentType]?.price ?? 0;
       const rNo = genReceiptNo();
- 
+
       // Save to history
       const entry = {
         id: rNo, date: new Date().toISOString(),
@@ -946,7 +850,7 @@ const AccountsSectionDashboard = () => {
       const hist = [entry, ...payHistory].slice(0, 200);
       setPayHistory(hist);
       localStorage.setItem('lkcwsc_pay_history', JSON.stringify(hist));
- 
+
       printReceipt({ 
         ...entry, receiptNo: rNo,
         feeTypeLabel: docFees[selectedDoc.documentType]?.label || selectedDoc.documentTypeLabel || entry.feeLabel || 'Document Fee',
@@ -959,7 +863,7 @@ const AccountsSectionDashboard = () => {
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); }
     finally { setDocLoading2(false); }
   };
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // Admission fee collection
   // ─────────────────────────────────────────────────────────────────────────
@@ -989,7 +893,7 @@ const AccountsSectionDashboard = () => {
         totalFees: selSemAmt || undefined,
         scholarshipAmount: admScholarshipAmt ? Number(admScholarshipAmt) : undefined,
       });
- 
+
       // Build itemized breakdown from selected fee items
       const ct = (selectedAdm.courseType||'').toLowerCase();
       const ck = ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
@@ -1004,7 +908,7 @@ const AccountsSectionDashboard = () => {
               return { sr: i+1, particular: item.name, amount: yearAmt };
             }).filter(r => r.amount > 0)
         : [];
- 
+
       const entry = {
         id: rNo, date: new Date().toISOString(),
         studentName: selectedAdm.applicantName,
@@ -1026,7 +930,7 @@ const AccountsSectionDashboard = () => {
       const hist = [entry, ...payHistory].slice(0, 200);
       setPayHistory(hist);
       localStorage.setItem('lkcwsc_pay_history', JSON.stringify(hist));
- 
+
       printReceipt({ 
         ...entry, receiptNo: rNo,
         feeTypeLabel: feeType?.label || entry.feeLabel || 'Fee',
@@ -1043,7 +947,7 @@ const AccountsSectionDashboard = () => {
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); }
     finally { setAdmLoading2(false); }
   };
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // Expense tracker
   // ─────────────────────────────────────────────────────────────────────────
@@ -1064,7 +968,7 @@ const AccountsSectionDashboard = () => {
     setExpenses(updated);
     localStorage.setItem('lkcwsc_expenses', JSON.stringify(updated));
   };
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // Derived numbers
   // ─────────────────────────────────────────────────────────────────────────
@@ -1073,21 +977,21 @@ const AccountsSectionDashboard = () => {
   const unpaidAdmCount   = admissions.filter(a => !a.feesPaid).length;
   const totalCollected   = payHistory.reduce((s, p) => s + (p.amount || 0), 0);
   const totalExpenses    = expenses.reduce((s, e) => s + (e.amount || 0), 0);
- 
+
   const filteredDocs = docRequests.filter(r => {
     const matchFilter = docFilter === 'all' || r.status === docFilter;
     const q = docSearch.toLowerCase();
     const matchSearch = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });
- 
+
   const filteredAdm = admissions.filter(a => {
     const matchFilter = admFilter === 'all' || (admFilter === 'paid' ? a.feesPaid : !a.feesPaid);
     const q = admSearch.toLowerCase();
     const matchSearch = !q || a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // Sidebar tabs
   // ─────────────────────────────────────────────────────────────────────────
@@ -1101,13 +1005,13 @@ const AccountsSectionDashboard = () => {
     { id: 'finance',      label: '📊 Finance Overview' },
     { id: 'all_students', label: '👩‍🎓 All Students' },
   ];
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="dashboard-layout">
- 
+
       {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
       <aside className="sidebar">
         <div className="sidebar-header">
@@ -1129,14 +1033,14 @@ const AccountsSectionDashboard = () => {
         </nav>
         <button className="sidebar-logout" onClick={handleLogout}>🚪 Logout</button>
       </aside>
- 
+
       {/* ── MAIN ─────────────────────────────────────────────────────────── */}
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <h2>💰 Accounts Section</h2>
           <div className="user-info"><span>👋 {user?.name} (Accounts Staff)</span></div>
         </div>
- 
+
         {/* Toast */}
         {toast.msg && (
           <div style={{ margin: '12px 24px 0', padding: '12px 18px', borderRadius: 10, fontWeight: 500, fontSize: 14,
@@ -1145,9 +1049,9 @@ const AccountsSectionDashboard = () => {
             {toast.msg}
           </div>
         )}
- 
+
         <div className="dashboard-content">
- 
+
           {/* ════════════════════════ HOME ════════════════════════ */}
           {activeTab === 'home' && (
             <div>
@@ -1155,7 +1059,7 @@ const AccountsSectionDashboard = () => {
                 <h3 style={{ color: '#1b5e20', marginBottom: 6 }}>💰 Welcome, {user?.name}!</h3>
                 <p style={{ color: '#555' }}>Manage fee collection, document requests, expenses, and receipts.</p>
               </div>
- 
+
               <div className="dash-cards">
                 <div className="dash-card orange" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('doc_req')}>
                   <div className="dash-card-icon">📄</div>
@@ -1174,7 +1078,7 @@ const AccountsSectionDashboard = () => {
                   <div><h3>₹{totalCollected.toLocaleString('en-IN')}</h3><p>Total Collected (Session)</p></div>
                 </div>
               </div>
- 
+
               {pendingDocCount > 0 && (
                 <div style={{ background: '#fff3e0', border: '2px solid #ffb74d', borderRadius: 12, padding: 20, marginBottom: 20 }}>
                   <h3 style={{ color: '#E65100', marginBottom: 8 }}>⚠️ {pendingDocCount} Document Request{pendingDocCount > 1 ? 's' : ''} Awaiting!</h3>
@@ -1185,7 +1089,7 @@ const AccountsSectionDashboard = () => {
                   </button>
                 </div>
               )}
- 
+
               <h3 style={{ margin: '24px 0 14px' }}>🚀 Quick Actions</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
                 {[
@@ -1204,13 +1108,13 @@ const AccountsSectionDashboard = () => {
               </div>
             </div>
           )}
- 
+
           {/* ════════════════════════ DOCUMENT REQUESTS ════════════════════════ */}
           {activeTab === 'doc_req' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📄 Document Requests</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Collect fees, generate receipts, approve or reject student requests.</p>
- 
+
               {/* Filters */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input type="text" placeholder="🔍 Search by name or email..." value={docSearch} onChange={e => setDocSearch(e.target.value)}
@@ -1230,7 +1134,7 @@ const AccountsSectionDashboard = () => {
                   🔄 Refresh
                 </button>
               </div>
- 
+
               {/* Counts row */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
                 {[
@@ -1244,7 +1148,7 @@ const AccountsSectionDashboard = () => {
                   </div>
                 ))}
               </div>
- 
+
               {docLoading ? (
                 <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
               ) : filteredDocs.length === 0 ? (
@@ -1268,7 +1172,7 @@ const AccountsSectionDashboard = () => {
                           </div>
                           <span style={{ padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: ss.bg, color: ss.color }}>{ss.label}</span>
                         </div>
- 
+
                         <div style={{ background: '#f8faff', padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                           <span><strong>Name:</strong> {req.studentName}</span>
                           <span><strong>Email:</strong> {req.studentEmail}</span>
@@ -1277,14 +1181,14 @@ const AccountsSectionDashboard = () => {
                           {req.rollNumber && <span><strong>Roll No:</strong> {req.rollNumber}</span>}
                           {req.studentPhone && <span><strong>Phone:</strong> {req.studentPhone}</span>}
                         </div>
- 
+
                         {req.reason && <p style={{ fontSize: 13, color: '#555', marginBottom: 10 }}><strong>Reason:</strong> {req.reason}</p>}
                         {req.documentType === 'TC' && isPending && (
                           <div style={{ background: '#fef3c7', padding: '8px 12px', borderRadius: 8, marginBottom: 10, fontSize: 13, color: '#92400e' }}>
                             ⚠️ TC will go to Principal for final approval after fee collection.
                           </div>
                         )}
- 
+
                         {isPending && (
                           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                             <button onClick={() => { setSelectedDoc(req); setDocAction('collect'); setPayMode('cash'); setTxnId(''); }}
@@ -1297,7 +1201,7 @@ const AccountsSectionDashboard = () => {
                             </button>
                           </div>
                         )}
- 
+
                         {req.accountsNotes && !isPending && (
                           <p style={{ fontSize: 12, color: '#777', marginTop: 8, fontStyle: 'italic' }}>Notes: {req.accountsNotes}</p>
                         )}
@@ -1308,7 +1212,7 @@ const AccountsSectionDashboard = () => {
               )}
             </div>
           )}
- 
+
           {/* ════════════════════════ FINANCE OVERVIEW ════════════════════════ */}
           {activeTab === 'finance' && (
             <div>
@@ -1317,13 +1221,13 @@ const AccountsSectionDashboard = () => {
               <AccountsStudentFeeView themeColor="#1565C0" />
             </div>
           )}
- 
+
           {/* ════════════════════════ ADMISSION FEES ════════════════════════ */}
           {activeTab === 'adm_fees' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>💰 Collect Fees</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Collect admission fees, exam fees, and other dues from enrolled students.</p>
- 
+
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input type="text" placeholder="🔍 Search by name, student ID or email..." value={admSearch} onChange={e => setAdmSearch(e.target.value)}
                   style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
@@ -1338,7 +1242,7 @@ const AccountsSectionDashboard = () => {
                   🔄 Refresh
                 </button>
               </div>
- 
+
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
                 {[
                   { label: 'Total Students', count: admissions.length, color: '#1565C0', bg: '#e3f2fd' },
@@ -1350,7 +1254,7 @@ const AccountsSectionDashboard = () => {
                   </div>
                 ))}
               </div>
- 
+
               {admLoading ? (
                 <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading admissions...</h3></div>
               ) : filteredAdm.length === 0 ? (
@@ -1391,20 +1295,20 @@ const AccountsSectionDashboard = () => {
               )}
             </div>
           )}
- 
+
           {/* ════════════════════════ FEE STRUCTURE ════════════════════════ */}
           {activeTab === 'fee_struct' && (
             <FeeStructTab
               docFees={docFees} setDocFees={setDocFees} saveDocFees={saveDocFees} showToast={showToast}
             />
           )}
- 
+
           {/* ════════════════════════ EXPENSES ════════════════════════ */}
           {activeTab === 'expenses' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🏗️ College Expense Tracker</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Record and monitor college expenditures.</p>
- 
+
               {/* Add Expense Form */}
               <div className="form-card" style={{ marginBottom: 28 }}>
                 <h3>➕ Record New Expense</h3>
@@ -1453,7 +1357,7 @@ const AccountsSectionDashboard = () => {
                   💾 Save Expense
                 </button>
               </div>
- 
+
               {/* Expense Summary */}
               <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
                 <div style={{ background: '#e3f2fd', color: '#1565C0', borderRadius: 12, padding: '12px 20px', fontWeight: 700, fontSize: 14 }}>
@@ -1463,7 +1367,7 @@ const AccountsSectionDashboard = () => {
                   Records: {expenses.length}
                 </div>
               </div>
- 
+
               {/* Expense List */}
               {expenses.length === 0 ? (
                 <div className="empty-state"><div className="empty-icon">🏗️</div><h3>No expenses recorded yet</h3></div>
@@ -1491,7 +1395,7 @@ const AccountsSectionDashboard = () => {
               )}
             </div>
           )}
- 
+
           {/* ════════════════════════ PAYMENT HISTORY ════════════════════════ */}
           {activeTab === 'history' && (
             <div>
@@ -1504,7 +1408,7 @@ const AccountsSectionDashboard = () => {
                   Total: ₹{totalCollected.toLocaleString('en-IN')}
                 </div>
               </div>
- 
+
               {payHistory.length === 0 ? (
                 <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts yet</h3><p>Receipts will appear here once you collect fees.</p></div>
               ) : (
@@ -1532,8 +1436,8 @@ const AccountsSectionDashboard = () => {
               )}
             </div>
           )}
- 
- 
+
+
           {/* ══ ALL STUDENTS ══ */}
           {activeTab === 'all_students' && (
             <div>
@@ -1544,7 +1448,7 @@ const AccountsSectionDashboard = () => {
           )}
         </div>
       </main>
- 
+
       {/* ════════════ COLLECT DOC FEE MODAL ════════════ */}
       {selectedDoc && docAction === 'collect' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
@@ -1553,7 +1457,7 @@ const AccountsSectionDashboard = () => {
             onClick={e => e.stopPropagation()}>
             <h2 style={{ color: '#1565C0', marginBottom: 6 }}>💰 Collect Fee</h2>
             <p style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>Verify payment, then generate an official receipt.</p>
- 
+
             {/* Summary */}
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: 16, marginBottom: 20, fontSize: 13 }}>
               <F label="Student" value={selectedDoc.studentName} />
@@ -1565,7 +1469,7 @@ const AccountsSectionDashboard = () => {
                 <span style={{ color: '#ffd700', fontWeight: 800, fontSize: 22 }}>₹ {docFees[selectedDoc.documentType]?.price ?? 0}/-</span>
               </div>
             </div>
- 
+
             {/* Payment mode */}
             <p style={{ fontWeight: 600, color: '#333', marginBottom: 10 }}>Payment Mode</p>
             <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
@@ -1579,7 +1483,7 @@ const AccountsSectionDashboard = () => {
                 </button>
               ))}
             </div>
- 
+
             {payMode === 'online' && (
               <div style={{ background: '#f0f4ff', border: '1px solid #c7d7f9', borderRadius: 10, padding: 16, marginBottom: 20 }}>
                 <p style={{ fontWeight: 600, color: '#1565C0', marginBottom: 8 }}>College UPI: <strong>{COLLEGE_UPI}</strong></p>
@@ -1588,13 +1492,13 @@ const AccountsSectionDashboard = () => {
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #1565C0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
               </div>
             )}
- 
+
             {payMode === 'cash' && (
               <div style={{ background: '#f0fff4', border: '1px solid #b2dfdb', borderRadius: 10, padding: 14, marginBottom: 20, fontSize: 14, color: '#2e7d32' }}>
                 ✅ Collect <strong>₹{docFees[selectedDoc.documentType]?.price ?? 0}/-</strong> cash from the student, then generate the receipt.
               </div>
             )}
- 
+
             <button onClick={handleDocCollect} disabled={docLoading2 || (payMode === 'online' && !txnId.trim())}
               style={{ width: '100%', background: docLoading2 ? '#aaa' : '#1565C0', color: '#fff', padding: 14, borderRadius: 10, border: 'none', fontSize: 15, fontWeight: 700, cursor: docLoading2 ? 'not-allowed' : 'pointer', opacity: (payMode === 'online' && !txnId.trim()) ? 0.5 : 1 }}>
               {docLoading2 ? '⏳ Processing...' : '🖨️ Generate Receipt & Approve'}
@@ -1605,7 +1509,7 @@ const AccountsSectionDashboard = () => {
           </div>
         </div>
       )}
- 
+
       {/* ════════════ REJECT DOC MODAL ════════════ */}
       {selectedDoc && docAction === 'reject' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
@@ -1634,8 +1538,7 @@ const AccountsSectionDashboard = () => {
           </div>
         </div>
       )}
- 
- 
+
       {/* ════════════ ADMISSION FEE MODAL ════════════ */}
       {/* ════════════════════════ ADMISSION FEE MODAL ════════════════════════ */}
       {selectedAdm && (() => {
@@ -1644,74 +1547,78 @@ const AccountsSectionDashboard = () => {
           : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
         const course = ck ? DETAILED_FEES[ck] : null;
         const admYear = selectedAdm.admissionYear || '1st Year';
+        // Yearly items — all sems for this year combined (unique items, max amount)
         const yearSemIdx = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
         const semIdxs = yearSemIdx[admYear] || [0,1];
         const schol = Number(admScholarshipAmt||0);
- 
-        // Build yearly item list
+
+        // Build yearly item list — combine both sems, sum amounts
         const yearItems = course ? course.items.map(item => {
           const amt = (item.s[semIdxs[0]]||0) + (item.s[semIdxs[1]]||0);
           return { ...item, yearAmt: amt };
         }).filter(item => item.yearAmt > 0) : [];
- 
+
+        const yearTotal = yearItems.reduce((s,i) => s + i.yearAmt, 0);
+
         const calcSelected = (map) =>
           yearItems.reduce((s,i) => s + (map[i.id] ? i.yearAmt : 0), 0);
- 
+
         const selectAll = () => {
           const m = {};
           yearItems.forEach(i => { m[i.id] = true; });
           setSelectedFeeItems(m);
           setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol)));
         };
- 
+
         const clearAll = () => { setSelectedFeeItems({}); setAdmFeeAmt('0'); };
- 
+
         const toggleItem = (id) => {
           const m = { ...selectedFeeItems, [id]: !selectedFeeItems[id] };
           setSelectedFeeItems(m);
           setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol)));
         };
- 
-        // ── Document fee selection state (inside modal via closure) ──
-        // We use admCollectDocMode to toggle document fees section
-        // docFees comes from parent scope
- 
-        // Calculate selected admission fee items total
-        const selAdmGross   = calcSelected(selectedFeeItems);
-        // Calculate selected document fees total
-        const selectedDocFeeKeys = Object.keys(selectedFeeItems).filter(k => k.startsWith('DOC_'));
-        const selDocTotal = selectedDocFeeKeys.reduce((s, k) => {
-          return s + (docFees[k.replace('DOC_', '')]?.price || 0);
-        }, 0);
- 
-        const selGross      = selAdmGross + selDocTotal;
-        const netPayable    = Math.max(0, selGross - schol);
-        const amtPaid       = Number(admFeeAmt||0);
-        const balance       = Math.max(0, netPayable - amtPaid);
- 
+
+        const selGross   = calcSelected(selectedFeeItems);
+        const netPayable = Math.max(0, selGross - schol);
+        const amtPaid    = Number(admFeeAmt||0);
+        const balance    = Math.max(0, netPayable - amtPaid);
+
         const uItems = yearItems.filter(i => i.section === 'University');
         const cItems = yearItems.filter(i => i.section === 'College');
- 
+
         return (
           <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
             onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType(''); }}>
-            <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:640, width:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}
+            <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:620, width:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}
               onClick={e => e.stopPropagation()}>
- 
+
               {/* Header */}
-              <h2 style={{ color:'#1565C0', marginBottom:4 }}>💰 Fee Collection</h2>
+              <h2 style={{ color:'#1565C0', marginBottom:8 }}>💰 Fee Collection</h2>
+              {/* Fee collection type toggle */}
+              <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+                <button
+                  style={{ flex:1, padding:'8px', borderRadius:8, border:`2px solid ${!admCollectDocMode?'#1565C0':'#ddd'}`, background:!admCollectDocMode?'#e3f2fd':'#fff', color:!admCollectDocMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                  onClick={()=>setAdmCollectDocMode(false)}>
+                  🎓 Admission / Annual Fees
+                </button>
+                <button
+                  style={{ flex:1, padding:'8px', borderRadius:8, border:`2px solid ${admCollectDocMode?'#1565C0':'#ddd'}`, background:admCollectDocMode?'#e3f2fd':'#fff', color:admCollectDocMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                  onClick={()=>setAdmCollectDocMode(true)}>
+                  📄 Document Fees
+                </button>
+              </div>
               <p style={{ color:'#666', fontSize:13, marginBottom:16 }}>{selectedAdm.applicantName} — {selectedAdm.courseType} · {admYear} · ID: {selectedAdm.studentId||'—'}</p>
- 
-              {/* Annual fee info bar */}
+
+              {/* Year total info */}
               <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Annual Fee ({admYear})</span>
-                <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{yearItems.reduce((s,i)=>s+i.yearAmt,0).toLocaleString('en-IN')}</span>
+                <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{yearTotal.toLocaleString('en-IN')}</span>
               </div>
- 
-              {/* ── SECTION 1: Admission / Annual Fee Items ── */}
+
+              {/* Step 1 — Select fee items */}
               <div style={{ marginBottom:16 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                  <label style={{ fontSize:13, fontWeight:800, color:'#1565C0' }}>📚 Admission / Annual Fee Items</label>
+                  <label style={{ fontSize:13, fontWeight:700, color:'#1565C0' }}>Select Fee Items</label>
                   <div style={{ display:'flex', gap:8 }}>
                     <button onClick={selectAll}
                       style={{ padding:'5px 14px', background:'#1565C0', color:'#fff', border:'none', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☑ Select All</button>
@@ -1719,16 +1626,16 @@ const AccountsSectionDashboard = () => {
                       style={{ padding:'5px 14px', background:'#f5f5f5', color:'#555', border:'1px solid #ddd', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☐ Clear</button>
                   </div>
                 </div>
- 
+
                 {!course ? (
                   <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ Course not detected. Enter amount manually below.</div>
                 ) : (
-                  <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:220, overflowY:'auto' }}>
+                  <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:260, overflowY:'auto' }}>
                     {uItems.length > 0 && <>
                       <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e', letterSpacing:0.5 }}>UNIVERSITY FEES (A)</div>
-                      {uItems.map((item) => (
+                      {uItems.map((item,idx) => (
                         <div key={item.id} onClick={() => toggleItem(item.id)}
-                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'#fff', userSelect:'none' }}>
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'idx%2===0?#fafbff:#fff', userSelect:'none' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                             <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
                             <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
@@ -1739,7 +1646,7 @@ const AccountsSectionDashboard = () => {
                     </>}
                     {cItems.length > 0 && <>
                       <div style={{ background:'#e8f5e9', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1b5e20', letterSpacing:0.5 }}>COLLEGE FEES (B)</div>
-                      {cItems.map((item) => (
+                      {cItems.map((item,idx) => (
                         <div key={item.id} onClick={() => toggleItem(item.id)}
                           style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#f0fff4':'#fff', userSelect:'none' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -1752,87 +1659,29 @@ const AccountsSectionDashboard = () => {
                     </>}
                   </div>
                 )}
-              </div>
- 
-              {/* ── SECTION 2: Document Fees (Optional Add-on) ── */}
-              <div style={{ marginBottom:16, border:'2px dashed #90CAF9', borderRadius:12, padding:14 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: admCollectDocMode ? 12 : 0 }}>
-                  <label style={{ fontSize:13, fontWeight:800, color:'#1565C0', cursor:'pointer' }}
-                    onClick={() => setAdmCollectDocMode(!admCollectDocMode)}>
-                    📄 Add Document Fees (Optional)
-                    <span style={{ fontSize:11, color:'#888', fontWeight:400, marginLeft:8 }}>e.g. Bonafide, ID Card, Marksheet</span>
-                  </label>
-                  <button onClick={() => setAdmCollectDocMode(!admCollectDocMode)}
-                    style={{ background: admCollectDocMode?'#ffebee':'#e3f2fd', color: admCollectDocMode?'#C62828':'#1565C0', border:'none', borderRadius:7, padding:'5px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                    {admCollectDocMode ? '✕ Hide' : '➕ Add'}
-                  </button>
-                </div>
- 
-                {admCollectDocMode && (
-                  <div>
-                    <p style={{ fontSize:12, color:'#888', marginBottom:10 }}>Select documents to collect fee for along with admission fees:</p>
-                    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                      {Object.entries(docFees).map(([key, val]) => {
-                        const docKey = `DOC_${key}`;
-                        const isSelected = !!selectedFeeItems[docKey];
-                        return (
-                          <div key={key} onClick={() => {
-                            const m = { ...selectedFeeItems, [docKey]: !isSelected };
-                            setSelectedFeeItems(m);
-                            // Recalculate amount
-                            const admAmt = yearItems.reduce((s,i) => s + (m[i.id] ? i.yearAmt : 0), 0);
-                            const docAmt = Object.keys(m).filter(k=>k.startsWith('DOC_')&&m[k]).reduce((s,k)=>s+(docFees[k.replace('DOC_','')]?.price||0),0);
-                            setAdmFeeAmt(String(Math.max(0, admAmt + docAmt - schol)));
-                          }}
-                            style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', borderRadius:9, border:`1.5px solid ${isSelected?'#1565C0':'#e0e7ef'}`, cursor:'pointer', background:isSelected?'#e8f4ff':'#fff', userSelect:'none' }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                              <input type="checkbox" checked={isSelected} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
-                              <span style={{ fontSize:13, color:'#333', fontWeight:500 }}>{val.label}</span>
-                            </div>
-                            <span style={{ fontSize:13, fontWeight:700, color:isSelected?'#1565C0':'#888' }}>₹{val.price}</span>
-                          </div>
-                        );
-                      })}
+
+                {/* Fee summary */}
+                {selGross > 0 && (
+                  <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 16px', marginTop:10 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4 }}>
+                      <span style={{ color:'#555' }}>Selected Total</span>
+                      <span style={{ fontWeight:700 }}>₹{selGross.toLocaleString('en-IN')}</span>
                     </div>
-                    {selDocTotal > 0 && (
-                      <div style={{ marginTop:10, background:'#e3f2fd', borderRadius:8, padding:'8px 14px', display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, color:'#1565C0' }}>
-                        <span>Document Fees Subtotal</span>
-                        <span>₹{selDocTotal.toLocaleString('en-IN')}</span>
+                    {schol > 0 && (
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#7B1FA2', marginBottom:4 }}>
+                        <span>Scholarship Deduction</span>
+                        <span style={{ fontWeight:700 }}>− ₹{schol.toLocaleString('en-IN')}</span>
                       </div>
                     )}
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'2px solid #e0e7ef', paddingTop:8, marginTop:6 }}>
+                      <span style={{ color:'#1565C0' }}>Net Payable</span>
+                      <span style={{ color:'#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
+                    </div>
                   </div>
                 )}
               </div>
- 
-              {/* ── Fee Summary ── */}
-              {selGross > 0 && (
-                <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 16px', marginBottom:14 }}>
-                  {selAdmGross > 0 && (
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4 }}>
-                      <span style={{ color:'#555' }}>Admission Fees</span>
-                      <span style={{ fontWeight:700 }}>₹{selAdmGross.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  {selDocTotal > 0 && (
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4, color:'#1565C0' }}>
-                      <span>Document Fees</span>
-                      <span style={{ fontWeight:700 }}>₹{selDocTotal.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  {schol > 0 && (
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#7B1FA2', marginBottom:4 }}>
-                      <span>Scholarship Deduction</span>
-                      <span style={{ fontWeight:700 }}>− ₹{schol.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'2px solid #e0e7ef', paddingTop:8, marginTop:6 }}>
-                    <span style={{ color:'#1565C0' }}>Net Payable</span>
-                    <span style={{ color:'#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              )}
- 
-              {/* ── Amount Collected ── */}
+
+              {/* Step 2 — Amount */}
               <div style={{ marginBottom:14 }}>
                 <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Amount Collected (₹) *</label>
                 <input type="number" placeholder="Enter amount" value={admFeeAmt}
@@ -1853,8 +1702,8 @@ const AccountsSectionDashboard = () => {
                   </div>
                 )}
               </div>
- 
-              {/* ── Payment Mode ── */}
+
+              {/* Step 3 — Payment Mode */}
               <div style={{ marginBottom:16 }}>
                 <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Payment Mode *</label>
                 <div style={{ display:'flex', gap:10 }}>
@@ -1866,7 +1715,7 @@ const AccountsSectionDashboard = () => {
                   ))}
                 </div>
               </div>
- 
+
               {admPayMode === 'online' && (
                 <div style={{ marginBottom:14 }}>
                   <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:6 }}>Transaction ID *</label>
@@ -1874,86 +1723,10 @@ const AccountsSectionDashboard = () => {
                     style={{ width:'100%', padding:'10px 14px', borderRadius:9, border:'2px solid #1565C0', fontSize:14, boxSizing:'border-box' }} />
                 </div>
               )}
- 
+
               {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
- 
-              <button onClick={async () => {
-                if (!admFeeAmt || isNaN(Number(admFeeAmt)) || Number(admFeeAmt) <= 0) {
-                  showToast('Enter a valid fee amount.', 'error'); return;
-                }
-                if (admPayMode === 'online' && !admTxnId.trim()) {
-                  showToast('Enter Transaction ID for online payment.', 'error'); return;
-                }
-                setAdmLoading2(true);
-                const rNo = genReceiptNo();
-                const feeType = FEE_TYPES.find(f => f.key === admFeeType);
- 
-                // Build itemized breakdown: admission items + document items
-                const admBreakdown = yearItems
-                  .filter(item => selectedFeeItems[item.id])
-                  .map((item, i) => ({ sr: i+1, particular: item.name, amount: item.yearAmt }));
- 
-                const docBreakdown = Object.entries(docFees)
-                  .filter(([key]) => selectedFeeItems[`DOC_${key}`])
-                  .map(([key, val], i) => ({ sr: admBreakdown.length + i + 1, particular: val.label, amount: val.price }));
- 
-                const feeBreakdown = [...admBreakdown, ...docBreakdown];
- 
-                try {
-                  await API.put(`/admissions/mark-fees-paid/${selectedAdm._id}`, {
-                    fees: Number(admFeeAmt),
-                    paymentMode: admPayMode,
-                    transactionId: admTxnId,
-                    receiptNo: rNo,
-                    collectedBy: user?.name || 'Accounts Staff',
-                    feeType: admFeeType,
-                    feeTypeLabel: feeType?.label || 'Fee',
-                    semester: admSelectedSem || '',
-                    scholarshipAmount: admScholarshipAmt ? Number(admScholarshipAmt) : undefined,
-                  });
- 
-                  const entry = {
-                    id: rNo, date: new Date().toISOString(),
-                    studentName: selectedAdm.applicantName,
-                    studentEmail: selectedAdm.email,
-                    studentId: selectedAdm.studentId,
-                    branch: selectedAdm.courseType,
-                    year: selectedAdm.admissionYear,
-                    semester: admSelectedSem || '',
-                    feeLabel: feeType?.label || 'Fee',
-                    amount: Number(admFeeAmt),
-                    paymentMode: admPayMode,
-                    transactionId: admTxnId,
-                    collectedBy: user?.name || 'Accounts Staff',
-                    type: 'admission',
-                    scholarshipDeduction: admScholarshipAmt ? Number(admScholarshipAmt) : 0,
-                    feeBreakdown,
-                  };
-                  const hist = [entry, ...payHistory].slice(0, 200);
-                  setPayHistory(hist);
-                  localStorage.setItem('lkcwsc_pay_history', JSON.stringify(hist));
- 
-                  printReceipt({
-                    ...entry, receiptNo: rNo,
-                    feeTypeLabel: feeType?.label || entry.feeLabel || 'Fee',
-                    courseType: selectedAdm.courseType || '',
-                    admissionYear: selectedAdm.admissionYear || '',
-                    verificationNo: 'ERP' + rNo,
-                    feeBreakdown,
-                  });
- 
-                  showToast('✅ Fee collected & receipt generated!');
-                  setSelectedAdm(null);
-                  setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash');
-                  setAdmSelectedSem(''); setAdmScholarshipAmt('');
-                  setSelectedFeeItems({}); setAdmCollectDocMode(false);
-                  fetchAdmissions();
-                } catch (e) {
-                  showToast(e.response?.data?.message || 'Failed.', 'error');
-                } finally {
-                  setAdmLoading2(false);
-                }
-              }} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
+
+              <button onClick={handleAdmFeeCollect} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
                 style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
                 {admLoading2 ? '⏳ Processing...' : '🖨️ Collect & Print Receipt'}
               </button>
@@ -1968,7 +1741,5 @@ const AccountsSectionDashboard = () => {
     </div>
   );
 };
- 
-export default AccountsSectionDashboard;
- 
 
+export default AccountsSectionDashboard;
