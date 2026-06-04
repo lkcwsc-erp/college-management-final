@@ -1010,10 +1010,9 @@ const printIDCard = (adm) => {
   </style></head><body>
   <div class="card">
     <div class="card-top" style="padding:10px 12px">
-      <div style="font-size:8px;opacity:0.8;margin-bottom:1px">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-      <div style="font-size:8.5px;opacity:0.75;margin-bottom:2px">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+      <div style="font-size:8px;font-style:normal;opacity:0.8;margin-bottom:1px">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
       <div style="font-size:12px;font-weight:900;line-height:1.2;margin-bottom:1px">Late Kalpana Chawla Women's Senior College</div>
-      <div style="font-size:7.5px;opacity:0.75">Lecture Colony, Gangakhed, Dist. Parbhani – 431514</div>
+      <div style="font-size:8.5px;font-style:normal;opacity:0.75;margin-bottom:1px">Affiliated to S.N.D.T. Women's University, Mumbai</div>
     </div>
     <div class="id-label">STUDENT IDENTITY CARD</div>
     <div class="card-body">
