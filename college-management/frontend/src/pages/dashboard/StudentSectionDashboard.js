@@ -761,7 +761,7 @@ const printTC = (adm) => {
       <div class="htxt">
         <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="h2">Late Kalpana Chawla Women's Senior College, Gangakhed</div>
-        <div class="h3">Lecturer Colony Gangakhed, Dist Parbhani - 431514</div>
+        <div class="h3">Lecturer Colony Gangakhed, Dist Parbhani Maharastra - 431514</div>
         <div class="h4">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
       </div>
     </div>
@@ -950,9 +950,7 @@ const printBonafide = (adm) => {
       <p>
         This is to certify that Miss <span class="ul">&nbsp;${name}&nbsp;</span>
         is/was a bonafide student of Late Kalpana Chawla Women's Senior College, Gangakhed.</p>
-      <p>    She is studying in <span class="ul" style="min-width:280px">&nbsp;${courseFull||'__________________________________'}&nbsp;</span> — <span class="ul-sm" style="min-width:60px">&nbsp;${classYear}&nbsp;</span> Class of this College.  </p>
-      <p> As per college records, her Date of Birth is&nbsp;  <span class="ul-sm">&nbsp;${dobDD}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm">&nbsp;${dobMM}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-yr">&nbsp;${dobYYYY}&nbsp;</span>  </p>
-      <p>  (In Words): <span class="ul-lg">&nbsp;${dobWords}&nbsp;</span>  </p> <p>  To the best of my knowledge and belief, her conduct and moral character are <strong>good</strong>. This certificate is issued on her request for official purpose.   </p>
+      <p>    She is studying in <span class="ul" style="min-width:280px">&nbsp;${courseFull||'__________________________________'}&nbsp;</span> — <span class="ul-sm" style="min-width:60px">&nbsp;${classYear}&nbsp;</span> Class of this College.  </p> <p> As per college records, her Date of Birth is&nbsp;  <span class="ul-sm">&nbsp;${dobDD}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm">&nbsp;${dobMM}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-yr">&nbsp;${dobYYYY}&nbsp;</span>  </p> <p>  (In Words): <span class="ul-lg">&nbsp;${dobWords}&nbsp;</span>  </p> <p>  To the best of my knowledge and belief, her conduct and moral character are <strong>good</strong>. This certificate is issued on her request for official purpose.   </p>
     </div>
 
     <div class="foot">
