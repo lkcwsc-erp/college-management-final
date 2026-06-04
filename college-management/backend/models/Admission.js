@@ -308,6 +308,10 @@ const admissionSchema = new mongoose.Schema(
     studentSectionRemark: { type: String, default: '' },
     principalRemark:      { type: String, default: '' },
     tcIssued:             { type: Boolean, default: false },
+    deleteRequested:      { type: Boolean, default: false },
+    deleteReason:         { type: String, default: '' },
+    deleteRequestedBy:    { type: String, default: '' },
+    deleteRequestedAt:    { type: Date },
     tcIssuedDate:         { type: Date },
 
     studentSectionStatus: {
