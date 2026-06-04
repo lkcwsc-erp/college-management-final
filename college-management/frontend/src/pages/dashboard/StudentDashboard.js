@@ -763,17 +763,29 @@ const StudentDashboard = () => {
                   </div>
 
                   {/* Issued Documents */}
-                  {myRequests.filter(r => r.status === 'completed').length > 0 && (
-                    <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16 }}>
-                      <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>✅ Issued Documents</h4>
+                  <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16 }}>
+                      <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>📦 Documents Collected from College</h4>
+                      {myRequests.filter(r => r.status === 'completed').length === 0 && (
+                        <p style={{ fontSize: 13, color: '#555' }}>No documents collected yet.</p>
+                      )}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                         {myRequests.filter(r => r.status === 'completed').map((r, i) => (
-                          <div key={i} style={{ background: '#fff', borderRadius: 9, border: '1px solid #c8e6c9', padding: '8px 14px', fontSize: 12 }}>
-                            <div style={{ fontWeight: 700, color: '#1b5e20' }}>{r.documentTypeLabel || r.documentType}</div>
+                          <div key={i} style={{ background: '#fff', borderRadius: 10, border: '1px solid #c8e6c9', padding: '10px 16px', fontSize: 12, minWidth: 170 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontSize: 18 }}>
+                                {r.documentType==='TC'?'📄':r.documentType==='BONAFIDE'?'📋':r.documentType==='ID_CARD'?'🪪':r.documentType==='MARKSHEET'?'📝':'📃'}
+                              </span>
+                              <span style={{ fontWeight: 800, color: '#1b5e20', fontSize: 13 }}>{r.documentTypeLabel || r.documentType}</span>
+                            </div>
                             {r.documentType === 'MARKSHEET' && r.marksheetSemester && (
-                              <div style={{ color: '#555', fontSize: 11 }}>{r.marksheetSemester} · {r.marksheetSession === 'mar_apr' ? 'Mar/Apr' : 'Nov/Dec'} {r.marksheetYear}</div>
+                              <div style={{ color: '#1565C0', fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
+                                {r.marksheetSemester} · {r.marksheetSession === 'mar_apr' ? 'March / April' : 'Nov / December'} {r.marksheetYear}
+                              </div>
                             )}
-                            <div style={{ color: '#888', fontSize: 10 }}>{new Date(r.updatedAt).toLocaleDateString('en-IN')}</div>
+                            {r.reason && <div style={{ color: '#666', fontSize: 11, marginBottom: 2 }}>Purpose: {r.reason}</div>}
+                            <div style={{ color: '#888', fontSize: 10 }}>
+                              Issued: {new Date(r.updatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -924,7 +936,7 @@ const StudentDashboard = () => {
                 {/* Issued Documents summary */}
                 {myRequests.filter(r => r.status === 'completed').length > 0 && (
                   <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16, marginBottom: 20 }}>
-                    <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>✅ Collected Documents</h4>
+                    <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>📦 Documents Collected from College</h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {myRequests.filter(r => r.status === 'completed').map((r, i) => (
                         <div key={i} style={{ background: '#fff', borderRadius: 10, border: '1px solid #c8e6c9', padding: '10px 16px', fontSize: 13 }}>
