@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import IDCard, { printIDCard } from '../../components/IDCard';
 import API from '../../api/axios';
 import './Dashboard.css';
 
+import IDCard, { printIDCard } from '../../components/IDCard.jsx';
 // Official fee structure 2025-26
 
 
@@ -372,6 +372,7 @@ const StudentDashboard = () => {
             <h3>Late Kalpana Chawla Women's Senior College</h3>
             <p>Senior Science & Arts College, Gangakhed</p>
           </div>
+    
         </div>
         <nav className="sidebar-nav">
           {tabs.map(tab => (
@@ -379,6 +380,15 @@ const StudentDashboard = () => {
               onClick={() => setActiveTab(tab.id)}>
               {tab.label}
             </button>
+          <div className="dashboard-container">
+
+    {myAdmission && (
+      <IDCard admission={myAdmission} />
+    )}
+
+    {/* baki dashboard code */}
+
+  </div>
           ))}
         </nav>
         <button className="sidebar-logout" onClick={handleLogout}>🚪 Logout</button>
