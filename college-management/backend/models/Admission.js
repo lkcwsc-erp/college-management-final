@@ -303,6 +303,7 @@ const admissionSchema = new mongoose.Schema(
     scholarshipNote:     { type: String, default: '' },
     mahaDBTUsername:     { type: String, default: '' },
     mahaDBTPassword:     { type: String, default: '' },
+    mahaDBTMobile:     { type: String, default: '' },
     mahaDBTAppNo:        { type: String, default: '' },
 
     studentSectionRemark: { type: String, default: '' },
