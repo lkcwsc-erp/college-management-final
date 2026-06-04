@@ -59,7 +59,7 @@ const printStudentReceipt = (p, adm) => {
     <div class="hdr">
       <img src="${logo}" class="hlogo"/>
       <div class="htxt">
-        <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="htrust" style="font-weight:700">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
         <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
         <div class="haddr">Gangakhed, Dist. Parbhani – 431514 &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
@@ -97,7 +97,6 @@ const printStudentReceipt = (p, adm) => {
       <div class="sigsys">This is system generated receipt and does not require seal/stamp.</div>
       <div class="sigbox"><div class="sigline">Accounts Section<br/>LKCWSC</div></div>
     </div>
-    <div class="erpline">ERP Verification No: <b>${p.receiptNo||'—'}</b> | Collected by: <b>${p.collectedBy||'Accounts Section'}</b></div>
   </div>
   <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
   const w = window.open('','_blank','width=680,height=680');
