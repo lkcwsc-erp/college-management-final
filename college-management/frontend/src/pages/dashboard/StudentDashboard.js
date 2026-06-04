@@ -302,6 +302,9 @@ const StudentDashboard = () => {
     API.get('/results/my')
       .then(res => setResults(res.data.results || []))
       .catch(() => {});
+    API.get('/document-requests/my')
+      .then(r => setMyRequests(r.data.requests || []))
+      .catch(() => {});
     // Fetch exam form settings
     API.get('/results/exam-settings')
       .then(res => setExamSettings(res.data.settings || {}))
