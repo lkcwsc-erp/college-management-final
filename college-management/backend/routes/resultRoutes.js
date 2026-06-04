@@ -110,7 +110,6 @@ router.get('/all-results', protect, authorizeRoles('staff_principal', 'staff_exa
   }
 });
 
-module.exports = router;
 // ── Exam Form Settings (global toggle by exam staff) ──────────────────────────
 const ExamSettings = (() => {
   let settings = { regularEnabled: false, backlogEnabled: false, lastUpdatedBy: '', lastUpdatedAt: null };
@@ -129,3 +128,4 @@ router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), (re
   ExamSettings.set({ regularEnabled, backlogEnabled, lastUpdatedBy: req.user.name || req.user.email });
   res.json({ success: true, message: 'Exam form settings updated', settings: ExamSettings.get() });
 });
+module.exports = router;
