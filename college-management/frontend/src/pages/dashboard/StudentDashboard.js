@@ -648,36 +648,130 @@ const StudentDashboard = () => {
 
           {/* ============ PROFILE TAB ============ */}
           {activeTab === 'profile' && (
-            <div className="profile-card">
-              <div className="profile-avatar">
-                {myAdmission?.studentPhoto ? (
-                  <img src={docUrl(myAdmission.studentPhoto)} alt="Student"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                ) : (
-                  <span style={{ fontSize: '3rem' }}>👩‍🎓</span>
-                )}
-              </div>
-              <div className="profile-details">
-                <h2>{user?.name}</h2>
-                <p className="profile-role">Student</p>
-                {myAdmission?.studentId && (
-                  <p style={{ color: '#2E7D32', fontWeight: '600', fontFamily: 'monospace' }}>🎓 ID: {myAdmission.studentId}</p>
-                )}
-                <div className="profile-info-grid">
-                  <div className="profile-info-item"><label>Email</label><p>{user?.email}</p></div>
-                  <div className="profile-info-item"><label>Phone</label><p>{myAdmission?.phone || user?.phone || 'Not provided'}</p></div>
-                  <div className="profile-info-item"><label>Academic Year</label><p>{myAdmission?.admissionYear || 'Not set'}</p></div>
-                  <div className="profile-info-item"><label>ABC ID</label><p>{myAdmission?.aparIdNumber || 'Not provided'}</p></div>
-                  <div className="profile-info-item"><label>Course</label><p>{myAdmission?.courseType || myAdmission?.course?.name || 'Not set'}</p></div>
-                  <div className="profile-info-item"><label>Category</label><p>{myAdmission?.category ? myAdmission.category.toUpperCase() : 'Not set'}</p></div>
-                  <div className="profile-info-item" style={{ gridColumn: '1 / -1' }}><label>Address</label><p>{myAdmission?.address || 'Not provided'}</p></div>
-                  <div className="profile-info-item"><label>Account Status</label><p className="status-active">Active</p></div>
+            <div>
+              <h3 style={{ marginBottom: 20, color: '#1565C0' }}>👤 My Profile</h3>
+              {!myAdmission ? (
+                <div className="empty-state"><div className="empty-icon">👤</div><h3>No profile data</h3></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                  {/* Top card — photo + name + ID */}
+                  <div style={{ background: 'linear-gradient(135deg,#1565C0,#0d47a1)', borderRadius: 16, padding: '24px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                    <div style={{ width: 90, height: 90, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', overflow: 'hidden', background: '#e3f2fd', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {myAdmission.studentPhoto
+                        ? <img src={docUrl(myAdmission.studentPhoto)} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display='none'} />
+                        : <span style={{ fontSize: '2.5rem' }}>👩‍🎓</span>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <h2 style={{ color: '#fff', margin: '0 0 4px', fontSize: '1.4rem' }}>{myAdmission.applicantName || user?.name}</h2>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                        {myAdmission.studentId
+                          ? <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>🎓 {myAdmission.studentId}</span>
+                          : <span style={{ background: '#fff3e0', color: '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>⏳ ID Pending</span>}
+                        <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12 }}>{myAdmission.courseType} · {myAdmission.admissionYear}</span>
+                        <span style={{ background: myAdmission.status === 'approved' ? '#e8f5e9' : '#fff3e0', color: myAdmission.status === 'approved' ? '#2E7D32' : '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                          {myAdmission.status === 'approved' ? '✅ Approved' : '⏳ Under Review'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Details grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+
+                    {/* Personal */}
+                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
+                      <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>👤 Personal Details</h4>
+                      {[
+                        ['Full Name',      myAdmission.applicantName],
+                        ["Father's Name",  myAdmission.fatherName],
+                        ["Mother's Name",  myAdmission.motherName],
+                        ['Date of Birth',  myAdmission.dateOfBirth ? new Date(myAdmission.dateOfBirth).toLocaleDateString('en-IN') : '—'],
+                        ['Gender',         myAdmission.gender],
+                        ['Blood Group',    myAdmission.bloodGroup],
+                        ['Religion',       myAdmission.religion],
+                        ['Category',       myAdmission.category?.toUpperCase()],
+                        ['Caste',          myAdmission.caste],
+                        ['Marital Status', myAdmission.isMarried ? 'Married' : 'Unmarried'],
+                        ['Mobile',         myAdmission.phone],
+                        ['Email',          myAdmission.email],
+                        ['Aadhar No.',     myAdmission.aadharNumber],
+                        ['Family Income',  myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'],
+                        ['Guardian Name',  myAdmission.guardianName],
+                        ['Guardian Phone', myAdmission.guardianPhone],
+                      ].map(([l, v]) => v && v !== '—' ? (
+                        <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
+                          <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
+                          <span style={{ color: '#222', textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+
+                    {/* Academic + Address */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
+                        <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🎓 Academic Details</h4>
+                        {[
+                          ['Student ID',    myAdmission.studentId],
+                          ['PRN Number',    myAdmission.prnNumber],
+                          ['ABC / APAR ID', myAdmission.aparIdNumber],
+                          ['Course',        myAdmission.courseType],
+                          ['Subject',       myAdmission.preferredSubject],
+                          ['Year',          myAdmission.admissionYear],
+                          ['SSC School',    myAdmission.sscSchoolName],
+                          ['SSC %',         myAdmission.sscPercentage ? `${myAdmission.sscPercentage}%` : '—'],
+                          ['HSC College',   myAdmission.hscCollegeName],
+                          ['HSC Stream',    myAdmission.hscStream],
+                          ['HSC %',         myAdmission.hscPercentage ? `${myAdmission.hscPercentage}%` : '—'],
+                        ].map(([l, v]) => v && v !== '—' ? (
+                          <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
+                            <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
+                            <span style={{ color: '#222', textAlign: 'right' }}>{v}</span>
+                          </div>
+                        ) : null)}
+                      </div>
+
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
+                        <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🏠 Address</h4>
+                        {[
+                          ['House No.',     myAdmission.houseNumber],
+                          ['Street/Area',   myAdmission.streetArea],
+                          ['City/Village',  myAdmission.cityTownVillage],
+                          ['District',      myAdmission.district],
+                          ['State',         myAdmission.state],
+                          ['Pin Code',      myAdmission.pinCode],
+                        ].map(([l, v]) => v && v !== '—' ? (
+                          <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
+                            <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
+                            <span style={{ color: '#222', textAlign: 'right' }}>{v}</span>
+                          </div>
+                        ) : null)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Issued Documents */}
+                  {myRequests.filter(r => r.status === 'completed').length > 0 && (
+                    <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16 }}>
+                      <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>✅ Issued Documents</h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                        {myRequests.filter(r => r.status === 'completed').map((r, i) => (
+                          <div key={i} style={{ background: '#fff', borderRadius: 9, border: '1px solid #c8e6c9', padding: '8px 14px', fontSize: 12 }}>
+                            <div style={{ fontWeight: 700, color: '#1b5e20' }}>{r.documentTypeLabel || r.documentType}</div>
+                            {r.documentType === 'MARKSHEET' && r.marksheetSemester && (
+                              <div style={{ color: '#555', fontSize: 11 }}>{r.marksheetSemester} · {r.marksheetSession === 'mar_apr' ? 'Mar/Apr' : 'Nov/Dec'} {r.marksheetYear}</div>
+                            )}
+                            <div style={{ color: '#888', fontSize: 10 }}>{new Date(r.updatedAt).toLocaleDateString('en-IN')}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* ============ FEES TAB ============ */}
           {activeTab === 'fees' && (
             <div>
               <h3 style={{ marginBottom: 4, color: '#1565C0' }}>💰 My Fees</h3>
