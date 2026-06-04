@@ -262,6 +262,15 @@ const OFFICIAL_FEES_YEARLY = {
   },
 };
 
+// ── Course full name helper ──────────────────────────────────────────────────
+const getCourseFull = (ct) => {
+  const c = (ct||'').toLowerCase();
+  if (c.includes('b.sc')||c.includes('bsc')||c.includes('science')) return 'Bachelor of Science (B.Sc.)';
+  if (c.includes('b.a')||c.includes('ba')||c.includes('arts')) return 'Bachelor of Arts (B.A.)';
+  return ct||'—';
+};
+
+
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -497,7 +506,7 @@ const StudentDashboard = () => {
                     </div>
                     <div className="fees-info-row">
                       <span className="fees-info-label">Course Applied</span>
-                      <span className="fees-info-value">{myAdmission.course?.name || myAdmission.courseType || 'N/A'}</span>
+                      <span className="fees-info-value">{myAdmission.course?.name || getCourseFull(myAdmission.courseType) || 'N/A'}</span>
                     </div>
                     <div className="fees-info-row">
                       <span className="fees-info-label">Status</span>
@@ -615,7 +624,7 @@ const StudentDashboard = () => {
                     <div className="fees-info-row"><span className="fees-info-label">Email</span><span className="fees-info-value">{myAdmission.email}</span></div>
                     <div className="fees-info-row"><span className="fees-info-label">Phone</span><span className="fees-info-value">{myAdmission.phone}</span></div>
                     <div className="fees-info-row"><span className="fees-info-label">Category</span><span className="fees-info-value">{myAdmission.category ? myAdmission.category.toUpperCase() : 'N/A'}</span></div>
-                    <div className="fees-info-row"><span className="fees-info-label">Course Applied</span><span className="fees-info-value">{myAdmission.course?.name || myAdmission.courseType || 'N/A'}</span></div>
+                    <div className="fees-info-row"><span className="fees-info-label">Course Applied</span><span className="fees-info-value">{myAdmission.course?.name || getCourseFull(myAdmission.courseType) || 'N/A'}</span></div>
                     <div className="fees-info-row"><span className="fees-info-label">SSC Percentage</span><span className="fees-info-value">{myAdmission.sscPercentage ? `${myAdmission.sscPercentage}%` : 'N/A'}</span></div>
                     <div className="fees-info-row"><span className="fees-info-label">HSC Percentage</span><span className="fees-info-value">{myAdmission.hscPercentage ? `${myAdmission.hscPercentage}%` : 'N/A'}</span></div>
                   </div>
@@ -668,7 +677,7 @@ const StudentDashboard = () => {
                         {myAdmission.studentId
                           ? <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>🎓 {myAdmission.studentId}</span>
                           : <span style={{ background: '#fff3e0', color: '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>⏳ ID Pending</span>}
-                        <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12 }}>{myAdmission.courseType} · {myAdmission.admissionYear}</span>
+                        <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12 }}>{getCourseFull(myAdmission.courseType)} · {myAdmission.admissionYear}</span>
                         <span style={{ background: myAdmission.status === 'approved' ? '#e8f5e9' : '#fff3e0', color: myAdmission.status === 'approved' ? '#2E7D32' : '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                           {myAdmission.status === 'approved' ? '✅ Approved' : '⏳ Under Review'}
                         </span>
@@ -715,7 +724,7 @@ const StudentDashboard = () => {
                           ['Student ID',    myAdmission.studentId],
                           ['PRN Number',    myAdmission.prnNumber],
                           ['ABC / APAR ID', myAdmission.aparIdNumber],
-                          ['Course',        myAdmission.courseType],
+                          ['Course',        getCourseFull(myAdmission.courseType)],
                           ['Subject',       myAdmission.preferredSubject],
                           ['Year',          myAdmission.admissionYear],
                           ['SSC School',    myAdmission.sscSchoolName],
@@ -909,6 +918,24 @@ const StudentDashboard = () => {
 
               {/* My Requests */}
               <div style={{ marginTop: 24 }}>
+                {/* Issued Documents summary */}
+                {myRequests.filter(r => r.status === 'completed').length > 0 && (
+                  <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16, marginBottom: 20 }}>
+                    <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>✅ Collected Documents</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {myRequests.filter(r => r.status === 'completed').map((r, i) => (
+                        <div key={i} style={{ background: '#fff', borderRadius: 10, border: '1px solid #c8e6c9', padding: '10px 16px', fontSize: 13 }}>
+                          <div style={{ fontWeight: 700, color: '#1b5e20', fontSize: 14 }}>{r.documentTypeLabel || r.documentType}</div>
+                          {r.documentType === 'MARKSHEET' && r.marksheetSemester && (
+                            <div style={{ color: '#555', fontSize: 12, marginTop: 2 }}>{r.marksheetSemester} · {r.marksheetSession === 'mar_apr' ? 'Mar / Apr' : 'Nov / Dec'} {r.marksheetYear}</div>
+                          )}
+                          <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>Issued: {new Date(r.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                   <h4 style={{ color: '#1565C0', marginBottom: 14 }}>📋 My Requests ({myRequests.length})</h4>
                   {myRequests.length === 0 ? (
                     <div style={{ background: '#f8faff', borderRadius: 10, padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>
