@@ -708,12 +708,13 @@ const StudentDashboard = () => {
                         ['Category',       myAdmission.category?.toUpperCase()],
                         ['Caste',          myAdmission.caste],
                         ['Marital Status', myAdmission.isMarried ? 'Married' : 'Unmarried'],
-                        ['Mobile',         myAdmission.phone],
-                        ['Email',          myAdmission.email],
-                        ['Aadhar No.',     myAdmission.aadharNumber],
-                        ['Family Income',  myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'],
-                        ['Guardian Name',  myAdmission.guardianName],
-                        ['Guardian Phone', myAdmission.guardianPhone],
+                        ['Mobile',           myAdmission.phone],
+                        ['Parent Phone',     myAdmission.parentPhone || myAdmission.fatherPhone || myAdmission.motherPhone],
+                        ['Email',            myAdmission.email],
+                        ['Aadhar No.',       myAdmission.aadharNumber],
+                        ['Family Income',    myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'],
+                        ['Guardian Name',    myAdmission.guardianName],
+                        ['Guardian Phone',   myAdmission.guardianPhone],
                       ].map(([l, v]) => v && v !== '—' ? (
                         <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
                           <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
@@ -763,6 +764,31 @@ const StudentDashboard = () => {
                         ) : null)}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Bank Details */}
+                  <div>
+
+                    {/* Bank Details */}
+                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
+                      <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🏦 Bank Details</h4>
+                      {[
+                        ['Bank Name',        myAdmission.bankName],
+                        ['Account No.',      myAdmission.bankAccountNumber],
+                        ['IFSC Code',        myAdmission.bankIfscCode],
+                        ['Branch',           myAdmission.bankBranch],
+                        ['Account Holder',   myAdmission.bankAccountHolder || myAdmission.applicantName],
+                      ].map(([l, v]) => v && v !== '—' ? (
+                        <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
+                          <span style={{ color: '#888', fontWeight: 600, minWidth: 120 }}>{l}</span>
+                          <span style={{ color: '#222', textAlign: 'right', fontFamily: l === 'Account No.' || l === 'IFSC Code' ? 'monospace' : 'inherit', fontWeight: l === 'Account No.' ? 700 : 400 }}>{v}</span>
+                        </div>
+                      ) : null)}
+                      {!myAdmission.bankName && !myAdmission.bankAccountNumber && (
+                        <p style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '12px 0' }}>No bank details added yet.</p>
+                      )}
+                    </div>
+
                   </div>
 
                   {/* Issued Documents */}
