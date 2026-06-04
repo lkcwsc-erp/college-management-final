@@ -193,11 +193,17 @@ const AdminDashboard = () => {
   const handleEditStaffSubmit = async (e) => {
     e.preventDefault();
     try {
-      await API.put(`/auth/staff/${editStaff._id}`, { name: editStaff.name, username: editStaff.username, email: editStaff.email, phone: editStaff.phone });
-      showMessage('✅ Staff updated!');
+      await API.put(`/auth/staff/${editStaff._id}`, { 
+        name: editStaff.name, 
+        username: editStaff.username, 
+        email: editStaff.email, 
+        phone: editStaff.phone,
+        role: editStaff.role,
+      });
+      showMessage('✅ Staff updated successfully!');
       setEditStaff(null);
       API.get('/auth/staff').then(res => setStaff(res.data.staff || []));
-    } catch (err) { showMessage('Failed: ' + (err.response?.data?.message || 'Error')); }
+    } catch (err) { showMessage('❌ Failed: ' + (err.response?.data?.message || 'Error')); }
   };
 
   const handleImageChange = (e) => {
@@ -528,6 +534,18 @@ const AdminDashboard = () => {
                         <label>Phone</label>
                         <input type="text" value={editStaff.phone || ''} maxLength="10"
                           onChange={e => { const v = e.target.value; if (/^\d{0,10}$/.test(v)) setEditStaff({...editStaff, phone: v}); }} />
+                      </div>
+                      <div className="form-group">
+                        <label>Role *</label>
+                        <select value={editStaff.role || ''} onChange={e => setEditStaff({...editStaff, role: e.target.value})}
+                          style={{width:'100%',padding:'10px 12px',borderRadius:'8px',border:'1px solid #ddd',fontSize:'14px'}}>
+                          <option value="staff_student">👩‍🎓 Student Section</option>
+                          <option value="staff_accounts">💰 Accounts Section</option>
+                          <option value="staff_exam">📝 Exam Section</option>
+                          <option value="staff_scholarship">🏅 Scholarship Section</option>
+                          <option value="staff_principal">🎓 Principal</option>
+                          <option value="admin">⚙️ Admin</option>
+                        </select>
                       </div>
                       <div style={{display:'flex',gap:'10px',marginTop:'20px'}}>
                         <button type="submit" className="btn btn-primary">💾 Save Changes</button>
