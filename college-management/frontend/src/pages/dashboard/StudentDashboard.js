@@ -78,8 +78,12 @@ const printStudentReceipt = (p, adm) => {
           <td class="lbl" style="padding-left:16px">Student UID</td><td class="val">: ${adm?.studentId||'—'}</td>
         </tr>
         <tr>
-          <td class="lbl">Class</td><td class="val">: ${(adm?.courseType||'—')+' '+(adm?.admissionYear||'')}</td>
+          <td class="lbl">Course</td><td class="val">: ${(()=>{const ct=(adm?.courseType||'').toLowerCase();return ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')?'Bachelor of Science (B.Sc.)':ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')?'Bachelor of Arts (B.A.)':adm?.courseType||'—';})()} </td>
           <td class="lbl" style="padding-left:16px">Academic Year</td><td class="val">: ${acadYear}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Class</td><td class="val">: ${adm?.admissionYear||'—'}</td>
+          <td class="lbl" style="padding-left:16px">Fee Type</td><td class="val">: ${p.feeTypeLabel||p.feeType||'—'}</td>
         </tr>
       </table>
     </div>
