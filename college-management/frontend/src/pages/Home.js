@@ -23,6 +23,7 @@ const Home = () => {
            <span className="hero-badge">✨ Affiliated to SNDT Women's University, Mumbai</span>
           </div>
           <p className="hero-vnss-line">
+          <img src="/Sanshta_logo.jpeg" alt="VNSS Logo" style={{height:'36px', width:'36px', objectFit:'contain', borderRadius:'4px', marginRight:'8px', verticalAlign:'middle'}} />
         <strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargav(She.)
         </p>
          <h1>Late Kalpana Chawala Women's<br /><span className="hero-highlight">Senior College</span></h1>
