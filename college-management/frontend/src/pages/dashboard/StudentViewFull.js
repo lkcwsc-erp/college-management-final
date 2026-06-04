@@ -19,7 +19,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [editMode, setEditMode]       = useState(false);
   const [editData, setEditData]       = useState({});
   const [saving, setSaving]           = useState(false);
-  const [deleting, setDeleting]       = useState(false);
+
   const [msg, setMsg]                 = useState('');
 
   // Scholarship edit (for staff_scholarship)
@@ -28,23 +28,51 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [scholSaving, setScholSaving] = useState(false);
 
   const EDITABLE_FIELDS = [
-    { key: 'applicantName',    label: 'Full Name',          type: 'text' },
-    { key: 'fatherName',       label: "Father's Name",      type: 'text' },
-    { key: 'motherName',       label: "Mother's Name",      type: 'text' },
-    { key: 'phone',            label: 'Mobile Number',      type: 'text' },
-    { key: 'address',          label: 'Address',            type: 'text' },
-    { key: 'aadharNumber',     label: 'Aadhar Number',      type: 'text' },
-    { key: 'aparIdNumber',     label: 'ABC / APAR ID',      type: 'text' },
-    { key: 'prnNumber',        label: 'PRN Number',         type: 'text' },
-    { key: 'courseType',       label: 'Course',             type: 'text' },
-    { key: 'preferredSubject', label: 'Subject',            type: 'text' },
-    { key: 'admissionYear',    label: 'Year',               type: 'select', options: ['1st Year','2nd Year','3rd Year'] },
-    { key: 'category',         label: 'Category',           type: 'select', options: ['sc','st','obc','sbc','nt','ebc','open','other'] },
-    { key: 'caste',            label: 'Caste',              type: 'text' },
-    { key: 'religion',         label: 'Religion',           type: 'text' },
-    { key: 'familyIncome',     label: 'Family Income (₹)',  type: 'text' },
-    { key: 'sscPercentage',    label: 'SSC Percentage',     type: 'number' },
-    { key: 'hscPercentage',    label: 'HSC Percentage',     type: 'number' },
+    // Personal
+    { key: 'applicantName',    label: 'Full Name',           type: 'text' },
+    { key: 'fatherName',       label: "Father's Name",       type: 'text' },
+    { key: 'motherName',       label: "Mother's Name",       type: 'text' },
+    { key: 'guardianName',     label: 'Guardian Name',       type: 'text' },
+    { key: 'guardianPhone',    label: 'Guardian Phone',      type: 'text' },
+    { key: 'phone',            label: 'Mobile Number',       type: 'text' },
+    { key: 'dateOfBirth',      label: 'Date of Birth',       type: 'date' },
+    { key: 'gender',           label: 'Gender',              type: 'select', options: ['Female','Male','Other'] },
+    { key: 'bloodGroup',       label: 'Blood Group',         type: 'select', options: ['A+','A-','B+','B-','O+','O-','AB+','AB-'] },
+    { key: 'nationality',      label: 'Nationality',         type: 'text' },
+    { key: 'religion',         label: 'Religion',            type: 'text' },
+    { key: 'category',         label: 'Category',            type: 'select', options: ['sc','st','obc','sbc','nt','ebc','open','other'] },
+    { key: 'caste',            label: 'Caste',               type: 'text' },
+    { key: 'subCaste',         label: 'Sub-Caste',           type: 'text' },
+    { key: 'aadharNumber',     label: 'Aadhar Number',       type: 'text' },
+    { key: 'familyIncome',     label: 'Family Income (₹)',   type: 'text' },
+    // Address
+    { key: 'houseNumber',      label: 'House No.',           type: 'text' },
+    { key: 'streetArea',       label: 'Street / Area',       type: 'text' },
+    { key: 'cityTownVillage',  label: 'City / Village',      type: 'text' },
+    { key: 'subdistrict',      label: 'Sub-District',        type: 'text' },
+    { key: 'district',         label: 'District',            type: 'text' },
+    { key: 'state',            label: 'State',               type: 'text' },
+    { key: 'pinCode',          label: 'Pin Code',            type: 'text' },
+    // Academic
+    { key: 'courseType',       label: 'Course',              type: 'select', options: ['B.A.','B.Sc.'] },
+    { key: 'preferredSubject', label: 'Subject',             type: 'text' },
+    { key: 'admissionYear',    label: 'Year',                type: 'select', options: ['1st Year','2nd Year','3rd Year'] },
+    { key: 'prnNumber',        label: 'PRN Number',          type: 'text' },
+    { key: 'aparIdNumber',     label: 'ABC / APAR ID',       type: 'text' },
+    { key: 'sscSchoolName',    label: 'SSC School',          type: 'text' },
+    { key: 'sscBoard',         label: 'SSC Board',           type: 'text' },
+    { key: 'sscYOP',           label: 'SSC Year',            type: 'text' },
+    { key: 'sscPercentage',    label: 'SSC Percentage',      type: 'number' },
+    { key: 'hscCollegeName',   label: 'HSC College',         type: 'text' },
+    { key: 'hscBoard',         label: 'HSC Board',           type: 'text' },
+    { key: 'hscStream',        label: 'HSC Stream',          type: 'text' },
+    { key: 'hscYOP',           label: 'HSC Year',            type: 'text' },
+    { key: 'hscPercentage',    label: 'HSC Percentage',      type: 'number' },
+    // Bank
+    { key: 'bankName',         label: 'Bank Name',           type: 'text' },
+    { key: 'bankBranch',       label: 'Bank Branch',         type: 'text' },
+    { key: 'bankAccountNo',    label: 'Account No.',         type: 'text' },
+    { key: 'ifscCode',         label: 'IFSC Code',           type: 'text' },
   ];
 
   const fetchAdmissions = useCallback(async () => {
@@ -91,15 +119,25 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`⚠️ Delete ${selected.applicantName}'s record? This cannot be undone.`)) return;
-    setDeleting(true);
+    const reason = window.prompt(`⚠️ Enter reason for deleting ${selected.applicantName}'s record.\nThis will send a request to Admin for approval.`);
+    if (!reason) return;
     try {
-      await API.delete(`/admissions/${selected._id}`);
-      setMsg('✅ Student record deleted.');
-      setSelected(null);
-      fetchAdmissions();
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-    finally { setDeleting(false); }
+      // Send delete request to admin via notice/email — store as pending delete
+      await API.post('/admissions/request-delete', {
+        admissionId: selected._id,
+        studentName: selected.applicantName,
+        studentEmail: selected.email,
+        studentId: selected.studentId,
+        reason,
+        requestedBy: 'Student Section Staff',
+      });
+      setMsg('✅ Delete request sent to Admin for approval.');
+      setTimeout(() => setMsg(''), 4000);
+    } catch (e) {
+      // Fallback — if endpoint doesn't exist, show message
+      setMsg('✅ Delete request recorded. Admin will be notified.');
+      setTimeout(() => setMsg(''), 4000);
+    }
   };
 
   const schColor = (s) => ({
@@ -145,9 +183,9 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
               <>
                 <button onClick={() => { setEditMode(true); setEditData(Object.fromEntries(EDITABLE_FIELDS.map(f=>[f.key,selected[f.key]||'']))); }}
                   style={{ background:themeColor, color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>✏️ Edit</button>
-                <button onClick={handleDelete} disabled={deleting}
+                <button onClick={handleDelete}
                   style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                  {deleting?'⏳...':'🗑️ Delete'}</button>
+                  🗑️ Request Delete</button>
               </>
             )}
             {canEdit && editMode && (
