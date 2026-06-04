@@ -234,6 +234,186 @@ const AdmissionModal = ({ adm, onClose, onRefresh, showMsg }) => {
 };
 
 // ─── Main Principal Dashboard ─────────────────────────────────────────────────
+
+// ─── Fee Structure Approval Tab (Principal) ────────────────────────────────
+const PrincipalFeeApprovalTab = ({ approvals, loading, onRefresh, showMsg }) => {
+  const [actionItem, setActionItem]   = useState(null);
+  const [actionType, setActionType]   = useState(''); // 'approve' | 'reject'
+  const [note, setNote]               = useState('');
+  const [submitting, setSubmitting]   = useState(false);
+
+  const pending   = approvals.filter(a => a.status === 'pending_principal');
+  const processed = approvals.filter(a => a.status !== 'pending_principal');
+
+  const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
+
+  const statusLabel = (s) => ({
+    pending_principal:     { label:'⏳ Awaiting Principal', color:'#E65100', bg:'#fff3e0' },
+    pending_admin:         { label:'✅ Sent to Admin', color:'#1565C0', bg:'#e3f2fd' },
+    approved:              { label:'✅ Fully Approved', color:'#2E7D32', bg:'#e8f5e9' },
+    rejected_by_principal: { label:'❌ Rejected by You', color:'#C62828', bg:'#ffebee' },
+    rejected_by_admin:     { label:'❌ Rejected by Admin', color:'#C62828', bg:'#ffebee' },
+  }[s] || { label: s, color:'#888', bg:'#f5f5f5' });
+
+  const handleAction = async () => {
+    if (actionType === 'reject' && !note.trim()) {
+      showMsg('❌ Please enter rejection reason.'); return;
+    }
+    setSubmitting(true);
+    try {
+      if (actionType === 'approve') {
+        await API.put(`/fee-approvals/principal/approve/${actionItem._id}`, { note });
+        showMsg('✅ Approved! Sent to Admin for final approval.');
+      } else {
+        await API.put(`/fee-approvals/principal/reject/${actionItem._id}`, { reason: note });
+        showMsg('✅ Request rejected.');
+      }
+      setActionItem(null); setNote('');
+      onRefresh();
+    } catch (e) {
+      showMsg('❌ ' + (e.response?.data?.message || 'Failed.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+        <div>
+          <h2 style={{ color:'#C62828', marginBottom:4 }}>💼 Fee Structure Approval Requests</h2>
+          <p style={{ color:'#666', fontSize:14 }}>Accounts Section ke fee change requests review karo. Approve karne par Admin ke paas jayega.</p>
+        </div>
+        <button onClick={onRefresh}
+          style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:9, padding:'9px 18px', fontWeight:600, fontSize:13, cursor:'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* Counts */}
+      <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
+        <div style={{ background:'#fff3e0', color:'#E65100', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>⏳ Pending: {pending.length}</div>
+        <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>✅ Processed: {processed.length}</div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign:'center', padding:30, color:'#888' }}>⏳ Loading...</div>
+      ) : pending.length === 0 && processed.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>
+          <div style={{ fontSize:40, marginBottom:10 }}>✅</div>
+          <p>Koi pending request nahi hai.</p>
+        </div>
+      ) : (
+        <div>
+          {pending.length > 0 && (
+            <div>
+              <h3 style={{ color:'#E65100', marginBottom:12 }}>⏳ Pending Your Approval ({pending.length})</h3>
+              <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:24 }}>
+                {pending.map(a => (
+                  <div key={a._id} style={{ background:'#fff', border:'2px solid #fbbf24', borderRadius:12, padding:18 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', flexWrap:'wrap', gap:10, marginBottom:12 }}>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:15, color:'#1a1a2e' }}>
+                          {a.itemName}
+                          {a.isNewItem && <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', borderRadius:10, padding:'2px 8px', marginLeft:8 }}>🆕 New Item</span>}
+                        </div>
+                        <div style={{ fontSize:12, color:'#888', marginTop:3 }}>
+                          Course: <strong>{a.courseKey}</strong> · Section: <strong>{a.itemSection}</strong> · Submitted by: <strong>{a.submittedBy}</strong>
+                        </div>
+                        <div style={{ fontSize:12, color:'#aaa' }}>{new Date(a.createdAt).toLocaleString('en-IN')}</div>
+                      </div>
+                    </div>
+
+                    {/* Amounts comparison */}
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:6, marginBottom:12 }}>
+                      {semLabels.map((sl, si) => {
+                        const oldAmt = a.oldAmounts?.[si] || 0;
+                        const newAmt = a.newAmounts?.[si] || 0;
+                        const changed = oldAmt !== newAmt;
+                        return (
+                          <div key={sl} style={{ background: changed ? '#fff3e0' : '#f5f5f5', borderRadius:8, padding:'8px 10px', textAlign:'center', border: changed ? '1px solid #fbbf24' : '1px solid #eee' }}>
+                            <div style={{ fontSize:10, color:'#888', marginBottom:4 }}>{sl}</div>
+                            {changed && <div style={{ fontSize:10, color:'#888', textDecoration:'line-through' }}>₹{oldAmt}</div>}
+                            <div style={{ fontSize:13, fontWeight:800, color: changed ? '#E65100' : '#aaa' }}>
+                              {newAmt > 0 ? `₹${newAmt}` : '—'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ display:'flex', gap:10 }}>
+                      <button onClick={() => { setActionItem(a); setActionType('approve'); setNote(''); }}
+                        style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                        ✅ Approve
+                      </button>
+                      <button onClick={() => { setActionItem(a); setActionType('reject'); setNote(''); }}
+                        style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                        ❌ Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {processed.length > 0 && (
+            <div>
+              <h3 style={{ color:'#888', marginBottom:12 }}>📋 Previous Requests</h3>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {processed.map(a => {
+                  const s = statusLabel(a.status);
+                  return (
+                    <div key={a._id} style={{ background:'#fff', border:`1px solid ${s.color}44`, borderLeft:`4px solid ${s.color}`, borderRadius:10, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+                      <div>
+                        <span style={{ fontWeight:600, fontSize:13, color:'#222' }}>{a.itemName}</span>
+                        <span style={{ fontSize:11, color:'#888', marginLeft:8 }}>({a.courseKey})</span>
+                        {a.principalNote && <p style={{ fontSize:12, color:'#888', margin:'4px 0 0' }}>Your note: {a.principalNote}</p>}
+                      </div>
+                      <span style={{ padding:'4px 14px', borderRadius:20, fontSize:12, fontWeight:700, background:s.bg, color:s.color }}>{s.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action Modal */}
+      {actionItem && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => { setActionItem(null); setNote(''); }}>
+          <div style={{ background:'#fff', borderRadius:14, padding:28, maxWidth:480, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: actionType==='approve' ? '#2E7D32' : '#C62828', marginBottom:14 }}>
+              {actionType==='approve' ? '✅ Approve Fee Change' : '❌ Reject Fee Change'}
+            </h3>
+            <p style={{ color:'#555', marginBottom:16 }}><strong>{actionItem.itemName}</strong> ({actionItem.courseKey})</p>
+            {actionType==='approve' && (
+              <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:16 }}>
+                ✅ Approving will send this request to Admin for final approval.
+              </div>
+            )}
+            <div className="form-group">
+              <label>{actionType==='approve' ? 'Note (optional)' : 'Rejection Reason *'}</label>
+              <textarea rows="3" placeholder={actionType==='approve' ? 'Any note for Admin...' : 'Why are you rejecting?'} value={note} onChange={e => setNote(e.target.value)}
+                style={{ width:'100%', padding:10, borderRadius:8, border:'1px solid #ddd', fontSize:13, resize:'vertical', boxSizing:'border-box', marginTop:6 }} />
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:16 }}>
+              <button onClick={handleAction} disabled={submitting}
+                style={{ background: actionType==='approve'?'#2E7D32':'#C62828', color:'#fff', padding:'12px 28px', borderRadius:8, border:'none', fontSize:14, fontWeight:600, cursor:submitting?'not-allowed':'pointer', opacity:submitting?0.6:1 }}>
+                {submitting ? '⏳...' : (actionType==='approve' ? '✅ Confirm Approve' : '❌ Confirm Reject')}
+              </button>
+              <button onClick={() => { setActionItem(null); setNote(''); }} style={{ background:'#eee', color:'#333', padding:'12px 22px', borderRadius:8, border:'none', fontSize:14, cursor:'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const PrincipalDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -252,6 +432,17 @@ const PrincipalDashboard = () => {
   const [selectedAdmission, setSelectedAdmission] = useState(null);
 
   const [message, setMessage] = useState('');
+  const [feeApprovals, setFeeApprovals] = useState([]);
+  const [feeApprLoading, setFeeApprLoading] = useState(false);
+
+  const fetchFeeApprovals = async () => {
+    setFeeApprLoading(true);
+    try {
+      const res = await API.get('/fee-approvals/all');
+      setFeeApprovals(res.data.approvals || []);
+    } catch { /* silent */ }
+    finally { setFeeApprLoading(false); }
+  };
 
   const showMsg = (msg) => {
     setMessage(msg);
@@ -286,6 +477,7 @@ const PrincipalDashboard = () => {
   useEffect(() => {
     if (activeTab === 'admissions') fetchAdmissions();
     if (activeTab === 'tc') fetchRequests();
+    if (activeTab === 'fee_approvals') fetchFeeApprovals();
   }, [activeTab]);
 
   const handleApprove = async () => {
@@ -337,6 +529,7 @@ const PrincipalDashboard = () => {
     { id: 'staff',      label: '👥 Staff Overview' },
     { id: 'notices',    label: '📢 Important Notices' },
     { id: 'all_students', label: '👩‍🎓 All Students' },
+    { id: 'fee_approvals', label: '💼 Fee Structure Approvals' },
   ];
 
   return (
@@ -602,6 +795,16 @@ const PrincipalDashboard = () => {
             </div>
           )}
           {activeTab === 'receipts' && <PaymentReceiptsTab themeColor="#C62828" />}
+
+          {/* ── FEE STRUCTURE APPROVALS ── */}
+          {activeTab === 'fee_approvals' && (
+            <PrincipalFeeApprovalTab
+              approvals={feeApprovals}
+              loading={feeApprLoading}
+              onRefresh={fetchFeeApprovals}
+              showMsg={showMsg}
+            />
+          )}
         </div>
       </main>
 
