@@ -1044,7 +1044,7 @@ const printIDCard = (adm) => {
     <button id="savejpg" style="padding:7px 18px;background:#e65100;color:white;border:none;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer">💾 Save as JPG</button>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <scri${'t'+'pt'}>
+  <scri${'pt'}>
     window.onload = () => {
       document.getElementById('savejpg').addEventListener('click', async () => {
         if(window.html2canvas){
