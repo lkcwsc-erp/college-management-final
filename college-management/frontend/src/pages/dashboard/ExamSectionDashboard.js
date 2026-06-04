@@ -18,14 +18,31 @@ const ResultUploadTab = () => {
   const [uploading, setUploading]   = useState(false);
   const [msg, setMsg]               = useState('');
 
+  const [courseFilter, setCourseFilter] = useState('');
+  const [yearFilter2, setYearFilter2]   = useState('');
+  const [allAdmissions, setAllAdmissions] = useState([]);
+  const [showList, setShowList] = useState(false);
+
   const findStudent = async () => {
-    if (!emailSearch.trim()) return;
-    setSearching(true); setSearchErr(''); setFoundAdm(null);
+    if (!emailSearch.trim() && !courseFilter && !yearFilter2) return;
+    setSearching(true); setSearchErr(''); setFoundAdm(null); setShowList(false);
     try {
       const res = await API.get('/admissions/staff-view/all');
-      const found = (res.data.admissions || []).find(a => a.email?.toLowerCase() === emailSearch.toLowerCase().trim());
-      if (!found) { setSearchErr('No approved student found with this email.'); }
-      else { setFoundAdm(found); setStep(2); }
+      const all = res.data.admissions || [];
+      if (emailSearch.trim()) {
+        const found = all.find(a => a.email?.toLowerCase() === emailSearch.toLowerCase().trim());
+        if (!found) { setSearchErr('No student found with this email.'); }
+        else { setFoundAdm(found); setStep(2); }
+      } else {
+        // Filter by course + year
+        const filtered = all.filter(a => {
+          const mc = !courseFilter || (a.courseType||'').toLowerCase().includes(courseFilter.toLowerCase());
+          const my = !yearFilter2 || a.admissionYear === yearFilter2;
+          return mc && my;
+        });
+        if (filtered.length === 0) { setSearchErr('No students found.'); }
+        else { setAllAdmissions(filtered); setShowList(true); }
+      }
     } catch { setSearchErr('Error searching. Try again.'); }
     finally { setSearching(false); }
   };
@@ -64,15 +81,43 @@ const ResultUploadTab = () => {
       {/* Step 1 — find student */}
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20 }}>
         <h4 style={{ color: '#f57c00', marginBottom: 14 }}>Step 1 — Find Student by Email</h4>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input type="email" placeholder="student@email.com" value={emailSearch} onChange={e => setEmailSearch(e.target.value)}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <input type="email" placeholder="Search by email..." value={emailSearch} onChange={e => { setEmailSearch(e.target.value); if(e.target.value) { setCourseFilter(''); setYearFilter2(''); } }}
             onKeyDown={e => e.key === 'Enter' && findStudent()}
             style={{ flex: 1, padding: '10px 14px', borderRadius: 9, border: '2px solid #f57c00', fontSize: 14, outline: 'none' }} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>OR filter by:</span>
+          <select value={courseFilter} onChange={e => { setCourseFilter(e.target.value); setEmailSearch(''); }}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
+            <option value="">All Courses</option>
+            <option value="B.A.">B.A.</option>
+            <option value="B.Sc.">B.Sc.</option>
+          </select>
+          <select value={yearFilter2} onChange={e => { setYearFilter2(e.target.value); setEmailSearch(''); }}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
+            <option value="">All Years</option>
+            <option value="1st Year">1st Year</option>
+            <option value="2nd Year">2nd Year</option>
+            <option value="3rd Year">3rd Year</option>
+          </select>
           <button onClick={findStudent} disabled={searching}
             style={{ background: '#f57c00', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 22px', fontSize: 14, fontWeight: 700, cursor: searching ? 'not-allowed' : 'pointer', opacity: searching ? 0.7 : 1 }}>
-            {searching ? '⏳...' : '🔍 Find'}
+            {searching ? '⏳...' : '🔍 Search'}
           </button>
         </div>
+        {/* Show student list when filtered by course/year */}
+        {showList && allAdmissions.length > 0 && (
+          <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #ffe0b2', borderRadius: 8, marginTop: 8 }}>
+            {allAdmissions.map(a => (
+              <div key={a._id} onClick={() => { setFoundAdm(a); setStep(2); setShowList(false); }}
+                style={{ padding: '10px 14px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', fontSize: 13, background: '#fff' }}
+                onMouseEnter={e => e.target.style.background='#fff3e0'} onMouseLeave={e => e.target.style.background='#fff'}>
+                <strong>{a.applicantName}</strong> — {a.courseType} · {a.admissionYear} · {a.email}
+              </div>
+            ))}
+          </div>
+        )}
         {searchErr && <p style={{ color: '#C62828', fontSize: 13, marginTop: 8 }}>{searchErr}</p>}
         {foundAdm && (
           <div style={{ background: '#e8f5e9', borderRadius: 10, padding: '12px 16px', marginTop: 12, fontSize: 13 }}>
@@ -671,6 +716,179 @@ const AttendanceTab = () => {
   );
 };
 
+// ─── Exam Data Tab ────────────────────────────────────────────────────────────
+const ExamDataTab = () => {
+  const [admissions, setAdmissions] = useState([]);
+  const [results, setResults]       = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [search, setSearch]         = useState('');
+  const [yearF, setYearF]           = useState('all');
+  const [selected, setSelected]     = useState(null);
+  const [selResults, setSelResults] = useState([]);
+  const [editResult, setEditResult] = useState(null);
+  const [saving, setSaving]         = useState(false);
+  const [msg, setMsg]               = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      API.get('/admissions/staff-view/all'),
+      API.get('/results/all-results'),
+    ]).then(([aRes, rRes]) => {
+      setAdmissions(aRes.data.admissions || []);
+      setResults(rRes.data.results || []);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const getStudentResults = (email) => results.filter(r => r.studentEmail === email);
+
+  const statusColor = (res) => ({
+    DISTINCTION: '#1b5e20', PASS: '#2E7D32', ATKT: '#E65100', FAIL: '#C62828'
+  }[res] || '#888');
+
+  const filtered = admissions.filter(s => {
+    const q = search.toLowerCase();
+    const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q);
+    const my = yearF === 'all' || s.admissionYear === yearF;
+    return mq && my;
+  });
+
+  if (selected) {
+    return (
+      <div>
+        <button onClick={() => { setSelected(null); setSelResults([]); setMsg(''); }}
+          style={{ background:'#f0f4ff', color:'#f57c00', border:'1px solid #f57c00', borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer', marginBottom:20 }}>← Back</button>
+        <h3 style={{ color:'#f57c00', marginBottom:4 }}>{selected.applicantName}</h3>
+        <p style={{ fontSize:13, color:'#666', marginBottom:16 }}>{selected.courseType} · {selected.admissionYear} · {selected.email}</p>
+        {msg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
+
+        {selResults.length === 0 ? (
+          <div style={{ background:'#f8faff', borderRadius:12, padding:30, textAlign:'center', color:'#888' }}>No exam results found for this student.</div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {selResults.map((r, i) => (
+              <div key={r._id||i} style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:18 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                  <div>
+                    <span style={{ fontWeight:700, fontSize:14, color:'#f57c00' }}>Semester {r.semester}</span>
+                    <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{r.year} · {r.courseType}</span>
+                  </div>
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontSize:13, fontWeight:800, padding:'3px 12px', borderRadius:20, background:`${statusColor(r.result)}22`, color:statusColor(r.result) }}>{r.result}</span>
+                    <span style={{ fontSize:13, fontWeight:700 }}>{r.percentage}%</span>
+                    <button onClick={() => setEditResult(r)}
+                      style={{ background:'#fff3e0', color:'#f57c00', border:'1px solid #f57c00', borderRadius:8, padding:'4px 12px', fontSize:12, fontWeight:600, cursor:'pointer' }}>✏️ Update</button>
+                  </div>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:8 }}>
+                  {(r.subjects||[]).map((s,j) => {
+                    const pct = s.maxMarks > 0 ? Math.round((s.obtainedMarks/s.maxMarks)*100) : 0;
+                    const fail = pct < 35;
+                    return (
+                      <div key={j} style={{ background: fail?'#ffebee':'#f8faff', borderRadius:8, padding:'8px 12px', border:`1px solid ${fail?'#ef9a9a':'#e0e7ef'}` }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:'#333', marginBottom:2 }}>{s.name}</div>
+                        <div style={{ fontSize:13, fontWeight:800, color:fail?'#C62828':'#1565C0' }}>{s.obtainedMarks} / {s.maxMarks}</div>
+                        <div style={{ fontSize:10, color: fail?'#C62828':'#888' }}>{pct}% {fail?'❌ FAIL':'✅'}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Edit result modal */}
+        {editResult && (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+            onClick={() => setEditResult(null)}>
+            <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:500, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,.2)' }} onClick={e=>e.stopPropagation()}>
+              <h3 style={{ color:'#f57c00', marginBottom:16 }}>✏️ Update Result — Semester {editResult.semester}</h3>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:16 }}>
+                {(editResult.subjects||[]).map((s,j) => (
+                  <div key={j} style={{ background:'#f8faff', borderRadius:8, padding:'10px 12px' }}>
+                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:4 }}>{s.name} (max: {s.maxMarks})</label>
+                    <input type="number" min="0" max={s.maxMarks}
+                      defaultValue={s.obtainedMarks}
+                      onChange={e => { s.obtainedMarks = Number(e.target.value); }}
+                      style={{ width:'100%', padding:'7px 10px', borderRadius:7, border:'2px solid #f57c00', fontSize:14, boxSizing:'border-box' }} />
+                  </div>
+                ))}
+              </div>
+              <button onClick={async () => {
+                setSaving(true);
+                try {
+                  await API.put(`/results/${editResult._id}`, { subjects: editResult.subjects });
+                  setMsg('✅ Result updated!');
+                  setEditResult(null);
+                  const rRes = await API.get('/results/all-results');
+                  const allR = rRes.data.results || [];
+                  setResults(allR);
+                  setSelResults(allR.filter(r => r.studentEmail === selected.email));
+                  setTimeout(() => setMsg(''), 3000);
+                } catch (e) { setMsg('❌ ' + (e.response?.data?.message||'Failed')); }
+                finally { setSaving(false); }
+              }} disabled={saving}
+                style={{ background:'#f57c00', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+                {saving?'⏳ Saving...':'💾 Save Changes'}
+              </button>
+              <button onClick={()=>setEditResult(null)} style={{ marginLeft:10, background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:14, cursor:'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 style={{ color:'#f57c00', marginBottom:4 }}>📊 Student Exam Data</h2>
+      <p style={{ color:'#666', marginBottom:20, fontSize:14 }}>View and update student exam results. Click on a student to see all their exams.</p>
+
+      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
+        <input type="text" placeholder="🔍 Search student..." value={search} onChange={e=>setSearch(e.target.value)}
+          style={{ flex:1, minWidth:200, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14 }} />
+        <select value={yearF} onChange={e=>setYearF(e.target.value)}
+          style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
+          <option value="all">All Years</option>
+          <option value="1st Year">1st Year</option>
+          <option value="2nd Year">2nd Year</option>
+          <option value="3rd Year">3rd Year</option>
+        </select>
+      </div>
+
+      {loading ? <div style={{textAlign:'center',padding:20,fontSize:'2rem'}}>⏳</div>
+      : (
+        <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 1fr 1fr 0.6fr', background:'#f57c00', padding:'10px 14px', gap:8 }}>
+            {['Student','Course/Year','Exams','Last Result',''].map(h=><span key={h} style={{color:'#fff',fontWeight:700,fontSize:12}}>{h}</span>)}
+          </div>
+          {filtered.map((s, idx) => {
+            const sResults = getStudentResults(s.email);
+            const last = sResults[0];
+            return (
+              <div key={s._id} style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 1fr 1fr 0.6fr', padding:'10px 14px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+                <div>
+                  <p style={{ fontWeight:600, fontSize:13, margin:0 }}>{s.applicantName}</p>
+                  <p style={{ fontSize:10, color:'#888', margin:0 }}>{s.email}</p>
+                </div>
+                <span style={{ fontSize:12 }}>{s.courseType} · {s.admissionYear}</span>
+                <span style={{ fontSize:13, fontWeight:700, color: sResults.length>0?'#1565C0':'#aaa' }}>{sResults.length} exam{sResults.length!==1?'s':''}</span>
+                <span style={{ fontSize:12, fontWeight:700, color: last?statusColor(last.result):'#aaa' }}>
+                  {last ? `Sem ${last.semester} — ${last.result}` : '—'}
+                </span>
+                <button onClick={() => { setSelected(s); setSelResults(getStudentResults(s.email)); }}
+                  style={{ background:'#fff3e0', color:'#f57c00', border:'1px solid #f57c00', borderRadius:7, padding:'5px 10px', fontSize:12, fontWeight:600, cursor:'pointer' }}>👁️</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 // ─── Main ExamSectionDashboard ────────────────────────────────────────────────
 const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
@@ -710,6 +928,7 @@ const ExamSectionDashboard = () => {
     { id: 'tc_verify',     label: '📄 TC Verification' },
     { id: 'marksheet',     label: '📋 Marksheet Requests' },
     { id: 'students',      label: '👩‍🎓 View Students' },
+    { id: 'exam_data',     label: '📊 Student Exam Data' },
   ];
 
   return (
@@ -867,6 +1086,8 @@ const ExamSectionDashboard = () => {
           {activeTab === 'upload_result' && <ResultUploadTab />}
           {activeTab === 'tc_verify'     && <ExamDocTab type="TC" title="📄 TC Verification" desc="Verify student result status before TC is sent to Principal." color="#1565C0" />}
           {activeTab === 'marksheet'     && <ExamDocTab type="MARKSHEET" title="📋 Marksheet Requests" desc="Process marksheet requests from students." color="#f57c00" />}
+          {activeTab === 'exam_data' && <ExamDataTab />}
+
           {activeTab === 'students'      && (
             <div>
               <h2 style={{ color: '#f57c00', marginBottom: 4 }}>👩‍🎓 View Students</h2>
