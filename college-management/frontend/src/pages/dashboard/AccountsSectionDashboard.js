@@ -1681,7 +1681,7 @@ const AccountsSectionDashboard = () => {
         // Calculate selected document fees total
         const selectedDocFeeKeys = Object.keys(selectedFeeItems).filter(k => k.startsWith('DOC_'));
         const selDocTotal = selectedDocFeeKeys.reduce((s, k) => {
-          return s + (docFees[k]?.price || 0);
+          return s + (docFees[k.replace('DOC_', '')]?.price || 0);
         }, 0);
  
         const selGross      = selAdmGross + selDocTotal;
