@@ -851,12 +851,25 @@ const StudentDashboard = () => {
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                           <thead>
-                            <tr style={{ background: '#f5f5f5' }}>
-                              {['Fee Structure Name','Year','Total Fees','Scholarship','Net Payable','Paid Amount','Balance Due','Receipt'].map(h => (
-                                <th key={h} style={{ padding: '9px 12px', fontWeight: 700, color: '#009688', textAlign: 'center', borderBottom: '2px solid #009688', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
-                              ))}
-                            <tr>
-                          </thead>
+  <tr style={{ background: '#f5f5f5' }}>
+    {['Fee Structure Name','Year','Total Fees','Scholarship','Net Payable','Paid Amount','Balance Due','Receipt'].map(h => (
+      <th
+        key={h}
+        style={{
+          padding: '9px 12px',
+          fontWeight: 700,
+          color: '#009688',
+          textAlign: 'center',
+          borderBottom: '2px solid #009688',
+          fontSize: 12,
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {h}
+      </th>
+    ))}
+  </tr>
+</thead>
                           <tbody>
                             {courseKey ? Object.entries(OFFICIAL_FEES_YEARLY[courseKey]?.years || {}).map(([yr, data], i) => {
                               const isCurrent = yr === myAdmission.admissionYear;
