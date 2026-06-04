@@ -363,7 +363,6 @@ const F = ({ label, value }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Fee Structure Tab Component ─────────────────────────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
-  const { user } = useAuth();
   const [feeView, setFeeView]           = useState('bsc');
   const [editDocFees2, setEditDocFees2] = useState(false);
   const [docFeeEdits2, setDocFeeEdits2] = useState({});
