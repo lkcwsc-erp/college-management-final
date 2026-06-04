@@ -1,21 +1,57 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const FeeStructureApproval = require('../models/FeeStructureApproval');
 
-// Fee Structure Approval Routes
-// Pending edits are stored in frontend localStorage
-// This route handles approval by Principal/Admin
+// ── Accounts submits edit for approval ─────────────────────────────────────
+router.post('/submit', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+  try {
+    const { courseKey, itemId, itemName, newAmounts, submittedBy } = req.body;
+    // Remove existing pending for same item
+    await FeeStructureApproval.deleteMany({ courseKey, itemId, status: 'pending' });
+    const doc = await FeeStructureApproval.create({
+      courseKey, itemId, itemName,
+      newAmounts, submittedBy: submittedBy || req.user.name,
+      status: 'pending',
+    });
+    res.json({ success: true, approval: doc });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
 
+// ── Get all pending approvals (Principal/Admin) ─────────────────────────────
 router.get('/pending', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
-  res.json({ success: true, pending: [] });
+  try {
+    const pending = await FeeStructureApproval.find({ status: 'pending' }).sort({ createdAt: -1 });
+    res.json({ success: true, pending });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/approve', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
-  res.json({ success: true, message: 'Fee structure approved' });
+// ── Get all approvals ────────────────────────────────────────────────────────
+router.get('/all', protect, authorizeRoles('admin', 'staff_principal', 'staff_accounts'), async (req, res) => {
+  try {
+    const all = await FeeStructureApproval.find().sort({ createdAt: -1 }).limit(100);
+    res.json({ success: true, approvals: all });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/reject', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
-  res.json({ success: true, message: 'Fee structure edit rejected' });
+// ── Approve ─────────────────────────────────────────────────────────────────
+router.put('/approve/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
+  try {
+    const doc = await FeeStructureApproval.findByIdAndUpdate(req.params.id, {
+      status: 'approved', reviewedBy: req.user.name, reviewedAt: new Date(),
+    }, { new: true });
+    res.json({ success: true, message: 'Fee structure change approved!', approval: doc });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ── Reject ──────────────────────────────────────────────────────────────────
+router.put('/reject/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
+  try {
+    const doc = await FeeStructureApproval.findByIdAndUpdate(req.params.id, {
+      status: 'rejected', reviewedBy: req.user.name, reviewedAt: new Date(),
+    }, { new: true });
+    res.json({ success: true, message: 'Fee structure change rejected.', approval: doc });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 module.exports = router;
