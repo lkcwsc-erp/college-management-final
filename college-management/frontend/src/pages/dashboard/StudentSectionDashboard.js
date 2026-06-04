@@ -1050,13 +1050,13 @@ const printIDCard = (adm) => {
         if(window.html2canvas){
           const canvas = await html2canvas(document.querySelector('.card'),{scale:3,backgroundColor:'white'});
           const a = document.createElement('a');
-          a.download = 'IDCard_${adm.studentId||adm.applicantName||"student"}.jpg';
+          a.download = 'IDCard.jpg';
           a.href = canvas.toDataURL('image/jpeg',0.95);
           a.click();
         } else { alert('Use Print > Save as PDF or right-click the card > Save image'); }
       });
     };
-  </scri${'t'+'pt'}></body></html>\`;
+  </scri${'pt'}></body></html>`;
   const w = window.open('','_blank','width=420,height=520'); w.document.write(html); w.document.close();
 };
 
