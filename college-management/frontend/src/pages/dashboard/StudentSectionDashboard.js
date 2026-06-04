@@ -949,21 +949,10 @@ const printBonafide = (adm) => {
     <div class="body">
       <p>
         This is to certify that Miss <span class="ul">&nbsp;${name}&nbsp;</span>
-        is/was a bonafide student of Late Kalpana Chawla Women's Senior College, Gangakhed.
-      </p>
-      <p>
-        She is studying in <span class="ul" style="min-width:280px">&nbsp;${courseFull||'__________________________________'}&nbsp;</span> — <span class="ul-sm" style="min-width:60px">&nbsp;${classYear}&nbsp;</span> Class of this College.
-      </p>
-      <p>
-        As per college records, her Date of Birth is&nbsp;
-        <span class="ul-sm">&nbsp;${dobDD}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm">&nbsp;${dobMM}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-yr">&nbsp;${dobYYYY}&nbsp;</span>
-      </p>
-      <p>
-        (In Words): <span class="ul-lg">&nbsp;${dobWords}&nbsp;</span>
-      </p>
-      <p>
-        To the best of my knowledge and belief, her conduct and moral character are <strong>good</strong>. This certificate is issued on her request for official purpose.
-      </p>
+        is/was a bonafide student of Late Kalpana Chawla Women's Senior College, Gangakhed.</p>
+      <p>    She is studying in <span class="ul" style="min-width:280px">&nbsp;${courseFull||'__________________________________'}&nbsp;</span> — <span class="ul-sm" style="min-width:60px">&nbsp;${classYear}&nbsp;</span> Class of this College.  </p>
+      <p> As per college records, her Date of Birth is&nbsp;  <span class="ul-sm">&nbsp;${dobDD}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm">&nbsp;${dobMM}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-yr">&nbsp;${dobYYYY}&nbsp;</span>  </p>
+      <p>  (In Words): <span class="ul-lg">&nbsp;${dobWords}&nbsp;</span>  </p> <p>  To the best of my knowledge and belief, her conduct and moral character are <strong>good</strong>. This certificate is issued on her request for official purpose.   </p>
     </div>
 
     <div class="foot">
