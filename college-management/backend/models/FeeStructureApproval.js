@@ -1,22 +1,14 @@
-onst express = require('express');
-const router = express.Router();
-const { protect, authorizeRoles } = require('../middleware/authMiddleware');
- 
-// Fee Structure Approval Routes
-// Pending edits are stored in frontend localStorage
-// This route handles approval by Principal/Admin
- 
-router.get('/pending', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
-  res.json({ success: true, pending: [] });
-});
- 
-router.post('/approve', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
-  res.json({ success: true, message: 'Fee structure approved' });
-});
- 
-router.post('/reject', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
-  res.json({ success: true, message: 'Fee structure edit rejected' });
-});
- 
-module.exports = router;
- 
+const mongoose = require('mongoose');
+
+const feeStructureApprovalSchema = new mongoose.Schema({
+  courseKey:    { type: String },
+  itemId:       { type: String },
+  itemName:     { type: String },
+  newAmounts:   [Number],
+  submittedBy:  { type: String },
+  status:       { type: String, enum: ['pending','approved','rejected'], default: 'pending' },
+  reviewedBy:   { type: String },
+  reviewedAt:   { type: Date },
+}, { timestamps: true });
+
+module.exports = mongoose.model('FeeStructureApproval', feeStructureApprovalSchema);
