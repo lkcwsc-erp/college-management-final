@@ -59,7 +59,7 @@ const printStudentReceipt = (p, adm) => {
     <div class="hdr">
       <img src="${logo}" class="hlogo"/>
       <div class="htxt">
-        <div class="htrust">Vidya-Niketan Sevabhavi Sanstha's</div>
+        <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
         <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
         <div class="haddr">Gangakhed, Dist. Parbhani – 431514 &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
