@@ -385,9 +385,6 @@ const StudentDashboard = () => {
     {myAdmission && (
       <IDCard admission={myAdmission} />
     )}
-
-    {/* baki dashboard code */}
-
   </div>
           ))}
         </nav>
