@@ -195,7 +195,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
       });
       setMsg(type === 'TC'
         ? '✅ Result verified! TC forwarded to Principal.'
-        : '✅ Marksheet approved! Forwarded to Student Section.');
+        : '✅ Marksheet issued to student!');
       setSelected(null); setNotes('');
       setTimeout(() => setMsg(''), 3000);
       fetch();
@@ -286,7 +286,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleApprove} disabled={saving}
                 style={{ flex: 1, background: saving ? '#aaa' : color, color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                {saving ? '⏳...' : type === 'TC' ? '✅ Verify & Forward to Principal' : '✅ Approve & Send to Student Section'}
+                {saving ? '⏳...' : type === 'TC' ? '✅ Verify & Forward to Principal' : '✅ Issue Marksheet to Student'}
               </button>
               <button onClick={handleReject} disabled={saving}
                 style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '12px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
