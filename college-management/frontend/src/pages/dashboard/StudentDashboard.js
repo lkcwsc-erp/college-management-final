@@ -380,12 +380,7 @@ const StudentDashboard = () => {
               onClick={() => setActiveTab(tab.id)}>
               {tab.label}
             </button>
-          <div className="dashboard-container">
-
-    {myAdmission && (
-      <IDCard admission={myAdmission} />
-    )}
-  </div>
+          
           ))}
         </nav>
         <button className="sidebar-logout" onClick={handleLogout}>🚪 Logout</button>
