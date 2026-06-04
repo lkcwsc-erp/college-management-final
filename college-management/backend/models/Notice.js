@@ -14,7 +14,8 @@ const noticeSchema = new mongoose.Schema({
     default: 'all'
   },
   attachment: { type: String, default: '' },
-  isActive: { type: Boolean, default: true },
+  isActive:          { type: Boolean, default: true },
+  specificRecipients: [{ type: String }],
   postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   expiryDate: { type: Date },
 }, { timestamps: true });
