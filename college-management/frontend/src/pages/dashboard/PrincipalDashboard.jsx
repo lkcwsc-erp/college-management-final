@@ -234,186 +234,6 @@ const AdmissionModal = ({ adm, onClose, onRefresh, showMsg }) => {
 };
 
 // ─── Main Principal Dashboard ─────────────────────────────────────────────────
-
-// ─── Fee Structure Approval Tab (Principal) ────────────────────────────────
-const PrincipalFeeApprovalTab = ({ approvals, loading, onRefresh, showMsg }) => {
-  const [actionItem, setActionItem]   = useState(null);
-  const [actionType, setActionType]   = useState(''); // 'approve' | 'reject'
-  const [note, setNote]               = useState('');
-  const [submitting, setSubmitting]   = useState(false);
-
-  const pending   = approvals.filter(a => a.status === 'pending_principal');
-  const processed = approvals.filter(a => a.status !== 'pending_principal');
-
-  const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
-
-  const statusLabel = (s) => ({
-    pending_principal:     { label:'⏳ Awaiting Principal', color:'#E65100', bg:'#fff3e0' },
-    pending_admin:         { label:'✅ Sent to Admin', color:'#1565C0', bg:'#e3f2fd' },
-    approved:              { label:'✅ Fully Approved', color:'#2E7D32', bg:'#e8f5e9' },
-    rejected_by_principal: { label:'❌ Rejected by You', color:'#C62828', bg:'#ffebee' },
-    rejected_by_admin:     { label:'❌ Rejected by Admin', color:'#C62828', bg:'#ffebee' },
-  }[s] || { label: s, color:'#888', bg:'#f5f5f5' });
-
-  const handleAction = async () => {
-    if (actionType === 'reject' && !note.trim()) {
-      showMsg('❌ Please enter rejection reason.'); return;
-    }
-    setSubmitting(true);
-    try {
-      if (actionType === 'approve') {
-        await API.put(`/fee-approvals/principal/approve/${actionItem._id}`, { note });
-        showMsg('✅ Approved! Sent to Admin for final approval.');
-      } else {
-        await API.put(`/fee-approvals/principal/reject/${actionItem._id}`, { reason: note });
-        showMsg('✅ Request rejected.');
-      }
-      setActionItem(null); setNote('');
-      onRefresh();
-    } catch (e) {
-      showMsg('❌ ' + (e.response?.data?.message || 'Failed.'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
-        <div>
-          <h2 style={{ color:'#C62828', marginBottom:4 }}>💼 Fee Structure Approval Requests</h2>
-          <p style={{ color:'#666', fontSize:14 }}>Accounts Section ke fee change requests review karo. Approve karne par Admin ke paas jayega.</p>
-        </div>
-        <button onClick={onRefresh}
-          style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:9, padding:'9px 18px', fontWeight:600, fontSize:13, cursor:'pointer' }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      {/* Counts */}
-      <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
-        <div style={{ background:'#fff3e0', color:'#E65100', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>⏳ Pending: {pending.length}</div>
-        <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>✅ Processed: {processed.length}</div>
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign:'center', padding:30, color:'#888' }}>⏳ Loading...</div>
-      ) : pending.length === 0 && processed.length === 0 ? (
-        <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>
-          <div style={{ fontSize:40, marginBottom:10 }}>✅</div>
-          <p>Koi pending request nahi hai.</p>
-        </div>
-      ) : (
-        <div>
-          {pending.length > 0 && (
-            <div>
-              <h3 style={{ color:'#E65100', marginBottom:12 }}>⏳ Pending Your Approval ({pending.length})</h3>
-              <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:24 }}>
-                {pending.map(a => (
-                  <div key={a._id} style={{ background:'#fff', border:'2px solid #fbbf24', borderRadius:12, padding:18 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', flexWrap:'wrap', gap:10, marginBottom:12 }}>
-                      <div>
-                        <div style={{ fontWeight:700, fontSize:15, color:'#1a1a2e' }}>
-                          {a.itemName}
-                          {a.isNewItem && <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', borderRadius:10, padding:'2px 8px', marginLeft:8 }}>🆕 New Item</span>}
-                        </div>
-                        <div style={{ fontSize:12, color:'#888', marginTop:3 }}>
-                          Course: <strong>{a.courseKey}</strong> · Section: <strong>{a.itemSection}</strong> · Submitted by: <strong>{a.submittedBy}</strong>
-                        </div>
-                        <div style={{ fontSize:12, color:'#aaa' }}>{new Date(a.createdAt).toLocaleString('en-IN')}</div>
-                      </div>
-                    </div>
-
-                    {/* Amounts comparison */}
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:6, marginBottom:12 }}>
-                      {semLabels.map((sl, si) => {
-                        const oldAmt = a.oldAmounts?.[si] || 0;
-                        const newAmt = a.newAmounts?.[si] || 0;
-                        const changed = oldAmt !== newAmt;
-                        return (
-                          <div key={sl} style={{ background: changed ? '#fff3e0' : '#f5f5f5', borderRadius:8, padding:'8px 10px', textAlign:'center', border: changed ? '1px solid #fbbf24' : '1px solid #eee' }}>
-                            <div style={{ fontSize:10, color:'#888', marginBottom:4 }}>{sl}</div>
-                            {changed && <div style={{ fontSize:10, color:'#888', textDecoration:'line-through' }}>₹{oldAmt}</div>}
-                            <div style={{ fontSize:13, fontWeight:800, color: changed ? '#E65100' : '#aaa' }}>
-                              {newAmt > 0 ? `₹${newAmt}` : '—'}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ display:'flex', gap:10 }}>
-                      <button onClick={() => { setActionItem(a); setActionType('approve'); setNote(''); }}
-                        style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                        ✅ Approve
-                      </button>
-                      <button onClick={() => { setActionItem(a); setActionType('reject'); setNote(''); }}
-                        style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                        ❌ Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {processed.length > 0 && (
-            <div>
-              <h3 style={{ color:'#888', marginBottom:12 }}>📋 Previous Requests</h3>
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                {processed.map(a => {
-                  const s = statusLabel(a.status);
-                  return (
-                    <div key={a._id} style={{ background:'#fff', border:`1px solid ${s.color}44`, borderLeft:`4px solid ${s.color}`, borderRadius:10, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
-                      <div>
-                        <span style={{ fontWeight:600, fontSize:13, color:'#222' }}>{a.itemName}</span>
-                        <span style={{ fontSize:11, color:'#888', marginLeft:8 }}>({a.courseKey})</span>
-                        {a.principalNote && <p style={{ fontSize:12, color:'#888', margin:'4px 0 0' }}>Your note: {a.principalNote}</p>}
-                      </div>
-                      <span style={{ padding:'4px 14px', borderRadius:20, fontSize:12, fontWeight:700, background:s.bg, color:s.color }}>{s.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Action Modal */}
-      {actionItem && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-          onClick={() => { setActionItem(null); setNote(''); }}>
-          <div style={{ background:'#fff', borderRadius:14, padding:28, maxWidth:480, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ color: actionType==='approve' ? '#2E7D32' : '#C62828', marginBottom:14 }}>
-              {actionType==='approve' ? '✅ Approve Fee Change' : '❌ Reject Fee Change'}
-            </h3>
-            <p style={{ color:'#555', marginBottom:16 }}><strong>{actionItem.itemName}</strong> ({actionItem.courseKey})</p>
-            {actionType==='approve' && (
-              <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:16 }}>
-                ✅ Approving will send this request to Admin for final approval.
-              </div>
-            )}
-            <div className="form-group">
-              <label>{actionType==='approve' ? 'Note (optional)' : 'Rejection Reason *'}</label>
-              <textarea rows="3" placeholder={actionType==='approve' ? 'Any note for Admin...' : 'Why are you rejecting?'} value={note} onChange={e => setNote(e.target.value)}
-                style={{ width:'100%', padding:10, borderRadius:8, border:'1px solid #ddd', fontSize:13, resize:'vertical', boxSizing:'border-box', marginTop:6 }} />
-            </div>
-            <div style={{ display:'flex', gap:10, marginTop:16 }}>
-              <button onClick={handleAction} disabled={submitting}
-                style={{ background: actionType==='approve'?'#2E7D32':'#C62828', color:'#fff', padding:'12px 28px', borderRadius:8, border:'none', fontSize:14, fontWeight:600, cursor:submitting?'not-allowed':'pointer', opacity:submitting?0.6:1 }}>
-                {submitting ? '⏳...' : (actionType==='approve' ? '✅ Confirm Approve' : '❌ Confirm Reject')}
-              </button>
-              <button onClick={() => { setActionItem(null); setNote(''); }} style={{ background:'#eee', color:'#333', padding:'12px 22px', borderRadius:8, border:'none', fontSize:14, cursor:'pointer' }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const PrincipalDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -432,17 +252,6 @@ const PrincipalDashboard = () => {
   const [selectedAdmission, setSelectedAdmission] = useState(null);
 
   const [message, setMessage] = useState('');
-  const [feeApprovals, setFeeApprovals] = useState([]);
-  const [feeApprLoading, setFeeApprLoading] = useState(false);
-
-  const fetchFeeApprovals = async () => {
-    setFeeApprLoading(true);
-    try {
-      const res = await API.get('/fee-approvals/all');
-      setFeeApprovals(res.data.approvals || []);
-    } catch { /* silent */ }
-    finally { setFeeApprLoading(false); }
-  };
 
   const showMsg = (msg) => {
     setMessage(msg);
@@ -477,7 +286,6 @@ const PrincipalDashboard = () => {
   useEffect(() => {
     if (activeTab === 'admissions') fetchAdmissions();
     if (activeTab === 'tc') fetchRequests();
-    if (activeTab === 'fee_approvals') fetchFeeApprovals();
   }, [activeTab]);
 
   const handleApprove = async () => {
@@ -529,7 +337,6 @@ const PrincipalDashboard = () => {
     { id: 'staff',      label: '👥 Staff Overview' },
     { id: 'notices',    label: '📢 Important Notices' },
     { id: 'all_students', label: '👩‍🎓 All Students' },
-    { id: 'fee_approvals', label: '💼 Fee Structure Approvals' },
   ];
 
   return (
@@ -795,16 +602,6 @@ const PrincipalDashboard = () => {
             </div>
           )}
           {activeTab === 'receipts' && <PaymentReceiptsTab themeColor="#C62828" />}
-
-          {/* ── FEE STRUCTURE APPROVALS ── */}
-          {activeTab === 'fee_approvals' && (
-            <PrincipalFeeApprovalTab
-              approvals={feeApprovals}
-              loading={feeApprLoading}
-              onRefresh={fetchFeeApprovals}
-              showMsg={showMsg}
-            />
-          )}
         </div>
       </main>
 
@@ -1082,38 +879,56 @@ const PrincipalStaffTab = () => {
 
 // ─── Notices Tab ─────────────────────────────────────────────────────────────
 const PrincipalNoticesTab = () => {
-  const [notices, setNotices]   = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [title, setTitle]       = useState('');
-  const [body, setBody]         = useState('');
-  const [photo, setPhoto]       = useState('');  // base64
+  const [notices, setNotices]     = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [staff, setStaff]         = useState([]);
+  const [title, setTitle]         = useState('');
+  const [body, setBody]           = useState('');
+  const [photo, setPhoto]         = useState('');
   const [photoName, setPhotoName] = useState('');
-  const [saving, setSaving]     = useState(false);
-  const [msg, setMsg]           = useState('');
+  const [audience, setAudience]   = useState('all');   // 'all' | 'students' | 'staff' | 'specific'
+  const [specificEmails, setSpecificEmails] = useState([]);
+  const [saving, setSaving]       = useState(false);
+  const [msg, setMsg]             = useState('');
 
   const fetchNotices = () => {
     setLoading(true);
     API.get('/notices').then(res => setNotices(res.data.notices||[])).catch(()=>{}).finally(()=>setLoading(false));
   };
 
-  useEffect(() => { fetchNotices(); }, []);
+  useEffect(() => {
+    fetchNotices();
+    API.get('/auth/staff').then(res => setStaff(res.data.staff||[])).catch(()=>{});
+  }, []);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { setMsg('❌ Image must be under 2MB.'); return; }
+    if (file.size > 2*1024*1024) { setMsg('❌ Image must be under 2MB.'); return; }
     setPhotoName(file.name);
     const reader = new FileReader();
-    reader.onload = (ev) => setPhoto(ev.target.result); // base64 with data:image prefix
+    reader.onload = (ev) => setPhoto(ev.target.result);
     reader.readAsDataURL(file);
   };
+
+  const roleLabel = (role) => ({
+    staff_student:'Student Section', staff_accounts:'Accounts', staff_exam:'Exam',
+    staff_scholarship:'Scholarship', staff_principal:'Principal', admin:'Admin',
+  }[role]||role);
 
   const handleAdd = async () => {
     if (!title.trim()) { setMsg('❌ Title required.'); return; }
     setSaving(true);
     try {
-      await API.post('/notices', { title, content: body || ' ', attachment: photo || '' });
-      setMsg('✅ Notice posted!'); setTitle(''); setBody(''); setPhoto(''); setPhotoName('');
+      await API.post('/notices', {
+        title,
+        content: body || ' ',
+        attachment: photo || '',
+        targetAudience: audience === 'all' ? 'all' : audience === 'students' ? 'student' : 'staff',
+        specificRecipients: audience === 'specific' ? specificEmails : [],
+      });
+      setMsg('✅ Notice posted!');
+      setTitle(''); setBody(''); setPhoto(''); setPhotoName(''); setSpecificEmails([]); setAudience('all');
       setTimeout(() => setMsg(''), 3000);
       fetchNotices();
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
@@ -1125,76 +940,106 @@ const PrincipalNoticesTab = () => {
     try { await API.delete(`/notices/${id}`); fetchNotices(); } catch {}
   };
 
+  const audienceLabel = (n) => {
+    if (n.targetAudience === 'student') return '👩‍🎓 Students';
+    if (n.targetAudience === 'staff') return '👥 All Staff';
+    if (n.specificRecipients?.length > 0) return `👤 ${n.specificRecipients.length} staff`;
+    return '🌐 Everyone';
+  };
+
   return (
     <div>
-      <h2 style={{ color: '#C62828', marginBottom: 4 }}>📢 Important Notices</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Post and manage college notices. Photos/images can be attached.</p>
+      <h2 style={{ color:'#C62828', marginBottom:4 }}>📢 Notices & Circulars</h2>
+      <p style={{ color:'#666', marginBottom:20, fontSize:14 }}>Post notices for students, staff, or specific staff members.</p>
 
-      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
+      {msg && <div style={{ padding:'12px 16px', borderRadius:10, marginBottom:14, fontWeight:500, fontSize:14, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
 
       {/* Post form */}
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20 }}>
-        <h4 style={{ color: '#C62828', marginBottom: 14 }}>📝 Post New Notice</h4>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 5 }}>Title *</label>
-          <input type="text" placeholder="Notice title..." value={title} onChange={e => setTitle(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 5 }}>Content</label>
-          <textarea rows="3" placeholder="Notice content..." value={body} onChange={e => setBody(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+      <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20, marginBottom:20 }}>
+        <h4 style={{ color:'#C62828', marginBottom:16 }}>📝 Post New Notice</h4>
+
+        {/* Audience */}
+        <div style={{ marginBottom:14 }}>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:8 }}>Send To *</label>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            {[{k:'all',l:'🌐 Everyone'},{k:'students',l:'👩‍🎓 All Students'},{k:'staff',l:'👥 All Staff'},{k:'specific',l:'👤 Specific Staff'}].map(o=>(
+              <button key={o.k} onClick={()=>setAudience(o.k)}
+                style={{ padding:'7px 16px', borderRadius:20, border:`2px solid ${audience===o.k?'#C62828':'#ddd'}`, background:audience===o.k?'#ffebee':'#fff', color:audience===o.k?'#C62828':'#555', fontWeight:audience===o.k?700:400, fontSize:13, cursor:'pointer' }}>
+                {o.l}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Photo upload */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 5 }}>📷 Attach Photo / Image (optional, max 2MB)</label>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }}>
+        {/* Specific staff selector */}
+        {audience==='specific' && (
+          <div style={{ marginBottom:14, background:'#f8faff', borderRadius:10, padding:14 }}>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:8 }}>Select Staff Members</label>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+              {staff.map(s=>(
+                <label key={s._id} style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:20, border:`1px solid ${specificEmails.includes(s.email)?'#C62828':'#ddd'}`, background:specificEmails.includes(s.email)?'#ffebee':'#fff', cursor:'pointer', fontSize:12 }}>
+                  <input type="checkbox" checked={specificEmails.includes(s.email)}
+                    onChange={e=>setSpecificEmails(prev=>e.target.checked?[...prev,s.email]:prev.filter(x=>x!==s.email))} style={{ cursor:'pointer' }}/>
+                  <span style={{ fontWeight:600, color:specificEmails.includes(s.email)?'#C62828':'#333' }}>{s.name}</span>
+                  <span style={{ fontSize:10, color:'#888' }}>({roleLabel(s.role)})</span>
+                </label>
+              ))}
+            </div>
+            {specificEmails.length>0 && <p style={{ fontSize:11, color:'#C62828', marginTop:8, fontWeight:600 }}>✅ {specificEmails.length} staff selected</p>}
+          </div>
+        )}
+
+        <div style={{ marginBottom:12 }}>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Title *</label>
+          <input type="text" placeholder="Notice title..." value={title} onChange={e=>setTitle(e.target.value)}
+            style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
+        </div>
+        <div style={{ marginBottom:12 }}>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Content</label>
+          <textarea rows="3" placeholder="Notice content..." value={body} onChange={e=>setBody(e.target.value)}
+            style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, resize:'vertical', boxSizing:'border-box' }} />
+        </div>
+        <div style={{ marginBottom:16 }}>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>📷 Attach Photo (optional, max 2MB)</label>
+          <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+            <label style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90CAF9', borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
               📎 Choose Image
-              <input type="file" accept="image/*" onChange={handlePhotoChange} style={{ display: 'none' }} />
+              <input type="file" accept="image/*" onChange={handlePhotoChange} style={{ display:'none' }} />
             </label>
             {photoName && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ {photoName}</span>
-                <button onClick={() => { setPhoto(''); setPhotoName(''); }}
-                  style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>✕ Remove</button>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:12, color:'#2E7D32', fontWeight:600 }}>✅ {photoName}</span>
+                <button onClick={()=>{setPhoto('');setPhotoName('');}} style={{ background:'#ffebee', color:'#C62828', border:'none', borderRadius:6, padding:'3px 8px', fontSize:12, cursor:'pointer' }}>✕</button>
               </div>
             )}
           </div>
-          {photo && (
-            <div style={{ marginTop: 10 }}>
-              <p style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Preview:</p>
-              <img src={photo} alt="preview" style={{ maxWidth: 200, maxHeight: 140, borderRadius: 8, border: '1px solid #ddd', objectFit: 'contain' }} />
-            </div>
-          )}
+          {photo && <img src={photo} alt="preview" style={{ maxWidth:200, maxHeight:120, borderRadius:8, border:'1px solid #ddd', marginTop:8, objectFit:'contain', display:'block' }} />}
         </div>
-
         <button onClick={handleAdd} disabled={saving}
-          style={{ background: '#C62828', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: saving?'not-allowed':'pointer', opacity: saving?0.7:1 }}>
-          {saving ? '⏳ Posting...' : '📢 Post Notice'}
+          style={{ background:'#C62828', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer', opacity:saving?0.7:1 }}>
+          {saving?'⏳ Posting...':'📢 Post Notice'}
         </button>
       </div>
 
       {/* Notices list */}
       {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p></div>
-      : notices.length === 0 ? <div className="empty-state"><div className="empty-icon">📢</div><h3>No notices yet</h3></div>
+      : notices.length===0 ? <div className="empty-state"><div className="empty-icon">📢</div><h3>No notices yet</h3></div>
       : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {notices.map(n => (
-            <div key={n._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: '4px solid #C62828', boxShadow: '0 1px 6px rgba(0,0,0,.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
-                <h4 style={{ color: '#1a1a2e', fontSize: 15, margin: 0 }}>{n.title}</h4>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, color: '#aaa' }}>{n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-IN') : ''}</span>
-                  <button onClick={() => handleDelete(n._id)}
-                    style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>🗑️</button>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {notices.map(n=>(
+            <div key={n._id} style={{ background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', padding:16, borderLeft:'4px solid #C62828', boxShadow:'0 1px 6px rgba(0,0,0,.05)' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', marginBottom:6, flexWrap:'wrap', gap:6 }}>
+                <div>
+                  <h4 style={{ color:'#1a1a2e', fontSize:15, margin:'0 0 4px' }}>{n.title}</h4>
+                  <span style={{ fontSize:11, background:'#fff3e0', color:'#E65100', padding:'2px 8px', borderRadius:10, fontWeight:600 }}>{audienceLabel(n)}</span>
+                </div>
+                <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
+                  <span style={{ fontSize:11, color:'#aaa' }}>{n.createdAt?new Date(n.createdAt).toLocaleDateString('en-IN'):''}</span>
+                  <button onClick={()=>handleDelete(n._id)} style={{ background:'#ffebee', color:'#C62828', border:'none', borderRadius:6, padding:'3px 10px', fontSize:12, cursor:'pointer', fontWeight:600 }}>🗑️</button>
                 </div>
               </div>
-              {n.content && n.content !== ' ' && <p style={{ fontSize: 13, color: '#555', margin: '0 0 10px' }}>{n.content}</p>}
-              {n.attachment && (
-                <img src={n.attachment} alt="notice" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, border: '1px solid #ddd', objectFit: 'contain', display: 'block' }} />
-              )}
+              {n.content && n.content!==' ' && <p style={{ fontSize:13, color:'#555', margin:'6px 0' }}>{n.content}</p>}
+              {n.attachment && <img src={n.attachment} alt="notice" style={{ maxWidth:'100%', maxHeight:300, borderRadius:8, border:'1px solid #ddd', objectFit:'contain', display:'block', marginTop:8 }} />}
             </div>
           ))}
         </div>
@@ -1202,5 +1047,6 @@ const PrincipalNoticesTab = () => {
     </div>
   );
 };
+
 
 export default PrincipalDashboard;
