@@ -6,202 +6,89 @@ import './Dashboard.css';
 import AdminReports from '../../components/AdminReports';
 import StudentViewFull from './StudentViewFull';
 
+// ─── Admin Delete Requests Tab ───────────────────────────────────────────────
+const AdminDeleteRequestsTab = () => {
+  const [pending, setPending] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg]         = useState('');
 
-// ─── Fee Structure Approval Tab (Admin) ───────────────────────────────────────
-const AdminFeeApprovalTab = ({ approvals, loading, onRefresh, showMsg }) => {
-  const [actionItem, setActionItem] = useState(null);
-  const [actionType, setActionType] = useState('');
-  const [note, setNote]             = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const fetch = () => {
+    setLoading(true);
+    API.get('/admissions/pending-deletes')
+      .then(res => setPending(res.data.pending || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
 
-  const pending   = approvals.filter(a => a.status === 'pending_admin');
-  const processed = approvals.filter(a => a.status !== 'pending_admin');
-  const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
+  useEffect(() => { fetch(); }, []);
 
-  const statusLabel = (s) => ({
-    pending_principal:     { label:'⏳ At Principal', color:'#E65100', bg:'#fff3e0' },
-    pending_admin:         { label:'⏳ Awaiting Admin', color:'#7B1FA2', bg:'#f3e5f5' },
-    approved:              { label:'✅ Fully Approved', color:'#2E7D32', bg:'#e8f5e9' },
-    rejected_by_principal: { label:'❌ Rejected by Principal', color:'#C62828', bg:'#ffebee' },
-    rejected_by_admin:     { label:'❌ Rejected by Admin', color:'#C62828', bg:'#ffebee' },
-  }[s] || { label: s, color:'#888', bg:'#f5f5f5' });
-
-  const handleAction = async () => {
-    if (actionType === 'reject' && !note.trim()) {
-      showMsg('❌ Please enter rejection reason.'); return;
-    }
-    setSubmitting(true);
+  const handleApprove = async (id, name) => {
+    if (!window.confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
     try {
-      if (actionType === 'approve') {
-        await API.put(`/fee-approvals/admin/approve/${actionItem._id}`, { note });
-        showMsg('✅ Fee structure change approved and now active!');
-      } else {
-        await API.put(`/fee-approvals/admin/reject/${actionItem._id}`, { reason: note });
-        showMsg('✅ Request rejected.');
-      }
-      setActionItem(null); setNote('');
-      onRefresh();
-    } catch (e) {
-      showMsg('❌ ' + (e.response?.data?.message || 'Failed.'));
-    } finally {
-      setSubmitting(false);
-    }
+      await API.delete(`/admissions/admin-delete/${id}`);
+      setMsg(`✅ ${name} deleted.`);
+      fetch();
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+  };
+
+  const handleReject = async (id) => {
+    try {
+      await API.put(`/admissions/update-documents/${id}`, { deleteRequested: false, deleteReason: '', deleteRequestedBy: '', deleteRequestedAt: null });
+      setMsg('✅ Delete request rejected.');
+      fetch();
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e) { setMsg('❌ Failed'); }
   };
 
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
-        <div>
-          <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure Final Approvals</h2>
-          <p style={{ color:'#666', fontSize:14 }}>Principal-approved fee changes ka final approval. Tumhare approve karne ke baad fee structure live ho jayega.</p>
-        </div>
-        <button onClick={onRefresh}
-          style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90CAF9', borderRadius:9, padding:'9px 18px', fontWeight:600, fontSize:13, cursor:'pointer' }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
-        <div style={{ background:'#f3e5f5', color:'#7B1FA2', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>⏳ Pending Admin: {pending.length}</div>
-        <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:600 }}>✅ Approved: {approvals.filter(a=>a.status==='approved').length}</div>
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign:'center', padding:30, color:'#888' }}>⏳ Loading...</div>
-      ) : pending.length === 0 && processed.length === 0 ? (
-        <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>
-          <div style={{ fontSize:40, marginBottom:10 }}>✅</div>
-          <p>Koi pending request nahi hai.</p>
+      <h2 style={{ color: '#C62828', marginBottom: 4 }}>🗑️ Delete Requests</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Student Section staff has requested deletion of these records. Review and approve/reject.</p>
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontSize: 14, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 500 }}>{msg}</div>}
+      {loading ? <div style={{textAlign:'center',padding:20,fontSize:'2rem'}}>⏳</div>
+      : pending.length === 0 ? (
+        <div style={{ background:'#f8faff', borderRadius:12, padding:30, textAlign:'center', color:'#888' }}>
+          <div style={{ fontSize:'2rem', marginBottom:8 }}>✅</div>
+          <p>No pending delete requests.</p>
         </div>
       ) : (
-        <div>
-          {pending.length > 0 && (
-            <div>
-              <h3 style={{ color:'#7B1FA2', marginBottom:12 }}>⏳ Pending Final Approval ({pending.length})</h3>
-              <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:24 }}>
-                {pending.map(a => (
-                  <div key={a._id} style={{ background:'#fff', border:'2px solid #ce93d8', borderRadius:12, padding:18 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', flexWrap:'wrap', gap:10, marginBottom:12 }}>
-                      <div>
-                        <div style={{ fontWeight:700, fontSize:15, color:'#1a1a2e' }}>
-                          {a.itemName}
-                          {a.isNewItem && <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', borderRadius:10, padding:'2px 8px', marginLeft:8 }}>🆕 New Item</span>}
-                        </div>
-                        <div style={{ fontSize:12, color:'#888', marginTop:3 }}>
-                          Course: <strong>{a.courseKey}</strong> · Submitted by: <strong>{a.submittedBy}</strong>
-                          {a.principalNote && <span> · Principal note: <em>{a.principalNote}</em></span>}
-                        </div>
-                        <div style={{ fontSize:12, color:'#aaa' }}>{new Date(a.createdAt).toLocaleString('en-IN')}</div>
-                      </div>
-                      <span style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600 }}>✅ Principal Approved</span>
-                    </div>
-
-                    {/* Amounts */}
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:6, marginBottom:12 }}>
-                      {semLabels.map((sl, si) => {
-                        const oldAmt = a.oldAmounts?.[si] || 0;
-                        const newAmt = a.newAmounts?.[si] || 0;
-                        const changed = oldAmt !== newAmt;
-                        return (
-                          <div key={sl} style={{ background: changed ? '#f3e5f5' : '#f5f5f5', borderRadius:8, padding:'8px 10px', textAlign:'center', border: changed ? '1px solid #ce93d8' : '1px solid #eee' }}>
-                            <div style={{ fontSize:10, color:'#888', marginBottom:4 }}>{sl}</div>
-                            {changed && <div style={{ fontSize:10, color:'#bbb', textDecoration:'line-through' }}>₹{oldAmt}</div>}
-                            <div style={{ fontSize:13, fontWeight:800, color: changed ? '#7B1FA2' : '#aaa' }}>
-                              {newAmt > 0 ? `₹${newAmt}` : '—'}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ display:'flex', gap:10 }}>
-                      <button onClick={() => { setActionItem(a); setActionType('approve'); setNote(''); }}
-                        style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                        ✅ Final Approve
-                      </button>
-                      <button onClick={() => { setActionItem(a); setActionType('reject'); setNote(''); }}
-                        style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                        ❌ Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {pending.map((p,i) => (
+            <div key={p._id||i} style={{ background:'#fff', borderRadius:12, border:'2px solid #ef9a9a', padding:18, boxShadow:'0 2px 8px rgba(0,0,0,.06)' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', flexWrap:'wrap', gap:10 }}>
+                <div>
+                  <h4 style={{ color:'#C62828', fontSize:15, margin:'0 0 4px' }}>{p.applicantName}</h4>
+                  <p style={{ fontSize:12, color:'#555', margin:'0 0 2px' }}>{p.email} · ID: {p.studentId||'—'}</p>
+                  <p style={{ fontSize:12, color:'#777', margin:'0 0 2px' }}><b>Reason:</b> {p.deleteReason||'Not specified'}</p>
+                  <p style={{ fontSize:11, color:'#aaa', margin:0 }}>
+                    Requested by: {p.deleteRequestedBy} · {p.deleteRequestedAt ? new Date(p.deleteRequestedAt).toLocaleDateString('en-IN') : ''}
+                  </p>
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => handleApprove(p._id, p.applicantName)}
+                    style={{ background:'#C62828', color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                    ✅ Approve Delete
+                  </button>
+                  <button onClick={() => handleReject(p._id)}
+                    style={{ background:'#e8f5e9', color:'#2E7D32', border:'1px solid #a5d6a7', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                    ❌ Reject
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-
-          {processed.length > 0 && (
-            <div>
-              <h3 style={{ color:'#888', marginBottom:12 }}>📋 All Requests History</h3>
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                {processed.map(a => {
-                  const s = statusLabel(a.status);
-                  return (
-                    <div key={a._id} style={{ background:'#fff', border:`1px solid ${s.color}44`, borderLeft:`4px solid ${s.color}`, borderRadius:10, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
-                      <div>
-                        <span style={{ fontWeight:600, fontSize:13 }}>{a.itemName}</span>
-                        <span style={{ fontSize:11, color:'#888', marginLeft:8 }}>({a.courseKey}) · {a.submittedBy}</span>
-                        {a.adminNote && <p style={{ fontSize:12, color:'#888', margin:'4px 0 0' }}>Admin note: {a.adminNote}</p>}
-                      </div>
-                      <span style={{ padding:'4px 14px', borderRadius:20, fontSize:12, fontWeight:700, background:s.bg, color:s.color }}>{s.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Action Modal */}
-      {actionItem && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-          onClick={() => { setActionItem(null); setNote(''); }}>
-          <div style={{ background:'#fff', borderRadius:14, padding:28, maxWidth:480, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ color: actionType==='approve'?'#2E7D32':'#C62828', marginBottom:14 }}>
-              {actionType==='approve' ? '✅ Final Approve - Fee Change' : '❌ Reject Fee Change'}
-            </h3>
-            <p style={{ color:'#555', marginBottom:16 }}><strong>{actionItem.itemName}</strong> ({actionItem.courseKey})</p>
-            {actionType==='approve' && (
-              <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:16 }}>
-                ✅ Approve karne ke baad ye fee change live ho jayega aur Accounts Section collect kar sakegi.
-              </div>
-            )}
-            <div className="form-group">
-              <label>{actionType==='approve' ? 'Note (optional)' : 'Rejection Reason *'}</label>
-              <textarea rows="3" placeholder={actionType==='approve' ? 'Final note...' : 'Reason for rejection...'} value={note} onChange={e => setNote(e.target.value)}
-                style={{ width:'100%', padding:10, borderRadius:8, border:'1px solid #ddd', fontSize:13, resize:'vertical', boxSizing:'border-box', marginTop:6 }} />
-            </div>
-            <div style={{ display:'flex', gap:10, marginTop:16 }}>
-              <button onClick={handleAction} disabled={submitting}
-                style={{ background: actionType==='approve'?'#2E7D32':'#C62828', color:'#fff', padding:'12px 28px', borderRadius:8, border:'none', fontSize:14, fontWeight:600, cursor:submitting?'not-allowed':'pointer', opacity:submitting?0.6:1 }}>
-                {submitting ? '⏳...' : (actionType==='approve' ? '✅ Final Approve' : '❌ Reject')}
-              </button>
-              <button onClick={() => { setActionItem(null); setNote(''); }} style={{ background:'#eee', color:'#333', padding:'12px 22px', borderRadius:8, border:'none', fontSize:14, cursor:'pointer' }}>Cancel</button>
-            </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
   );
 };
 
+
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
-  const [feeApprovals, setFeeApprovals]   = useState([]);
-  const [feeApprLoading, setFeeApprLoading] = useState(false);
-
-  const fetchFeeApprovals = async () => {
-    setFeeApprLoading(true);
-    try {
-      const res = await API.get('/fee-approvals/all');
-      setFeeApprovals(res.data.approvals || []);
-    } catch { /* silent */ }
-    finally { setFeeApprLoading(false); }
-  };
-
   const [students, setStudents] = useState([]);
   const [faculty, setFaculty] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -363,10 +250,10 @@ const AdminDashboard = () => {
     { id: 'notices',  label: '📢 Notices' },
     { id: 'events',   label: '🗓️ Events' },
     { id: 'contacts',  label: '📬 Messages' },
-    { id: 'messaging', label: '✉️ Send Message' },
+    { id: 'messaging',      label: '✉️ Send Message' },
+    { id: 'delete_requests', label: '🗑️ Delete Requests' },
     { id: 'reports',   label: '📊 Reports' },
     { id: 'receipts',  label: '🧾 Payment Receipts' },
-    { id: 'fee_approvals', label: '💼 Fee Approvals' },
   ];
 
   const roleLabel = (role) => ({
@@ -953,15 +840,8 @@ const AdminDashboard = () => {
           {activeTab === 'receipts'  && <PaymentReceiptsTab themeColor="#1565C0" />}
           {activeTab === 'messaging' && <AdminMessagingTab user={user} showMessage={showMessage} />}
 
-          {/* ── FEE STRUCTURE APPROVALS ── */}
-          {activeTab === 'fee_approvals' && (
-            <AdminFeeApprovalTab
-              approvals={feeApprovals}
-              loading={feeApprLoading}
-              onRefresh={fetchFeeApprovals}
-              showMsg={showMessage}
-            />
-          )}
+          {/* Delete Requests */}
+          {activeTab === 'delete_requests' && <AdminDeleteRequestsTab />}
 
         </div>
       </main>
