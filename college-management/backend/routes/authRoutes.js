@@ -28,7 +28,7 @@ router.post('/register', protect, authorizeRoles('admin'), register);
 
 // Admin: Staff Management
 router.post('/create-staff', protect, authorizeRoles('admin'), createStaff);
-router.get('/staff', protect, authorizeRoles('admin'), getAllStaff);
+router.get('/staff', protect, authorizeRoles('admin', 'staff_principal'), getAllStaff);
 router.put('/staff/:id', protect, authorizeRoles('admin'), updateStaff); // ✅ ADDED
 router.delete('/staff/:id', protect, authorizeRoles('admin'), deleteStaff);
 
