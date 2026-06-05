@@ -117,10 +117,12 @@ const admissionSchema = new mongoose.Schema(
        AADHAR VERIFICATION
     ================================================================ */
     // FIX: added 12-digit validator — was missing in previous version
-    aadharNumber: {
-      type:    String,
-      trim:    true,
-      default: '',
+aadharNumber: {
+      type:     String,
+      trim:     true,
+      default:  '',
+      unique:   true,
+      sparse:   true,
       validate: {
         validator: (v) => v === '' || /^\d{12}$/.test(v),
         message:   'Aadhar number must be exactly 12 digits',
