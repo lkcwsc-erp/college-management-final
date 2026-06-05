@@ -22,8 +22,9 @@ const Home = () => {
            <span className="hero-badge" style={{fontSize:"15px",fontWeight:700}}>✨ Affiliated to SNDT Women's University, Mumbai</span>
           </div>
           <p className="hero-vnss-line">
-        Under the aegis of &nbsp;<strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon
-        </p>
+          <img src="/Sanshta_logo.jpeg" alt="VNSS Logo" style={{height:'40px', width:'40px', objectFit:'contain', borderRadius:'50%', border:'2px solid rgba(255,255,255,0.5)', marginRight:'10px', verticalAlign:'middle'}} />
+          <strong>Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</strong>
+          </p>
          <h1>Late Kalpana Chawala Women's<br /><span className="hero-highlight">Senior College</span></h1>
          <h2>Empowering Women Through Excellence in Education</h2>
           <p className="hero-location">Senior Science & Arts College, Gangakhed, Parbhani</p>
