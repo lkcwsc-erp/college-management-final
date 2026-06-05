@@ -6,7 +6,7 @@ const admissionSchema = new mongoose.Schema(
        APPLICANT — BASIC CONTACT
     ================================================================ */
     applicantName: { type: String, required: [true, 'Applicant name is required'], trim: true },
-    email:         { type: String, required: [true, 'Email is required'], trim: true, lowercase: true },
+    email:         { type: String, required: [true, 'Email is required'], trim: true, lowercase: true, unique: true },
     phone:         {
       type:     String,
       required: [true, 'Phone number is required'],
