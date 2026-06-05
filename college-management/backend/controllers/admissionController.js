@@ -60,9 +60,18 @@ exports.createAdmission = async (req, res) => {
     if (!body.guardianFullName?.trim())
       return res.status(400).json({ success: false, message: 'Guardian Full Name is required.' });
 
-    // Aadhar
+  // Aadhar — format validation
     if (!body.aadharNumber?.trim() || !/^\d{12}$/.test(body.aadharNumber.trim()))
       return res.status(400).json({ success: false, message: 'A valid 12-digit Aadhar number is required.' });
+
+    // Aadhar — uniqueness check
+    const existingAadhar = await Admission.findOne({ aadharNumber: body.aadharNumber.trim() });
+    if (existingAadhar) {
+      return res.status(400).json({
+        success: false,
+        message: 'This Aadhar number is already registered with another student.',
+      });
+    }
 
     // APAAR ID — numeric only, exactly 12 digits
     const aparId = body.aparIdNumber?.trim() || '';
