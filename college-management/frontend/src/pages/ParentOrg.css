@@ -376,6 +376,41 @@
   font-weight: 700;
 }
 
+/* FOUNDER ACHIEVEMENTS */
+.po-founder-achievements {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 20px 0 24px;
+  background: #f8faff;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #e3eaf6;
+}
+.po-achievement-item {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.po-achievement-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.po-achievement-item strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a237e;
+  margin-bottom: 4px;
+}
+.po-achievement-item p {
+  font-size: 13.5px;
+  color: #555;
+  line-height: 1.7;
+  margin: 0;
+}
+
 /* RESPONSIVE */
 @media (max-width: 900px) {
   .po-mv-grid { grid-template-columns: 1fr; }
