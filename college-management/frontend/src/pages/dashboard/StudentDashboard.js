@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
@@ -105,6 +105,1579 @@ const printStudentReceipt = (p, adm) => {
   <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
   const w = window.open('','_blank','width=680,height=680');
   w.document.write(html); w.document.close();
+};
+
+
+const printTC = (adm) => {
+
+  const today   = new Date();
+  const dateStr = String(today.getDate()).padStart(2,'0') + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + today.getFullYear();
+
+  const dobObj  = adm.dateOfBirth ? new Date(adm.dateOfBirth) : null;
+  const dobStr  = dobObj ? String(dobObj.getDate()).padStart(2,'0')+'/'+String(dobObj.getMonth()+1).padStart(2,'0')+'/'+dobObj.getFullYear() : '';
+
+  // DOB in words
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+    'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen',
+    'Twenty','Twenty-One','Twenty-Two','Twenty-Three','Twenty-Four','Twenty-Five','Twenty-Six',
+    'Twenty-Seven','Twenty-Eight','Twenty-Nine','Thirty','Thirty-One'];
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const yearToWords = (y) => {
+    if (y>=1000){const th=Math.floor(y/1000),rem=y%1000,thW=ones[th]+' Thousand';if(rem===0)return thW;if(rem<100)return thW+' '+(rem<ones.length?ones[rem]:tens[Math.floor(rem/10)]+(rem%10?'-'+ones[rem%10]:''));const h=Math.floor(rem/100),r=rem%100,hw=ones[h]+' Hundred',rw=r===0?'':(r<ones.length?ones[r]:tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:''));return thW+' '+hw+(rw?' '+rw:'');}
+    const h=Math.floor(y/100),r=y%100;return(ones[h]+' Hundred'+(r===0?'':(r<ones.length?' '+ones[r]:' '+tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:'')))).trim();
+  };
+  const dobWords = dobObj ? ones[dobObj.getDate()]+' '+monthNames[dobObj.getMonth()]+' '+yearToWords(dobObj.getFullYear()) : '';
+
+  const ct = (adm.courseType||'').toLowerCase();
+  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
+    ? 'Bachelor of Science (B.Sc.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
+    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')
+    ? 'Bachelor of Arts (B.A.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
+    : (adm.courseType||'') + (adm.preferredSubject?' — '+adm.preferredSubject:'');
+
+  const html = `<!DOCTYPE html><html><head><title>Transfer Certificate</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px;font-size:13px}
+    .page{background:white;width:720px;border:1.5px solid #000;padding:0;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+    .hdr{display:flex;align-items:center;gap:10px;border-bottom:1.5px solid #000;padding:8px 12px}
+    .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+    .htxt{flex:1;text-align:center}
+    .htrust{font-size:8.5px;color:#555}
+    .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3;margin:2px 0}
+    .haddr{font-size:8.5px;color:#444;margin-top:1px}
+    .titlesec{text-align:center;padding:6px 0 2px;border-bottom:1px solid #000}
+    .title{font-size:15px;font-weight:bold;letter-spacing:2px;text-decoration:underline;text-underline-offset:3px}
+    .subtitle{font-size:11px;font-style:italic;margin-top:1px}
+    .disclaimer{font-size:9.5px;font-style:italic;padding:5px 14px;border-bottom:1px solid #ccc;color:#333;line-height:1.4}
+    .regrow{display:flex;justify-content:space-between;padding:5px 14px;border-bottom:1px solid #ccc;font-size:12px}
+    .reglabel{font-weight:600}
+    .regval{font-weight:bold}
+    /* Editable fields */
+    input[type=text]{border:none;border-bottom:1px dotted #555;outline:none;font-family:'Times New Roman',serif;font-size:13px;background:transparent;padding:1px 4px;min-width:180px;font-weight:bold}
+    input[type=text]:focus{border-bottom:1.5px solid #000;background:#fffde7}
+    /* Table rows */
+    .rows{padding:2px 14px}
+    .row{display:flex;align-items:baseline;padding:5px 0;border-bottom:1px dotted #ccc;font-size:13px}
+    .rnum{width:22px;flex-shrink:0;font-weight:600}
+    .rlabel{width:210px;flex-shrink:0}
+    .rcolon{width:16px;flex-shrink:0}
+    .rval{flex:1;font-weight:bold}
+    .rval input{width:100%;min-width:unset}
+    /* Footer */
+    .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:12px 14px 10px}
+    .fsign{text-align:center;min-width:100px}
+    .fsign-line{border-top:1px solid #000;margin-top:32px;padding-top:4px;font-size:12px;font-weight:bold}
+    /* Print button */
+    .print-btn{display:block;margin:10px auto;padding:8px 28px;background:#1a237e;color:white;border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer}
+    @media print{
+      body{background:white;padding:0}
+      .page{box-shadow:none}
+      .print-btn{display:none}
+      input[type=text]{border-bottom:1px dotted #555}
+    }
+  </style></head><body>
+  <div class="page">
+
+    <div class="hdr">
+      <img src="data:image/jpeg;base64,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" class="logo"/>
+      <div class="htxt">
+        <div class="h1">Vidya Niketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="h2">Late Kalpana Chawala Arts &amp; Science Mahila Senior College Gangakhed,</div>
+        <div class="h3">Lecturer Colony Gangakhed, Dist Parbhani - 431514</div>
+        <div class="h4">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
+      </div>
+    </div>
+
+    <div class="titlesec">
+      <div class="title">TRANSFER CERTIFICATE</div>
+      <div class="subtitle">(vide Rule 17)</div>
+    </div>
+
+    <div class="disclaimer">
+      <em>(No Change in any entry in this certificate shall be made except by the authority issuing it and any infringement of this requirement is liable to involve the imposition of penalty of such as that of Rustication)</em>
+    </div>
+
+    <div class="regrow">
+      <span><span class="reglabel">Register No. : </span><input type="text" value="" style="min-width:100px"/></span>
+      <span><span class="reglabel">T.C. No. : </span><span class="regval">TC${String(new Date().getFullYear()).slice(-2)}-${Date.now().toString().slice(-5)}</span></span>
+    </div>
+
+    <div class="rows">
+      <div class="row"><span class="rnum">1.</span><span class="rlabel">Name of Student in Full</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.applicantName||''}"/></span></div>
+      <div class="row"><span class="rnum">2.</span><span class="rlabel">Mother's Name</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.motherName||''}"/></span></div>
+      <div class="row"><span class="rnum">3.</span><span class="rlabel">Caste &amp; Sub-Caste</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.caste||''}"/></span></div>
+      <div class="row"><span class="rnum">4.</span><span class="rlabel">Place of Birth</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row">
+        <span class="rnum"></span><span class="rlabel">Nationality</span><span class="rcolon">:</span>
+        <span class="rval"><input type="text" value="Indian" style="min-width:120px"/></span></div>
+      <div class="row">
+        <span class="rnum">5.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
+        <span class="rval">
+          <input type="text" value="${dobStr}" style="min-width:120px"/>
+        </span>
+      </div>
+      <div class="row">
+        <span class="rnum"></span><span class="rlabel">(In Words)</span><span class="rcolon">:</span>
+        <span class="rval"><input type="text" value="${dobWords}" style="min-width:280px"/></span>
+      </div>
+      <div class="row"><span class="rnum">6.</span><span class="rlabel">Last School / College attended</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row"><span class="rnum">7.</span><span class="rlabel">Date of Admission</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row"><span class="rnum">8.</span><span class="rlabel">Progress</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Satisfactory"/></span></div>
+      <div class="row"><span class="rnum">9.</span><span class="rlabel">Conduct</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Good"/></span></div>
+      <div class="row"><span class="rnum">10.</span><span class="rlabel">Date of Leaving</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${dateStr}"/></span></div>
+      <div class="row"><span class="rnum">11.</span><span class="rlabel">Standard in which studying and since when</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${courseFull + (adm.admissionYear?' ('+adm.admissionYear+')':'')}"/></span></div>
+      <div class="row"><span class="rnum">12.</span><span class="rlabel">Reason of Leaving College</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row"><span class="rnum">13.</span><span class="rlabel">Remarks</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row" style="border-bottom:none;padding-top:8px"><span class="rnum">14.</span><span style="flex:1;font-weight:bold">Certified that the above information is in accordance with the college record.</span></div>
+    </div>
+
+    <div class="foot">
+      <div class="fsign">
+        <div style="font-size:12px;margin-bottom:2px">Date : ${dateStr}</div>
+      </div>
+      <div class="fsign">
+        <div class="fsign-line">Clark</div>
+      </div>
+      <div class="fsign">
+        <div class="fsign-line">Principal</div>
+      </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()">🖨️ Print TC</button>
+  </div>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=800,height=900');
+  w.document.write(html);
+  w.document.close();
+};
+
+const printBonafide = (adm) => {
+  const certNo  = 'BON' + new Date().getFullYear().toString().slice(-2) + '-' + Date.now().toString().slice(-4);
+  const now     = new Date();
+  const day     = String(now.getDate()).padStart(2,'0');
+  const month   = String(now.getMonth()+1).padStart(2,'0');
+  const fullYear= now.getFullYear();
+  const acadY1  = now.getMonth()+1 >= 6 ? fullYear : fullYear-1;
+  const acadYear= acadY1 + '-' + String(acadY1+1).slice(-2);
+
+  const dobObj  = adm.dateOfBirth ? new Date(adm.dateOfBirth) : null;
+  const dobDD   = dobObj ? String(dobObj.getDate()).padStart(2,'0') : '____';
+  const dobMM   = dobObj ? String(dobObj.getMonth()+1).padStart(2,'0') : '____';
+  const dobYYYY = dobObj ? String(dobObj.getFullYear()) : '______';
+
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen','Twenty','Twenty-One','Twenty-Two','Twenty-Three','Twenty-Four','Twenty-Five','Twenty-Six','Twenty-Seven','Twenty-Eight','Twenty-Nine','Thirty','Thirty-One'];
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const yearToWords = (y) => {
+    if (y>=1000){const th=Math.floor(y/1000),rem=y%1000,thW=ones[th]+' Thousand';if(rem===0)return thW;if(rem<100)return thW+' '+(rem<ones.length?ones[rem]:tens[Math.floor(rem/10)]+(rem%10?'-'+ones[rem%10]:''));const h=Math.floor(rem/100),r=rem%100,hw=ones[h]+' Hundred',rw=r===0?'':(r<ones.length?ones[r]:tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:''));return thW+' '+hw+(rw?' '+rw:'');}
+    const h=Math.floor(y/100),r=y%100;return(ones[h]+' Hundred'+(r===0?'':(r<ones.length?' '+ones[r]:' '+tens[Math.floor(r/10)]+(r%10?'-'+ones[r%10]:'')))).trim();
+  };
+  const dobWords = dobObj ? ones[dobObj.getDate()]+' '+monthNames[dobObj.getMonth()]+' '+yearToWords(dobObj.getFullYear()) : '________________';
+
+  const ct = (adm.courseType||'').toLowerCase();
+  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
+    ? 'Bachelor of Science (B.Sc.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
+    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts')
+    ? 'Bachelor of Arts (B.A.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
+    : (adm.courseType||'') + (adm.preferredSubject?' — '+adm.preferredSubject:'');
+
+  const logo = "data:image/jpeg;base64,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";
+
+  const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px}
+    .page{background:white;width:730px;border:2px solid #000}
+    /* Header */
+    .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
+    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0}
+    .htxt{flex:1;text-align:center}
+    .h1{font-size:11px;color:#333}
+    .h2{font-size:11px;color:#333}
+    .h3{font-size:21px;font-weight:900;color:#000;margin:3px 0 2px}
+    .h4{font-size:11px;color:#000;margin-bottom:1px}
+    .h5{font-size:10px;color:#555}
+    /* Title */
+    .titlebar{text-align:center;padding:8px 0;border-bottom:1px solid #000}
+    .titletxt{font-size:17px;font-weight:900;letter-spacing:5px;text-decoration:underline;text-underline-offset:4px}
+    /* Meta */
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;padding:6px 18px;border-bottom:1px solid #ccc;font-size:12.5px}
+    .mrow{display:flex;gap:4px;align-items:baseline}
+    .ml{font-weight:700}
+    .mv{border-bottom:1px solid #000;flex:1;min-width:80px;padding-left:3px;font-weight:bold}
+    /* Body */
+    .body{padding:10px 20px 8px;font-size:14px;line-height:1.5}
+    .body p{margin:0 0 8px 0}
+    .ul{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;min-width:200px;text-align:center}
+    .ul-sm{border-bottom:1.5px solid #000;display:inline-block;font-weight:bold;min-width:44px;text-align:center}
+    .ul-lg{border-bottom:1.5px solid #000;display:inline-block;min-width:340px;font-weight:bold}
+    /* Footer */
+    .foot{display:flex;justify-content:flex-end;align-items:flex-end;padding:10px 20px 12px}
+    .signbox{text-align:center;min-width:120px}
+    .signline{border-top:1px solid #000;padding-top:5px;font-size:13px;font-weight:bold;margin-top:36px}
+    /* ERP */
+    .erp{border-top:1px dashed #aaa;padding:5px 18px;font-size:9.5px;color:#666;display:flex;justify-content:space-between}
+    .sysgen{padding:3px 18px 5px;font-size:9px;color:#888;text-align:center}
+    @media print{body{background:white;padding:0}.page{box-shadow:none}}
+  </style></head><body><div class="page">
+    <div class="hdr">
+      <img src="${logo}" class="logo"/>
+      <div class="htxt">
+        <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="h2">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+        <div class="h3">Late Kalpana Chawla Women's Senior College</div>
+        <div class="h4">Lecture Colony, Gangakhed, Tq. Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
+        <div class="h5">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
+      </div>
+    </div>
+    <div class="titlebar"><span class="titletxt">BONAFIDE &nbsp; CERTIFICATE</span></div>
+    <div class="meta">
+      <div class="mrow"><span class="ml">Certificate No.:</span><span class="mv">&nbsp;${certNo}</span></div>
+      <div class="mrow"><span class="ml">Date:</span><span class="mv">&nbsp;${day} / ${month} / ${fullYear}</span></div>
+      <div class="mrow"><span class="ml">Student ID:</span><span class="mv">&nbsp;${adm.studentId||'____________________'}</span></div>
+      <div class="mrow"><span class="ml">Academic Year:</span><span class="mv">&nbsp;${acadYear}</span></div>
+    </div>
+    <div class="body">
+      <p>This is to certify that Miss &nbsp;<span class="ul">&nbsp;${adm.applicantName||''}&nbsp;</span>&nbsp; is a bonafide student of Late Kalpana Chawla Women's Senior College, Gangakhed. She is studying in <span class="ul" style="min-width:220px">&nbsp;${courseFull||'____________________'}&nbsp;</span> Course, <span class="ul" style="min-width:80px">&nbsp;${adm.admissionYear||'________'}&nbsp;</span> during the Academic Year &nbsp;<strong>${acadYear}</strong>. As per college records, her Date of Birth is &nbsp;<span class="ul-sm">&nbsp;${dobDD}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm">&nbsp;${dobMM}&nbsp;</span>&nbsp;/&nbsp;<span class="ul-sm" style="min-width:60px">&nbsp;${dobYYYY}&nbsp;</span> (In Words): &nbsp;<span class="ul-lg">&nbsp;${dobWords}&nbsp;</span>. To the best of my knowledge and belief, her conduct and moral character are <strong>good</strong>. This certificate is issued on her request for official purpose.</p>
+    </div>
+    <div class="foot">
+      <div class="signbox">
+        <div class="signline">Principal</div>
+      </div>
+    </div>
+    <div class="erp"><span>ERP Verification ID: <strong>ERP${certNo}</strong></span><span>Generated Through College ERP System</span></div>
+    <div class="sysgen">This is a system generated certificate.</div>
+  </div>
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  const w = window.open('','_blank','width=800,height=700'); w.document.write(html); w.document.close();
+};
+
+
+
+const DOC_CONFIG = {
+  TC:        { label: 'Transfer Certificate', icon: '📄', color: '#1565C0', bg: '#e3f2fd' },
+  BONAFIDE:  { label: 'Bonafide Certificate',  icon: '📜', color: '#7B1FA2', bg: '#f3e5f5' },
+  ID_CARD:   { label: 'ID Card',               icon: '🪪', color: '#2E7D32', bg: '#e8f5e9' },
+  MARKSHEET: { label: 'Marksheet',             icon: '📋', color: '#E65100', bg: '#fff3e0' },
+  MIGRATION: { label: 'Migration Certificate', icon: '📜', color: '#795548', bg: '#efebe9' },
+};
+
+const AllDocumentsTab = ({ user }) => { // eslint-disable-line no-unused-vars
+  const [requests, setRequests]   = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [admMap, setAdmMap]       = useState({});
+  const [search, setSearch]       = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [completing, setCompleting] = useState('');
+  const [rejecting, setRejecting]   = useState('');
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectNote, setRejectNote]   = useState('');
+  const [msg, setMsg]               = useState('');
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [reqRes, admRes] = await Promise.all([
+        API.get('/document-requests/student-section/all'),
+        API.get('/admissions/staff-view/all'),
+      ]);
+      setRequests(reqRes.data.requests || []);
+      const map = {};
+      (admRes.data.admissions || []).forEach(a => { map[a.email] = a; });
+      setAdmMap(map);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const handlePrint = (req) => {
+    const adm = admMap[req.studentEmail] || {};
+    const merged = {
+      applicantName: req.studentName, email: req.studentEmail,
+      studentId: adm.studentId||'', prnNumber: adm.prnNumber||'',
+      aparIdNumber: adm.aparIdNumber||'', dateOfBirth: adm.dateOfBirth||'',
+      gender: adm.gender||'Female', fatherName: adm.fatherName||'',
+      motherName: adm.motherName||'', category: adm.category||'',
+      caste: adm.caste||'',
+      courseType: req.branch||adm.courseType||adm.course||adm.hscStream||'',
+      preferredSubject: adm.preferredSubject||adm.subject||'',
+      admissionYear: req.admissionYear||adm.admissionYear||'',
+      address: adm.address||'', religion: adm.religion||'',
+    };
+    if (req.documentType === 'TC') printTC(merged);
+    else if (req.documentType === 'BONAFIDE') printBonafide(merged);
+    else printIDCard(merged);
+  };
+
+  const handleComplete = async (req) => {
+    setCompleting(req._id);
+    try {
+      await API.put(`/document-requests/student-section/complete/${req._id}`, {
+        notes: `${DOC_CONFIG[req.documentType]?.label || req.documentType} generated and issued.`
+      });
+      setMsg('✅ Marked as issued!');
+      setTimeout(() => setMsg(''), 3000);
+      fetchData();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setCompleting(''); }
+  };
+
+  const handleReject = async () => {
+    if (!rejectNote.trim()) return;
+    setRejecting(rejectModal._id);
+    try {
+      await API.put(`/document-requests/accounts/reject/${rejectModal._id}`, { reason: rejectNote });
+      setMsg('✅ Request rejected.');
+      setRejectModal(null); setRejectNote('');
+      setTimeout(() => setMsg(''), 3000);
+      fetchData();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setRejecting(''); }
+  };
+
+  const filtered = requests.filter(r => {
+    const mt = typeFilter === 'all' || r.documentType === typeFilter;
+    const ms = statusFilter === 'all' || r.status === statusFilter;
+    const q  = search.toLowerCase();
+    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q);
+    return mt && ms && mq;
+  });
+
+  const pending = requests.filter(r => r.status === 'pending_generation').length;
+
+  const statusStyle = (s) => ({
+    pending_accounts:      { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Accounts' },
+    rejected_by_accounts:  { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' },
+    pending_exam:          { bg: '#e3f2fd', color: '#1565C0', label: '🔍 At Exam Section' },
+    rejected_by_exam:      { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Exam' },
+    pending_principal:     { bg: '#fff3e0', color: '#E65100', label: '🔄 At Principal' },
+    rejected_by_principal: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' },
+    pending_generation:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Issue' },
+    completed:             { bg: '#f3e5f5', color: '#7B1FA2', label: '🏁 Issued' },
+  }[s] || { bg: '#f5f5f5', color: '#888', label: s });
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📄 Documents & Certificates</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Print TC, Bonafide, ID Card and mark as issued. All document types in one place.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Pending: {pending}</div>
+        <div style={{ background: '#e8f5e9', color: '#2E7D32', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>Issued: {requests.filter(r=>r.status==='completed').length}</div>
+        {Object.entries(DOC_CONFIG).map(([k,v]) => {
+          const c = requests.filter(r=>r.documentType===k).length;
+          return c > 0 ? <div key={k} style={{ background: v.bg, color: v.color, borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: 600 }}>{v.icon} {v.label}: {c}</div> : null;
+        })}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Types</option>
+          {Object.entries(DOC_CONFIG).map(([k,v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Status</option>
+          <option value="pending_generation">✅ Ready to Issue</option>
+          <option value="completed">🏁 Issued</option>
+          <option value="pending_accounts">⏳ At Accounts</option>
+          <option value="pending_exam">🔍 At Exam Section</option>
+          <option value="pending_principal">🔄 At Principal</option>
+          <option value="rejected_by_accounts">❌ Rejected</option>
+        </select>
+        <button onClick={fetchData}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 26, maxWidth: 440, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color: '#C62828', marginBottom: 12 }}>❌ Reject Request</h3>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 14 }}>Student: <strong>{rejectModal.studentName}</strong> — {DOC_CONFIG[rejectModal.documentType]?.label}</p>
+            <textarea rows="3" placeholder="Reason for rejection..." value={rejectNote} onChange={e => setRejectNote(e.target.value)}
+              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={handleReject} disabled={!rejectNote.trim() || rejecting === rejectModal._id}
+                style={{ background: '#C62828', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                {rejecting === rejectModal._id ? '⏳...' : '❌ Confirm Reject'}
+              </button>
+              <button onClick={() => { setRejectModal(null); setRejectNote(''); }}
+                style={{ background: '#eee', color: '#333', padding: '10px 18px', borderRadius: 8, border: 'none', fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p><h3>Loading...</h3></div>
+      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">📭</div><h3>No requests found</h3><p>Document requests will appear here after Accounts section approves them.</p></div>
+      : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map(req => {
+            const cfg = DOC_CONFIG[req.documentType] || { label: req.documentType, icon: '📄', color: '#555', bg: '#f5f5f5' };
+            const ss  = statusStyle(req.status);
+            const isReady = req.status === 'pending_generation';
+            const canPrint = ['TC','BONAFIDE','ID_CARD'].includes(req.documentType);
+            const adm = admMap[req.studentEmail] || {};
+            return (
+              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isReady ? cfg.color+'55' : '#e0e7ef'}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${cfg.color}` }}>
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: isReady ? cfg.bg+'aa' : '#fafbff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 22 }}>{cfg.icon}</span>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <h4 style={{ color: cfg.color, fontSize: 15, margin: 0 }}>{cfg.label}</h4>
+                        {req.urgency === 'urgent' && <span style={{ background: '#ffebee', color: '#C62828', fontSize: 11, padding: '1px 8px', borderRadius: 10, fontWeight: 600 }}>⚡ Urgent</span>}
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 12, background: ss.bg, color: ss.color }}>{ss.label}</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>{new Date(req.createdAt).toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {canPrint && (
+                      <button onClick={() => handlePrint(req)}
+                        style={{ background: cfg.color, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        🖨️ Print {cfg.label}
+                      </button>
+                    )}
+                    {isReady && (
+                      <button onClick={() => handleComplete(req)} disabled={completing === req._id}
+                        style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: completing===req._id?'not-allowed':'pointer', opacity: completing===req._id?0.7:1 }}>
+                        {completing === req._id ? '⏳...' : '✅ Mark Issued'}
+                      </button>
+                    )}
+                    {isReady && (
+                      <button onClick={() => { setRejectModal(req); setRejectNote(''); }}
+                        style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        ❌ Reject
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div style={{ padding: '10px 18px 14px', fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, borderTop: '1px solid #f0f4f8' }}>
+                  <span><strong>Student:</strong> {req.studentName}</span>
+                  <span><strong>Email:</strong> {req.studentEmail}</span>
+                  <span><strong>Branch:</strong> {req.branch||'—'}</span>
+                  <span><strong>Year:</strong> {req.admissionYear||'—'}</span>
+                  {adm.studentId && <span><strong>Student ID:</strong> {adm.studentId}</span>}
+                  {adm.prnNumber && <span><strong>PRN:</strong> {adm.prnNumber}</span>}
+                  {req.reason && <span style={{gridColumn:'1/-1'}}><strong>Reason:</strong> {req.reason}</span>}
+                  {req.accountsNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Accounts: {req.accountsNotes}</span>}
+                  {req.principalNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Principal: {req.principalNotes}</span>}
+                </div>
+                {req.status === 'completed' && req.generatedBy && (
+                  <div style={{ padding: '6px 18px 10px', fontSize: 12, color: '#7B1FA2', fontWeight: 600, borderTop: '1px solid #f0f4f8' }}>
+                    🏁 Issued by {req.generatedBy} on {req.generatedDate ? new Date(req.generatedDate).toLocaleDateString('en-IN') : '—'}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+const UpdatePrnTab = () => { // eslint-disable-line no-unused-vars
+  const [admissions, setAdmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState(null); // { _id, prnNumber, aparIdNumber }
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const fetchAdmissions = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/admissions/student-section/approved');
+      setAdmissions(res.data.admissions || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchAdmissions(); }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await API.put(`/admissions/update-prn/${editing._id}`, {
+        prnNumber: editing.prnNumber,
+        aparIdNumber: editing.aparIdNumber,
+      });
+      setMsg('✅ PRN / ABC ID updated successfully!');
+      setTimeout(() => setMsg(''), 3000);
+      setEditing(null);
+      fetchAdmissions();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to update')); }
+    finally { setSaving(false); }
+  };
+
+  const filtered = admissions.filter(a => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
+  });
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🔢 Update PRN / ABC ID</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Add or update the PRN Number and ABC (APAR) ID for enrolled students.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by name, student ID or email..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <button onClick={fetchAdmissions}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* Edit modal */}
+      {editing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color: '#1565C0', marginBottom: 4 }}>🔢 Update PRN / ABC ID</h3>
+            <p style={{ color: '#666', fontSize: 13, marginBottom: 18 }}>Student: <strong>{editing.applicantName}</strong> ({editing.studentId || 'No ID'})</p>
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>PRN Number</label>
+              <input type="text" placeholder="Enter PRN Number" value={editing.prnNumber}
+                onChange={e => setEditing({ ...editing, prnNumber: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #1565C0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>ABC ID (APAR ID)</label>
+              <input type="text" placeholder="Enter ABC / APAR ID" value={editing.aparIdNumber}
+                onChange={e => setEditing({ ...editing, aparIdNumber: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #1565C0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+            </div>
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleSave} disabled={saving}
+                style={{ flex: 1, background: '#1565C0', color: '#fff', padding: 12, borderRadius: 9, border: 'none', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? '⏳ Saving...' : '💾 Save Changes'}
+              </button>
+              <button onClick={() => { setEditing(null); setMsg(''); }}
+                style={{ padding: '12px 20px', background: '#eee', color: '#333', borderRadius: 9, border: 'none', fontSize: 14, cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading students...</h3></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🔢</div><h3>No students found</h3><p>Approved students will appear here.</p></div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.3fr 1.4fr 0.8fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
+            {['Student', 'Student ID', 'PRN Number', 'ABC / APAR ID', 'Action'].map(h => (
+              <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((adm, idx) => (
+            <div key={adm._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.3fr 1.4fr 0.8fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', margin: 0 }}>{adm.applicantName}</p>
+                <p style={{ fontSize: 11, color: '#888', margin: '2px 0 0' }}>{adm.courseType} · {adm.admissionYear}</p>
+              </div>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#1565C0', fontWeight: 600 }}>{adm.studentId || '—'}</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.prnNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>
+                {adm.prnNumber || '⚠️ Not set'}
+              </span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: adm.aparIdNumber ? '#2E7D32' : '#E65100', fontWeight: 600 }}>
+                {adm.aparIdNumber || '⚠️ Not set'}
+              </span>
+              <button onClick={() => setEditing({ _id: adm._id, applicantName: adm.applicantName, studentId: adm.studentId, prnNumber: adm.prnNumber || '', aparIdNumber: adm.aparIdNumber || '' })}
+                style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                ✏️ Edit
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CARRY FORWARD TAB
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CARRY FORWARD TAB — with result check
+// ─────────────────────────────────────────────────────────────────────────────
+const CarryForwardTab = () => { // eslint-disable-line no-unused-vars
+  const [admissions, setAdmissions]       = useState([]);
+  const [loading, setLoading]             = useState(false);
+  const [search, setSearch]               = useState('');
+  const [yearFilter, setYearFilter]       = useState('all');
+  const [promoting, setPromoting]         = useState('');
+  const [msg, setMsg]                     = useState('');
+  const [results, setResults]             = useState({});
+  const [loadingResult, setLoadingResult] = useState('');
+  const [expandedResult, setExpandedResult] = useState(null); // admissionId to show full marksheet
+
+  const fetchAdmissions = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/admissions/student-section/approved');
+      setAdmissions(res.data.admissions || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchAdmissions(); }, []);
+
+  const fetchResult = async (adm) => {
+    setLoadingResult(adm._id);
+    try {
+      const res = await API.get(`/results/by-email/${encodeURIComponent(adm.email)}`);
+      const allResults = res.data.results || [];
+      if (allResults.length === 0) {
+        setResults(prev => ({ ...prev, [adm._id]: { status: 'no_result', allResults: [] } }));
+        return;
+      }
+      // Sort by year desc, semester desc → latest first
+      allResults.sort((a, b) => b.year - a.year || b.semester - a.semester);
+      const latest = allResults[0];
+      const subjects = latest.subjects || [];
+      const atktSubs = subjects.filter(s => Number(s.obtainedMarks) < Number(s.maxMarks) * 0.35);
+      const status = latest.result ||
+        (atktSubs.length === subjects.length && subjects.length > 0 ? 'fail' :
+         atktSubs.length > 0 ? 'atkt' :
+         (latest.percentage >= 75 ? 'distinction' : 'pass'));
+      setResults(prev => ({
+        ...prev,
+        [adm._id]: {
+          status,
+          percentage: latest.percentage,
+          semester: latest.semester,
+          year: latest.year,
+          subjects,
+          atktSubjects: atktSubs.map(s => s.name),
+          totalSubjects: subjects.length,
+          allResults,
+        }
+      }));
+    } catch {
+      setResults(prev => ({ ...prev, [adm._id]: { status: 'error', allResults: [] } }));
+    }
+    finally { setLoadingResult(''); }
+  };
+
+  const handlePromote = async (adm, newYear) => {
+    const r = results[adm._id];
+    if (!r || r.status === 'no_result') {
+      alert('⚠️ Please check the result first before promoting.'); return;
+    }
+    if (r.status === 'fail') {
+      if (!window.confirm(`⚠️ ${adm.applicantName} has FAILED all subjects (${r.percentage}%).
+Are you sure you want to promote?`)) return;
+    } else if (r.status === 'atkt') {
+      if (!window.confirm(`⚠️ ${adm.applicantName} has ATKT in: ${r.atktSubjects.join(', ')}.
+Promote to ${newYear} with ATKT?`)) return;
+    } else {
+      if (!window.confirm(`Promote ${adm.applicantName} (${r.percentage}%) to ${newYear}?`)) return;
+    }
+    setPromoting(adm._id);
+    try {
+      await API.put(`/admissions/carry-forward/${adm._id}`, { newYear });
+      setMsg(`✅ ${adm.applicantName} promoted to ${newYear}!`);
+      setTimeout(() => setMsg(''), 4000);
+      fetchAdmissions();
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setPromoting(''); }
+  };
+
+  const nextYear = (current) => {
+    if (current === '1st Year') return '2nd Year';
+    if (current === '2nd Year') return '3rd Year';
+    return null;
+  };
+
+  const statusColor = (s) => ({
+    pass:        { bg: '#e8f5e9', color: '#2E7D32', border: '#a5d6a7' },
+    distinction: { bg: '#e8f5e9', color: '#1b5e20', border: '#66bb6a' },
+    atkt:        { bg: '#fff3e0', color: '#E65100', border: '#ffb74d' },
+    fail:        { bg: '#ffebee', color: '#C62828', border: '#ef9a9a' },
+    no_result:   { bg: '#f5f5f5', color: '#888',    border: '#e0e0e0' },
+    error:       { bg: '#ffebee', color: '#C62828', border: '#ef9a9a' },
+  }[s] || { bg: '#f5f5f5', color: '#888', border: '#e0e0e0' });
+
+  const statusLabel = (r) => {
+    if (!r) return null;
+    const sc = statusColor(r.status);
+    const labels = {
+      no_result:   'No Result Uploaded',
+      error:       'Fetch Error',
+      pass:        `✅ PASS — ${r.percentage}%`,
+      distinction: `🏅 DISTINCTION — ${r.percentage}%`,
+      atkt:        `⚠️ ATKT — ${r.atktSubjects?.length} subject(s) failed`,
+      fail:        `❌ FAIL — All subjects failed`,
+    };
+    return (
+      <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+        {labels[r.status] || r.status}
+      </span>
+    );
+  };
+
+  const gradeColor = (obtained, max) => {
+    const pct = max > 0 ? (obtained / max) * 100 : 0;
+    if (pct < 35) return { bg: '#ffebee', color: '#C62828', label: 'F' };
+    if (pct < 45) return { bg: '#fff3e0', color: '#E65100', label: 'B' };
+    if (pct < 55) return { bg: '#fff8e1', color: '#F57F17', label: 'B+' };
+    if (pct < 65) return { bg: '#f3e5f5', color: '#7B1FA2', label: 'A' };
+    if (pct < 75) return { bg: '#e3f2fd', color: '#1565C0', label: 'A+' };
+    return { bg: '#e8f5e9', color: '#2E7D32', label: 'O' };
+  };
+
+  const filtered = admissions.filter(a => {
+    const mf = yearFilter === 'all' || a.admissionYear === yearFilter;
+    const q = search.toLowerCase();
+    const ms = !q || a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q);
+    return mf && ms;
+  });
+
+  const counts = {
+    first:  admissions.filter(a => a.admissionYear === '1st Year').length,
+    second: admissions.filter(a => a.admissionYear === '2nd Year').length,
+    third:  admissions.filter(a => a.admissionYear === '3rd Year').length,
+  };
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 SY / TY Carry Forward</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+        Check last semester marksheet first, then promote student to next year.
+      </p>
+
+      {msg && (
+        <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14,
+          background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee',
+          color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>
+          {msg}
+        </div>
+      )}
+
+      {/* Stats */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          { label: '1st Year', count: counts.first,  color: '#1565C0', bg: '#e3f2fd' },
+          { label: '2nd Year', count: counts.second, color: '#7B1FA2', bg: '#f3e5f5' },
+          { label: '3rd Year', count: counts.third,  color: '#2E7D32', bg: '#e8f5e9' },
+          { label: 'Total',    count: admissions.length, color: '#555', bg: '#f5f5f5' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600 }}>
+            {p.label}: {p.count}
+          </div>
+        ))}
+      </div>
+
+      {/* Warning */}
+      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#7c5e00' }}>
+        📌 <strong>Step 1:</strong> Click <strong>📊 Check Marksheet</strong> to view last semester result.
+        &nbsp;&nbsp;<strong>Step 2:</strong> Review marks/status. &nbsp;&nbsp;<strong>Step 3:</strong> Click promote if eligible.
+        <br/>Result must be checked before promoting. Pass / ATKT / Fail determines eligibility.
+      </div>
+
+      {/* Search + Filter */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search by name or student ID..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="all">All Years</option>
+          <option value="1st Year">1st Year (→ 2nd Year)</option>
+          <option value="2nd Year">2nd Year (→ 3rd Year)</option>
+          <option value="3rd Year">3rd Year (Completed)</option>
+        </select>
+        <button onClick={fetchAdmissions}
+          style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p><h3>Loading...</h3></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🎓</div><h3>No students found</h3></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {filtered.map((adm) => {
+            const ny = nextYear(adm.admissionYear);
+            const r  = results[adm._id];
+            const sc = r ? statusColor(r.status) : { bg: '#fff', color: '#888', border: '#e0e7ef' };
+            const isExpanded = expandedResult === adm._id;
+
+            return (
+              <div key={adm._id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${r ? sc.border : '#e0e7ef'}`, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${r ? sc.color : '#bbb'}` }}>
+
+                {/* Student header row */}
+                <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <h4 style={{ color: '#1565C0', fontSize: 15, margin: 0 }}>{adm.applicantName}</h4>
+                      <span style={{ fontSize: 11, background: '#e3f2fd', color: '#1565C0', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>{adm.admissionYear}</span>
+                      {statusLabel(r)}
+                    </div>
+                    <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>
+                      {adm.email} · {adm.courseType || '—'} · ID: {adm.studentId || '—'}
+                    </p>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button
+                      onClick={() => { fetchResult(adm); setExpandedResult(adm._id); }}
+                      disabled={loadingResult === adm._id}
+                      style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: loadingResult === adm._id ? 'not-allowed' : 'pointer', opacity: loadingResult === adm._id ? 0.7 : 1 }}>
+                      {loadingResult === adm._id ? '⏳ Loading...' : '📊 Check Marksheet'}
+                    </button>
+                    {r && (
+                      <button
+                        onClick={() => setExpandedResult(isExpanded ? null : adm._id)}
+                        style={{ background: '#f0f4ff', color: '#1565C0', border: '1px solid #c7d7f9', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        {isExpanded ? '▲ Hide' : '▼ View Details'}
+                      </button>
+                    )}
+                    {ny && r && r.status !== 'no_result' && r.status !== 'error' && (
+                      <button
+                        onClick={() => handlePromote(adm, ny)}
+                        disabled={promoting === adm._id}
+                        style={{
+                          background: r.status === 'fail' ? '#ffebee' : r.status === 'atkt' ? '#fff3e0' : '#2E7D32',
+                          color: r.status === 'fail' ? '#C62828' : r.status === 'atkt' ? '#E65100' : '#fff',
+                          border: `2px solid ${r.status === 'fail' ? '#ef9a9a' : r.status === 'atkt' ? '#ffb74d' : '#2E7D32'}`,
+                          borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700,
+                          cursor: promoting === adm._id ? 'not-allowed' : 'pointer',
+                          opacity: promoting === adm._id ? 0.7 : 1,
+                        }}>
+                        {promoting === adm._id ? '⏳...' : `→ Promote to ${ny}`}
+                      </button>
+                    )}
+                    {!ny && <span style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>✅ Course Completed</span>}
+                  </div>
+                </div>
+
+                {/* Expanded marksheet */}
+                {isExpanded && r && r.status !== 'no_result' && r.status !== 'error' && r.subjects?.length > 0 && (
+                  <div style={{ borderTop: `1px solid ${sc.border}`, background: r.status === 'fail' ? '#fff8f8' : r.status === 'atkt' ? '#fffaf5' : '#f8fff8' }}>
+                    {/* Result summary bar */}
+                    <div style={{ padding: '10px 20px', background: sc.bg, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${sc.border}` }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: sc.color }}>
+                        📋 Sem {r.semester} — {r.year} Result
+                      </span>
+                      <span style={{ fontSize: 13, color: '#555' }}>
+                        Total: <strong>{r.subjects.reduce((s, sub) => s + (sub.obtainedMarks || 0), 0)}</strong>
+                        /{r.subjects.reduce((s, sub) => s + (sub.maxMarks || 0), 0)}
+                      </span>
+                      <span style={{ fontSize: 13, color: '#555' }}>
+                        Percentage: <strong style={{ color: sc.color }}>{r.percentage}%</strong>
+                      </span>
+                      {r.status === 'atkt' && (
+                        <span style={{ fontSize: 13, color: '#E65100', fontWeight: 600 }}>
+                          ATKT: {r.atktSubjects.length} subject(s)
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Subject-wise table */}
+                    <div style={{ padding: '14px 20px' }}>
+                      <div style={{ background: '#1565C0', display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '8px 14px', borderRadius: '8px 8px 0 0', gap: 8 }}>
+                        {['Subject', 'Max Marks', 'Obtained', 'Grade', 'Status'].map(h => (
+                          <span key={h} style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{h}</span>
+                        ))}
+                      </div>
+                      {r.subjects.map((sub, i) => {
+                        const gc = gradeColor(sub.obtainedMarks, sub.maxMarks);
+                        const pct = sub.maxMarks > 0 ? Math.round((sub.obtainedMarks / sub.maxMarks) * 100) : 0;
+                        const isFail = sub.obtainedMarks < sub.maxMarks * 0.35;
+                        return (
+                          <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '9px 14px', gap: 8, alignItems: 'center', background: isFail ? '#fff5f5' : i % 2 === 0 ? '#fafbff' : '#fff', borderBottom: '1px solid #f0f4f8' }}>
+                            <span style={{ fontSize: 13, fontWeight: isFail ? 700 : 500, color: isFail ? '#C62828' : '#222' }}>
+                              {isFail ? '⚠️ ' : ''}{sub.name || `Subject ${i + 1}`}
+                            </span>
+                            <span style={{ fontSize: 13, color: '#555' }}>{sub.maxMarks}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: isFail ? '#C62828' : '#1565C0' }}>
+                              {sub.obtainedMarks} <span style={{ fontSize: 10, color: '#888' }}>({pct}%)</span>
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: gc.bg, color: gc.color, textAlign: 'center' }}>
+                              {sub.grade || gc.label}
+                            </span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: isFail ? '#C62828' : '#2E7D32' }}>
+                              {isFail ? '❌ ATKT' : '✅ Pass'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {/* Summary row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 0.8fr', padding: '10px 14px', gap: 8, alignItems: 'center', background: sc.bg, borderRadius: '0 0 8px 8px', borderTop: `2px solid ${sc.color}` }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: sc.color }}>TOTAL</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{r.subjects.reduce((s, sub) => s + (sub.maxMarks || 0), 0)}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: sc.color }}>{r.subjects.reduce((s, sub) => s + (sub.obtainedMarks || 0), 0)} <span style={{ fontSize: 10 }}>({r.percentage}%)</span></span>
+                        <span></span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: sc.color }}>{r.status.toUpperCase()}</span>
+                      </div>
+                    </div>
+
+                    {/* ATKT summary */}
+                    {r.status === 'atkt' && (
+                      <div style={{ margin: '0 20px 14px', background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
+                        <strong style={{ color: '#E65100' }}>⚠️ ATKT in {r.atktSubjects.length} Subject(s):</strong>
+                        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {r.atktSubjects.map((s, i) => (
+                            <span key={i} style={{ background: '#ffebee', color: '#C62828', padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 600 }}>{s}</span>
+                          ))}
+                        </div>
+                        <p style={{ fontSize: 12, color: '#555', marginTop: 8, marginBottom: 0 }}>
+                          Student must clear these subjects. Can be promoted with ATKT pending.
+                        </p>
+                      </div>
+                    )}
+
+                    {r.status === 'fail' && (
+                      <div style={{ margin: '0 20px 14px', background: '#ffebee', border: '1px solid #ef9a9a', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C62828' }}>
+                        ❌ <strong>All subjects failed.</strong> Promotion is not recommended. Staff must approve manually if promoting.
+                      </div>
+                    )}
+
+                    {(r.status === 'pass' || r.status === 'distinction') && (
+                      <div style={{ margin: '0 20px 14px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#2E7D32' }}>
+                        ✅ <strong>All subjects cleared.</strong> Student is eligible for promotion to {ny || 'next year'}.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* No result message */}
+                {isExpanded && r && r.status === 'no_result' && (
+                  <div style={{ padding: '16px 20px', background: '#f9f9f9', borderTop: '1px solid #eee', fontSize: 13, color: '#888', textAlign: 'center' }}>
+                    📭 No marksheet found for this student. Ask the Examination Section to upload the result first.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => { // eslint-disable-line no-unused-vars
+  const [receipts, setReceipts]     = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [search, setSearch]         = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [errMsg, setErrMsg]         = useState("");
+
+  const fetchReceipts = async () => {
+    setLoading(true); setErrMsg("");
+    try {
+      const res = await API.get("/admissions/receipts/all");
+      setReceipts(res.data.receipts || []);
+    } catch (e) { setErrMsg("Failed to load: " + (e.response?.data?.message || "Error")); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchReceipts(); }, []);
+
+  const filtered = receipts.filter(r => {
+    const q  = search.toLowerCase();
+    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q) || r.studentId?.toLowerCase().includes(q) || r.receiptNo?.toLowerCase().includes(q);
+    const mt = typeFilter === "all" || r.feeType === typeFilter;
+    const now = new Date(); let md = true;
+    if (dateFilter === "today") { const d = new Date(r.paidAt); md = d.toDateString() === now.toDateString(); }
+    else if (dateFilter === "week") { const d = new Date(r.paidAt); md = (now - d) <= 7*24*60*60*1000; }
+    else if (dateFilter === "month") { const d = new Date(r.paidAt); md = d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
+    return mq && mt && md;
+  });
+
+  const totalAmount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+  const feeTypes = [...new Set(receipts.map(r => r.feeType).filter(Boolean))];
+
+  return (
+    <div>
+      <h2 style={{ color: themeColor, marginBottom: 4 }}>🧾 Payment Receipts</h2>
+      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>All fee receipts collected by Accounts Section.</p>
+      {errMsg && <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 14, fontSize: 14, background: "#ffebee", color: "#C62828" }}>{errMsg}</div>}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ background: "#e8f5e9", color: "#2E7D32", borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>💰 Total: ₹{totalAmount.toLocaleString("en-IN")}</div>
+        <div style={{ background: "#e3f2fd", color: themeColor, borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>🧾 Count: {filtered.length}</div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <input type="text" placeholder="🔍 Name, ID, receipt no..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 9, border: "1px solid #ddd", fontSize: 14 }} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Fee Types</option>
+          {feeTypes.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <button onClick={fetchReceipts} style={{ padding: "9px 14px", background: "#f0f4ff", color: themeColor, border: "1px solid #ddd", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🔄</button>
+      </div>
+      {loading ? <div className="empty-state"><p style={{fontSize:"2rem"}}>⏳</p><h3>Loading...</h3></div>
+      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts found</h3></div>
+      : (
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e0e7ef", boxShadow: "0 2px 10px rgba(0,0,0,.06)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", background: themeColor, padding: "12px 16px", gap: 8 }}>
+            {["Receipt No","Student","Email","Fee Type","Amount","Mode","Date"].map(h => <span key={h} style={{color:"#fff",fontWeight:700,fontSize:12}}>{h}</span>)}
+          </div>
+          {filtered.map((r, idx) => (
+            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", padding: "11px 16px", gap: 8, alignItems: "center", borderBottom: "1px solid #f0f4f8", background: idx%2===0?"#fafbff":"#fff" }}>
+              <span style={{fontSize:11,fontFamily:"monospace",color:themeColor,fontWeight:700}}>{r.receiptNo||"—"}</span>
+              <div><p style={{fontWeight:600,fontSize:13,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:"#888",margin:0}}>{r.studentId||""} · {r.admissionYear||""}</p></div>
+              <span style={{fontSize:11,color:"#555"}}>{r.studentEmail}</span>
+              <span style={{fontSize:12}}>{r.feeTypeLabel||r.feeType||"—"}</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>₹{(r.amount||0).toLocaleString("en-IN")}</span>
+              <span style={{fontSize:11,background:r.paymentMode==="online"?"#e3f2fd":"#e8f5e9",color:r.paymentMode==="online"?"#1565C0":"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:600}}>{r.paymentMode==="online"?"🌐 Online":"💵 Cash"}</span>
+              <span style={{fontSize:11,color:"#888"}}>{r.paidAt?new Date(r.paidAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}</span>
+            </div>
+          ))}
+          <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+const _docUrl_id = (f) => (f||'').startsWith('http') ? f : `https://college-management-nnve.onrender.com/uploads/${f}`;
+const _getValidPeriod = () => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; };
+
+const printIDCard = (admission) => {
+  const photoSrc = admission.studentPhoto ? _docUrl_id(admission.studentPhoto) : null;
+  const course   = getCourseFull(admission.courseType);
+  const year     = admission.admissionYear || '\u2014';
+  const dob      = admission.dateOfBirth
+    ? new Date(admission.dateOfBirth).toLocaleDateString('en-IN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+      }).replace(/\//g, '/')
+    : '\u2014';
+  const mobile    = admission.phone      || '\u2014\u2014';
+  const bloodGrp  = admission.bloodGroup || '\u2014\u2014';
+  const studentId = admission.studentId  || '\u2014';
+  const validPeriod = _getValidPeriod();
+  const name = (admission.applicantName || '').toLowerCase();
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>ID Card – ${admission.applicantName || 'Student'}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+    }
+    .card {
+      width: 85mm;
+      border: 1px solid #ccc;
+      background: #fff;
+      font-size: 11px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+    /* ── College Header ── */
+    .header {
+      background: #fff;
+      padding: 12px 14px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    .logo-circle {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      border: 2px solid #1a237e;
+      overflow: hidden;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+    .logo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .trust-name {
+      font-size: 8px;
+      color: #555;
+      font-style: italic;
+      margin-bottom: 2px;
+    }
+    .college-name {
+      font-size: 12.5px;
+      font-weight: 900;
+      color: #1a237e;
+      line-height: 1.3;
+      margin-bottom: 2px;
+    }
+    .college-addr {
+      font-size: 8px;
+      color: #444;
+      line-height: 1.4;
+    }
+    .affiliation {
+      font-size: 7.5px;
+      color: #666;
+      margin-top: 1px;
+    }
+
+    /* ── Blue Banner ── */
+    .banner {
+      background: #1a237e;
+      color: #FDD835;
+      text-align: center;
+      padding: 7px 0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+    }
+
+    /* ── Body ── */
+    .body {
+      background: #f0f4ff;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .photo-frame {
+      width: 70px;
+      height: 80px;
+      border: 2px solid #1a237e;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #c5cae9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .photo-placeholder {
+      font-size: 32px;
+      color: #555;
+    }
+    .student-name {
+      font-size: 14px;
+      font-weight: 900;
+      color: #1a237e;
+      text-align: center;
+      margin-bottom: 10px;
+      text-transform: lowercase;
+    }
+    /* Details table */
+    .details {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .details tr {
+      border-bottom: 1px dashed #bbb;
+    }
+    .details tr:last-child {
+      border-bottom: none;
+    }
+    .details td {
+      padding: 4px 2px;
+      vertical-align: middle;
+    }
+    .details .lbl {
+      font-weight: 600;
+      color: #333;
+      width: 70px;
+      font-size: 10px;
+    }
+    .details .sep {
+      width: 12px;
+      color: #333;
+      font-size: 10px;
+    }
+    .details .val {
+      font-weight: 700;
+      color: #1a237e;
+      font-size: 10.5px;
+    }
+
+    /* ── Student ID bar ── */
+    .id-bar {
+      background: #1a237e;
+      color: #FDD835;
+      text-align: center;
+      padding: 7px 0;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ── Signature strip ── */
+    .sig-strip {
+      background: #fff;
+      padding: 14px 20px 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .sig-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 34%;
+    }
+    .sig-line {
+      border-top: 1px solid #333;
+      width: 100%;
+      margin-bottom: 3px;
+    }
+    .sig-label {
+      font-size: 8px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: #1a237e;
+      color: #fff;
+      padding: 8px 10px;
+      font-size: 7.5px;
+      line-height: 1.7;
+    }
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+    }
+    .footer-center {
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    @media print {
+      body { padding: 0; }
+      .card { box-shadow: none; border: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-circle">
+        <img src="/college-logo.png" onerror="this.style.display='none'" alt="Logo"/>
+      </div>
+      <div class="trust-name">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+      <div class="college-name">Late Kalpana Chawla Women's Senior College</div>
+      <div class="affiliation">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+      <div class="college-addr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
+    </div>
+
+    <!-- Banner -->
+    <div class="banner">S T U D E N T &nbsp; I D E N T I T Y &nbsp; C A R D</div>
+
+    <!-- Body -->
+    <div class="body">
+      <!-- Photo -->
+      <div class="photo-frame">
+        ${photoSrc
+          ? `<img src="${photoSrc}" alt="Student Photo" />`
+          : `<span class="photo-placeholder">&#128105;</span>`}
+      </div>
+
+      <!-- Name -->
+      <div class="student-name">${name}</div>
+
+      <!-- Details -->
+      <table class="details">
+        <tr>
+          <td class="lbl">Course</td>
+          <td class="sep"></td>
+          <td class="val">${course}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Year</td>
+          <td class="sep"></td>
+          <td class="val">${year}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Date of Birth</td>
+          <td class="sep"></td>
+          <td class="val">${dob}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Mobile No.</td>
+          <td class="sep"></td>
+          <td class="val">${mobile}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Blood Group</td>
+          <td class="sep"></td>
+          <td class="val">${bloodGrp}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Valid</td>
+          <td class="sep"></td>
+          <td class="val">${validPeriod}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Student ID bar -->
+    <div class="id-bar">${studentId}</div>
+
+    <!-- Signature strip -->
+    <div class="sig-strip">
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Student Signature</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Principal</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-row">
+        <span>+91 9307162914</span>
+        <span>lkcwsc@vnssorg.com</span>
+      </div>
+      <div class="footer-row">
+        <span>lkcwsc.vnssorg.com</span>
+      </div>
+      <div class="footer-center">
+        Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    window.onload = () => { window.print(); };
+  </script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=420,height=700');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
+};
+
+// ── React Preview Component ─────────────────────────────────────────────────
+// Use this inline in your dashboard to show the card before printing.
+// Props: admission (object from your API)
+const IDCard = ({ admission }) => { // eslint-disable-line no-unused-vars
+  const printRef = useRef();
+  if (!admission) return null;
+
+  const photoSrc  = admission.studentPhoto ? _docUrl_id(admission.studentPhoto) : null;
+  const course    = getCourseFull(admission.courseType);
+  const year      = admission.admissionYear || '—';
+  const dob       = admission.dateOfBirth
+    ? new Date(admission.dateOfBirth).toLocaleDateString('en-IN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+      })
+    : '—';
+  const mobile    = admission.phone      || '--';
+  const bloodGrp  = admission.bloodGroup || '--';
+  const studentId = admission.studentId  || '—';
+  const validPeriod = _getValidPeriod();
+  const name = (admission.applicantName || '').toLowerCase();
+
+  const card = {
+    width: 321,        // 85mm @ 96dpi
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    border: '1px solid #ccc',
+    background: '#fff',
+    fontSize: 11,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+    borderRadius: 2,
+  };
+
+  const row = (label, value) => (
+    <tr key={label} style={{ borderBottom: '1px dashed #bbb' }}>
+      <td style={{ padding: '4px 2px', width: 72, fontWeight: 600, color: '#333', fontSize: 10 }}>{label}</td>
+      <td style={{ padding: '4px 2px', width: 12, fontSize: 10 }}></td>
+      <td style={{ padding: '4px 2px', fontWeight: 700, color: '#1a237e', fontSize: 10.5 }}>{value}</td>
+    </tr>
+  );
+
+  return (
+    <div>
+      {/* Print button */}
+      <div style={{ textAlign: 'center', marginBottom: 12 }}>
+        <button
+          onClick={() => printIDCard(admission)}
+          style={{
+            background: '#1a237e', color: '#FDD835', border: 'none',
+            padding: '8px 22px', borderRadius: 6, fontWeight: 700,
+            fontSize: 13, cursor: 'pointer', letterSpacing: 0.5,
+          }}
+        >
+          🖨️ Print ID Card
+        </button>
+      </div>
+
+      {/* Preview */}
+      <div ref={printRef} style={card}>
+
+        {/* Header */}
+        <div style={{
+          background: '#fff', padding: '12px 14px 8px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          textAlign: 'center', borderBottom: '1px solid #ddd',
+        }}>
+          <div style={{
+            width: 62, height: 62, borderRadius: '50%',
+            border: '2px solid #1a237e', overflow: 'hidden',
+            background: '#e8eaf6', marginBottom: 6, flexShrink: 0,
+          }}>
+            <img
+              src="/college-logo.png"
+              alt="Logo"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={e => { e.target.style.display = 'none'; }}
+            />
+          </div>
+          <div style={{ fontSize: 8, color: '#555', marginBottom: 2 }}>
+            Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)
+          </div>
+          <div style={{ fontSize: 12.5, fontWeight: 900, color: '#1a237e', lineHeight: 1.3, marginBottom: 2 }}>
+            Late Kalpana Chawla Women's Senior College
+          </div>
+          <div style={{ fontSize: 7.5, color: '#666', marginTop: 1 }}>
+            Affiliated to S.N.D.T. Women's University, Mumbai
+          </div>
+          <div style={{ fontSize: 7, color: '#555', marginTop: 1 }}>
+            Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514
+          </div>
+          <div style={{ fontSize: 7.5, color: '#444', marginTop: 1 }}>
+            Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514
+          </div>
+        </div>
+
+        {/* Banner */}
+        <div style={{
+          background: '#1a237e', color: '#FDD835', textAlign: 'center',
+          padding: '7px 0', fontSize: 10, fontWeight: 700, letterSpacing: 3,
+        }}>
+          S T U D E N T &nbsp; I D E N T I T Y &nbsp; C A R D
+        </div>
+
+        {/* Body */}
+        <div style={{
+          background: '#f0f4ff', padding: '14px 12px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+        }}>
+          {/* Photo */}
+          <div style={{
+            width: 70, height: 80, border: '2px solid #1a237e',
+            borderRadius: 4, overflow: 'hidden', background: '#c5cae9',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 10,
+          }}>
+            {photoSrc
+              ? <img src={photoSrc} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ fontSize: 32 }}>👩</span>}
+          </div>
+
+          {/* Name */}
+          <div style={{
+            fontSize: 14, fontWeight: 900, color: '#1a237e',
+            textAlign: 'center', marginBottom: 10, textTransform: 'lowercase',
+          }}>
+            {name}
+          </div>
+
+          {/* Details */}
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              {row('Course',       course)}
+              {row('Year',         year)}
+              {row('Date of Birth', dob)}
+              {row('Mobile No.',   mobile)}
+              {row('Blood Group',  bloodGrp)}
+              {row('Valid',        validPeriod)}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ID bar */}
+        <div style={{
+          background: '#1a237e', color: '#FDD835', textAlign: 'center',
+          padding: '7px 0', fontSize: 14, fontWeight: 900, letterSpacing: 2,
+          fontFamily: "'Courier New', monospace",
+        }}>
+          {studentId}
+        </div>
+
+        {/* Signature strip */}
+        <div style={{ background: '#fff', padding: '14px 20px 6px', display: 'flex', justifyContent: 'space-between' }}>
+          {['Student Signature', 'Principal'].map(lbl => (
+            <div key={lbl} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '34%' }}>
+              <div style={{ borderTop: '1px solid #333', width: '100%', marginBottom: 3 }} />
+              <div style={{ fontSize: 8, fontWeight: 700, color: '#333' }}>{lbl}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ background: '#1a237e', color: '#fff', padding: '8px 10px', fontSize: 7.5, lineHeight: 1.7 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>+91 9307162914</span>
+            <span>lkcwsc@vnssorg.com</span>
+          </div>
+          <div><span>lkcwsc.vnssorg.com</span></div>
+          <div style={{ textAlign: 'center', marginTop: 2 }}>
+            Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
 };
 
 
