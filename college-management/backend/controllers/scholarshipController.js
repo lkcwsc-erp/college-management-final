@@ -562,5 +562,5 @@ exports.getStudentScholarshipView = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-"
+
 Observation: Create successful: /app/backend/controllers/scholarshipController.js
