@@ -1859,7 +1859,7 @@ const StudentDashboard = () => {
 
   const [results, setResults] = useState([]);
   const [resultsLoading] = useState(false);
-  const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false });
+ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false, regularCourse: '', regularSemester: '', regularExamEvent: '', backlogCourse: '', backlogSemester: '', backlogExamEvent: '' });
   const [examSubmitted, setExamSubmitted] = useState({ regular: false, backlog: false });
 
   useEffect(() => {
@@ -2711,12 +2711,14 @@ const StudentDashboard = () => {
                 Fill your examination form when enabled by the Examination Section.
               </p>
 
-              {/* Regular Exam */}
+            {/* Regular Exam */}
               <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', marginBottom: 20, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
                 <div style={{ background: examSettings.regularEnabled ? 'linear-gradient(135deg,#0D47A1,#1565C0)' : '#9e9e9e', padding: '16px 20px' }}>
                   <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>📋 Regular Examination Form</h4>
                   <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
-                    {examSettings.regularEnabled ? '✅ Currently Open' : '🔒 Not yet opened by Examination Section'}
+                    {examSettings.regularEnabled
+                      ? `✅ Regular ${examSettings.regularCourse} ${examSettings.regularSemester} Semester Exam Form ${examSettings.regularExamEvent}`
+                      : '🔒 Not yet opened by Examination Section'}
                   </p>
                 </div>
                 <div style={{ padding: 20 }}>
@@ -2734,9 +2736,8 @@ const StudentDashboard = () => {
                     </div>
                   ) : (
                     <div>
-                      <div style={{ background: '#e3f2fd', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#0c4a6e' }}>
-                        <strong>ℹ️ Student Details (auto-attached):</strong><br />
-                        Name: {myAdmission?.applicantName || user?.name} | Course: {myAdmission?.courseType || 'N/A'} | Year: {myAdmission?.admissionYear || 'N/A'}
+                      <div style={{ background: '#e3f2fd', borderRadius: 10, padding: '14px 16px', marginBottom: 16, fontSize: 14, color: '#0c4a6e' }}>
+                        <strong>📋 Regular {examSettings.regularCourse} {examSettings.regularSemester} Semester Exam Form {examSettings.regularExamEvent}</strong>
                       </div>
                       <p style={{ fontSize: 13, color: '#555', marginBottom: 16 }}>
                         By submitting this form, you confirm that your fees are paid and you wish to appear for the regular examination.
@@ -2744,7 +2745,7 @@ const StudentDashboard = () => {
                       <button
                         onClick={() => setExamSubmitted(prev => ({ ...prev, regular: true }))}
                         style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                        📝 Submit Regular Exam Form
+                        📝 Submit Request for Exam Form
                       </button>
                       <p style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>* Ensure fees are paid before submitting.</p>
                     </div>
@@ -2752,12 +2753,14 @@ const StudentDashboard = () => {
                 </div>
               </div>
 
-              {/* Backlog Exam */}
+            {/* Backlog Exam */}
               <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
                 <div style={{ background: examSettings.backlogEnabled ? 'linear-gradient(135deg,#e65100,#f57c00)' : '#9e9e9e', padding: '16px 20px' }}>
                   <h4 style={{ color: '#fff', margin: 0, fontSize: 16 }}>📋 Backlog / KT Examination Form</h4>
                   <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: '4px 0 0' }}>
-                    {examSettings.backlogEnabled ? '✅ Currently Open' : '🔒 Not yet opened by Examination Section'}
+                    {examSettings.backlogEnabled
+                      ? `✅ Backlog ${examSettings.backlogCourse} ${examSettings.backlogSemester} Semester KT Form ${examSettings.backlogExamEvent}`
+                      : '🔒 Not yet opened by Examination Section'}
                   </p>
                 </div>
                 <div style={{ padding: 20 }}>
@@ -2775,21 +2778,21 @@ const StudentDashboard = () => {
                     </div>
                   ) : (
                     <div>
-                      <div style={{ background: '#fff3e0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#7c3d00' }}>
-                        <strong>⚠️ Backlog/KT Form:</strong> Only for students who have failed subjects in previous semesters. Ensure your KT exam fees are paid.
+                      <div style={{ background: '#fff3e0', borderRadius: 10, padding: '14px 16px', marginBottom: 16, fontSize: 14, color: '#7c3d00' }}>
+                        <strong>📋 Backlog {examSettings.backlogCourse} {examSettings.backlogSemester} Semester KT Form {examSettings.backlogExamEvent}</strong>
                       </div>
+                      <p style={{ fontSize: 13, color: '#555', marginBottom: 16 }}>
+                        Only for students with failed subjects. Ensure your KT exam fees are paid before submitting.
+                      </p>
                       <button
                         onClick={() => setExamSubmitted(prev => ({ ...prev, backlog: true }))}
                         style={{ background: '#E65100', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                        📝 Submit Backlog Exam Form
+                        📝 Submit Request for Exam Form
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
-          )}
-
           {/* ============ SCHOLARSHIP TAB ============ */}
           {activeTab === 'scholarship' && (
             <div>
