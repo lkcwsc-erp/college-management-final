@@ -894,7 +894,9 @@ const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
-  const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false, lastUpdatedBy: '', lastUpdatedAt: null });
+const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false, regularCourse: '', regularSemester: '', regularExamEvent: '', backlogCourse: '', backlogSemester: '', backlogExamEvent: '', lastUpdatedBy: '', lastUpdatedAt: null });
+  const [openFormModal, setOpenFormModal] = useState(null);
+  const [formDraft, setFormDraft] = useState({ course: '', semester: '', examEvent: '' });
   const [settingMsg, setSettingMsg] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -906,18 +908,47 @@ const ExamSectionDashboard = () => {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const toggleExamForm = async (type, value) => {
+ const handleOpenFormClick = (type) => {
+    setOpenFormModal(type);
+    setFormDraft({ course: '', semester: '', examEvent: '' });
+  };
+
+  const submitOpenForm = async () => {
+    if (!formDraft.course || !formDraft.semester || !formDraft.examEvent) {
+      alert('Please select Course, Semester, and Exam Event.');
+      return;
+    }
     setSavingSettings(true);
     try {
-      const updated = { ...examSettings, [type]: value };
-      const res = await API.put('/results/exam-settings', {
-        regularEnabled: updated.regularEnabled,
-        backlogEnabled: updated.backlogEnabled,
-      });
-      setExamSettings(res.data.settings || updated);
-      setSettingMsg(`✅ ${type === 'regularEnabled' ? 'Regular' : 'Backlog'} exam form ${value ? 'OPENED' : 'CLOSED'} for students!`);
+      const isRegular = openFormModal === 'regular';
+      const payload = {
+        regularEnabled:   isRegular ? true : examSettings.regularEnabled,
+        backlogEnabled:   !isRegular ? true : examSettings.backlogEnabled,
+        regularCourse:    isRegular ? formDraft.course    : examSettings.regularCourse,
+        regularSemester:  isRegular ? formDraft.semester  : examSettings.regularSemester,
+        regularExamEvent: isRegular ? formDraft.examEvent : examSettings.regularExamEvent,
+        backlogCourse:    !isRegular ? formDraft.course    : examSettings.backlogCourse,
+        backlogSemester:  !isRegular ? formDraft.semester  : examSettings.backlogSemester,
+        backlogExamEvent: !isRegular ? formDraft.examEvent : examSettings.backlogExamEvent,
+      };
+      const res = await API.put('/results/exam-settings', payload);
+      setExamSettings(res.data.settings || payload);
+      setSettingMsg(`✅ ${isRegular ? 'Regular' : 'Backlog'} exam form OPENED for students!`);
       setTimeout(() => setSettingMsg(''), 4000);
+      setOpenFormModal(null);
     } catch (e) { setSettingMsg('❌ Failed to update settings.'); }
+    finally { setSavingSettings(false); }
+  };
+
+  const closeExamForm = async (type) => {
+    setSavingSettings(true);
+    try {
+      const payload = { ...examSettings, [type]: false };
+      const res = await API.put('/results/exam-settings', payload);
+      setExamSettings(res.data.settings || payload);
+      setSettingMsg(`✅ ${type === 'regularEnabled' ? 'Regular' : 'Backlog'} exam form CLOSED.`);
+      setTimeout(() => setSettingMsg(''), 4000);
+    } catch (e) { setSettingMsg('❌ Failed to update.'); }
     finally { setSavingSettings(false); }
   };
 
@@ -1030,11 +1061,11 @@ const ExamSectionDashboard = () => {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => toggleExamForm('regularEnabled', true)} disabled={savingSettings || examSettings.regularEnabled}
+                     <button onClick={() => handleOpenFormClick('regular')} disabled={savingSettings || examSettings.regularEnabled}
                         style={{ flex: 1, background: examSettings.regularEnabled ? '#eee' : '#2E7D32', color: examSettings.regularEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: examSettings.regularEnabled ? 'not-allowed' : 'pointer' }}>
                         🟢 Open Form
                       </button>
-                      <button onClick={() => toggleExamForm('regularEnabled', false)} disabled={savingSettings || !examSettings.regularEnabled}
+                     <button onClick={() => closeExamForm('regularEnabled')} disabled={savingSettings || !examSettings.regularEnabled}
                         style={{ flex: 1, background: !examSettings.regularEnabled ? '#eee' : '#C62828', color: !examSettings.regularEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: !examSettings.regularEnabled ? 'not-allowed' : 'pointer' }}>
                         🔴 Close Form
                       </button>
@@ -1061,11 +1092,11 @@ const ExamSectionDashboard = () => {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => toggleExamForm('backlogEnabled', true)} disabled={savingSettings || examSettings.backlogEnabled}
+                     <button onClick={() => handleOpenFormClick('backlog')} disabled={savingSettings || examSettings.backlogEnabled}
                         style={{ flex: 1, background: examSettings.backlogEnabled ? '#eee' : '#E65100', color: examSettings.backlogEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: examSettings.backlogEnabled ? 'not-allowed' : 'pointer' }}>
                         🟢 Open Form
                       </button>
-                      <button onClick={() => toggleExamForm('backlogEnabled', false)} disabled={savingSettings || !examSettings.backlogEnabled}
+                    <button onClick={() => closeExamForm('backlogEnabled')} disabled={savingSettings || !examSettings.backlogEnabled}
                         style={{ flex: 1, background: !examSettings.backlogEnabled ? '#eee' : '#C62828', color: !examSettings.backlogEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: !examSettings.backlogEnabled ? 'not-allowed' : 'pointer' }}>
                         🔴 Close Form
                       </button>
@@ -1077,6 +1108,48 @@ const ExamSectionDashboard = () => {
               <div style={{ marginTop: 20, background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 12, padding: '14px 18px', fontSize: 13, color: '#7c5e00' }}>
                 ⚠️ <strong>Important:</strong> When you open a form, all students can immediately see and fill it in their dashboard.
                 When you close it, the form becomes locked and students cannot submit. Use this at the start and end of exam season.
+              </div>
+            </div>
+          )}
+
+{openFormModal && (
+            <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <div style={{ background:'#fff', borderRadius:16, padding:32, minWidth:340, maxWidth:420, boxShadow:'0 8px 32px rgba(0,0,0,0.18)' }}>
+                <h3 style={{ marginBottom:4, color: openFormModal==='regular' ? '#1b5e20' : '#bf360c' }}>
+                  {openFormModal==='regular' ? '📋 Open Regular Exam Form' : '📋 Open Backlog/KT Exam Form'}
+                </h3>
+                <p style={{ color:'#666', fontSize:13, marginBottom:20 }}>Select details before opening the form for students.</p>
+
+                <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Course *</label>
+                <select value={formDraft.course} onChange={e => setFormDraft(p=>({...p, course:e.target.value}))}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1.5px solid #ddd', marginBottom:16, fontSize:14 }}>
+                  <option value=''>-- Select Course --</option>
+                  <option value='BA'>BA</option>
+                  <option value='BSc'>BSc</option>
+                </select>
+
+                <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Semester *</label>
+                <select value={formDraft.semester} onChange={e => setFormDraft(p=>({...p, semester:e.target.value}))}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1.5px solid #ddd', marginBottom:16, fontSize:14 }}>
+                  <option value=''>-- Select Semester --</option>
+                  {['1st','2nd','3rd','4th','5th','6th'].map(s=><option key={s} value={s}>{s} Semester</option>)}
+                </select>
+
+                <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Exam Event *</label>
+                <input type='text' placeholder='e.g. April-May 2026' value={formDraft.examEvent}
+                  onChange={e => setFormDraft(p=>({...p, examEvent:e.target.value}))}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1.5px solid #ddd', marginBottom:22, fontSize:14 }} />
+
+                <div style={{ display:'flex', gap:12 }}>
+                  <button onClick={() => setOpenFormModal(null)}
+                    style={{ flex:1, padding:'11px', borderRadius:9, border:'1.5px solid #ddd', background:'#f5f5f5', fontWeight:700, cursor:'pointer', fontSize:14 }}>
+                    Cancel
+                  </button>
+                  <button onClick={submitOpenForm} disabled={savingSettings}
+                    style={{ flex:2, padding:'11px', borderRadius:9, border:'none', background: openFormModal==='regular'?'#2E7D32':'#E65100', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:14 }}>
+                    {savingSettings ? 'Opening...' : '✅ Open Form for Students'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
