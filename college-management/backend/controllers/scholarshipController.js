@@ -563,4 +563,3 @@ exports.getStudentScholarshipView = async (req, res) => {
   }
 };
 
-Observation: Create successful: /app/backend/controllers/scholarshipController.js
