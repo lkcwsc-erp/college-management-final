@@ -1,4 +1,3 @@
-
 //Home.js
 
 import React from 'react';
@@ -19,12 +18,11 @@ const Home = () => {
         <div className="hero-content">
           {/* SNDT Logo + Badge in one line */}
          <div className="hero-affiliation">
-          <img src="/sndt-logo.png" alt="SNDT Logo" className="affiliation-logo" />
-           <span className="hero-badge">✨ Affiliated to SNDT Women's University, Mumbai</span>
+          <img src="/sndt-logo.png" alt="SNDT Logo" className="affiliation-logo" style={{height:"60px",width:"60px",objectFit:"contain",borderRadius:"50%",border:"2px solid rgba(255,255,255,0.5)"}} />
+           <span className="hero-badge" style={{fontSize:"15px",fontWeight:700}}>✨ Affiliated to SNDT Women's University, Mumbai</span>
           </div>
           <p className="hero-vnss-line">
-          <img src="/Sanshta_logo.jpeg" alt="VNSS Logo" style={{height:'36px', width:'36px', objectFit:'contain', borderRadius:'4px', marginRight:'8px', verticalAlign:'middle'}} />
-        <strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargav(She.)
+        Under the aegis of &nbsp;<strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargaon
         </p>
          <h1>Late Kalpana Chawala Women's<br /><span className="hero-highlight">Senior College</span></h1>
          <h2>Empowering Women Through Excellence in Education</h2>
