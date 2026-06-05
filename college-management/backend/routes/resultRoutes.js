@@ -112,20 +112,50 @@ router.get('/all-results', protect, authorizeRoles('staff_principal', 'staff_exa
 
 // ── Exam Form Settings (global toggle by exam staff) ──────────────────────────
 const ExamSettings = (() => {
-  let settings = { regularEnabled: false, backlogEnabled: false, lastUpdatedBy: '', lastUpdatedAt: null };
+let settings = { regularEnabled: false, backlogEnabled: false, lastUpdatedBy: '', lastUpdatedAt: null };
   return {
     get: () => settings,
     set: (data) => { settings = { ...settings, ...data, lastUpdatedAt: new Date() }; }
   };
 })();
 
-router.get('/exam-settings', protect, (req, res) => {
-  res.json({ success: true, settings: ExamSettings.get() });
+// ── Exam Settings Schema (persistent in DB) ───────────────────────────────────
+const mongoose = require('mongoose');
+const ExamSettingSchema = new mongoose.Schema({
+  key:             { type: String, default: 'main' },
+  regularEnabled:  { type: Boolean, default: false },
+  backlogEnabled:  { type: Boolean, default: false },
+  lastUpdatedBy:   { type: String, default: '' },
+  lastUpdatedAt:   { type: Date, default: null },
+});
+const ExamSettingModel = mongoose.models.ExamSetting || mongoose.model('ExamSetting', ExamSettingSchema);
+
+router.get('/exam-settings', protect, async (req, res) => {
+  try {
+    let doc = await ExamSettingModel.findOne({ key: 'main' });
+    if (!doc) doc = await ExamSettingModel.create({ key: 'main' });
+    res.json({ success: true, settings: doc });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Could not load exam settings.' });
+  }
 });
 
-router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), (req, res) => {
-  const { regularEnabled, backlogEnabled } = req.body;
-  ExamSettings.set({ regularEnabled, backlogEnabled, lastUpdatedBy: req.user.name || req.user.email });
-  res.json({ success: true, message: 'Exam form settings updated', settings: ExamSettings.get() });
+router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+  try {
+    const { regularEnabled, backlogEnabled } = req.body;
+    const doc = await ExamSettingModel.findOneAndUpdate(
+      { key: 'main' },
+      {
+        regularEnabled,
+        backlogEnabled,
+        lastUpdatedBy: req.user.name || req.user.email,
+        lastUpdatedAt: new Date(),
+      },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, message: 'Exam form settings updated', settings: doc });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to update settings.' });
+  }
 });
 module.exports = router;
