@@ -93,14 +93,40 @@ router.get('/by-email/:email', protect, authorizeRoles('staff_exam', 'staff_stud
   }
 });
 
+// All results for Principal
+router.get('/all-results', protect, authorizeRoles('staff_principal', 'staff_exam', 'admin'), async (req, res) => {
+  try {
+    const Result = require('../models/Result');
+    const results = await Result.find().sort({ createdAt: -1 }).limit(500);
+    res.json({ success: true, results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ── Exam Form Settings (global toggle by exam staff) ──────────────────────────
+const ExamSettings = (() => {
+  let settings = { regularEnabled: false, backlogEnabled: false, lastUpdatedBy: '', lastUpdatedAt: null };
+  return {
+    get: () => settings,
+    set: (data) => { settings = { ...settings, ...data, lastUpdatedAt: new Date() }; }
+  };
+})();
+
+router.get('/exam-settings', protect, (req, res) => {
+  res.json({ success: true, settings: ExamSettings.get() });
+});
+
+router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), (req, res) => {
+  const { regularEnabled, backlogEnabled } = req.body;
+  ExamSettings.set({ regularEnabled, backlogEnabled, lastUpdatedBy: req.user.name || req.user.email });
+  res.json({ success: true, message: 'Exam form settings updated', settings: ExamSettings.get() });
+});
+
 // ── /:studentId must be LAST to avoid catching named routes above ─────────────
 router.get('/:studentId', protect, authorizeRoles('staff_exam', 'staff', 'admin'), getResultByStudent);
 router.put('/:id', protect, authorizeRoles('staff_exam', 'staff', 'admin'), updateResult);
 router.delete('/:id', protect, authorizeRoles('staff_exam', 'admin'), deleteResult);
-
-
-// All results for Principal
-router.get('/all-results', protect, authorizeRoles('staff_principal', 'staff_exam', 'admin'), async (req, res) => {
   try {
     const Result = require('../models/Result');
     const results = await Result.find().sort({ createdAt: -1 }).limit(500);
