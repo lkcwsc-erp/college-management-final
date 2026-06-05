@@ -208,7 +208,7 @@ const ParentOrg = () => {
                   <img src="/photo.png" alt="Late Shri Sopan Sodgir" />
                 </div>
                 <div className="po-founder-years">
-                  <span>1984 – 2025</span>
+                  <span>07 July 1984 – 08 July 2025</span>
                   <small>Born – Passed Away</small>
                 </div>
               </div>
