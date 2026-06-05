@@ -241,8 +241,19 @@ exports.createAdmission = async (req, res) => {
       twelfthTC:               filePath(files, 'twelfthTC'),
     };
 
+ /* ----------------------------------------------------------
+       4. EMAIL UNIQUENESS CHECK
+    ---------------------------------------------------------- */
+    const existingAdmission = await Admission.findOne({ email: body.email.trim().toLowerCase() });
+    if (existingAdmission) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email is already used by another student. Please use a different email address.',
+      });
+    }
+
     /* ----------------------------------------------------------
-       4. SAVE TO DATABASE
+       5. SAVE TO DATABASE
     ---------------------------------------------------------- */
     const admission = await Admission.create(admissionData);
 
