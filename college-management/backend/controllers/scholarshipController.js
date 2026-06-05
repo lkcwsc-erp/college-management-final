@@ -1,7 +1,3 @@
-Now let me create the scholarship controller with all necessary functions:
-Action: file_editor create /app/backend/controllers/scholarshipController.js --file-text "const ScholarshipMaster = require('../models/ScholarshipMaster');
-const Admission = require('../models/Admission');
-const XLSX = require('xlsx');
 
 /* ============================================================
    CREATE SCHOLARSHIP MASTER
