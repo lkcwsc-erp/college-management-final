@@ -805,12 +805,12 @@ const printTC = (adm) => {
       <div class="row"><span class="rnum">1.</span><span class="rlabel">Name of Student in Full</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.applicantName||''}"/></span></div>
       <div class="row"><span class="rnum">2.</span><span class="rlabel">Mother's Name</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.motherName||''}"/></span></div>
       <div class="row"><span class="rnum">3.</span><span class="rlabel">Caste &amp; Sub-Caste</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.caste||''}"/></span></div>
-      <div class="row"><span class="rnum">4.</span><span class="rlabel">Place of Birth</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/><strong style="margin-left:20px">Nationality :</strong> <input type="text" value="Indian" style="min-width:80px"/></span></div>
+      <div class="row"><span class="rnum">4.</span><span class="rlabel">Place of Birth</span><span class="rcolon">:</span><span class="rval" style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap"><input type="text" value="" style="flex:1;min-width:80px"/><strong style="white-space:nowrap;font-size:12px">Nationality :</strong><input type="text" value="Indian" style="min-width:80px;flex-shrink:0"/></span></div>
       <div class="row">
         <span class="rnum">5.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
-        <span class="rval">
-          <input type="text" value="${dobStr}" style="min-width:100px"/>
-          <br/><span style="font-size:12px">(In word) : ( <input type="text" value="${dobWords}" style="min-width:260px"/> )</span>
+        <span class="rval" style="display:flex;flex-direction:column;gap:4px">
+          <input type="text" value="${dobStr}" style="min-width:120px"/>
+          <span style="display:flex;align-items:center;gap:4px;font-size:12px"><span style="white-space:nowrap;font-weight:normal">(In Words) :</span><input type="text" value="${dobWords}" style="flex:1;min-width:220px;font-size:12px;font-weight:bold"/></span>
         </span>
       </div>
       <div class="row"><span class="rnum">6.</span><span class="rlabel">Last School / College attended</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
