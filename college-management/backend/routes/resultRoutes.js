@@ -148,11 +148,17 @@ let settings = { regularEnabled: false, backlogEnabled: false, lastUpdatedBy: ''
 // ── Exam Settings Schema (persistent in DB) ───────────────────────────────────
 const mongoose = require('mongoose');
 const ExamSettingSchema = new mongoose.Schema({
-  key:             { type: String, default: 'main' },
-  regularEnabled:  { type: Boolean, default: false },
-  backlogEnabled:  { type: Boolean, default: false },
-  lastUpdatedBy:   { type: String, default: '' },
-  lastUpdatedAt:   { type: Date, default: null },
+  key:               { type: String, default: 'main' },
+  regularEnabled:    { type: Boolean, default: false },
+  backlogEnabled:    { type: Boolean, default: false },
+  regularCourse:     { type: String, default: '' },
+  regularSemester:   { type: String, default: '' },
+  regularExamEvent:  { type: String, default: '' },
+  backlogCourse:     { type: String, default: '' },
+  backlogSemester:   { type: String, default: '' },
+  backlogExamEvent:  { type: String, default: '' },
+  lastUpdatedBy:     { type: String, default: '' },
+  lastUpdatedAt:     { type: Date, default: null },
 });
 const ExamSettingModel = mongoose.models.ExamSetting || mongoose.model('ExamSetting', ExamSettingSchema);
 
@@ -168,12 +174,13 @@ router.get('/exam-settings', protect, async (req, res) => {
 
 router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
   try {
-    const { regularEnabled, backlogEnabled } = req.body;
+   const { regularEnabled, backlogEnabled, regularCourse, regularSemester, regularExamEvent, backlogCourse, backlogSemester, backlogExamEvent } = req.body;
     const doc = await ExamSettingModel.findOneAndUpdate(
       { key: 'main' },
-      {
-        regularEnabled,
-        backlogEnabled,
+   {
+        regularEnabled, backlogEnabled,
+        regularCourse, regularSemester, regularExamEvent,
+        backlogCourse, backlogSemester, backlogExamEvent,
         lastUpdatedBy: req.user.name || req.user.email,
         lastUpdatedAt: new Date(),
       },
