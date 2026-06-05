@@ -262,8 +262,8 @@ export const printIDCard = (admission) => {
       </div>
       <div class="trust-name">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
       <div class="college-name">Late Kalpana Chawla Women's Senior College</div>
-      <div class="college-addr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
       <div class="affiliation">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+      <div class="college-addr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
     </div>
 
     <!-- Banner -->
@@ -444,6 +444,12 @@ const IDCard = ({ admission }) => {
           </div>
           <div style={{ fontSize: 7.5, color: '#666', marginTop: 1 }}>
             Affiliated to S.N.D.T. Women's University, Mumbai
+          </div>
+          <div style={{ fontSize: 7, color: '#555', marginTop: 1 }}>
+            Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514
+          </div>
+          <div style={{ fontSize: 7.5, color: '#444', marginTop: 1 }}>
+            Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514
           </div>
         </div>
 
