@@ -197,15 +197,16 @@ const ParentOrg = () => {
             <div className="po-section-label">In Loving Memory</div>
             <h2 className="po-section-title">Our Visionary Leader</h2>
             <p className="po-section-sub">
-              We honour the life and legacy of the visionary who built VNSS
-              from the ground up and devoted his life to education and community service.
+              We honour the extraordinary life and enduring legacy of the visionary
+              founder who built VNSS from the ground up and devoted his life to
+              education, social welfare, and community empowerment.
             </p>
 
             <div className="po-founder-card">
 
               <div className="po-founder-left">
                 <div className="po-founder-photo-large">
-                  <img src="/photo.png" alt="Late Shri Sopan Sodgir" />
+                  <img src="/photo.png" alt="Late Shri Sopan Sambhaji Sodgir" />
                 </div>
                 <div className="po-founder-years">
                   <span>07 July 1984 – 08 July 2025</span>
@@ -214,32 +215,103 @@ const ParentOrg = () => {
               </div>
 
               <div className="po-founder-info">
-                <h3>Late Shri Sopan Sodgir</h3>
-                <span className="po-founder-badge">Founder & President, VNSS</span>
+                <h3>Late Shri Sopan Sambhaji Sodgir</h3>
+                <span className="po-founder-badge">Founder & Secretary, Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</span>
+
                 <p>
-                  Late Shri Sopan Sodgir was a visionary educationist, dedicated social
-                  worker, and the founding force behind Vidyaniketan Sevabhavi Sanstha.
-                  With an unwavering belief that education is the most powerful tool for
-                  social transformation, he established VNSS with the mission of bringing
-                  quality education to the doorstep of every child in rural Maharashtra.
+                  Late Shri Sopan Sambhaji Sodgir was a visionary educationist, social
+                  reformer, entrepreneur, and dedicated community leader whose life was
+                  devoted to the service of society and the empowerment of rural
+                  communities through education. Born on <strong>7th July 1984</strong>,
+                  he completed his Higher Secondary Education from <em>Dayanand Junior
+                  College, Latur</em> and later graduated from <em>Dayanand Arts College,
+                  Latur</em>. From an early age, he demonstrated exceptional leadership
+                  qualities, social awareness, and a strong desire to contribute to
+                  the development of society.
                 </p>
+
                 <p>
-                  Throughout his life, he championed the causes of women empowerment,
-                  student welfare, and community development — tirelessly working to
-                  build institutions that would outlast him and continue serving
-                  generations to come. His leadership, humility, and compassion
-                  inspired all who had the privilege of working alongside him.
+                  With a vision to make quality education accessible to rural and
+                  underprivileged students, he established{" "}
+                  <strong>Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</strong> in
+                  the year <strong>2005</strong>. Under his dynamic leadership, the
+                  institution expanded its educational and social activities, becoming
+                  a beacon of hope for many aspiring students.
                 </p>
-                <div className="po-founder-quote">
-                  <span>"</span> Education is not just about knowledge — it is about
-                  building character, nurturing compassion, and empowering every individual
-                  to contribute meaningfully to society. <span>"</span>
+
+                {/* Key Achievements */}
+                <div className="po-founder-achievements">
+                  <div className="po-achievement-item">
+                    <div className="po-achievement-icon">🏛️</div>
+                    <div>
+                      <strong>Late Kalpana Chawla Women's Senior College (2008)</strong>
+                      <p>
+                        One of his most significant achievements — founded with the noble
+                        objective of providing higher education to women and promoting
+                        women's empowerment through knowledge and skill development.
+                        Today, the college stands as a living testament to his commitment
+                        to education and social progress.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="po-achievement-item">
+                    <div className="po-achievement-icon">🎖️</div>
+                    <div>
+                      <strong>District-Level General Knowledge Competitions</strong>
+                      <p>
+                        Organised to encourage intellectual growth among students, gaining
+                        considerable recognition. The prize distribution ceremony was
+                        graced by renowned film actress <strong>Alka Kubal</strong>,
+                        inspiring thousands of young participants.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="po-achievement-item">
+                    <div className="po-achievement-icon">🤝</div>
+                    <div>
+                      <strong>Samuhik Vivah Sohala (Mass Marriage Ceremonies)</strong>
+                      <p>
+                        Successfully organised in Gangakhed to support economically
+                        disadvantaged families and promote social harmony across the
+                        community.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="po-achievement-item">
+                    <div className="po-achievement-icon">🏗️</div>
+                    <div>
+                      <strong>Unique Horizon Engineers &amp; Infra Pvt. Ltd.</strong>
+                      <p>
+                        Founded to demonstrate that business success and social
+                        responsibility can go hand in hand — creating employment
+                        opportunities and contributing to regional development.
+                      </p>
+                    </div>
+                  </div>
                 </div>
+
+                <p>
+                  Coming from a humble background, Shri Sopan Sodgir transformed
+                  challenges into opportunities through hard work, determination, and
+                  vision. He broke the cycle of poverty within his family and became
+                  an inspiration for countless young people who aspired to create
+                  meaningful change in society. Known for his simplicity, dedication,
+                  and progressive thinking, he firmly believed that education was the
+                  most powerful tool for social transformation.
+                </p>
+
+                <div className="po-founder-quote">
+                  <span>"</span>A visionary may depart, but his vision continues
+                  to illuminate the path for generations to come.<span>"</span>
+                </div>
+
                 <div className="po-founder-rip">
                   🕊️ &nbsp;
                   <span>
-                    <strong>Late Shri Sopan Sodgir</strong> — Forever in our hearts.
-                    His vision lives on through every student we serve.
+                    On <strong>8th July 2025</strong> — the day after his 41st birthday —
+                    Shri Sopan Sambhaji Sodgir left for his heavenly abode. Though his
+                    untimely demise created an irreplaceable void, his ideals, institutions,
+                    and contributions continue to inspire future generations.
                   </span>
                 </div>
               </div>
