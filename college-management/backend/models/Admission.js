@@ -272,6 +272,13 @@ aadharNumber: {
     plainPassword:      { type: String, default: '' },   // For Student Section visibility
     fees:               { type: Number, default: 0 },   // Total amount paid so far
     feesPaid:           { type: Boolean, default: false },
+    scholarshipEligibleAmount: { type: Number, default: 0 },
+scholarshipReceivedAmount: { type: Number, default: 0 },
+scholarshipPendingAmount: { type: Number, default: 0 },
+academicYear: { type: String, default: '' },
+scholarshipVerifiedBy: { type: String, default: '' },
+scholarshipVerifiedDate: { type: Date },
+
     // Full ledger of every payment
     feeLedger: [{
       receiptNo:     { type: String, default: '' },
