@@ -63,6 +63,7 @@ const Navbar = () => {
             <Link to="/gallery" onClick={() => setMenuOpen(false)}>Gallery</Link>
             <Link to="/events" onClick={() => setMenuOpen(false)}>Events</Link>
             <Link to="/achievements" onClick={() => setMenuOpen(false)}>Achievements</Link>
+            <Link to="/resources" onClick={() => setMenuOpen(false)}>Resources</Link>
             <Link to="/notifications" onClick={() => setMenuOpen(false)} className="nav-notification-link">
               Notifications
               <span className="nav-notif-dot"></span>
