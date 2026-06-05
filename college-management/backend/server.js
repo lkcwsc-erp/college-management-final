@@ -43,6 +43,20 @@ app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/results', require('./routes/resultRoutes'));
 app.use('/api/about', require('./routes/aboutRoutes'));
 
+app.use('/api/admissions', require('./routes/admissionRoutes'));
+app.use('/api/document-requests', require('./routes/documentRequestRoutes'));
+app.use('/api/staff', require('./routes/staffRoutes'));
+app.use('/api/attendance', require('./routes/attendanceRoutes'));
+app.use('/api/results', require('./routes/resultRoutes'));
+app.use('/api/about', require('./routes/aboutRoutes'));
+
+// 👇 YE NAYI LINE ADD KARO
+app.use('/api/scholarships', require('./routes/scholarshipRoutes'));
+
+app.get('/', (req, res) => {
+  res.json({ message: '🎓 Late Kalpana Chawla Mahila College API Running!' });
+});
+
 app.get('/', (req, res) => {
   res.json({ message: '🎓 Late Kalpana Chawla Mahila College API Running!' });
 });
