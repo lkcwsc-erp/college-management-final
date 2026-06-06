@@ -759,6 +759,8 @@ const AccountsSectionDashboard = () => {
   const [admDocType, setAdmDocType] = useState(''); // eslint-disable-line no-unused-vars
   const [selectedFeeItems, setSelectedFeeItems] = useState({}); // {itemId: true/false}
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
+  const [admScholarshipLoading, setAdmScholarshipLoading] = useState(false);
+  const [admScholarshipLabel, setAdmScholarshipLabel] = useState('');
   const [admLoading2, setAdmLoading2]       = useState(false);
 
 
@@ -961,7 +963,7 @@ const AccountsSectionDashboard = () => {
       showToast('Fee collected & receipt generated!'); setAdmMsg('');
       setSelectedAdm(null);
       setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash');
-      setAdmSelectedSem(''); setAdmScholarshipAmt('');
+      setAdmSelectedSem(''); setAdmScholarshipAmt(''); setAdmScholarshipLabel('');
       fetchAdmissions();
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); }
     finally { setAdmLoading2(false); }
@@ -1495,7 +1497,27 @@ const AccountsSectionDashboard = () => {
                         color: adm.feesPaid ? '#2E7D32' : '#E65100' }}>
                         {adm.feesPaid ? '✅ Paid' : '⏳ Pending'}
                       </span>
-                      <button onClick={() => { setSelectedAdm(adm); setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash'); setAdmFeeType('admission'); setAdmSelectedSem(''); setAdmScholarshipAmt(''); }}
+                      <button onClick={() => { setSelectedAdm(adm); setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash'); setAdmFeeType('admission'); setAdmSelectedSem(''); setAdmScholarshipAmt(''); setAdmScholarshipLabel('');
+                        // Auto-fetch MahaDBT scholarship amount
+                        if (adm.category && adm.courseType && adm.admissionYear) {
+                          setAdmScholarshipLoading(true);
+                          API.get('/scholarships/master', { params: {
+                            category: adm.category,
+                            courseType: adm.courseType,
+                            admissionYear: adm.admissionYear,
+                            isActive: true,
+                          }}).then(r => {
+                            const master = r.data.scholarships?.[0];
+                            if (master) {
+                              setAdmScholarshipAmt(String(master.scholarshipAmount));
+                              setAdmScholarshipLabel(master.academicYear);
+                            } else {
+                              setAdmScholarshipAmt('0');
+                              setAdmScholarshipLabel('');
+                            }
+                          }).catch(() => {}).finally(() => setAdmScholarshipLoading(false));
+                        }
+                      }}
                         style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         💰 Collect
                       </button>
@@ -2072,6 +2094,35 @@ const AccountsSectionDashboard = () => {
                   </div>
                 )}
 
+                {/* MahaDBT Scholarship Section */}
+                <div style={{ background: schol > 0 ? '#f3e5f5' : '#fafafa', border: `1px solid ${schol > 0 ? '#ce93d8' : '#e0e7ef'}`, borderRadius:10, padding:'12px 16px', marginTop:10 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                    <div>
+                      <span style={{ fontSize:13, fontWeight:700, color:'#7B1FA2' }}>🎓 MahaDBT Scholarship</span>
+                      {admScholarshipLabel && <span style={{ fontSize:11, color:'#9C27B0', marginLeft:8 }}>(AY {admScholarshipLabel})</span>}
+                      {admScholarshipLoading && <span style={{ fontSize:11, color:'#9C27B0', marginLeft:8 }}>⏳ Fetching...</span>}
+                    </div>
+                    {selectedAdm.category && (
+                      <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:8, background:'#e3f2fd', color:'#1565C0' }}>
+                        {selectedAdm.category}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    placeholder={admScholarshipLoading ? 'Fetching...' : schol === 0 ? 'No scholarship (enter manually if needed)' : ''}
+                    value={admScholarshipAmt}
+                    onChange={e => { setAdmScholarshipAmt(e.target.value); setAdmFeeAmt(String(Math.max(0, calcSelected(selectedFeeItems) - Number(e.target.value||0)))); }}
+                    min="0"
+                    style={{ width:'100%', padding:'8px 12px', borderRadius:8, border:`2px solid ${schol > 0 ? '#ce93d8' : '#e0e7ef'}`, fontSize:14, fontWeight:700, color:'#7B1FA2', boxSizing:'border-box', background:'#fff' }}
+                  />
+                  {schol === 0 && !admScholarshipLoading && selectedAdm.category && (
+                    <div style={{ fontSize:11, color:'#E65100', marginTop:4 }}>
+                      ⚠️ No MahaDBT master found for {selectedAdm.category} / {selectedAdm.courseType} / {selectedAdm.admissionYear}. Enter manually or add in Scholarship Master.
+                    </div>
+                  )}
+                </div>
+
                 {/* Fee summary */}
                 {selGross > 0 && (
                   <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 16px', marginTop:10 }}>
@@ -2081,13 +2132,13 @@ const AccountsSectionDashboard = () => {
                     </div>
                     {schol > 0 && (
                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#7B1FA2', marginBottom:4 }}>
-                        <span>Scholarship Deduction</span>
+                        <span>🎓 MahaDBT Scholarship Deduction</span>
                         <span style={{ fontWeight:700 }}>− ₹{schol.toLocaleString('en-IN')}</span>
                       </div>
                     )}
                     <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'2px solid #e0e7ef', paddingTop:8, marginTop:6 }}>
-                      <span style={{ color:'#1565C0' }}>Net Payable</span>
-                      <span style={{ color:'#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
+                      <span style={{ color:'#1565C0' }}>Net Payable by Student</span>
+                      <span style={{ color: schol > 0 ? '#2E7D32' : '#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 )}
