@@ -1,4 +1,5 @@
 // routes/expenseRoutes.js
+const { protect } = require('../middleware/authMiddleware');
 const express    = require('express');
 const router     = express.Router();
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
