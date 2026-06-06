@@ -1,6 +1,5 @@
 // controllers/expenseController.js
-const Expense  = require('../models/Expense');
-const upload   = require('../utils/upload');
+const Expense     = require('../models/Expense');
 const { cloudinary } = require('../utils/upload');
 
 // ─────────────────────────────────────────────────────────────────────────────
