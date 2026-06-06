@@ -39,7 +39,7 @@ const Navbar = () => {
           />
           <div className="brand-text">
               <span className="brand-vnss">
-             Vidyaniketan Sevabhavi Sanstha (VNSS), Dongargaon
+             Vidyaniketan Sevabhavi Sanstha (VNSS), Dongargaon(She.)
             </span>
             <span className="brand-name">
               Late Kalpana Chawla Women's Senior College
