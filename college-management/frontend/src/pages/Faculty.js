@@ -118,11 +118,16 @@ const Faculty = () => {
                 <div className="faculty-avatar">
                   {member.photo ? (
                     <img
-                      src={`http://localhost:5000/uploads/${member.photo}`}
+                        src={member.photo
+                        ? (member.photo.startsWith('http')
+                          ? member.photo
+                        : `${process.env.REACT_APP_API_URL}/uploads/${member.photo}`)
+                        : '/college-logo.png'}
                       alt={member.name}
-                    />
+                  onError={(e) => { e.target.src = '/new college logo.png'; }}
+                  />
                   ) : (
-                    <div className="faculty-avatar-placeholder">👩‍🏫</div>
+                    <img src="/new college logo.png" alt="College Logo" style={{width:'80px', height:'80px', objectFit:'contain', borderRadius:'50%'}} />
                   )}
                 </div>
                 <div className="faculty-info">
