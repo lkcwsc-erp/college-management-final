@@ -33,7 +33,7 @@ const Navbar = () => {
       <div className="navbar-brand">
         <Link to="/" onClick={() => setMenuOpen(false)}>
           <img
-            src="/ College-logo.png";
+            src="/college-logo.png";
             alt="College Logo"
             className="brand-logo-img"
           />
