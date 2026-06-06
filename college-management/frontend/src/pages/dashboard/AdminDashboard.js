@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
@@ -343,18 +343,17 @@ const AdminAchievementsTab = ({ showMessage }) => {
   const [saving, setSaving]             = useState(false);
   const [showForm, setShowForm]         = useState(false);
 
-  const fetchAll = () => {
-    setLoading(true);
-    API.get('/achievements/all')
-      .then(res => setAchievements(res.data.achievements || []))
-      .catch(() => showMessage('❌ Failed to load achievements'))
-      .finally(() => setLoading(false));
-  };
+  const fetchAll = useCallback(() => {
+  setLoading(true);
+  API.get('/achievements/all')
+    .then(res => setAchievements(res.data.achievements || []))
+    .catch(() => showMessage('❌ Failed to load achievements'))
+    .finally(() => setLoading(false));
+}, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 useEffect(() => {
   fetchAll();
-}, []);
+}, [fetchAll]);
 
   const handleSave = async () => {
     if (!form.title.trim())       return showMessage('❌ Title is required');
