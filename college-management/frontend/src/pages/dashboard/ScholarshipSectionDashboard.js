@@ -142,6 +142,25 @@ const ScholarshipSectionDashboard = () => {
     if (activeTab === 'master') fetchMasters();
   }, [activeTab, fetchMasters]);
 
+  // Fetch full student data (with documents) when viewing detail
+  const handleViewStudent = useCallback(async (adm) => {
+    setSelected(adm);
+    setEditMode(false);
+    setEditData({});
+    setMsg('');
+    setActiveTab('detail');
+    try {
+      const res = await API.get('/admissions/scholarship-section/all');
+      const full = (res.data.admissions || []).find(a => a._id === adm._id || a.studentId === adm.studentId);
+      if (full) setSelected(s => ({ ...s, ...full }));
+    } catch {
+      try {
+        const res2 = await API.get('/scholarships/register?limit=1&search=' + adm.studentId);
+        if (res2.data.students?.[0]) setSelected(s => ({ ...s, ...res2.data.students[0] }));
+      } catch { }
+    }
+  }, []);
+
   /* ── Actions ─────────────────────────────── */
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -348,7 +367,7 @@ const ScholarshipSectionDashboard = () => {
               onPageChange={(p) => fetchAdmissions(p)}
               onRefresh={() => fetchAdmissions(1)}
               onExport={handleExport} exporting={exporting}
-              onView={(adm) => { setSelected(adm); setEditMode(false); setEditData({}); setMsg(''); setActiveTab('detail'); }}
+              onView={handleViewStudent}
             />
           )}
 
@@ -367,7 +386,7 @@ const ScholarshipSectionDashboard = () => {
               onPageChange={(p) => fetchAdmissions(p)}
               onRefresh={() => fetchAdmissions(1)}
               onExport={handleExport} exporting={exporting}
-              onView={(adm) => { setSelected(adm); setEditMode(false); setEditData({}); setMsg(''); setActiveTab('detail'); }}
+              onView={handleViewStudent}
               showAmounts
             />
           )}
@@ -422,7 +441,7 @@ const ScholarshipSectionDashboard = () => {
               search={search} setSearch={setSearch}
               showPass={showPass} setShowPass={setShowPass}
               onRefresh={() => fetchAdmissions(1)}
-              onView={(adm) => { setSelected(adm); setEditMode(false); setEditData({}); setMsg(''); setActiveTab('detail'); }}
+              onView={handleViewStudent}
             />
           )}
 
