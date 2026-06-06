@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
-import ExpenseTracker from '../../components/ExpenseTracker';
 import StudentViewFull from './StudentViewFull';
 
 
@@ -764,12 +763,25 @@ const AccountsSectionDashboard = () => {
 
 
 
-  // ── College expenses ───────────────────────────────────────────────────────
-  const [expenses, setExpenses]             = useState(() => {
-    try { return JSON.parse(localStorage.getItem('lkcwsc_expenses') || '[]'); } catch { return []; }
-  });
-  const [expForm, setExpForm]               = useState({ description: '', amount: '', date: '', category: 'other', paidTo: '' });
-  const [expMsg, setExpMsg]                 = useState('');
+  // ── College expenses (API-backed) ─────────────────────────────────────────
+  const [expenses, setExpenses]   = useState([]);
+  const [expTotal, setExpTotal]   = useState(0);
+  const [expPage,  setExpPage]    = useState(1);
+  const [expPages, setExpPages]   = useState(1);
+  const [expLoading, setExpLoading] = useState(false);
+  const [expStats, setExpStats]   = useState(null);
+  const [expStatsLoading, setExpStatsLoading] = useState(false);
+
+  const BLANK_EXP_FORM = {
+    description: '', amount: '', date: new Date().toISOString().slice(0,10),
+    category: 'other', paymentMode: 'cash', paidTo: '', billNumber: '',
+    academicYear: '', remarks: '', billFile: null,
+  };
+  const [expForm, setExpForm]     = useState(BLANK_EXP_FORM);
+  const [expEditId, setExpEditId] = useState(null);
+  const [expMsg,  setExpMsg]      = useState('');
+  const [expFilters, setExpFilters] = useState({ academicYear: '', category: '', paymentMode: '', startDate: '', endDate: '', search: '' });
+  const [expSubmitting, setExpSubmitting] = useState(false);
 
   // ── Payment history (from localStorage) ──────────────────────────────────
   const [payHistory, setPayHistory]         = useState(() => {
@@ -801,6 +813,14 @@ const AccountsSectionDashboard = () => {
     fetchDocRequests();
     fetchAdmissions();
   }, [fetchDocRequests, fetchAdmissions]);
+
+  // Load expenses + stats when expenses tab becomes active
+  useEffect(() => {
+    if (activeTab === 'expenses') {
+      fetchExpenses(1);
+      fetchExpStats();
+    }
+  }, [activeTab]);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -948,24 +968,213 @@ const AccountsSectionDashboard = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Expense tracker
+  // Expense tracker — API-backed
   // ─────────────────────────────────────────────────────────────────────────
-  const saveExpense = () => {
-    if (!expForm.description.trim() || !expForm.amount || !expForm.date) {
-      setExpMsg('❌ Fill all required fields.'); return;
-    }
-    const entry = { ...expForm, id: Date.now(), amount: Number(expForm.amount) };
-    const updated = [entry, ...expenses];
-    setExpenses(updated);
-    localStorage.setItem('lkcwsc_expenses', JSON.stringify(updated));
-    setExpForm({ description: '', amount: '', date: '', category: 'other', paidTo: '' });
-    setExpMsg('✅ Expense recorded!');
-    setTimeout(() => setExpMsg(''), 3000);
+  const EXPENSE_CATEGORIES = [
+    { value: 'academic_resources',      label: '📚 Academic Resources' },
+    { value: 'library_expenses',        label: '📖 Library Expenses' },
+    { value: 'laboratory_expenses',     label: '🔬 Laboratory Expenses' },
+    { value: 'office_administration',   label: '🗂️ Office Administration' },
+    { value: 'internet_communication',  label: '🌐 Internet & Communication' },
+    { value: 'website_erp_maintenance', label: '💻 Website & ERP Maintenance' },
+    { value: 'faculty_development',     label: '👩‍🏫 Faculty Development' },
+    { value: 'student_activities',      label: '🎓 Student Activities' },
+    { value: 'scholarships_welfare',    label: '🎖️ Scholarships & Student Welfare' },
+    { value: 'building_development',    label: '🏗️ Building Development' },
+    { value: 'electrical_maintenance',  label: '⚡ Electrical Maintenance' },
+    { value: 'water_sanitation',        label: '🚿 Water & Sanitation' },
+    { value: 'university_govt_fees',    label: '🏛️ University / Government Fees' },
+    { value: 'it_software',             label: '🖥️ IT & Software' },
+    { value: 'vehicle_travel',          label: '🚗 Vehicle & Travel' },
+    { value: 'infrastructure',          label: '🔩 Infrastructure' },
+    { value: 'stationery',              label: '📝 Stationery' },
+    { value: 'electricity',             label: '💡 Electricity / Utilities' },
+    { value: 'salary',                  label: '👤 Salary / Wages' },
+    { value: 'events',                  label: '🎉 Events / Functions' },
+    { value: 'maintenance',             label: '🔧 Maintenance' },
+    { value: 'other',                   label: '📦 Other' },
+  ];
+
+  const PAYMENT_MODES = [
+    { value: 'cash',           label: '💵 Cash' },
+    { value: 'upi',            label: '📱 UPI' },
+    { value: 'bank_transfer',  label: '🏦 Bank Transfer' },
+    { value: 'cheque',         label: '📋 Cheque' },
+    { value: 'online_payment', label: '🌐 Online Payment' },
+  ];
+
+  // Generate academic year options e.g. "2023-24", "2024-25", "2025-26"
+  const genAcademicYears = () => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, i) => {
+      const y = currentYear - 2 + i;
+      return `${y}-${String(y + 1).slice(-2)}`;
+    });
   };
-  const deleteExpense = (id) => {
-    const updated = expenses.filter(e => e.id !== id);
-    setExpenses(updated);
-    localStorage.setItem('lkcwsc_expenses', JSON.stringify(updated));
+
+  const fetchExpenses = useCallback(async (page = 1, filters = expFilters) => {
+    setExpLoading(true);
+    try {
+      const params = new URLSearchParams({ page, limit: 20 });
+      if (filters.academicYear) params.append('academicYear', filters.academicYear);
+      if (filters.category)     params.append('category',     filters.category);
+      if (filters.paymentMode)  params.append('paymentMode',  filters.paymentMode);
+      if (filters.startDate)    params.append('startDate',    filters.startDate);
+      if (filters.endDate)      params.append('endDate',      filters.endDate);
+      if (filters.search)       params.append('search',       filters.search);
+      const res = await API.get(`/expenses?${params.toString()}`);
+      setExpenses(res.data.expenses || []);
+      setExpTotal(res.data.total || 0);
+      setExpPage(res.data.page  || 1);
+      setExpPages(res.data.pages || 1);
+    } catch (e) {
+      showToast('Failed to load expenses.', 'error');
+    } finally {
+      setExpLoading(false);
+    }
+  }, [expFilters]);
+
+  const fetchExpStats = useCallback(async () => {
+    setExpStatsLoading(true);
+    try {
+      const params = expFilters.academicYear ? `?academicYear=${expFilters.academicYear}` : '';
+      const res = await API.get(`/expenses/dashboard${params}`);
+      setExpStats(res.data.stats);
+    } catch (e) { /* silent */ }
+    finally { setExpStatsLoading(false); }
+  }, [expFilters.academicYear]);
+
+  const saveExpense = async () => {
+    if (!expForm.description.trim() || !expForm.amount || !expForm.date || !expForm.paymentMode || !expForm.academicYear) {
+      setExpMsg('❌ Fill all required fields (Description, Amount, Date, Payment Mode, Academic Year).'); return;
+    }
+    if (expForm.billFile && expForm.billFile.size > 200 * 1024) {
+      setExpMsg('❌ Bill file must be under 200 KB.'); return;
+    }
+    setExpSubmitting(true);
+    try {
+      const fd = new FormData();
+      fd.append('description',  expForm.description);
+      fd.append('amount',       expForm.amount);
+      fd.append('date',         expForm.date);
+      fd.append('category',     expForm.category);
+      fd.append('paymentMode',  expForm.paymentMode);
+      fd.append('paidTo',       expForm.paidTo);
+      fd.append('billNumber',   expForm.billNumber);
+      fd.append('academicYear', expForm.academicYear);
+      fd.append('remarks',      expForm.remarks);
+      if (expForm.billFile) fd.append('billFile', expForm.billFile);
+
+      if (expEditId) {
+        await API.put(`/expenses/${expEditId}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setExpMsg('✅ Expense updated!');
+      } else {
+        await API.post('/expenses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setExpMsg('✅ Expense recorded!');
+      }
+      setExpForm({ ...BLANK_EXP_FORM });
+      setExpEditId(null);
+      await fetchExpenses(1);
+      await fetchExpStats();
+      setTimeout(() => setExpMsg(''), 4000);
+    } catch (e) {
+      setExpMsg('❌ ' + (e.response?.data?.message || 'Failed to save expense.'));
+    } finally {
+      setExpSubmitting(false);
+    }
+  };
+
+  const deleteExpense = async (id) => {
+    if (!window.confirm('Delete this expense record? This action cannot be undone.')) return;
+    try {
+      await API.delete(`/expenses/${id}`);
+      showToast('Expense deleted.', 'success');
+      await fetchExpenses(expPage);
+      await fetchExpStats();
+    } catch (e) {
+      showToast('Failed to delete expense.', 'error');
+    }
+  };
+
+  const startEditExpense = (exp) => {
+    setExpEditId(exp._id);
+    setExpForm({
+      description:  exp.description,
+      amount:       exp.amount,
+      date:         exp.date ? exp.date.slice(0,10) : '',
+      category:     exp.category,
+      paymentMode:  exp.paymentMode,
+      paidTo:       exp.paidTo || '',
+      billNumber:   exp.billNumber || '',
+      academicYear: exp.academicYear || '',
+      remarks:      exp.remarks || '',
+      billFile:     null,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const exportExpenses = async (fmt) => {
+    try {
+      const params = new URLSearchParams();
+      if (expFilters.academicYear) params.append('academicYear', expFilters.academicYear);
+      if (expFilters.category)     params.append('category',     expFilters.category);
+      if (expFilters.startDate)    params.append('startDate',    expFilters.startDate);
+      if (expFilters.endDate)      params.append('endDate',      expFilters.endDate);
+      const res = await API.get(`/expenses/export?${params.toString()}`);
+      const data = res.data;
+
+      if (fmt === 'csv') {
+        const headers = ['Date','Description','Category','Payment Mode','Paid To','Bill No','Amount (INR)','Academic Year','Remarks','Entered By','Created At'];
+        const rows = data.expenses.map(e => [
+          e.date ? new Date(e.date).toLocaleDateString('en-IN') : '',
+          `"${(e.description||'').replace(/"/g,'""')}"`,
+          e.category, e.paymentMode, `"${e.paidTo||''}"`, e.billNumber||'',
+          e.amount, e.academicYear,
+          `"${(e.remarks||'').replace(/"/g,'""')}"`,
+          e.enteredBy||'',
+          e.createdAt ? new Date(e.createdAt).toLocaleString('en-IN') : '',
+        ]);
+        const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a'); a.href = url;
+        a.download = `expenses-${expFilters.academicYear || 'all'}.csv`; a.click();
+        URL.revokeObjectURL(url);
+        showToast('Excel/CSV exported!', 'success');
+      } else {
+        // PDF — open print window
+        const totalAmt = data.expenses.reduce((s,e) => s+(e.amount||0), 0);
+        const rows = data.expenses.map((e, i) => `
+          <tr style="background:${i%2===0?'#f8faff':'#fff'}">
+            <td>${i+1}</td>
+            <td>${e.date ? new Date(e.date).toLocaleDateString('en-IN') : ''}</td>
+            <td>${e.description||''}</td>
+            <td>${e.category||''}</td>
+            <td>${e.paymentMode||''}</td>
+            <td>${e.paidTo||''}</td>
+            <td>${e.billNumber||''}</td>
+            <td style="text-align:right">₹${Number(e.amount||0).toLocaleString('en-IN')}</td>
+            <td>${e.academicYear||''}</td>
+            <td>${e.enteredBy||''}</td>
+          </tr>`).join('');
+        const html = `<!DOCTYPE html><html><head><title>Expense Report</title>
+          <style>body{font-family:Arial;font-size:11px;margin:20px}
+          h2{text-align:center;color:#1565C0}table{width:100%;border-collapse:collapse}
+          th{background:#1565C0;color:#fff;padding:7px;text-align:left}
+          td{padding:6px;border-bottom:1px solid #e0e7ef}
+          .total{font-weight:bold;text-align:right;font-size:13px;margin-top:10px}</style></head>
+          <body><h2>College Expense Report</h2>
+          <p>Academic Year: <b>${expFilters.academicYear||'All'}</b> | Generated: ${new Date().toLocaleString('en-IN')} | Total Records: ${data.expenses.length}</p>
+          <table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Category</th><th>Payment Mode</th><th>Paid To</th><th>Bill No</th><th>Amount</th><th>Acad. Year</th><th>Entered By</th></tr></thead>
+          <tbody>${rows}</tbody></table>
+          <p class="total">Grand Total: ₹${totalAmt.toLocaleString('en-IN')}</p>
+          </body></html>`;
+        const w = window.open('','_blank'); w.document.write(html); w.document.close(); w.print();
+        showToast('PDF print dialog opened.', 'success');
+      }
+    } catch (e) {
+      showToast('Export failed.', 'error');
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -975,6 +1184,7 @@ const AccountsSectionDashboard = () => {
   const paidAdmCount     = admissions.filter(a => a.feesPaid).length;
   const unpaidAdmCount   = admissions.filter(a => !a.feesPaid).length;
   const totalCollected   = payHistory.reduce((s, p) => s + (p.amount || 0), 0);
+  // eslint-disable-next-line no-unused-vars
   const totalExpenses    = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
   const filteredDocs = docRequests.filter(r => {
@@ -1304,14 +1514,300 @@ const AccountsSectionDashboard = () => {
 
           {/* ════════════════════════ EXPENSES ════════════════════════ */}
           {activeTab === 'expenses' && (
-            <ExpenseTracker
-              user={user}
-              showToast={showToast}
-              API={API}
-            />
+            <div>
+              {/* ── Header ── */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20, flexWrap:'wrap', gap:12 }}>
+                <div>
+                  <h2 style={{ color:'#1565C0', marginBottom:4 }}>🏗️ College Expense Tracker</h2>
+                  <p style={{ color:'#666', fontSize:14 }}>Record, monitor and export all college expenditures.</p>
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => exportExpenses('csv')}
+                    style={{ padding:'9px 16px', background:'#2E7D32', color:'#fff', border:'none', borderRadius:9, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+                    📥 Export Excel
+                  </button>
+                  <button onClick={() => exportExpenses('pdf')}
+                    style={{ padding:'9px 16px', background:'#1565C0', color:'#fff', border:'none', borderRadius:9, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+                    🖨️ Print PDF
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Dashboard Stats ── */}
+              {expStatsLoading ? null : expStats ? (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:12, marginBottom:24 }}>
+                  <div style={{ background:'#e3f2fd', borderRadius:12, padding:'14px 18px' }}>
+                    <p style={{ fontSize:11, color:'#1565C0', fontWeight:600, margin:'0 0 4px' }}>💰 Total Today</p>
+                    <p style={{ fontSize:20, fontWeight:800, color:'#1565C0', margin:0 }}>₹{(expStats.today?.total||0).toLocaleString('en-IN')}</p>
+                    <p style={{ fontSize:11, color:'#888', margin:'2px 0 0' }}>{expStats.today?.count||0} records</p>
+                  </div>
+                  <div style={{ background:'#fff3e0', borderRadius:12, padding:'14px 18px' }}>
+                    <p style={{ fontSize:11, color:'#E65100', fontWeight:600, margin:'0 0 4px' }}>📅 This Month</p>
+                    <p style={{ fontSize:20, fontWeight:800, color:'#E65100', margin:0 }}>₹{(expStats.thisMonth?.total||0).toLocaleString('en-IN')}</p>
+                    <p style={{ fontSize:11, color:'#888', margin:'2px 0 0' }}>{expStats.thisMonth?.count||0} records</p>
+                  </div>
+                  <div style={{ background:'#f3e5f5', borderRadius:12, padding:'14px 18px' }}>
+                    <p style={{ fontSize:11, color:'#7B1FA2', fontWeight:600, margin:'0 0 4px' }}>🎓 This Academic Year</p>
+                    <p style={{ fontSize:20, fontWeight:800, color:'#7B1FA2', margin:0 }}>₹{(expStats.thisAcademicYear?.total||0).toLocaleString('en-IN')}</p>
+                    <p style={{ fontSize:11, color:'#888', margin:'2px 0 0' }}>{expStats.thisAcademicYear?.count||0} records</p>
+                  </div>
+                  {expStats.categoryWise?.slice(0,3).map(c => (
+                    <div key={c._id} style={{ background:'#e8f5e9', borderRadius:12, padding:'14px 18px' }}>
+                      <p style={{ fontSize:11, color:'#2E7D32', fontWeight:600, margin:'0 0 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {EXPENSE_CATEGORIES.find(x=>x.value===c._id)?.label || c._id}
+                      </p>
+                      <p style={{ fontSize:18, fontWeight:800, color:'#2E7D32', margin:0 }}>₹{(c.total||0).toLocaleString('en-IN')}</p>
+                      <p style={{ fontSize:11, color:'#888', margin:'2px 0 0' }}>{c.count} records</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
+                  <div style={{ background:'#e3f2fd', color:'#1565C0', borderRadius:12, padding:'12px 20px', fontWeight:700, fontSize:14 }}>
+                    Total Records: {expTotal}
+                  </div>
+                  <button onClick={() => { fetchExpStats(); fetchExpenses(1); }}
+                    style={{ padding:'10px 18px', background:'#f0f4ff', color:'#1565C0', border:'1px solid #90caf9', borderRadius:10, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+                    🔄 Load Stats
+                  </button>
+                </div>
+              )}
+
+              {/* ── Add / Edit Expense Form ── */}
+              <div className="form-card" style={{ marginBottom:28 }}>
+                <h3>{expEditId ? '✏️ Edit Expense' : '➕ Record New Expense'}</h3>
+                {expMsg && (
+                  <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:14, fontSize:13, fontWeight:600,
+                    background:expMsg.includes('✅')?'#e8f5e9':'#ffebee',
+                    color:expMsg.includes('✅')?'#2E7D32':'#C62828' }}>{expMsg}</div>
+                )}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+
+                  {/* Description */}
+                  <div className="form-group" style={{ gridColumn:'1/-1' }}>
+                    <label>Description *</label>
+                    <input type="text" placeholder="e.g. Stationery purchase for office" value={expForm.description}
+                      onChange={e => setExpForm(f => ({ ...f, description:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }} />
+                  </div>
+
+                  {/* Amount */}
+                  <div className="form-group">
+                    <label>Amount (₹) *</label>
+                    <input type="number" min="0" placeholder="e.g. 5000" value={expForm.amount}
+                      onChange={e => setExpForm(f => ({ ...f, amount:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }} />
+                  </div>
+
+                  {/* Date */}
+                  <div className="form-group">
+                    <label>Date *</label>
+                    <input type="date" value={expForm.date}
+                      onChange={e => setExpForm(f => ({ ...f, date:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }} />
+                  </div>
+
+                  {/* Category */}
+                  <div className="form-group">
+                    <label>Category *</label>
+                    <select value={expForm.category} onChange={e => setExpForm(f => ({ ...f, category:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }}>
+                      {EXPENSE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Payment Mode */}
+                  <div className="form-group">
+                    <label>Payment Mode *</label>
+                    <select value={expForm.paymentMode} onChange={e => setExpForm(f => ({ ...f, paymentMode:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }}>
+                      {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Academic Year */}
+                  <div className="form-group">
+                    <label>Academic Year *</label>
+                    <select value={expForm.academicYear} onChange={e => setExpForm(f => ({ ...f, academicYear:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }}>
+                      <option value="">Select Year…</option>
+                      {genAcademicYears().map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Paid To */}
+                  <div className="form-group">
+                    <label>Paid To / Vendor</label>
+                    <input type="text" placeholder="e.g. Sharma Stationery Store" value={expForm.paidTo}
+                      onChange={e => setExpForm(f => ({ ...f, paidTo:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }} />
+                  </div>
+
+                  {/* Bill Number */}
+                  <div className="form-group">
+                    <label>Bill / Invoice Number</label>
+                    <input type="text" placeholder="e.g. INV-2025-001" value={expForm.billNumber}
+                      onChange={e => setExpForm(f => ({ ...f, billNumber:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }} />
+                  </div>
+
+                  {/* Bill Upload */}
+                  <div className="form-group">
+                    <label>Bill / Invoice Upload <span style={{fontSize:11,color:'#888'}}>(PDF/JPG/PNG — max 200 KB)</span></label>
+                    <input type="file" accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if (file && file.size > 200*1024) { setExpMsg('❌ File must be under 200 KB.'); e.target.value=''; return; }
+                        setExpForm(f => ({ ...f, billFile:file||null }));
+                        setExpMsg('');
+                      }}
+                      style={{ width:'100%', padding:'7px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }} />
+                    {expForm.billFile && <p style={{fontSize:11,color:'#2E7D32',marginTop:4}}>✅ {expForm.billFile.name}</p>}
+                  </div>
+
+                  {/* Remarks */}
+                  <div className="form-group" style={{ gridColumn:'1/-1' }}>
+                    <label>Remarks / Notes</label>
+                    <textarea rows={2} placeholder="Any additional notes about this expense…" value={expForm.remarks}
+                      onChange={e => setExpForm(f => ({ ...f, remarks:e.target.value }))}
+                      style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, resize:'vertical', boxSizing:'border-box' }} />
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', gap:10, marginTop:16 }}>
+                  <button onClick={saveExpense} disabled={expSubmitting}
+                    style={{ background:'#1565C0', color:'#fff', padding:'11px 28px', borderRadius:8, border:'none', fontWeight:600, fontSize:14, cursor:expSubmitting?'not-allowed':'pointer', opacity:expSubmitting?0.7:1 }}>
+                    {expSubmitting ? '⏳ Saving…' : expEditId ? '💾 Update Expense' : '💾 Save Expense'}
+                  </button>
+                  {expEditId && (
+                    <button onClick={() => { setExpEditId(null); setExpForm({ ...BLANK_EXP_FORM }); setExpMsg(''); }}
+                      style={{ padding:'11px 20px', background:'#eee', color:'#333', border:'none', borderRadius:8, fontSize:14, cursor:'pointer' }}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Filters & Search ── */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:10, marginBottom:16 }}>
+                <input type="text" placeholder="🔍 Search description…" value={expFilters.search}
+                  onChange={e => setExpFilters(f => ({ ...f, search:e.target.value }))}
+                  style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }} />
+                <select value={expFilters.category} onChange={e => setExpFilters(f => ({ ...f, category:e.target.value }))}
+                  style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }}>
+                  <option value="">All Categories</option>
+                  {EXPENSE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+                <select value={expFilters.paymentMode} onChange={e => setExpFilters(f => ({ ...f, paymentMode:e.target.value }))}
+                  style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }}>
+                  <option value="">All Payment Modes</option>
+                  {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+                <select value={expFilters.academicYear} onChange={e => setExpFilters(f => ({ ...f, academicYear:e.target.value }))}
+                  style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }}>
+                  <option value="">All Academic Years</option>
+                  {genAcademicYears().map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <input type="date" value={expFilters.startDate} onChange={e => setExpFilters(f => ({ ...f, startDate:e.target.value }))}
+                  style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }} />
+                <input type="date" value={expFilters.endDate} onChange={e => setExpFilters(f => ({ ...f, endDate:e.target.value }))}
+                  style={{ padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13 }} />
+                <button onClick={() => { fetchExpenses(1); fetchExpStats(); }} disabled={expLoading}
+                  style={{ padding:'8px 16px', background:'#1565C0', color:'#fff', border:'none', borderRadius:8, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+                  🔍 Search
+                </button>
+              </div>
+
+              {/* ── Record count badges ── */}
+              <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+                <span style={{ background:'#e3f2fd', color:'#1565C0', borderRadius:20, padding:'4px 14px', fontSize:12, fontWeight:600 }}>
+                  Showing: {expenses.length} / {expTotal}
+                </span>
+                <span style={{ background:'#f3e5f5', color:'#7B1FA2', borderRadius:20, padding:'4px 14px', fontSize:12, fontWeight:600 }}>
+                  Page {expPage} / {expPages}
+                </span>
+              </div>
+
+              {/* ── Expense List Table ── */}
+              {expLoading ? (
+                <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p><h3>Loading…</h3></div>
+              ) : expenses.length === 0 ? (
+                <div className="empty-state"><div className="empty-icon">🏗️</div><h3>No expenses found</h3></div>
+              ) : (
+                <>
+                  <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.06)', marginBottom:14 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'2fr 1.4fr 0.9fr 1.1fr 1fr 1fr 0.8fr 1fr', background:'#1565C0', padding:'13px 16px', gap:8 }}>
+                      {['Description','Category','Date','Paid To','Payment Mode','Amount','Bill','Actions'].map(h => (
+                        <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
+                      ))}
+                    </div>
+                    {expenses.map((exp, idx) => {
+                      const catLabel = EXPENSE_CATEGORIES.find(c=>c.value===exp.category)?.label || exp.category;
+                      const modeLabel = PAYMENT_MODES.find(m=>m.value===exp.paymentMode)?.label || exp.paymentMode;
+                      return (
+                        <div key={exp._id} style={{ display:'grid', gridTemplateColumns:'2fr 1.4fr 0.9fr 1.1fr 1fr 1fr 0.8fr 1fr', padding:'12px 16px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+                          <div>
+                            <p style={{ fontWeight:600, fontSize:13, color:'#1a1a2e', margin:0 }}>{exp.description}</p>
+                            {exp.remarks && <p style={{ fontSize:11, color:'#888', margin:'2px 0 0' }}>{exp.remarks}</p>}
+                            {exp.billNumber && <p style={{ fontSize:10, color:'#aaa', margin:'1px 0 0' }}>Bill# {exp.billNumber}</p>}
+                          </div>
+                          <span style={{ fontSize:11, color:'#555' }}>{catLabel}</span>
+                          <span style={{ fontSize:12, color:'#555' }}>{exp.date ? new Date(exp.date).toLocaleDateString('en-IN') : '—'}</span>
+                          <span style={{ fontSize:12, color:'#555' }}>{exp.paidTo || '—'}</span>
+                          <span style={{ fontSize:11, color:'#555' }}>{modeLabel}</span>
+                          <span style={{ fontSize:13, fontWeight:700, color:'#C62828' }}>₹{Number(exp.amount).toLocaleString('en-IN')}</span>
+                          <span>
+                            {exp.billFile?.url
+                              ? <a href={exp.billFile.url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:'#1565C0', fontWeight:600 }}>📎 View</a>
+                              : <span style={{ fontSize:11, color:'#ccc' }}>—</span>}
+                          </span>
+                          <div style={{ display:'flex', gap:5 }}>
+                            <button onClick={() => {
+                                setExpEditId(exp._id);
+                                setExpForm({ description:exp.description, amount:exp.amount, date:exp.date?exp.date.slice(0,10):'', category:exp.category, paymentMode:exp.paymentMode||'cash', paidTo:exp.paidTo||'', billNumber:exp.billNumber||'', academicYear:exp.academicYear||'', remarks:exp.remarks||'', billFile:null });
+                                window.scrollTo({top:0,behavior:'smooth'});
+                              }}
+                              style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90caf9', borderRadius:6, padding:'4px 8px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                              ✏️
+                            </button>
+                            <button onClick={() => deleteExpense(exp._id)}
+                              style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:6, padding:'4px 8px', fontSize:11, cursor:'pointer', fontWeight:600 }}>
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Audit footer */}
+                  {expenses.length > 0 && (
+                    <div style={{ fontSize:11, color:'#aaa', padding:'4px 8px' }}>
+                      Last entry — Entered by: <strong>{expenses[0]?.enteredBy || '—'}</strong> | Created: {expenses[0]?.createdAt ? new Date(expenses[0].createdAt).toLocaleString('en-IN') : '—'}
+                      {expenses[0]?.lastModifiedBy && ` | Modified by: ${expenses[0].lastModifiedBy}`}
+                    </div>
+                  )}
+
+                  {/* Pagination */}
+                  {expPages > 1 && (
+                    <div style={{ display:'flex', gap:8, justifyContent:'center', marginTop:14 }}>
+                      {expPage > 1 && (
+                        <button onClick={() => { const p=expPage-1; setExpPage(p); fetchExpenses(p); }}
+                          style={{ padding:'7px 18px', background:'#e3f2fd', color:'#1565C0', border:'1px solid #90caf9', borderRadius:8, fontWeight:600, cursor:'pointer' }}>← Prev</button>
+                      )}
+                      <span style={{ padding:'7px 14px', fontSize:13, fontWeight:600, color:'#555' }}>Page {expPage} of {expPages}</span>
+                      {expPage < expPages && (
+                        <button onClick={() => { const p=expPage+1; setExpPage(p); fetchExpenses(p); }}
+                          style={{ padding:'7px 18px', background:'#1565C0', color:'#fff', border:'none', borderRadius:8, fontWeight:600, cursor:'pointer' }}>Next →</button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
 
-          {/* ════════════════════════ PAYMENT HISTORY ════════════════════════ */}
+                    {/* ════════════════════════ PAYMENT HISTORY ════════════════════════ */}
           {activeTab === 'history' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
