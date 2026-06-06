@@ -351,7 +351,10 @@ const AdminAchievementsTab = ({ showMessage }) => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+useEffect(() => {
+  fetchAll();
+}, []);
 
   const handleSave = async () => {
     if (!form.title.trim())       return showMessage('❌ Title is required');
