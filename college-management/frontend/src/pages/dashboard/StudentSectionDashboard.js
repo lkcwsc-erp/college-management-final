@@ -862,7 +862,7 @@ const printTC = (adm) => {
     }
   </style></head><body>
   <div class="page">
-  <img src="/College logo.png" class="logo"/>
+  <img src="/ College logo.png" class="logo"/>
     <div class="hdr">
       <div class="htxt">
         <div class="h1">Vidya Niketan Sevabhavi Sanstha, Dongargaon (She.)</div>
@@ -957,7 +957,7 @@ const printBonafide = (adm) => {
     ? 'Bachelor of Arts (B.A.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
     : (adm.courseType||'') + (adm.preferredSubject?' — '+adm.preferredSubject:'');
 
-  const logo = "/College-logo.png";
+  const logo = "/ College-logo.png";
   const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -1029,7 +1029,7 @@ const printBonafide = (adm) => {
 
 
 const printIDCard = (adm) => {
-  const logo = "/College-logo.png";
+  const logo = "/ College-logo.png";
 
   const validYear = new Date().getFullYear();
   const dobStr = adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}) : '--';
