@@ -85,6 +85,599 @@ const AdminDeleteRequestsTab = () => {
 };
 
 
+// ─── Shared Payment Receipts Tab ─────────────────────────────────────────────
+const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
+  const [receipts, setReceipts]     = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [search, setSearch]         = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [errMsg, setErrMsg]         = useState("");
+
+  const fetchReceipts = async () => {
+    setLoading(true); setErrMsg("");
+    try {
+      const res = await API.get("/admissions/receipts/all");
+      setReceipts(res.data.receipts || []);
+    } catch (e) { setErrMsg("Failed to load: " + (e.response?.data?.message || "Error")); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchReceipts(); }, []);
+
+  const filtered = receipts.filter(r => {
+    const q  = search.toLowerCase();
+    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q) || r.studentId?.toLowerCase().includes(q) || r.receiptNo?.toLowerCase().includes(q);
+    const mt = typeFilter === "all" || r.feeType === typeFilter;
+    const now = new Date(); let md = true;
+    if (dateFilter === "today") { const d = new Date(r.paidAt); md = d.toDateString() === now.toDateString(); }
+    else if (dateFilter === "week") { const d = new Date(r.paidAt); md = (now - d) <= 7*24*60*60*1000; }
+    else if (dateFilter === "month") { const d = new Date(r.paidAt); md = d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
+    return mq && mt && md;
+  });
+
+  const totalAmount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+  const feeTypes = [...new Set(receipts.map(r => r.feeType).filter(Boolean))];
+
+  return (
+    <div>
+      <h2 style={{ color: themeColor, marginBottom: 4 }}>🧾 Payment Receipts</h2>
+      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>All fee receipts collected by Accounts Section.</p>
+      {errMsg && <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 14, fontSize: 14, background: "#ffebee", color: "#C62828" }}>{errMsg}</div>}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ background: "#e8f5e9", color: "#2E7D32", borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>💰 Total: ₹{totalAmount.toLocaleString("en-IN")}</div>
+        <div style={{ background: "#e3f2fd", color: themeColor, borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>🧾 Count: {filtered.length}</div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <input type="text" placeholder="🔍 Name, ID, receipt no..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 9, border: "1px solid #ddd", fontSize: 14 }} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Fee Types</option>
+          {feeTypes.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <button onClick={fetchReceipts} style={{ padding: "9px 14px", background: "#f0f4ff", color: themeColor, border: "1px solid #ddd", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🔄</button>
+      </div>
+      {loading ? <div className="empty-state"><p style={{fontSize:"2rem"}}>⏳</p><h3>Loading...</h3></div>
+      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts found</h3></div>
+      : (
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e0e7ef", boxShadow: "0 2px 10px rgba(0,0,0,.06)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", background: themeColor, padding: "12px 16px", gap: 8 }}>
+            {["Receipt No","Student","Email","Fee Type","Amount","Mode","Date"].map(h => <span key={h} style={{color:"#fff",fontWeight:700,fontSize:12}}>{h}</span>)}
+          </div>
+          {filtered.map((r, idx) => (
+            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", padding: "11px 16px", gap: 8, alignItems: "center", borderBottom: "1px solid #f0f4f8", background: idx%2===0?"#fafbff":"#fff" }}>
+              <span style={{fontSize:11,fontFamily:"monospace",color:themeColor,fontWeight:700}}>{r.receiptNo||"—"}</span>
+              <div><p style={{fontWeight:600,fontSize:13,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:"#888",margin:0}}>{r.studentId||""} · {r.admissionYear||""}</p></div>
+              <span style={{fontSize:11,color:"#555"}}>{r.studentEmail}</span>
+              <span style={{fontSize:12}}>{r.feeTypeLabel||r.feeType||"—"}</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>₹{(r.amount||0).toLocaleString("en-IN")}</span>
+              <span style={{fontSize:11,background:r.paymentMode==="online"?"#e3f2fd":"#e8f5e9",color:r.paymentMode==="online"?"#1565C0":"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:600}}>{r.paymentMode==="online"?"🌐 Online":"💵 Cash"}</span>
+              <span style={{fontSize:11,color:"#888"}}>{r.paidAt?new Date(r.paidAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}</span>
+            </div>
+          ))}
+          <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Admin Messaging Component ─────────────────────────────────────────────────
+const AdminMessagingTab = ({ user, showMessage }) => {
+  const [admissions, setAdmissions] = React.useState([]);
+  const [staff, setStaff]           = React.useState([]);
+  const [loading, setLoading]       = React.useState(false);
+  const [subject, setSubject]       = React.useState('');
+  const [message, setMessage]       = React.useState('');
+  const [target, setTarget]         = React.useState('all_students'); // all_students | all_staff | specific
+  const [selected, setSelected]     = React.useState([]); // specific emails
+  const [sending, setSending]       = React.useState(false);
+  const [msg, setMsg]               = React.useState('');
+  const [search, setSearch]         = React.useState('');
+
+  React.useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      API.get('/admissions/staff-view/all').catch(() => ({ data: { admissions: [] } })),
+      API.get('/auth/staff').catch(() => ({ data: { staff: [] } })),
+    ]).then(([admRes, staffRes]) => {
+      setAdmissions(admRes.data.admissions || []);
+      setStaff(staffRes.data.staff || []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const getRecipients = () => {
+    if (target === 'all_students') return admissions.map(a => ({ email: a.email, name: a.applicantName }));
+    if (target === 'all_staff')    return staff.map(s => ({ email: s.email, name: s.name }));
+    return selected.map(email => {
+      const adm = admissions.find(a => a.email === email);
+      const st  = staff.find(s => s.email === email);
+      return { email, name: adm?.applicantName || st?.name || email };
+    });
+  };
+
+  const handleSend = async () => {
+    if (!subject.trim() || !message.trim()) { setMsg('❌ Subject and message are required.'); return; }
+    const recipients = getRecipients();
+    if (recipients.length === 0) { setMsg('❌ No recipients selected.'); return; }
+    if (!window.confirm(`Send message to ${recipients.length} recipient(s)?`)) return;
+
+    setSending(true);
+    try {
+      const res = await API.post('/auth/send-message', { recipients, subject, message });
+      setMsg(`✅ Sent to ${res.data.sent} recipient(s).${res.data.failed > 0 ? ` ${res.data.failed} failed.` : ''}`);
+      setSubject(''); setMessage(''); setSelected([]);
+      setTimeout(() => setMsg(''), 5000);
+    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to send')); }
+    finally { setSending(false); }
+  };
+
+  const allPeople = [
+    ...admissions.map(a => ({ email: a.email, name: a.applicantName, type: 'student', course: a.courseType, year: a.admissionYear })),
+    ...staff.map(s => ({ email: s.email, name: s.name, type: 'staff', role: s.role })),
+  ].filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.email?.toLowerCase().includes(search.toLowerCase()));
+
+  const recipients = getRecipients();
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>✉️ Send Message</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Send email messages to students and staff directly from the portal.</p>
+
+      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        {/* Left — compose */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24 }}>
+          <h4 style={{ color: '#1565C0', marginBottom: 16 }}>📝 Compose Message</h4>
+
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Send To</label>
+            <select value={target} onChange={e => { setTarget(e.target.value); setSelected([]); }}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
+              <option value="all_students">👩‍🎓 All Students ({admissions.length})</option>
+              <option value="all_staff">👨‍💼 All Staff ({staff.length})</option>
+              <option value="specific">🎯 Specific People</option>
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Subject *</label>
+            <input type="text" placeholder="e.g. Exam Schedule Notice" value={subject} onChange={e => setSubject(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Message *</label>
+            <textarea rows="6" placeholder="Type your message here..." value={message} onChange={e => setMessage(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+
+          <div style={{ background: '#f0f9ff', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#1565C0' }}>
+            📨 Will be sent to: <strong>{recipients.length} recipient(s)</strong>
+            {target === 'all_students' && ` — All ${admissions.length} students`}
+            {target === 'all_staff' && ` — All ${staff.length} staff members`}
+          </div>
+
+          <button onClick={handleSend} disabled={sending || !subject || !message || recipients.length === 0}
+            style={{ width: '100%', background: sending ? '#aaa' : '#1565C0', color: '#fff', border: 'none', borderRadius: 9, padding: '13px', fontSize: 15, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', opacity: (!subject || !message || recipients.length === 0) ? 0.6 : 1 }}>
+            {sending ? '⏳ Sending...' : `✉️ Send to ${recipients.length} Recipient(s)`}
+          </button>
+        </div>
+
+        {/* Right — select specific */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24 }}>
+          <h4 style={{ color: '#1565C0', marginBottom: 14 }}>
+            {target === 'specific' ? '🎯 Select Recipients' : '👥 Preview Recipients'}
+          </h4>
+
+          <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, marginBottom: 12, boxSizing: 'border-box' }} />
+
+          {loading ? <div style={{ textAlign: 'center', color: '#888', padding: 20 }}>⏳ Loading...</div> : (
+            <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #f0f4f8', borderRadius: 8 }}>
+              {allPeople.slice(0, 50).map((p, i) => {
+                const isSelected = target === 'specific' ? selected.includes(p.email) :
+                  (target === 'all_students' ? p.type === 'student' : p.type === 'staff');
+                return (
+                  <div key={i} onClick={() => {
+                    if (target !== 'specific') return;
+                    setSelected(prev => prev.includes(p.email) ? prev.filter(e => e !== p.email) : [...prev, p.email]);
+                  }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid #f0f4f8', cursor: target === 'specific' ? 'pointer' : 'default', background: isSelected ? '#e8f5e9' : '#fff' }}>
+                    <span style={{ fontSize: 14 }}>{isSelected ? '✅' : (target === 'specific' ? '⬜' : '•')}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 600, fontSize: 13, margin: 0, color: '#1a1a2e' }}>{p.name}</p>
+                      <p style={{ fontSize: 11, color: '#888', margin: 0 }}>{p.email} · {p.type === 'student' ? `${p.course} ${p.year}` : p.role}</p>
+                    </div>
+                    <span style={{ fontSize: 10, background: p.type === 'student' ? '#e3f2fd' : '#e8f5e9', color: p.type === 'student' ? '#1565C0' : '#2E7D32', padding: '1px 7px', borderRadius: 10, fontWeight: 600 }}>
+                      {p.type}
+                    </span>
+                  </div>
+                );
+              })}
+              {allPeople.length > 50 && <div style={{ padding: '8px 12px', fontSize: 12, color: '#888', textAlign: 'center' }}>Showing 50 of {allPeople.length}. Search to filter.</div>}
+            </div>
+          )}
+
+          {target === 'specific' && selected.length > 0 && (
+            <div style={{ marginTop: 10, background: '#e8f5e9', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#2E7D32', fontWeight: 600 }}>
+              ✅ {selected.length} recipient(s) selected
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// ─── Admin Achievements Tab ──────────────────────────────────────────────────
+const ACHIEVEMENT_ICONS = ['🏆','🎖️','🌟','🔬','🎭','⚽','🤝','💡','📚','🎓','🏅','🥇','🎗️','🏛️','🔭','🎨','🏋️','🧪','💻','📜'];
+const ACHIEVEMENT_CATEGORIES = [
+  { value: 'academic',  label: '📚 Academic' },
+  { value: 'sports',    label: '⚽ Sports' },
+  { value: 'cultural',  label: '🎭 Cultural' },
+  { value: 'research',  label: '🔬 Research' },
+  { value: 'social',    label: '🤝 Social / NSS' },
+  { value: 'award',     label: '🏅 Award' },
+  { value: 'other',     label: '📦 Other' },
+];
+const BLANK_ACH = { icon: '🏆', title: '', description: '', category: 'academic', year: '', order: 0, isActive: true };
+
+const AdminAchievementsTab = ({ showMessage }) => {
+  const [achievements, setAchievements] = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [form, setForm]                 = useState(BLANK_ACH);
+  const [editingId, setEditingId]       = useState(null);
+  const [saving, setSaving]             = useState(false);
+  const [showForm, setShowForm]         = useState(false);
+
+  const fetchAll = () => {
+    setLoading(true);
+    API.get('/achievements/all')
+      .then(res => setAchievements(res.data.achievements || []))
+      .catch(() => showMessage('❌ Failed to load achievements'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const handleSave = async () => {
+    if (!form.title.trim())       return showMessage('❌ Title is required');
+    if (!form.description.trim()) return showMessage('❌ Description is required');
+    setSaving(true);
+    try {
+      if (editingId) {
+        await API.put(`/achievements/${editingId}`, form);
+        showMessage('✅ Achievement updated!');
+      } else {
+        await API.post('/achievements', form);
+        showMessage('✅ Achievement added!');
+      }
+      setForm(BLANK_ACH); setEditingId(null); setShowForm(false); fetchAll();
+    } catch (e) {
+      showMessage('❌ ' + (e.response?.data?.message || 'Failed to save'));
+    } finally { setSaving(false); }
+  };
+
+  const handleEdit = (a) => {
+    setForm({ icon: a.icon, title: a.title, description: a.description, category: a.category, year: a.year || '', order: a.order || 0, isActive: a.isActive });
+    setEditingId(a._id); setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this achievement?')) return;
+    try {
+      await API.delete(`/achievements/${id}`);
+      showMessage('🗑️ Achievement deleted'); fetchAll();
+    } catch (e) { showMessage('❌ Failed to delete'); }
+  };
+
+  const handleToggle = async (a) => {
+    try {
+      await API.put(`/achievements/${a._id}`, { ...a, isActive: !a.isActive });
+      showMessage(`${!a.isActive ? '✅ Shown' : '🙈 Hidden'} on website`); fetchAll();
+    } catch (e) { showMessage('❌ Failed to update'); }
+  };
+
+  const S = {
+    card:   { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:12, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:   { padding:'12px 16px' },
+    label:  { display:'block', fontWeight:600, fontSize:13, color:'#374151', marginBottom:5 },
+    input:  { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    select: { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, background:'#fff', boxSizing:'border-box' },
+    btn:    (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'7px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }),
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0, color:'#1565C0' }}>🏆 Achievements ({achievements.length})</h3>
+        <button style={S.btn('#1565C0')} onClick={() => { setForm(BLANK_ACH); setEditingId(null); setShowForm(!showForm); }}>
+          {showForm ? '✖ Close Form' : '➕ Add Achievement'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{ ...S.card, border:'2px solid #1565C0', marginBottom:24 }}>
+          <div style={{ ...S.header, background:'#e3f2fd' }}>
+            <strong style={{ color:'#1565C0' }}>{editingId ? '✏️ Edit Achievement' : '➕ New Achievement'}</strong>
+          </div>
+          <div style={S.body}>
+            <div style={{ marginBottom:16 }}>
+              <label style={S.label}>Icon</label>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:8 }}>
+                {ACHIEVEMENT_ICONS.map(ic => (
+                  <button key={ic} onClick={() => setForm({...form, icon: ic})}
+                    style={{ fontSize:22, background: form.icon===ic ? '#e3f2fd' : 'transparent', border: form.icon===ic ? '2px solid #1565C0' : '2px solid transparent', borderRadius:8, padding:'4px 8px', cursor:'pointer' }}>
+                    {ic}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize:28 }}>Selected: {form.icon}</div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px,1fr))', gap:14, marginBottom:14 }}>
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={S.label}>Title *</label>
+                <input style={S.input} type="text" placeholder="e.g. University Rank Holders"
+                  value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
+              </div>
+              <div>
+                <label style={S.label}>Category</label>
+                <select style={S.select} value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
+                  {ACHIEVEMENT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>Year (optional)</label>
+                <input style={S.input} type="text" placeholder="e.g. 2024-25"
+                  value={form.year} onChange={e => setForm({...form, year: e.target.value})} />
+              </div>
+              <div>
+                <label style={S.label}>Display Order</label>
+                <input style={S.input} type="number" min="0"
+                  value={form.order} onChange={e => setForm({...form, order: Number(e.target.value)})} />
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:22 }}>
+                <input type="checkbox" id="achIsActive" checked={form.isActive}
+                  onChange={e => setForm({...form, isActive: e.target.checked})}
+                  style={{ width:18, height:18, cursor:'pointer' }} />
+                <label htmlFor="achIsActive" style={{ fontWeight:600, fontSize:13, cursor:'pointer' }}>Show on website</label>
+              </div>
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={S.label}>Description *</label>
+                <textarea style={{ ...S.input, minHeight:80, resize:'vertical' }}
+                  placeholder="Describe the achievement..."
+                  value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button style={S.btn('#2E7D32')} onClick={handleSave} disabled={saving}>
+                {saving ? '⏳ Saving...' : (editingId ? '💾 Update' : '💾 Save')}
+              </button>
+              <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setShowForm(false); setEditingId(null); setForm(BLANK_ACH); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>⏳ Loading...</div>
+      ) : achievements.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
+          <div style={{ fontSize:40 }}>🏆</div>
+          <h3>No achievements yet. Click "Add Achievement" to add one.</h3>
+        </div>
+      ) : (
+        achievements.map(a => (
+          <div key={a._id} style={{ ...S.card, opacity: a.isActive ? 1 : 0.6 }}>
+            <div style={S.header}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:26 }}>{a.icon}</span>
+                <div>
+                  <strong style={{ fontSize:14 }}>{a.title}</strong>
+                  {a.year && <span style={{ fontSize:11, color:'#1565C0', marginLeft:8 }}>📅 {a.year}</span>}
+                  <div style={{ fontSize:11, color:'#888', marginTop:2 }}>
+                    {ACHIEVEMENT_CATEGORIES.find(c=>c.value===a.category)?.label || a.category} · Order: {a.order}
+                  </div>
+                </div>
+              </div>
+              <span style={{ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: a.isActive?'#e8f5e9':'#ffebee', color: a.isActive?'#2E7D32':'#C62828' }}>
+                {a.isActive ? '✅ Visible' : '🙈 Hidden'}
+              </span>
+            </div>
+            <div style={S.body}>
+              <p style={{ fontSize:13, color:'#555', margin:'0 0 12px' }}>{a.description}</p>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <button style={S.btn('#1565C0')} onClick={() => handleEdit(a)}>✏️ Edit</button>
+                <button style={S.btn(a.isActive?'#455a64':'#2E7D32')} onClick={() => handleToggle(a)}>
+                  {a.isActive ? '🙈 Hide' : '👁️ Show'}
+                </button>
+                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(a._id)}>🗑️ Delete</button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+
+const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
+  const [editingId, setEditingId]   = useState(null);
+  const [replyText, setReplyText]   = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [search, setSearch]         = useState('');
+  const [filter, setFilter]         = useState('all');
+
+  const refreshContacts = () => {
+    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
+  };
+
+  const handleMarkRead = async (id) => {
+    try {
+      await API.put(`/contact/${id}/read`);
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to mark as read'); }
+  };
+
+  const handleSaveReply = async (id) => {
+    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
+    setSaving(true);
+    try {
+      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
+      showMessage('✅ Reply saved successfully!');
+      setEditingId(null);
+      setReplyText('');
+      refreshContacts();
+    } catch (e) {
+      showMessage('❌ Failed to save reply');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    try {
+      await API.delete(`/contact/${id}`);
+      showMessage('🗑️ Message deleted');
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to delete'); }
+  };
+
+  const filtered = contacts.filter(c => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.subject.toLowerCase().includes(q) ||
+      c.message.toLowerCase().includes(q);
+    const matchFilter =
+      filter === 'all'     ? true :
+      filter === 'unread'  ? !c.isRead :
+      filter === 'replied' ? !!c.adminReply :
+      true;
+    return matchSearch && matchFilter;
+  });
+
+  const S = {
+    card:      { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header:    { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:      { padding:'14px 18px' },
+    badge:     (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
+    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
+    btn:       (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
+    input:     { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    textarea:  { width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {['all','unread','replied'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
+              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <input style={{ ...S.input, marginBottom:16 }}
+        type="text" placeholder="🔍 Search by name, email, subject..."
+        value={search} onChange={e => setSearch(e.target.value)} />
+
+      {filtered.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
+          <div style={{ fontSize:40 }}>📭</div>
+          <h3>No messages found</h3>
+        </div>
+      ) : (
+        filtered.map(c => (
+          <div key={c._id} style={S.card}>
+            <div style={S.header}>
+              <div>
+                <strong style={{ fontSize:15 }}>{c.name}</strong>
+                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
+              </div>
+              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
+                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
+                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+              </div>
+            </div>
+            <div style={S.body}>
+              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
+                📧 {c.email}
+                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
+              </div>
+              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
+                {c.message}
+              </div>
+              {c.adminReply && editingId !== c._id && (
+                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
+                  <strong>Admin Reply:</strong> {c.adminReply}
+                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
+                </div>
+              )}
+              {editingId === c._id && (
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
+                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
+                  </label>
+                  <textarea style={S.textarea}
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="Type your reply here..." />
+                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
+                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
+                    </button>
+                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <button style={S.btn('#1565C0')}
+                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
+                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
+                </button>
+                {!c.isRead && (
+                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
+                    👁️ Mark as Read
+                  </button>
+                )}
+                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -855,598 +1448,5 @@ const AdminDashboard = () => {
   );
 };
 
-
-// ─── Shared Payment Receipts Tab ─────────────────────────────────────────────
-const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
-  const [receipts, setReceipts]     = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [search, setSearch]         = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [errMsg, setErrMsg]         = useState("");
-
-  const fetchReceipts = async () => {
-    setLoading(true); setErrMsg("");
-    try {
-      const res = await API.get("/admissions/receipts/all");
-      setReceipts(res.data.receipts || []);
-    } catch (e) { setErrMsg("Failed to load: " + (e.response?.data?.message || "Error")); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchReceipts(); }, []);
-
-  const filtered = receipts.filter(r => {
-    const q  = search.toLowerCase();
-    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q) || r.studentId?.toLowerCase().includes(q) || r.receiptNo?.toLowerCase().includes(q);
-    const mt = typeFilter === "all" || r.feeType === typeFilter;
-    const now = new Date(); let md = true;
-    if (dateFilter === "today") { const d = new Date(r.paidAt); md = d.toDateString() === now.toDateString(); }
-    else if (dateFilter === "week") { const d = new Date(r.paidAt); md = (now - d) <= 7*24*60*60*1000; }
-    else if (dateFilter === "month") { const d = new Date(r.paidAt); md = d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
-    return mq && mt && md;
-  });
-
-  const totalAmount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
-  const feeTypes = [...new Set(receipts.map(r => r.feeType).filter(Boolean))];
-
-  return (
-    <div>
-      <h2 style={{ color: themeColor, marginBottom: 4 }}>🧾 Payment Receipts</h2>
-      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>All fee receipts collected by Accounts Section.</p>
-      {errMsg && <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 14, fontSize: 14, background: "#ffebee", color: "#C62828" }}>{errMsg}</div>}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <div style={{ background: "#e8f5e9", color: "#2E7D32", borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>💰 Total: ₹{totalAmount.toLocaleString("en-IN")}</div>
-        <div style={{ background: "#e3f2fd", color: themeColor, borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>🧾 Count: {filtered.length}</div>
-      </div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <input type="text" placeholder="🔍 Name, ID, receipt no..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 9, border: "1px solid #ddd", fontSize: 14 }} />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
-          <option value="all">All Fee Types</option>
-          {feeTypes.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}
-          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
-          <option value="all">All Time</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-        </select>
-        <button onClick={fetchReceipts} style={{ padding: "9px 14px", background: "#f0f4ff", color: themeColor, border: "1px solid #ddd", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🔄</button>
-      </div>
-      {loading ? <div className="empty-state"><p style={{fontSize:"2rem"}}>⏳</p><h3>Loading...</h3></div>
-      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts found</h3></div>
-      : (
-        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e0e7ef", boxShadow: "0 2px 10px rgba(0,0,0,.06)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", background: themeColor, padding: "12px 16px", gap: 8 }}>
-            {["Receipt No","Student","Email","Fee Type","Amount","Mode","Date"].map(h => <span key={h} style={{color:"#fff",fontWeight:700,fontSize:12}}>{h}</span>)}
-          </div>
-          {filtered.map((r, idx) => (
-            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", padding: "11px 16px", gap: 8, alignItems: "center", borderBottom: "1px solid #f0f4f8", background: idx%2===0?"#fafbff":"#fff" }}>
-              <span style={{fontSize:11,fontFamily:"monospace",color:themeColor,fontWeight:700}}>{r.receiptNo||"—"}</span>
-              <div><p style={{fontWeight:600,fontSize:13,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:"#888",margin:0}}>{r.studentId||""} · {r.admissionYear||""}</p></div>
-              <span style={{fontSize:11,color:"#555"}}>{r.studentEmail}</span>
-              <span style={{fontSize:12}}>{r.feeTypeLabel||r.feeType||"—"}</span>
-              <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>₹{(r.amount||0).toLocaleString("en-IN")}</span>
-              <span style={{fontSize:11,background:r.paymentMode==="online"?"#e3f2fd":"#e8f5e9",color:r.paymentMode==="online"?"#1565C0":"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:600}}>{r.paymentMode==="online"?"🌐 Online":"💵 Cash"}</span>
-              <span style={{fontSize:11,color:"#888"}}>{r.paidAt?new Date(r.paidAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}</span>
-            </div>
-          ))}
-          <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
-            <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ── Admin Messaging Component ─────────────────────────────────────────────────
-const AdminMessagingTab = ({ user, showMessage }) => {
-  const [admissions, setAdmissions] = React.useState([]);
-  const [staff, setStaff]           = React.useState([]);
-  const [loading, setLoading]       = React.useState(false);
-  const [subject, setSubject]       = React.useState('');
-  const [message, setMessage]       = React.useState('');
-  const [target, setTarget]         = React.useState('all_students'); // all_students | all_staff | specific
-  const [selected, setSelected]     = React.useState([]); // specific emails
-  const [sending, setSending]       = React.useState(false);
-  const [msg, setMsg]               = React.useState('');
-  const [search, setSearch]         = React.useState('');
-
-  React.useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      API.get('/admissions/staff-view/all').catch(() => ({ data: { admissions: [] } })),
-      API.get('/auth/staff').catch(() => ({ data: { staff: [] } })),
-    ]).then(([admRes, staffRes]) => {
-      setAdmissions(admRes.data.admissions || []);
-      setStaff(staffRes.data.staff || []);
-    }).finally(() => setLoading(false));
-  }, []);
-
-  const getRecipients = () => {
-    if (target === 'all_students') return admissions.map(a => ({ email: a.email, name: a.applicantName }));
-    if (target === 'all_staff')    return staff.map(s => ({ email: s.email, name: s.name }));
-    return selected.map(email => {
-      const adm = admissions.find(a => a.email === email);
-      const st  = staff.find(s => s.email === email);
-      return { email, name: adm?.applicantName || st?.name || email };
-    });
-  };
-
-  const handleSend = async () => {
-    if (!subject.trim() || !message.trim()) { setMsg('❌ Subject and message are required.'); return; }
-    const recipients = getRecipients();
-    if (recipients.length === 0) { setMsg('❌ No recipients selected.'); return; }
-    if (!window.confirm(`Send message to ${recipients.length} recipient(s)?`)) return;
-
-    setSending(true);
-    try {
-      const res = await API.post('/auth/send-message', { recipients, subject, message });
-      setMsg(`✅ Sent to ${res.data.sent} recipient(s).${res.data.failed > 0 ? ` ${res.data.failed} failed.` : ''}`);
-      setSubject(''); setMessage(''); setSelected([]);
-      setTimeout(() => setMsg(''), 5000);
-    } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed to send')); }
-    finally { setSending(false); }
-  };
-
-  const allPeople = [
-    ...admissions.map(a => ({ email: a.email, name: a.applicantName, type: 'student', course: a.courseType, year: a.admissionYear })),
-    ...staff.map(s => ({ email: s.email, name: s.name, type: 'staff', role: s.role })),
-  ].filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.email?.toLowerCase().includes(search.toLowerCase()));
-
-  const recipients = getRecipients();
-
-  return (
-    <div>
-      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>✉️ Send Message</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Send email messages to students and staff directly from the portal.</p>
-
-      {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        {/* Left — compose */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24 }}>
-          <h4 style={{ color: '#1565C0', marginBottom: 16 }}>📝 Compose Message</h4>
-
-          <div className="form-group" style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Send To</label>
-            <select value={target} onChange={e => { setTarget(e.target.value); setSelected([]); }}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
-              <option value="all_students">👩‍🎓 All Students ({admissions.length})</option>
-              <option value="all_staff">👨‍💼 All Staff ({staff.length})</option>
-              <option value="specific">🎯 Specific People</option>
-            </select>
-          </div>
-
-          <div className="form-group" style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Subject *</label>
-            <input type="text" placeholder="e.g. Exam Schedule Notice" value={subject} onChange={e => setSubject(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' }} />
-          </div>
-
-          <div className="form-group" style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#333', marginBottom: 6 }}>Message *</label>
-            <textarea rows="6" placeholder="Type your message here..." value={message} onChange={e => setMessage(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
-          </div>
-
-          <div style={{ background: '#f0f9ff', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#1565C0' }}>
-            📨 Will be sent to: <strong>{recipients.length} recipient(s)</strong>
-            {target === 'all_students' && ` — All ${admissions.length} students`}
-            {target === 'all_staff' && ` — All ${staff.length} staff members`}
-          </div>
-
-          <button onClick={handleSend} disabled={sending || !subject || !message || recipients.length === 0}
-            style={{ width: '100%', background: sending ? '#aaa' : '#1565C0', color: '#fff', border: 'none', borderRadius: 9, padding: '13px', fontSize: 15, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', opacity: (!subject || !message || recipients.length === 0) ? 0.6 : 1 }}>
-            {sending ? '⏳ Sending...' : `✉️ Send to ${recipients.length} Recipient(s)`}
-          </button>
-        </div>
-
-        {/* Right — select specific */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24 }}>
-          <h4 style={{ color: '#1565C0', marginBottom: 14 }}>
-            {target === 'specific' ? '🎯 Select Recipients' : '👥 Preview Recipients'}
-          </h4>
-
-          <input type="text" placeholder="🔍 Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, marginBottom: 12, boxSizing: 'border-box' }} />
-
-          {loading ? <div style={{ textAlign: 'center', color: '#888', padding: 20 }}>⏳ Loading...</div> : (
-            <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #f0f4f8', borderRadius: 8 }}>
-              {allPeople.slice(0, 50).map((p, i) => {
-                const isSelected = target === 'specific' ? selected.includes(p.email) :
-                  (target === 'all_students' ? p.type === 'student' : p.type === 'staff');
-                return (
-                  <div key={i} onClick={() => {
-                    if (target !== 'specific') return;
-                    setSelected(prev => prev.includes(p.email) ? prev.filter(e => e !== p.email) : [...prev, p.email]);
-                  }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid #f0f4f8', cursor: target === 'specific' ? 'pointer' : 'default', background: isSelected ? '#e8f5e9' : '#fff' }}>
-                    <span style={{ fontSize: 14 }}>{isSelected ? '✅' : (target === 'specific' ? '⬜' : '•')}</span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600, fontSize: 13, margin: 0, color: '#1a1a2e' }}>{p.name}</p>
-                      <p style={{ fontSize: 11, color: '#888', margin: 0 }}>{p.email} · {p.type === 'student' ? `${p.course} ${p.year}` : p.role}</p>
-                    </div>
-                    <span style={{ fontSize: 10, background: p.type === 'student' ? '#e3f2fd' : '#e8f5e9', color: p.type === 'student' ? '#1565C0' : '#2E7D32', padding: '1px 7px', borderRadius: 10, fontWeight: 600 }}>
-                      {p.type}
-                    </span>
-                  </div>
-                );
-              })}
-              {allPeople.length > 50 && <div style={{ padding: '8px 12px', fontSize: 12, color: '#888', textAlign: 'center' }}>Showing 50 of {allPeople.length}. Search to filter.</div>}
-            </div>
-          )}
-
-          {target === 'specific' && selected.length > 0 && (
-            <div style={{ marginTop: 10, background: '#e8f5e9', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#2E7D32', fontWeight: 600 }}>
-              ✅ {selected.length} recipient(s) selected
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-// ─── Admin Achievements Tab ──────────────────────────────────────────────────
-const ACHIEVEMENT_ICONS = ['🏆','🎖️','🌟','🔬','🎭','⚽','🤝','💡','📚','🎓','🏅','🥇','🎗️','🏛️','🔭','🎨','🏋️','🧪','💻','📜'];
-const ACHIEVEMENT_CATEGORIES = [
-  { value: 'academic',  label: '📚 Academic' },
-  { value: 'sports',    label: '⚽ Sports' },
-  { value: 'cultural',  label: '🎭 Cultural' },
-  { value: 'research',  label: '🔬 Research' },
-  { value: 'social',    label: '🤝 Social / NSS' },
-  { value: 'award',     label: '🏅 Award' },
-  { value: 'other',     label: '📦 Other' },
-];
-const BLANK_ACH = { icon: '🏆', title: '', description: '', category: 'academic', year: '', order: 0, isActive: true };
-
-const AdminAchievementsTab = ({ showMessage }) => {
-  const [achievements, setAchievements] = useState([]);
-  const [loading, setLoading]           = useState(false);
-  const [form, setForm]                 = useState(BLANK_ACH);
-  const [editingId, setEditingId]       = useState(null);
-  const [saving, setSaving]             = useState(false);
-  const [showForm, setShowForm]         = useState(false);
-
-  const fetchAll = () => {
-    setLoading(true);
-    API.get('/achievements/all')
-      .then(res => setAchievements(res.data.achievements || []))
-      .catch(() => showMessage('❌ Failed to load achievements'))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchAll(); }, []);
-
-  const handleSave = async () => {
-    if (!form.title.trim())       return showMessage('❌ Title is required');
-    if (!form.description.trim()) return showMessage('❌ Description is required');
-    setSaving(true);
-    try {
-      if (editingId) {
-        await API.put(`/achievements/${editingId}`, form);
-        showMessage('✅ Achievement updated!');
-      } else {
-        await API.post('/achievements', form);
-        showMessage('✅ Achievement added!');
-      }
-      setForm(BLANK_ACH); setEditingId(null); setShowForm(false); fetchAll();
-    } catch (e) {
-      showMessage('❌ ' + (e.response?.data?.message || 'Failed to save'));
-    } finally { setSaving(false); }
-  };
-
-  const handleEdit = (a) => {
-    setForm({ icon: a.icon, title: a.title, description: a.description, category: a.category, year: a.year || '', order: a.order || 0, isActive: a.isActive });
-    setEditingId(a._id); setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this achievement?')) return;
-    try {
-      await API.delete(`/achievements/${id}`);
-      showMessage('🗑️ Achievement deleted'); fetchAll();
-    } catch (e) { showMessage('❌ Failed to delete'); }
-  };
-
-  const handleToggle = async (a) => {
-    try {
-      await API.put(`/achievements/${a._id}`, { ...a, isActive: !a.isActive });
-      showMessage(`${!a.isActive ? '✅ Shown' : '🙈 Hidden'} on website`); fetchAll();
-    } catch (e) { showMessage('❌ Failed to update'); }
-  };
-
-  const S = {
-    card:   { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:12, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
-    header: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
-    body:   { padding:'12px 16px' },
-    label:  { display:'block', fontWeight:600, fontSize:13, color:'#374151', marginBottom:5 },
-    input:  { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
-    select: { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, background:'#fff', boxSizing:'border-box' },
-    btn:    (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'7px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }),
-  };
-
-  return (
-    <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
-        <h3 style={{ margin:0, color:'#1565C0' }}>🏆 Achievements ({achievements.length})</h3>
-        <button style={S.btn('#1565C0')} onClick={() => { setForm(BLANK_ACH); setEditingId(null); setShowForm(!showForm); }}>
-          {showForm ? '✖ Close Form' : '➕ Add Achievement'}
-        </button>
-      </div>
-
-      {showForm && (
-        <div style={{ ...S.card, border:'2px solid #1565C0', marginBottom:24 }}>
-          <div style={{ ...S.header, background:'#e3f2fd' }}>
-            <strong style={{ color:'#1565C0' }}>{editingId ? '✏️ Edit Achievement' : '➕ New Achievement'}</strong>
-          </div>
-          <div style={S.body}>
-            <div style={{ marginBottom:16 }}>
-              <label style={S.label}>Icon</label>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:8 }}>
-                {ACHIEVEMENT_ICONS.map(ic => (
-                  <button key={ic} onClick={() => setForm({...form, icon: ic})}
-                    style={{ fontSize:22, background: form.icon===ic ? '#e3f2fd' : 'transparent', border: form.icon===ic ? '2px solid #1565C0' : '2px solid transparent', borderRadius:8, padding:'4px 8px', cursor:'pointer' }}>
-                    {ic}
-                  </button>
-                ))}
-              </div>
-              <div style={{ fontSize:28 }}>Selected: {form.icon}</div>
-            </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px,1fr))', gap:14, marginBottom:14 }}>
-              <div style={{ gridColumn:'1/-1' }}>
-                <label style={S.label}>Title *</label>
-                <input style={S.input} type="text" placeholder="e.g. University Rank Holders"
-                  value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
-              </div>
-              <div>
-                <label style={S.label}>Category</label>
-                <select style={S.select} value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
-                  {ACHIEVEMENT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>Year (optional)</label>
-                <input style={S.input} type="text" placeholder="e.g. 2024-25"
-                  value={form.year} onChange={e => setForm({...form, year: e.target.value})} />
-              </div>
-              <div>
-                <label style={S.label}>Display Order</label>
-                <input style={S.input} type="number" min="0"
-                  value={form.order} onChange={e => setForm({...form, order: Number(e.target.value)})} />
-              </div>
-              <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:22 }}>
-                <input type="checkbox" id="achIsActive" checked={form.isActive}
-                  onChange={e => setForm({...form, isActive: e.target.checked})}
-                  style={{ width:18, height:18, cursor:'pointer' }} />
-                <label htmlFor="achIsActive" style={{ fontWeight:600, fontSize:13, cursor:'pointer' }}>Show on website</label>
-              </div>
-              <div style={{ gridColumn:'1/-1' }}>
-                <label style={S.label}>Description *</label>
-                <textarea style={{ ...S.input, minHeight:80, resize:'vertical' }}
-                  placeholder="Describe the achievement..."
-                  value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
-              </div>
-            </div>
-            <div style={{ display:'flex', gap:10 }}>
-              <button style={S.btn('#2E7D32')} onClick={handleSave} disabled={saving}>
-                {saving ? '⏳ Saving...' : (editingId ? '💾 Update' : '💾 Save')}
-              </button>
-              <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setShowForm(false); setEditingId(null); setForm(BLANK_ACH); }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div style={{ textAlign:'center', padding:40, color:'#888' }}>⏳ Loading...</div>
-      ) : achievements.length === 0 ? (
-        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
-          <div style={{ fontSize:40 }}>🏆</div>
-          <h3>No achievements yet. Click "Add Achievement" to add one.</h3>
-        </div>
-      ) : (
-        achievements.map(a => (
-          <div key={a._id} style={{ ...S.card, opacity: a.isActive ? 1 : 0.6 }}>
-            <div style={S.header}>
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <span style={{ fontSize:26 }}>{a.icon}</span>
-                <div>
-                  <strong style={{ fontSize:14 }}>{a.title}</strong>
-                  {a.year && <span style={{ fontSize:11, color:'#1565C0', marginLeft:8 }}>📅 {a.year}</span>}
-                  <div style={{ fontSize:11, color:'#888', marginTop:2 }}>
-                    {ACHIEVEMENT_CATEGORIES.find(c=>c.value===a.category)?.label || a.category} · Order: {a.order}
-                  </div>
-                </div>
-              </div>
-              <span style={{ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: a.isActive?'#e8f5e9':'#ffebee', color: a.isActive?'#2E7D32':'#C62828' }}>
-                {a.isActive ? '✅ Visible' : '🙈 Hidden'}
-              </span>
-            </div>
-            <div style={S.body}>
-              <p style={{ fontSize:13, color:'#555', margin:'0 0 12px' }}>{a.description}</p>
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button style={S.btn('#1565C0')} onClick={() => handleEdit(a)}>✏️ Edit</button>
-                <button style={S.btn(a.isActive?'#455a64':'#2E7D32')} onClick={() => handleToggle(a)}>
-                  {a.isActive ? '🙈 Hide' : '👁️ Show'}
-                </button>
-                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(a._id)}>🗑️ Delete</button>
-              </div>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-};
-
-
-const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
-  const [editingId, setEditingId]   = useState(null);
-  const [replyText, setReplyText]   = useState('');
-  const [saving, setSaving]         = useState(false);
-  const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState('all');
-
-  const refreshContacts = () => {
-    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
-  };
-
-  const handleMarkRead = async (id) => {
-    try {
-      await API.put(`/contact/${id}/read`);
-      refreshContacts();
-    } catch (e) { showMessage('❌ Failed to mark as read'); }
-  };
-
-  const handleSaveReply = async (id) => {
-    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
-    setSaving(true);
-    try {
-      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
-      showMessage('✅ Reply saved successfully!');
-      setEditingId(null);
-      setReplyText('');
-      refreshContacts();
-    } catch (e) {
-      showMessage('❌ Failed to save reply');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this message? This cannot be undone.')) return;
-    try {
-      await API.delete(`/contact/${id}`);
-      showMessage('🗑️ Message deleted');
-      refreshContacts();
-    } catch (e) { showMessage('❌ Failed to delete'); }
-  };
-
-  const filtered = contacts.filter(c => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      c.name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      c.subject.toLowerCase().includes(q) ||
-      c.message.toLowerCase().includes(q);
-    const matchFilter =
-      filter === 'all'     ? true :
-      filter === 'unread'  ? !c.isRead :
-      filter === 'replied' ? !!c.adminReply :
-      true;
-    return matchSearch && matchFilter;
-  });
-
-  const S = {
-    card:      { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
-    header:    { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
-    body:      { padding:'14px 18px' },
-    badge:     (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
-    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
-    btn:       (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
-    input:     { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
-    textarea:  { width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
-  };
-
-  return (
-    <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
-        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          {['all','unread','replied'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
-              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <input style={{ ...S.input, marginBottom:16 }}
-        type="text" placeholder="🔍 Search by name, email, subject..."
-        value={search} onChange={e => setSearch(e.target.value)} />
-
-      {filtered.length === 0 ? (
-        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
-          <div style={{ fontSize:40 }}>📭</div>
-          <h3>No messages found</h3>
-        </div>
-      ) : (
-        filtered.map(c => (
-          <div key={c._id} style={S.card}>
-            <div style={S.header}>
-              <div>
-                <strong style={{ fontSize:15 }}>{c.name}</strong>
-                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
-              </div>
-              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
-                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
-                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
-                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
-              </div>
-            </div>
-            <div style={S.body}>
-              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
-                📧 {c.email}
-                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
-              </div>
-              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
-                {c.message}
-              </div>
-              {c.adminReply && editingId !== c._id && (
-                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
-                  <strong>Admin Reply:</strong> {c.adminReply}
-                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
-                </div>
-              )}
-              {editingId === c._id && (
-                <div style={{ marginBottom:12 }}>
-                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
-                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
-                  </label>
-                  <textarea style={S.textarea}
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    placeholder="Type your reply here..." />
-                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
-                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
-                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
-                    </button>
-                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button style={S.btn('#1565C0')}
-                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
-                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
-                </button>
-                {!c.isRead && (
-                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
-                    👁️ Mark as Read
-                  </button>
-                )}
-                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
-                  🗑️ Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-};
 
 export default AdminDashboard;
