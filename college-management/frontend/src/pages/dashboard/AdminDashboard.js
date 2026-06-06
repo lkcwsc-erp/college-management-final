@@ -830,29 +830,12 @@ const AdminDashboard = () => {
 
           {/* ══ CONTACTS ══ */}
           {activeTab === 'contacts' && (
-            <div>
-              <h3 style={{marginBottom:'20px'}}>Contact Messages ({contacts.length})</h3>
-              {contacts.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📬</div>
-                  <h3>No Messages Yet</h3>
-                  <p>Contact form submissions will appear here.</p>
-                </div>
-              ) : (
-                contacts.map(c => (
-                  <div className="notice-full-card" key={c._id}>
-                    <div className="notice-full-header">
-                      <h4>{c.name} — {c.subject}</h4>
-                      <span className={c.isRead ? 'notice-tag' : 'notice-tag unread'}>{c.isRead ? 'Read' : 'New'}</span>
-                    </div>
-                    <p>{c.message}</p>
-                    <small>📧 {c.email} | 📞 {c.phone} | {new Date(c.createdAt).toLocaleDateString()}</small>
-                  </div>
-                ))
-              )}
-            </div>
+            <ContactMessagesTab
+            contacts={contacts}
+           setContacts={setContacts}
+            showMessage={showMessage}
+            />
           )}
-
           {/* ══ MESSAGING ══ */}
           {activeTab === 'reports'   && <AdminReports themeColor="#1565C0" />}
           {activeTab === 'receipts'  && <PaymentReceiptsTab themeColor="#1565C0" />}
@@ -1100,6 +1083,707 @@ const AdminMessagingTab = ({ user, showMessage }) => {
           )}
         </div>
       </div>
+    </div>
+  );
+};
+const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
+  const [editingId, setEditingId]   = useState(null);
+  const [replyText, setReplyText]   = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [search, setSearch]         = useState('');
+  const [filter, setFilter]         = useState('all'); // all | unread | replied
+ 
+  const refreshContacts = () => {
+    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
+  };
+ 
+  const handleMarkRead = async (id) => {
+    try {
+      await API.put(`/contact/${id}/read`);
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to mark as read'); }
+  };
+ 
+  const handleSaveReply = async (id) => {
+    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
+    setSaving(true);
+    try {
+      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
+      showMessage('✅ Reply saved successfully!');
+      setEditingId(null);
+      setReplyText('');
+      refreshContacts();
+    } catch (e) {
+      showMessage('❌ Failed to save reply');
+    } finally {
+      setSaving(false);
+    }
+  };
+ 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    try {
+      await API.delete(`/contact/${id}`);
+      showMessage('🗑️ Message deleted');
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to delete'); }
+  };
+ 
+  const filtered = contacts.filter(c => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.subject.toLowerCase().includes(q) ||
+      c.message.toLowerCase().includes(q);
+    const matchFilter =
+      filter === 'all'     ? true :
+      filter === 'unread'  ? !c.isRead :
+      filter === 'replied' ? !!c.adminReply :
+      true;
+    return matchSearch && matchFilter;
+  });
+ 
+  const S = {
+    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:    { padding:'14px 18px' },
+    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
+    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
+    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
+    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
+  };
+ 
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {['all','unread','replied'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
+              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+ 
+      {/* Search */}
+      <input style={{ ...S.input, marginBottom:16 }}
+        type="text" placeholder="🔍 Search by name, email, subject..."
+        value={search} onChange={e => setSearch(e.target.value)} />
+ 
+      {/* Empty state */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
+          <div style={{ fontSize:40 }}>📭</div>
+          <h3>No messages found</h3>
+        </div>
+      ) : (
+        filtered.map(c => (
+          <div key={c._id} style={S.card}>
+            {/* Card Header */}
+            <div style={S.header}>
+              <div>
+                <strong style={{ fontSize:15 }}>{c.name}</strong>
+                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
+              </div>
+              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
+                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
+                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+              </div>
+            </div>
+ 
+            {/* Card Body */}
+            <div style={S.body}>
+              {/* Contact info */}
+              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
+                📧 {c.email}
+                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
+              </div>
+ 
+              {/* Original message */}
+              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
+                {c.message}
+              </div>
+ 
+              {/* Existing reply display */}
+              {c.adminReply && editingId !== c._id && (
+                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
+                  <strong>Admin Reply:</strong> {c.adminReply}
+                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
+                </div>
+              )}
+ 
+              {/* Reply editor */}
+              {editingId === c._id && (
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
+                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
+                  </label>
+                  <textarea style={S.textarea}
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="Type your reply here..." />
+                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
+                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
+                    </button>
+                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+ 
+              {/* Action buttons */}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <button style={S.btn('#1565C0')}
+                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
+                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
+                </button>
+                {!c.isRead && (
+                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
+                    👁️ Mark as Read
+                  </button>
+                )}
+                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+ const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
+  const [editingId, setEditingId]   = useState(null);
+  const [replyText, setReplyText]   = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [search, setSearch]         = useState('');
+  const [filter, setFilter]         = useState('all'); // all | unread | replied
+ 
+  const refreshContacts = () => {
+    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
+  };
+ 
+  const handleMarkRead = async (id) => {
+    try {
+      await API.put(`/contact/${id}/read`);
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to mark as read'); }
+  };
+ 
+  const handleSaveReply = async (id) => {
+    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
+    setSaving(true);
+    try {
+      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
+      showMessage('✅ Reply saved successfully!');
+      setEditingId(null);
+      setReplyText('');
+      refreshContacts();
+    } catch (e) {
+      showMessage('❌ Failed to save reply');
+    } finally {
+      setSaving(false);
+    }
+  };
+ 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    try {
+      await API.delete(`/contact/${id}`);
+      showMessage('🗑️ Message deleted');
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to delete'); }
+  };
+ 
+  const filtered = contacts.filter(c => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.subject.toLowerCase().includes(q) ||
+      c.message.toLowerCase().includes(q);
+    const matchFilter =
+      filter === 'all'     ? true :
+      filter === 'unread'  ? !c.isRead :
+      filter === 'replied' ? !!c.adminReply :
+      true;
+    return matchSearch && matchFilter;
+  });
+ 
+  const S = {
+    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:    { padding:'14px 18px' },
+    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
+    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
+    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
+    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
+  };
+ 
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {['all','unread','replied'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
+              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+ 
+      {/* Search */}
+      <input style={{ ...S.input, marginBottom:16 }}
+        type="text" placeholder="🔍 Search by name, email, subject..."
+        value={search} onChange={e => setSearch(e.target.value)} />
+ 
+      {/* Empty state */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
+          <div style={{ fontSize:40 }}>📭</div>
+          <h3>No messages found</h3>
+        </div>
+      ) : (
+        filtered.map(c => (
+          <div key={c._id} style={S.card}>
+            {/* Card Header */}
+            <div style={S.header}>
+              <div>
+                <strong style={{ fontSize:15 }}>{c.name}</strong>
+                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
+              </div>
+              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
+                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
+                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+              </div>
+            </div>
+ 
+            {/* Card Body */}
+            <div style={S.body}>
+              {/* Contact info */}
+              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
+                📧 {c.email}
+                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
+              </div>
+ 
+              {/* Original message */}
+              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
+                {c.message}
+              </div>
+ 
+              {/* Existing reply display */}
+              {c.adminReply && editingId !== c._id && (
+                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
+                  <strong>Admin Reply:</strong> {c.adminReply}
+                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
+                </div>
+              )}
+ 
+              {/* Reply editor */}
+              {editingId === c._id && (
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
+                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
+                  </label>
+                  <textarea style={S.textarea}
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="Type your reply here..." />
+                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
+                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
+                    </button>
+                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+ 
+              {/* Action buttons */}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <button style={S.btn('#1565C0')}
+                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
+                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
+                </button>
+                {!c.isRead && (
+                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
+                    👁️ Mark as Read
+                  </button>
+                )}
+                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
+  const [editingId, setEditingId]   = useState(null);
+  const [replyText, setReplyText]   = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [search, setSearch]         = useState('');
+  const [filter, setFilter]         = useState('all'); // all | unread | replied
+ 
+  const refreshContacts = () => {
+    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
+  };
+ 
+  const handleMarkRead = async (id) => {
+    try {
+      await API.put(`/contact/${id}/read`);
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to mark as read'); }
+  };
+ 
+  const handleSaveReply = async (id) => {
+    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
+    setSaving(true);
+    try {
+      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
+      showMessage('✅ Reply saved successfully!');
+      setEditingId(null);
+      setReplyText('');
+      refreshContacts();
+    } catch (e) {
+      showMessage('❌ Failed to save reply');
+    } finally {
+      setSaving(false);
+    }
+  };
+ 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    try {
+      await API.delete(`/contact/${id}`);
+      showMessage('🗑️ Message deleted');
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to delete'); }
+  };
+ 
+  const filtered = contacts.filter(c => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.subject.toLowerCase().includes(q) ||
+      c.message.toLowerCase().includes(q);
+    const matchFilter =
+      filter === 'all'     ? true :
+      filter === 'unread'  ? !c.isRead :
+      filter === 'replied' ? !!c.adminReply :
+      true;
+    return matchSearch && matchFilter;
+  });
+ 
+  const S = {
+    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:    { padding:'14px 18px' },
+    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
+    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
+    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
+    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
+  };
+ 
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {['all','unread','replied'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
+              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+ 
+      {/* Search */}
+      <input style={{ ...S.input, marginBottom:16 }}
+        type="text" placeholder="🔍 Search by name, email, subject..."
+        value={search} onChange={e => setSearch(e.target.value)} />
+ 
+      {/* Empty state */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
+          <div style={{ fontSize:40 }}>📭</div>
+          <h3>No messages found</h3>
+        </div>
+      ) : (
+        filtered.map(c => (
+          <div key={c._id} style={S.card}>
+            {/* Card Header */}
+            <div style={S.header}>
+              <div>
+                <strong style={{ fontSize:15 }}>{c.name}</strong>
+                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
+              </div>
+              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
+                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
+                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+              </div>
+            </div>
+ 
+            {/* Card Body */}
+            <div style={S.body}>
+              {/* Contact info */}
+              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
+                📧 {c.email}
+                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
+              </div>
+ 
+              {/* Original message */}
+              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
+                {c.message}
+              </div>
+ 
+              {/* Existing reply display */}
+              {c.adminReply && editingId !== c._id && (
+                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
+                  <strong>Admin Reply:</strong> {c.adminReply}
+                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
+                </div>
+              )}
+ 
+              {/* Reply editor */}
+              {editingId === c._id && (
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
+                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
+                  </label>
+                  <textarea style={S.textarea}
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="Type your reply here..." />
+                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
+                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
+                    </button>
+                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+ 
+              {/* Action buttons */}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <button style={S.btn('#1565C0')}
+                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
+                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
+                </button>
+                {!c.isRead && (
+                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
+                    👁️ Mark as Read
+                  </button>
+                )}
+                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
+  const [editingId, setEditingId]   = useState(null);
+  const [replyText, setReplyText]   = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [search, setSearch]         = useState('');
+  const [filter, setFilter]         = useState('all'); // all | unread | replied
+
+  const refreshContacts = () => {
+    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
+  };
+
+  const handleMarkRead = async (id) => {
+    try {
+      await API.put(`/contact/${id}/read`);
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to mark as read'); }
+  };
+
+  const handleSaveReply = async (id) => {
+    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
+    setSaving(true);
+    try {
+      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
+      showMessage('✅ Reply saved successfully!');
+      setEditingId(null);
+      setReplyText('');
+      refreshContacts();
+    } catch (e) {
+      showMessage('❌ Failed to save reply');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    try {
+      await API.delete(`/contact/${id}`);
+      showMessage('🗑️ Message deleted');
+      refreshContacts();
+    } catch (e) { showMessage('❌ Failed to delete'); }
+  };
+
+  const filtered = contacts.filter(c => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.subject.toLowerCase().includes(q) ||
+      c.message.toLowerCase().includes(q);
+    const matchFilter =
+      filter === 'all'     ? true :
+      filter === 'unread'  ? !c.isRead :
+      filter === 'replied' ? !!c.adminReply :
+      true;
+    return matchSearch && matchFilter;
+  });
+
+  const S = {
+    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:    { padding:'14px 18px' },
+    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
+    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
+    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
+    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {['all','unread','replied'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
+              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Search */}
+      <input style={{ ...S.input, marginBottom:16 }}
+        type="text" placeholder="🔍 Search by name, email, subject..."
+        value={search} onChange={e => setSearch(e.target.value)} />
+
+      {/* Empty state */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
+          <div style={{ fontSize:40 }}>📭</div>
+          <h3>No messages found</h3>
+        </div>
+      ) : (
+        filtered.map(c => (
+          <div key={c._id} style={S.card}>
+            {/* Card Header */}
+            <div style={S.header}>
+              <div>
+                <strong style={{ fontSize:15 }}>{c.name}</strong>
+                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
+              </div>
+              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
+                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
+                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+              </div>
+            </div>
+
+            {/* Card Body */}
+            <div style={S.body}>
+              {/* Contact info */}
+              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
+                📧 {c.email}
+                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
+              </div>
+
+              {/* Original message */}
+              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
+                {c.message}
+              </div>
+
+              {/* Existing reply display */}
+              {c.adminReply && editingId !== c._id && (
+                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
+                  <strong>Admin Reply:</strong> {c.adminReply}
+                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
+                </div>
+              )}
+
+              {/* Reply editor */}
+              {editingId === c._id && (
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
+                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
+                  </label>
+                  <textarea style={S.textarea}
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="Type your reply here..." />
+                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
+                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
+                    </button>
+                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <button style={S.btn('#1565C0')}
+                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
+                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
+                </button>
+                {!c.isRead && (
+                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
+                    👁️ Mark as Read
+                  </button>
+                )}
+                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 };
