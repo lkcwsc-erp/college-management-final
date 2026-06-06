@@ -261,7 +261,7 @@ const ParentOrg = () => {
                       <p>
                         Organised to encourage intellectual growth among students, gaining
                         considerable recognition. The prize distribution ceremony was
-                        graced by renowned film actress <strong>Alka Kubal</strong>,
+                        graced by renowned film actress Alka Kubal,
                         inspiring thousands of young participants.
                       </p>
                     </div>
