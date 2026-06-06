@@ -310,6 +310,47 @@ scholarshipVerifiedDate: { type: Date },
       default: 'not_filled',
     },
     scholarshipNote:     { type: String, default: '' },
+    aadharVerificationStatus: {
+  type: String,
+  enum: ['pending', 'verified', 'rejected'],
+  default: 'pending',
+},
+aadharVerificationRemark: { type: String, default: '' },
+
+casteCertificateVerificationStatus: {
+  type: String,
+  enum: ['pending', 'verified', 'rejected'],
+  default: 'pending',
+},
+casteCertificateVerificationRemark: { type: String, default: '' },
+
+casteValidityVerificationStatus: {
+  type: String,
+  enum: ['pending', 'verified', 'rejected'],
+  default: 'pending',
+},
+casteValidityVerificationRemark: { type: String, default: '' },
+
+incomeCertificateVerificationStatus: {
+  type: String,
+  enum: ['pending', 'verified', 'rejected'],
+  default: 'pending',
+},
+incomeCertificateVerificationRemark: { type: String, default: '' },
+
+domicileVerificationStatus: {
+  type: String,
+  enum: ['pending', 'verified', 'rejected'],
+  default: 'pending',
+},
+domicileVerificationRemark: { type: String, default: '' },
+
+bankPassbookVerificationStatus: {
+  type: String,
+  enum: ['pending', 'verified', 'rejected'],
+  default: 'pending',
+},
+bankPassbookVerificationRemark: { type: String, default: '' },
     mahaDBTUsername:     { type: String, default: '' },
     mahaDBTPassword:     { type: String, default: '' },
     mahaDBTMobile:     { type: String, default: '' },
