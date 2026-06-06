@@ -267,7 +267,17 @@ exports.getScholarshipRegister = async (req, res) => {
         'studentId applicantName courseType admissionYear academicYear category ' +
         'totalFees scholarshipAmount scholarshipEligibleAmount scholarshipReceivedAmount ' +
         'scholarshipPendingAmount feesPaid scholarshipStatus mahaDBTAppNo email phone ' +
-        'scholarshipVerifiedBy scholarshipVerifiedDate'
+        'scholarshipVerifiedBy scholarshipVerifiedDate scholarshipNote ' +
+        'mahaDBTUsername mahaDBTPassword mahaDBTMobile ' +
+        'fatherName motherName dateOfBirth gender ' +
+        'aadharPhoto casteCertificate casteValidityCertificate ' +
+        'incomeCertificate domicileCertificate bankPassbook ' +
+        'aadharVerificationStatus aadharVerificationRemark ' +
+        'casteCertificateVerificationStatus casteCertificateVerificationRemark ' +
+        'casteValidityVerificationStatus casteValidityVerificationRemark ' +
+        'incomeCertificateVerificationStatus incomeCertificateVerificationRemark ' +
+        'domicileVerificationStatus domicileVerificationRemark ' +
+        'bankPassbookVerificationStatus bankPassbookVerificationRemark'
       )
       .sort({ createdAt: -1 })
       .skip(skip)
