@@ -799,7 +799,6 @@ const printTC = (adm) => {
   const dobObj  = adm.dateOfBirth ? new Date(adm.dateOfBirth) : null;
   const dobStr  = dobObj ? String(dobObj.getDate()).padStart(2,'0')+'/'+String(dobObj.getMonth()+1).padStart(2,'0')+'/'+dobObj.getFullYear() : '';
 
-  // DOB in words
   const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
     'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen',
     'Twenty','Twenty-One','Twenty-Two','Twenty-Three','Twenty-Four','Twenty-Five','Twenty-Six',
@@ -823,37 +822,97 @@ const printTC = (adm) => {
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px;font-size:13px}
-    .page{background:white;width:720px;border:1.5px solid #000;padding:0;box-shadow:0 4px 20px rgba(0,0,0,.15)}
-    .hdr{display:flex;align-items:center;gap:10px;border-bottom:1.5px solid #000;padding:8px 12px}
-    .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+
+    /* ── Page with dark double border ── */
+    .page{
+      background:white;
+      width:720px;
+      border:3px double #000;
+      outline:1px solid #000;
+      outline-offset:-6px;
+      padding:0;
+      box-shadow:0 4px 20px rgba(0,0,0,.2)
+    }
+
+    /* ── Header ── */
+    .hdr{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      border-bottom:2px solid #000;
+      padding:10px 16px
+    }
+    .hlogo{
+      width:72px;
+      height:72px;
+      object-fit:contain;
+      flex-shrink:0;
+      border-radius:50%;
+      border:2px solid #1a237e;
+      padding:3px;
+      background:#fff
+    }
     .htxt{flex:1;text-align:center}
-    .htrust{font-size:8.5px;color:#555}
-    .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3;margin:2px 0}
-    .haddr{font-size:8.5px;color:#444;margin-top:1px}
-    .titlesec{text-align:center;padding:6px 0 2px;border-bottom:1px solid #000}
-    .title{font-size:15px;font-weight:bold;letter-spacing:2px;text-decoration:underline;text-underline-offset:3px}
-    .subtitle{font-size:11px;font-style:italic;margin-top:1px}
-    .disclaimer{font-size:9.5px;font-style:italic;padding:5px 14px;border-bottom:1px solid #ccc;color:#333;line-height:1.4}
-    .regrow{display:flex;justify-content:space-between;padding:5px 14px;border-bottom:1px solid #ccc;font-size:12px}
+    .htrust{
+      font-size:10px;
+      color:#444;
+      font-style:italic;
+      margin-bottom:2px
+    }
+    .hname{
+      font-size:17px;
+      font-weight:900;
+      color:#000;
+      line-height:1.3;
+      margin:3px 0;
+      letter-spacing:0.3px
+    }
+    .haddr{
+      font-size:10px;
+      color:#333;
+      margin-top:2px;
+      line-height:1.5
+    }
+    .hcontact{
+      font-size:9.5px;
+      color:#555;
+      margin-top:3px
+    }
+
+    /* ── Title ── */
+    .titlesec{text-align:center;padding:7px 0 3px;border-bottom:1.5px solid #000}
+    .title{font-size:16px;font-weight:bold;letter-spacing:2px;text-decoration:underline;text-underline-offset:3px}
+    .subtitle{font-size:11px;font-style:italic;margin-top:2px}
+
+    /* ── Disclaimer ── */
+    .disclaimer{font-size:9.5px;font-style:italic;padding:5px 14px;border-bottom:1px solid #999;color:#333;line-height:1.5}
+
+    /* ── Register row ── */
+    .regrow{display:flex;justify-content:space-between;padding:5px 14px;border-bottom:1px solid #999;font-size:12px}
     .reglabel{font-weight:600}
     .regval{font-weight:bold}
-    /* Editable fields */
+
+    /* ── Editable fields ── */
     input[type=text]{border:none;border-bottom:1px dotted #555;outline:none;font-family:'Times New Roman',serif;font-size:13px;background:transparent;padding:1px 4px;min-width:180px;font-weight:bold}
     input[type=text]:focus{border-bottom:1.5px solid #000;background:#fffde7}
-    /* Table rows */
+
+    /* ── Table rows ── */
     .rows{padding:2px 14px}
-    .row{display:flex;align-items:baseline;padding:5px 0;border-bottom:1px dotted #ccc;font-size:13px}
+    .row{display:flex;align-items:baseline;padding:5px 0;border-bottom:1px dotted #bbb;font-size:13px}
     .rnum{width:22px;flex-shrink:0;font-weight:600}
     .rlabel{width:210px;flex-shrink:0}
     .rcolon{width:16px;flex-shrink:0}
     .rval{flex:1;font-weight:bold}
     .rval input{width:100%;min-width:unset}
-    /* Footer */
-    .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:12px 14px 10px}
+
+    /* ── Footer ── */
+    .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:14px 18px 12px}
     .fsign{text-align:center;min-width:100px}
-    .fsign-line{border-top:1px solid #000;margin-top:32px;padding-top:4px;font-size:12px;font-weight:bold}
-    /* Print button */
+    .fsign-line{border-top:1px solid #000;margin-top:36px;padding-top:4px;font-size:12px;font-weight:bold}
+
+    /* ── Print button ── */
     .print-btn{display:block;margin:10px auto;padding:8px 28px;background:#1a237e;color:white;border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer}
+
     @media print{
       body{background:white;padding:0}
       .page{box-shadow:none}
@@ -862,30 +921,37 @@ const printTC = (adm) => {
     }
   </style></head><body>
   <div class="page">
-  <img src="/college-logo.png" class="logo"/>
+
+    <!-- Header -->
     <div class="hdr">
+      <img src="/college-logo.png" class="hlogo" alt="Logo" onerror="this.style.display='none'"/>
       <div class="htxt">
-        <div class="h1">Vidya Niketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-        <div class="h2">Late Kalpana Chawala Arts &amp; Science Mahila Senior College Gangakhed,</div>
-        <div class="h3">Lecturer Colony Gangakhed, Dist Parbhani - 431514</div>
-        <div class="h4">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
+        <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="hname">Late Kalpana Chawla Women's Senior College</div>
+        <div class="haddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
+        <div class="haddr">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+        <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
       </div>
     </div>
 
+    <!-- Title -->
     <div class="titlesec">
       <div class="title">TRANSFER CERTIFICATE</div>
       <div class="subtitle">(vide Rule 17)</div>
     </div>
 
+    <!-- Disclaimer -->
     <div class="disclaimer">
       <em>(No Change in any entry in this certificate shall be made except by the authority issuing it and any infringement of this requirement is liable to involve the imposition of penalty of such as that of Rustication)</em>
     </div>
 
+    <!-- Register / TC no -->
     <div class="regrow">
       <span><span class="reglabel">Register No. : </span><input type="text" value="" style="min-width:100px"/></span>
       <span><span class="reglabel">T.C. No. : </span><span class="regval">TC${String(new Date().getFullYear()).slice(-2)}-${Date.now().toString().slice(-5)}</span></span>
     </div>
 
+    <!-- Rows -->
     <div class="rows">
       <div class="row"><span class="rnum">1.</span><span class="rlabel">Name of Student in Full</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.applicantName||''}"/></span></div>
       <div class="row"><span class="rnum">2.</span><span class="rlabel">Mother's Name</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.motherName||''}"/></span></div>
@@ -905,6 +971,7 @@ const printTC = (adm) => {
       <div class="row" style="border-bottom:none;padding-top:8px"><span class="rnum">14.</span><span style="flex:1;font-weight:bold">Certified that the above information is in accordance with the college record.</span></div>
     </div>
 
+    <!-- Footer signatures -->
     <div class="foot">
       <div class="fsign">
         <div style="font-size:12px;margin-bottom:2px">Date : ${dateStr}</div>
@@ -925,7 +992,6 @@ const printTC = (adm) => {
   w.document.write(html);
   w.document.close();
 };
-
 
 const printBonafide = (adm) => {
   const certNo  = 'BON' + new Date().getFullYear().toString().slice(-2) + '-' + Date.now().toString().slice(-4);
