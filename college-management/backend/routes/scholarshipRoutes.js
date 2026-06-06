@@ -1,44 +1,40 @@
-const express = require('express');
-const router = express.Router();
+/* ============================================================
+   scholarshipRoutes.js
+   ============================================================ */
+const express    = require('express');
+const router     = express.Router();
+const ctrl       = require('../controllers/scholarshipController');
+const upload     = require('../utils/upload');
 
-const scholarshipController = require('../controllers/scholarshipController');
-const upload = require('../utils/upload');
+// ── Scholarship Master ─────────────────────────────────────
+// NOTE: /master/import MUST come before /master/:id to avoid
+//       Express matching "import" as an :id param
+router.post  ('/master/import', upload.single('file'), ctrl.importScholarshipMaster);
 
-// Scholarship Master
-router.post('/master', scholarshipController.createScholarshipMaster);
-router.get('/master', scholarshipController.getAllScholarshipMasters);
-router.get('/master/:id', scholarshipController.getScholarshipMasterById);
-router.put('/master/:id', scholarshipController.updateScholarshipMaster);
-router.delete('/master/:id', scholarshipController.deleteScholarshipMaster);
+router.post  ('/master',     ctrl.createScholarshipMaster);
+router.get   ('/master',     ctrl.getAllScholarshipMasters);
+router.get   ('/master/:id', ctrl.getScholarshipMasterById);
+router.put   ('/master/:id', ctrl.updateScholarshipMaster);
+router.delete('/master/:id', ctrl.deleteScholarshipMaster);
 
-router.post(
-  '/master/import',
-  upload.single('file'),
-  scholarshipController.importScholarshipMaster
-);
+// ── Scholarship Register ───────────────────────────────────
+// NOTE: /register/export MUST come before /register to avoid routing issues
+router.get('/register/export', ctrl.exportScholarshipRegister);
+router.get('/register',        ctrl.getScholarshipRegister);
 
-// Student Scholarship
-router.post('/calculate/:admissionId', scholarshipController.autoCalculateScholarship);
+// ── Dashboard ──────────────────────────────────────────────
+router.get('/dashboard', ctrl.getScholarshipDashboard);
 
-router.get('/dashboard', scholarshipController.getScholarshipDashboard);
+// ── Student Operations ─────────────────────────────────────
+router.post('/calculate/:admissionId',               ctrl.autoCalculateScholarship);
+router.put ('/document-verification/:admissionId',   ctrl.updateDocumentVerification);
+router.put ('/status/:admissionId',                  ctrl.updateScholarshipStatus);
+router.put ('/mahadbt/:admissionId',                 ctrl.updateMahaDBTCredentials);
 
-router.get('/register', scholarshipController.getScholarshipRegister);
+// ── Student View (for student dashboard) ───────────────────
+router.get('/student/:studentId',   ctrl.getStudentScholarshipView);
 
-router.get('/register/export', scholarshipController.exportScholarshipRegister);
-
-router.put(
-  '/document-verification/:admissionId',
-  scholarshipController.updateDocumentVerification
-);
-
-router.put(
-  '/status/:admissionId',
-  scholarshipController.updateScholarshipStatus
-);
-
-router.get(
-  '/student/:studentId',
-  scholarshipController.getStudentScholarshipView
-);
+// ── Receipt Data ───────────────────────────────────────────
+router.get('/receipt/:admissionId', ctrl.getScholarshipReceiptData);
 
 module.exports = router;
