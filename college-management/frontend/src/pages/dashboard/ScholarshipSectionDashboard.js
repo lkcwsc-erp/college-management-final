@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
@@ -164,7 +164,7 @@ const ScholarshipSectionDashboard = () => {
       });
       flashMsg('✅ Saved successfully!');
       // Refresh selected student
-      const res = await API.get(`/scholarships/receipt/${selected._id}`);
+      await API.get(`/scholarships/receipt/${selected._id}`);
       const full = await API.get('/scholarships/register?limit=1&search=' + selected.studentId);
       if (full.data.students?.[0]) setSelected(s => ({ ...s, ...full.data.students[0] }));
       setEditMode(false);
