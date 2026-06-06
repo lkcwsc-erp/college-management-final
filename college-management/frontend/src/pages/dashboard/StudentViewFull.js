@@ -2,8 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api/axios';
 
 // ─── Role-based access config ────────────────────────────────────────────────
-// canEdit:   Student Section + Principal
-// role:      'student_section' | 'exam' | 'scholarship' | 'accounts' | 'principal' | 'readonly'
+// canEdit:   Student Section + Principal can edit/delete
+// role:      controls which action buttons appear in detail view
+// 'student'  → credentials visible
+// 'exam'     → result/attendance actions
+// 'scholarship' → scholarship status edit
+// 'accounts' → fee ledger visible
 
 const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'readonly' }) => {
   const [admissions, setAdmissions]   = useState([]);
@@ -11,20 +15,20 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [search, setSearch]           = useState('');
   const [yearFilter, setYearFilter]   = useState('all');
   const [catFilter, setCatFilter]     = useState('all');
-  const [statusFilter, setStatusFilter] = useState('current'); // 'current' | 'past' | 'all'
   const [selected, setSelected]       = useState(null);
-  const [detailTab, setDetailTab]     = useState('overview');
   const [editMode, setEditMode]       = useState(false);
   const [editData, setEditData]       = useState({});
   const [saving, setSaving]           = useState(false);
+
   const [msg, setMsg]                 = useState('');
 
-  // Scholarship edit (scholarship section)
+  // Scholarship edit (for staff_scholarship)
   const [scholEdit, setScholEdit]     = useState(false);
   const [scholData, setScholData]     = useState({});
   const [scholSaving, setScholSaving] = useState(false);
 
   const EDITABLE_FIELDS = [
+    // Personal
     { key: 'applicantName',    label: 'Full Name',           type: 'text' },
     { key: 'fatherName',       label: "Father's Name",       type: 'text' },
     { key: 'motherName',       label: "Mother's Name",       type: 'text' },
@@ -41,6 +45,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     { key: 'subCaste',         label: 'Sub-Caste',           type: 'text' },
     { key: 'aadharNumber',     label: 'Aadhar Number',       type: 'text' },
     { key: 'familyIncome',     label: 'Family Income (₹)',   type: 'text' },
+    // Address
     { key: 'houseNumber',      label: 'House No.',           type: 'text' },
     { key: 'streetArea',       label: 'Street / Area',       type: 'text' },
     { key: 'cityTownVillage',  label: 'City / Village',      type: 'text' },
@@ -48,6 +53,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     { key: 'district',         label: 'District',            type: 'text' },
     { key: 'state',            label: 'State',               type: 'text' },
     { key: 'pinCode',          label: 'Pin Code',            type: 'text' },
+    // Academic
     { key: 'courseType',       label: 'Course',              type: 'select', options: ['B.A.','B.Sc.'] },
     { key: 'preferredSubject', label: 'Subject',             type: 'text' },
     { key: 'admissionYear',    label: 'Year',                type: 'select', options: ['1st Year','2nd Year','3rd Year'] },
@@ -62,6 +68,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     { key: 'hscStream',        label: 'HSC Stream',          type: 'text' },
     { key: 'hscYOP',           label: 'HSC Year',            type: 'text' },
     { key: 'hscPercentage',    label: 'HSC Percentage',      type: 'number' },
+    // Bank
     { key: 'bankName',         label: 'Bank Name',           type: 'text' },
     { key: 'bankBranch',       label: 'Bank Branch',         type: 'text' },
     { key: 'bankAccountNo',    label: 'Account No.',         type: 'text' },
@@ -79,14 +86,15 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
 
   useEffect(() => { fetchAdmissions(); }, [fetchAdmissions]);
 
+  // ── Scholarship save ──────────────────────────────────────────────────────
   const handleScholSave = async () => {
     setScholSaving(true);
     try {
       await API.put(`/admissions/update-mahadbt/${selected._id}`, scholData);
       setMsg('✅ Scholarship details updated!');
       setScholEdit(false);
+      await fetchAdmissions();
       const res = await API.get('/admissions/staff-view/all');
-      setAdmissions(res.data.admissions || []);
       const updated = (res.data.admissions || []).find(a => a._id === selected._id);
       if (updated) setSelected(updated);
       setTimeout(() => setMsg(''), 3000);
@@ -94,13 +102,14 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     finally { setScholSaving(false); }
   };
 
+  // ── Student Section edit save ─────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true);
     try {
       await API.put(`/admissions/update-documents/${selected._id}`, editData);
       setMsg('✅ Student data updated!');
+      await fetchAdmissions();
       const res = await API.get('/admissions/staff-view/all');
-      setAdmissions(res.data.admissions || []);
       const updated = (res.data.admissions || []).find(a => a._id === selected._id);
       if (updated) setSelected(updated);
       setEditMode(false); setEditData({});
@@ -113,16 +122,22 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     const reason = window.prompt(`⚠️ Enter reason for deleting ${selected.applicantName}'s record.\nThis will send a request to Admin for approval.`);
     if (!reason) return;
     try {
+      // Send delete request to admin via notice/email — store as pending delete
       await API.post('/admissions/request-delete', {
-        admissionId: selected._id, studentName: selected.applicantName,
-        studentEmail: selected.email, studentId: selected.studentId,
-        reason, requestedBy: 'Student Section Staff',
+        admissionId: selected._id,
+        studentName: selected.applicantName,
+        studentEmail: selected.email,
+        studentId: selected.studentId,
+        reason,
+        requestedBy: 'Student Section Staff',
       });
       setMsg('✅ Delete request sent to Admin for approval.');
-    } catch {
+      setTimeout(() => setMsg(''), 4000);
+    } catch (e) {
+      // Fallback — if endpoint doesn't exist, show message
       setMsg('✅ Delete request recorded. Admin will be notified.');
+      setTimeout(() => setMsg(''), 4000);
     }
-    setTimeout(() => setMsg(''), 4000);
   };
 
   const schColor = (s) => ({
@@ -135,91 +150,100 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
 
   const exportCSV = () => {
     const data = filteredAdmissions;
-    const headers = ['Student ID','Name','Email','Mobile','Category','Course','Year','PRN','ABC ID','Aadhar','Father','Mother','DOB','SSC %','HSC %','Scholarship'];
-    const rows = data.map(s => [s.studentId||'',s.applicantName||'',s.email||'',s.phone||'',s.category||'',s.courseType||'',s.admissionYear||'',s.prnNumber||'',s.aparIdNumber||'',s.aadharNumber||'',s.fatherName||'',s.motherName||'',s.dateOfBirth?new Date(s.dateOfBirth).toLocaleDateString('en-IN'):'',s.sscPercentage||'',s.hscPercentage||'',s.scholarshipStatus||'']);
+    const headers = ['Student ID','Name','Email','Mobile','Category','Caste','Course','Subject','Year','PRN','ABC ID','Aadhar','Father','Mother','DOB','Address','Family Income','SSC %','HSC %','Scholarship'];
+    const rows = data.map(s => [s.studentId||'',s.applicantName||'',s.email||'',s.phone||'',s.category||'',s.caste||'',s.courseType||'',s.preferredSubject||'',s.admissionYear||'',s.prnNumber||'',s.aparIdNumber||'',s.aadharNumber||'',s.fatherName||'',s.motherName||'',s.dateOfBirth?new Date(s.dateOfBirth).toLocaleDateString('en-IN'):'',s.address||'',s.familyIncome||'',s.sscPercentage||'',s.hscPercentage||'',s.scholarshipStatus||'']);
     const csv = [headers,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='students.csv'; a.click(); URL.revokeObjectURL(url);
   };
 
-  // ── Filters ─────────────────────────────────────────────────────────────────
   const cats = [...new Set(admissions.map(a=>(a.category||'other').toLowerCase()))].sort();
-
   const filteredAdmissions = admissions.filter(s => {
-    const q = search.toLowerCase();
-    const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)
-      || s.studentId?.toLowerCase().includes(q) || s.prnNumber?.toLowerCase().includes(q)
-      || s.aadharNumber?.toLowerCase().includes(q) || s.phone?.includes(q);
-    const my = yearFilter === 'all' || s.admissionYear === yearFilter;
-    const mc = catFilter === 'all' || (s.category||'other').toLowerCase() === catFilter;
-    // Current = tcIssued false or not set; Past = tcIssued true
-    const ms = statusFilter === 'all' ? true
-      : statusFilter === 'current' ? !s.tcIssued
-      : s.tcIssued === true;
-    return mq && my && mc && ms;
+    const q=search.toLowerCase();
+    const mq=!q||s.applicantName?.toLowerCase().includes(q)||s.email?.toLowerCase().includes(q)||s.studentId?.toLowerCase().includes(q)||s.prnNumber?.toLowerCase().includes(q)||s.aadharNumber?.toLowerCase().includes(q)||s.phone?.includes(q);
+    const my=yearFilter==='all'||s.admissionYear===yearFilter;
+    const mc=catFilter==='all'||(s.category||'other').toLowerCase()===catFilter;
+    return mq&&my&&mc;
   });
 
-  // ── Row detail field renderer ─────────────────────────────────────────────
-  const Row = ({ label, value, mono = false, badge = null }) => (
-    <div style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
-      <span style={{ color:'#888', fontWeight:600, minWidth:130, flexShrink:0 }}>{label}</span>
-      {badge || <span style={{ color:(!value||value==='—')?'#ccc':'#222', textAlign:'right', wordBreak:'break-all', fontFamily:mono?'monospace':'inherit' }}>{value||'—'}</span>}
-    </div>
-  );
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // DETAIL VIEW
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── DETAIL VIEW ────────────────────────────────────────────────────────────
   if (selected) {
-    const TABS = [
-      { id:'overview',  label:'👤 Overview' },
-      { id:'academic',  label:'🎓 Academic' },
-      { id:'documents', label:'📎 Documents' },
-      { id:'fees',      label:'💰 Fees',       show: role === 'accounts' || role === 'student_section' || role === 'principal' },
-      { id:'scholarship',label:'🏅 Scholarship', show: role === 'scholarship' || role === 'student_section' || role === 'principal' },
-    ].filter(t => t.show !== false);
-
     return (
       <div>
         {/* Top bar */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <button onClick={() => { setSelected(null); setEditMode(false); setEditData({}); setScholEdit(false); setMsg(''); setDetailTab('overview'); }}
-              style={{ background:'#f0f4ff', color:themeColor, border:`1px solid ${themeColor}44`, borderRadius:8, padding:'7px 14px', fontSize:13, fontWeight:600, cursor:'pointer' }}>← Back</button>
-            <div>
-              <span style={{ fontWeight:700, fontSize:16, color:'#1a1a2e' }}>{selected.applicantName}</span>
-              <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', padding:'2px 10px', borderRadius:10, fontWeight:700, marginLeft:8 }}>{selected.studentId||'No ID'}</span>
-              {selected.tcIssued && <span style={{ fontSize:11, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:10, fontWeight:700, marginLeft:6 }}>TC Issued</span>}
-            </div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={() => { setSelected(null); setEditMode(false); setEditData({}); setScholEdit(false); setMsg(''); }}
+              style={{ background:'#f0f4ff', color:themeColor, border:`1px solid ${themeColor}44`, borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>← Back</button>
+            <h3 style={{ color:themeColor, margin:0 }}>👩‍🎓 {selected.applicantName}</h3>
+            <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', padding:'2px 10px', borderRadius:10, fontWeight:700 }}>{selected.studentId||'No ID'}</span>
           </div>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
             {canEdit && !editMode && (
               <>
-                <button onClick={() => { setEditMode(true); setDetailTab('overview'); setEditData(Object.fromEntries(EDITABLE_FIELDS.map(f=>[f.key,selected[f.key]||'']))); }}
-                  style={{ background:themeColor, color:'#fff', border:'none', borderRadius:8, padding:'7px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>✏️ Edit</button>
+                <button onClick={() => { setEditMode(true); setEditData(Object.fromEntries(EDITABLE_FIELDS.map(f=>[f.key,selected[f.key]||'']))); }}
+                  style={{ background:themeColor, color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>✏️ Edit</button>
                 <button onClick={handleDelete}
-                  style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'7px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>🗑️ Delete</button>
+                  style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                  🗑️ Request Delete</button>
               </>
             )}
             {canEdit && editMode && (
               <>
                 <button onClick={handleSave} disabled={saving}
-                  style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'7px 16px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                  {saving?'⏳ Saving...':'💾 Save'}</button>
+                  style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                  {saving?'⏳ Saving...':'💾 Save Changes'}</button>
                 <button onClick={() => { setEditMode(false); setEditData({}); setMsg(''); }}
-                  style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'7px 14px', fontSize:13, cursor:'pointer' }}>Cancel</button>
+                  style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'8px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
               </>
             )}
             {role==='scholarship' && !scholEdit && (
-              <button onClick={() => { setScholEdit(true); setDetailTab('scholarship'); setScholData({ scholarshipStatus:selected.scholarshipStatus||'not_filled', scholarshipAmount:selected.scholarshipAmount||'', mahaDBTUsername:selected.mahaDBTUsername||'', mahaDBTPassword:selected.mahaDBTPassword||'', mahaDBTAppNo:selected.mahaDBTAppNo||'', mahaDBTMobile:selected.mahaDBTMobile||'', scholarshipNote:selected.scholarshipNote||'' }); }}
-                style={{ background:'#7B1FA2', color:'#fff', border:'none', borderRadius:8, padding:'7px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>🏅 Edit Scholarship</button>
+              <button onClick={() => { setScholEdit(true); setScholData({ scholarshipStatus:selected.scholarshipStatus||'not_filled', scholarshipAmount:selected.scholarshipAmount||'', mahaDBTUsername:selected.mahaDBTUsername||'', mahaDBTPassword:selected.mahaDBTPassword||'', mahaDBTAppNo:selected.mahaDBTAppNo||'', scholarshipNote:selected.scholarshipNote||'' }); }}
+                style={{ background:'#7B1FA2', color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>🏅 Edit Scholarship</button>
             )}
           </div>
         </div>
 
-        {msg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
+        {msg && <div style={{ padding:'12px 16px', borderRadius:10, marginBottom:14, fontWeight:500, fontSize:14, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
 
-        {/* Edit Mode — full form */}
+        {/* Scholarship edit panel */}
+        {scholEdit && (
+          <div style={{ background:'#f3e5f5', border:'1px solid #ce93d8', borderRadius:14, padding:20, marginBottom:20 }}>
+            <h4 style={{ color:'#7B1FA2', marginBottom:14 }}>🏅 Edit Scholarship Details</h4>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+              {[
+                { key:'scholarshipStatus', label:'Status', type:'select', options:['not_filled','filled','approved','rejected','disbursed'] },
+                { key:'scholarshipAmount', label:'Scholarship Amount (₹)', type:'number' },
+                { key:'mahaDBTUsername',   label:'MahaDBT Username',        type:'text' },
+                { key:'mahaDBTPassword',   label:'MahaDBT Password',        type:'text' },
+                { key:'mahaDBTAppNo',      label:'MahaDBT App No.',         type:'text' },
+                { key:'mahaDBTMobile',     label:'MahaDBT Mobile No.',      type:'text' },
+                { key:'scholarshipNote',   label:'Notes',                   type:'text' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#7B1FA2', marginBottom:5 }}>{f.label}</label>
+                  {f.type==='select'
+                    ? <select value={scholData[f.key]||''} onChange={e=>setScholData(p=>({...p,[f.key]:e.target.value}))}
+                        style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #ce93d8', fontSize:13, boxSizing:'border-box' }}>
+                        {f.options.map(o=><option key={o} value={o}>{o.replace('_',' ')}</option>)}
+                      </select>
+                    : <input type={f.type} value={scholData[f.key]||''} onChange={e=>setScholData(p=>({...p,[f.key]:e.target.value}))}
+                        style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #ce93d8', fontSize:13, boxSizing:'border-box' }} />
+                  }
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:16 }}>
+              <button onClick={handleScholSave} disabled={scholSaving}
+                style={{ background:'#7B1FA2', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                {scholSaving?'⏳ Saving...':'💾 Save Scholarship'}</button>
+              <button onClick={()=>setScholEdit(false)}
+                style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Edit mode */}
         {editMode ? (
           <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:24 }}>
             <div style={{ background:'#fff8e1', border:'1px solid #ffe082', borderRadius:8, padding:'10px 14px', marginBottom:18, fontSize:13, color:'#7c5e00' }}>
@@ -245,87 +269,47 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
             </div>
           </div>
         ) : (
-          <>
-            {/* Tab bar */}
-            <div style={{ display:'flex', gap:4, marginBottom:16, borderBottom:'2px solid #e0e7ef', flexWrap:'wrap' }}>
-              {TABS.map(t => (
-                <button key={t.id} onClick={() => setDetailTab(t.id)}
-                  style={{ padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer', border:'none', borderBottom: detailTab===t.id ? `3px solid ${themeColor}` : '3px solid transparent', background:'transparent', color: detailTab===t.id ? themeColor : '#888', marginBottom:-2 }}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
+          /* Read view — All sections */
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
-            {/* ── TAB: Overview ─────────────────────────── */}
-            {detailTab === 'overview' && (
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                {/* Personal */}
-                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                  <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>👤 Personal Details</h4>
-                  {[
-                    ['Full Name',      selected.applicantName],
-                    ["Father's Name",  selected.fatherName],
-                    ["Mother's Name",  selected.motherName],
-                    ['Guardian',       selected.guardianName],
-                    ['Guardian Phone', selected.guardianPhone],
-                    ['DOB',            selected.dateOfBirth?new Date(selected.dateOfBirth).toLocaleDateString('en-IN'):'—'],
-                    ['Gender',         selected.gender],
-                    ['Blood Group',    selected.bloodGroup],
-                    ['Nationality',    selected.nationality],
-                    ['Religion',       selected.religion],
-                    ['Mobile',         selected.phone],
-                    ['Email',          selected.email],
-                  ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                </div>
-
-                {/* Identity + Address */}
-                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>🪪 Identity</h4>
-                    {[
-                      ['Category',    selected.category?(selected.category).toUpperCase():'—'],
-                      ['Caste',       selected.caste],
-                      ['Sub-Caste',   selected.subCaste],
-                      ['Aadhar No.',  selected.aadharNumber],
-                      ['Family Income', selected.familyIncome?`₹${selected.familyIncome}`:'—'],
-                      ['Caste Cert No.', selected.casteCertificateNo],
-                      ['Issuing Auth',   selected.casteCertificateAuthority],
-                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
+            {/* Row 1 — Personal + Academic */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+              {/* Personal Details */}
+              <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>👤 Personal Details</h4>
+                {[
+                  ['Full Name',     selected.applicantName],
+                  ["Father's Name", selected.fatherName],
+                  ["Mother's Name", selected.motherName],
+                  ['Guardian',      selected.guardianName],
+                  ['Guardian Phone',selected.guardianPhone],
+                  ['DOB',           selected.dateOfBirth?new Date(selected.dateOfBirth).toLocaleDateString('en-IN'):'—'],
+                  ['Gender',        selected.gender],
+                  ['Blood Group',   selected.bloodGroup],
+                  ['Nationality',   selected.nationality],
+                  ['Religion',      selected.religion],
+                  ['Category',      selected.category?(selected.category).toUpperCase():'—'],
+                  ['Caste',         selected.caste],
+                  ['Sub-Caste',     selected.subCaste],
+                  ['Marital Status',selected.isMarried?'Married':'Unmarried'],
+                  ['Husband Name',  selected.isMarried?selected.husbandName:'—'],
+                  ['Mobile',        selected.phone],
+                  ['Email',         selected.email],
+                  ['Aadhar No.',    selected.aadharNumber],
+                  ['Family Income', selected.familyIncome?`₹${selected.familyIncome}`:'—'],
+                ].map(([l,v])=>(
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right', wordBreak:'break-all', fontSize:12 }}>{v||'—'}</span>
                   </div>
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>🏠 Address</h4>
-                    {[
-                      ['House No.',    selected.houseNumber],
-                      ['Street/Area',  selected.streetArea],
-                      ['City/Village', selected.cityTownVillage],
-                      ['Sub-District', selected.subdistrict],
-                      ['District',     selected.district],
-                      ['State',        selected.state],
-                      ['Pin Code',     selected.pinCode],
-                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                  </div>
-                  {/* Credentials — Student Section only */}
-                  {role==='student_section' && (
-                    <div style={{ background:'#e8f5e9', borderRadius:14, border:'1px solid #a5d6a7', padding:20 }}>
-                      <h4 style={{ color:'#2E7D32', marginBottom:12, fontSize:14 }}>🔑 Login Credentials</h4>
-                      {[
-                        ['Email',      selected.email],
-                        ['Password',   selected.plainPassword||selected.tempPassword||'(set during generation)'],
-                        ['Student ID', selected.studentId||'Not assigned'],
-                        ['PRN',        selected.prnNumber||'Not set'],
-                      ].map(([l,v]) => <Row key={l} label={l} value={v} mono />)}
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
-            )}
 
-            {/* ── TAB: Academic ─────────────────────────── */}
-            {detailTab === 'academic' && (
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                {/* Current Academic */}
+              {/* Right column */}
+              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                {/* Academic */}
                 <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                  <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>🎓 Current Enrollment</h4>
+                  <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🎓 Academic Details</h4>
                   {[
                     ['Student ID',    selected.studentId],
                     ['PRN Number',    selected.prnNumber],
@@ -333,233 +317,146 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                     ['Course',        selected.courseType],
                     ['Subject',       selected.preferredSubject],
                     ['Year',          selected.admissionYear],
-                    ['Academic Year', selected.academicYear],
-                    ['Status',        selected.tcIssued ? '🔴 TC Issued (Inactive)' : '🟢 Active'],
-                  ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                </div>
-
-                {/* SSC + HSC */}
-                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>📚 SSC (10th)</h4>
-                    {[
-                      ['School',   selected.sscSchoolName],
-                      ['Board',    selected.sscBoard],
-                      ['Year',     selected.sscYOP],
-                      ['Percentage', selected.sscPercentage?`${selected.sscPercentage}%`:'—'],
-                      ['Grade',    selected.sscGrade],
-                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                  </div>
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>📚 HSC (12th)</h4>
-                    {[
-                      ['College',  selected.hscCollegeName],
-                      ['Board',    selected.hscBoard],
-                      ['Stream',   selected.hscStream],
-                      ['Year',     selected.hscYOP],
-                      ['Percentage', selected.hscPercentage?`${selected.hscPercentage}%`:'—'],
-                      ['Grade',    selected.hscGrade],
-                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                  </div>
-                  {selected.hasGap && (
-                    <div style={{ background:'#fff8e1', borderRadius:14, border:'1px solid #ffe082', padding:20 }}>
-                      <h4 style={{ color:'#F57F17', marginBottom:12, fontSize:14 }}>⏸️ Gap Year</h4>
-                      {[
-                        ['From', selected.gapFromYear],
-                        ['To',   selected.gapToYear],
-                        ['Reason', selected.gapReason],
-                      ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Bank Details */}
-                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                  <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>🏦 Bank Details</h4>
-                  {[
-                    ['Bank Name',   selected.bankName],
-                    ['Branch',      selected.bankBranch],
-                    ['Account No.', selected.bankAccountNo],
-                    ['IFSC Code',   selected.ifscCode],
-                  ].map(([l,v]) => <Row key={l} label={l} value={v} mono={l!=='Bank Name'&&l!=='Branch'} />)}
-                </div>
-              </div>
-            )}
-
-            {/* ── TAB: Documents ────────────────────────── */}
-            {detailTab === 'documents' && (
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:16 }}>
-                {[
-                  { label:'📸 Photo',              url: selected.photo },
-                  { label:'🪪 Aadhar Card',         url: selected.aadharPhoto },
-                  { label:'📋 Caste Certificate',   url: selected.casteCertificate },
-                  { label:'✅ Caste Validity',      url: selected.casteValidityCertificate },
-                  { label:'📄 Income Certificate',  url: selected.incomeCertificate },
-                  { label:'🏠 Domicile Certificate',url: selected.domicileCertificate },
-                  { label:'🏦 Bank Passbook',        url: selected.bankPassbook },
-                  { label:'📝 SSC Marksheet',        url: selected.sscMarksheet },
-                  { label:'📝 HSC Marksheet',        url: selected.hscMarksheet },
-                  { label:'🎓 HSC Certificate',      url: selected.hscCertificate },
-                  { label:'📋 Migration Certificate',url: selected.migrationCertificate },
-                  { label:'🔖 Leaving Certificate',  url: selected.leavingCertificate },
-                ].map(({ label, url }) => (
-                  <div key={label} style={{ background: url?'#f0fdf4':'#fafafa', borderRadius:12, border:`1px solid ${url?'#a5d6a7':'#e0e7ef'}`, padding:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontSize:13, fontWeight:600, color: url?'#1a1a2e':'#aaa' }}>{label}</span>
-                    {url
-                      ? <a href={url} target="_blank" rel="noreferrer"
-                          style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'4px 10px', borderRadius:6, textDecoration:'none' }}>View ↗</a>
-                      : <span style={{ fontSize:11, color:'#ccc' }}>Not uploaded</span>
-                    }
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* ── TAB: Fees ─────────────────────────────── */}
-            {detailTab === 'fees' && (
-              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                {/* Fee summary cards */}
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
-                  {[
-                    { label:'Total Fees',    value:`₹${Number(selected.totalFees||0).toLocaleString('en-IN')}`,            bg:'#e3f2fd', color:'#1565C0' },
-                    { label:'Scholarship',   value:`₹${Number(selected.scholarshipAmount||0).toLocaleString('en-IN')}`,    bg:'#f3e5f5', color:'#7B1FA2' },
-                    { label:'Net Payable',   value:`₹${Math.max(0,(selected.totalFees||0)-(selected.scholarshipAmount||0)).toLocaleString('en-IN')}`, bg:'#fff8e1', color:'#F57F17' },
-                    { label:'Paid',          value:`₹${Number(selected.feesPaid||0).toLocaleString('en-IN')}`,             bg:'#e8f5e9', color:'#2E7D32' },
-                  ].map(c => (
-                    <div key={c.label} style={{ background:c.bg, borderRadius:12, padding:'14px 16px', textAlign:'center' }}>
-                      <div style={{ fontSize:11, color:c.color, fontWeight:600, marginBottom:4 }}>{c.label}</div>
-                      <div style={{ fontSize:16, fontWeight:800, color:c.color }}>{c.value}</div>
+                    ['SSC School',    selected.sscSchoolName],
+                    ['SSC Board',     selected.sscBoard],
+                    ['SSC Year',      selected.sscYOP],
+                    ['SSC %',         selected.sscPercentage?`${selected.sscPercentage}%`:'—'],
+                    ['SSC Grade',     selected.sscGrade],
+                    ['HSC College',   selected.hscCollegeName],
+                    ['HSC Board',     selected.hscBoard],
+                    ['HSC Stream',    selected.hscStream],
+                    ['HSC Year',      selected.hscYOP],
+                    ['HSC %',         selected.hscPercentage?`${selected.hscPercentage}%`:'—'],
+                    ['HSC Grade',     selected.hscGrade],
+                    ['Has Gap Year',  selected.hasGap?'Yes':'No'],
+                    ['Gap Period',    selected.hasGap?`${selected.gapFromYear||''} – ${selected.gapToYear||''}`:'—'],
+                    ['Gap Reason',    selected.gapReason],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                      <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                      <span style={{ color:(!v||v==='—'||v==='No')?'#ccc':'#222', textAlign:'right' }}>{v||'—'}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Fee Ledger */}
-                {selected.feeLedger?.length > 0 ? (
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:'#1565C0', marginBottom:12, fontSize:14 }}>📋 Payment History</h4>
-                    <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', background:'#e3f2fd', padding:'7px 14px', borderRadius:8, marginBottom:6, gap:8 }}>
-                      {['Fee Type','Mode','Date','Amount'].map(h=>(
-                        <span key={h} style={{ fontSize:11, fontWeight:700, color:'#1565C0' }}>{h}</span>
-                      ))}
+                {/* Scholarship */}
+                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                  <h4 style={{ color:'#7B1FA2', marginBottom:14, fontSize:14 }}>🏅 Scholarship</h4>
+                  {[
+                    ['Status',          <span style={{ background:schColor(selected.scholarshipStatus)[0], color:schColor(selected.scholarshipStatus)[1], padding:'2px 10px', borderRadius:10, fontSize:11, fontWeight:700 }}>{(selected.scholarshipStatus||'not_filled').replace(/_/g,' ')}</span>],
+                    ['Amount',          selected.scholarshipAmount>0?`₹${Number(selected.scholarshipAmount).toLocaleString('en-IN')}`:'—'],
+                    ['MahaDBT Username',selected.mahaDBTUsername],
+                    ['MahaDBT App No.', selected.mahaDBTAppNo],
+                    ['MahaDBT Mobile',   selected.mahaDBTMobile],
+                    ['Note',            selected.scholarshipNote],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                      <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                      <span style={{ color:'#222', textAlign:'right' }}>{v||'—'}</span>
                     </div>
-                    {selected.feeLedger.map((p,i) => (
-                      <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', padding:'7px 14px', borderBottom:'1px solid #f0f4f8', gap:8, alignItems:'center' }}>
-                        <span style={{ fontSize:12 }}>{p.feeTypeLabel||p.feeType}</span>
-                        <span style={{ fontSize:11, color:'#555', textTransform:'capitalize' }}>{p.paymentMode||'—'}</span>
-                        <span style={{ fontSize:11, color:'#888' }}>{p.paidAt?new Date(p.paidAt).toLocaleDateString('en-IN'):'—'}</span>
-                        <span style={{ fontSize:13, fontWeight:700, color:'#2E7D32' }}>₹{(p.amount||0).toLocaleString('en-IN')}</span>
-                      </div>
-                    ))}
-                    <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', padding:'8px 14px', background:'#e8f5e9', borderRadius:8, marginTop:6, gap:8 }}>
-                      <span style={{ fontSize:12, fontWeight:700, color:'#2E7D32', gridColumn:'span 3' }}>Total Collected</span>
-                      <span style={{ fontSize:14, fontWeight:800, color:'#1b5e20' }}>₹{selected.feeLedger.reduce((s,p)=>s+(p.amount||0),0).toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ background:'#f8faff', borderRadius:12, border:'1px solid #e0e7ef', padding:24, textAlign:'center', color:'#aaa', fontSize:14 }}>
-                    No payment records found.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── TAB: Scholarship ──────────────────────── */}
-            {detailTab === 'scholarship' && (
-              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                {/* Scholarship Edit Form */}
-                {scholEdit && (
-                  <div style={{ background:'#f3e5f5', border:'1px solid #ce93d8', borderRadius:14, padding:20 }}>
-                    <h4 style={{ color:'#7B1FA2', marginBottom:14 }}>🏅 Edit Scholarship Details</h4>
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                      {[
-                        { key:'scholarshipStatus', label:'Status', type:'select', options:['not_filled','filled','approved','rejected','disbursed'] },
-                        { key:'scholarshipAmount', label:'Scholarship Amount (₹)', type:'number' },
-                        { key:'mahaDBTUsername',   label:'MahaDBT Username',       type:'text' },
-                        { key:'mahaDBTPassword',   label:'MahaDBT Password',       type:'text' },
-                        { key:'mahaDBTAppNo',      label:'MahaDBT App No.',        type:'text' },
-                        { key:'mahaDBTMobile',     label:'MahaDBT Mobile No.',     type:'text' },
-                        { key:'scholarshipNote',   label:'Notes',                  type:'text' },
-                      ].map(f => (
-                        <div key={f.key}>
-                          <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#7B1FA2', marginBottom:5 }}>{f.label}</label>
-                          {f.type==='select'
-                            ? <select value={scholData[f.key]||''} onChange={e=>setScholData(p=>({...p,[f.key]:e.target.value}))}
-                                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #ce93d8', fontSize:13, boxSizing:'border-box' }}>
-                                {f.options.map(o=><option key={o} value={o}>{o.replace(/_/g,' ')}</option>)}
-                              </select>
-                            : <input type={f.type} value={scholData[f.key]||''} onChange={e=>setScholData(p=>({...p,[f.key]:e.target.value}))}
-                                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #ce93d8', fontSize:13, boxSizing:'border-box' }} />
-                          }
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display:'flex', gap:10, marginTop:16 }}>
-                      <button onClick={handleScholSave} disabled={scholSaving}
-                        style={{ background:'#7B1FA2', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                        {scholSaving?'⏳ Saving...':'💾 Save Scholarship'}</button>
-                      <button onClick={()=>setScholEdit(false)}
-                        style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Scholarship info display */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:'#7B1FA2', marginBottom:12, fontSize:14 }}>🏅 Scholarship Status</h4>
-                    {[
-                      ['Status', null, <span key="s" style={{ background:schColor(selected.scholarshipStatus)[0], color:schColor(selected.scholarshipStatus)[1], padding:'3px 10px', borderRadius:10, fontSize:11, fontWeight:700 }}>{(selected.scholarshipStatus||'not_filled').replace(/_/g,' ')}</span>],
-                      ['Eligible Amount', `₹${Number(selected.scholarshipEligibleAmount||0).toLocaleString('en-IN')}`],
-                      ['Scholarship Amount', `₹${Number(selected.scholarshipAmount||0).toLocaleString('en-IN')}`],
-                      ['Received Amount', `₹${Number(selected.scholarshipReceivedAmount||0).toLocaleString('en-IN')}`],
-                      ['Pending Amount', `₹${Number(selected.scholarshipPendingAmount||0).toLocaleString('en-IN')}`],
-                      ['Note', selected.scholarshipNote],
-                    ].map(([l,v,badge]) => <Row key={l} label={l} value={v} badge={badge} />)}
-                  </div>
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:'#7B1FA2', marginBottom:12, fontSize:14 }}>🌐 MahaDBT Details</h4>
-                    {[
-                      ['Username',   selected.mahaDBTUsername],
-                      ['App No.',    selected.mahaDBTAppNo],
-                      ['Mobile',     selected.mahaDBTMobile],
-                      ['Verified By',selected.scholarshipVerifiedBy],
-                      ['Verified On',selected.scholarshipVerifiedDate?new Date(selected.scholarshipVerifiedDate).toLocaleDateString('en-IN'):'—'],
-                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                  </div>
+                  ))}
                 </div>
               </div>
-            )}
-          </>
+            </div>
+
+            {/* Row 2 — Address + Caste + Bank */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+              {/* Address */}
+              <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🏠 Address</h4>
+                {[
+                  ['House No.',    selected.houseNumber],
+                  ['Street/Area',  selected.streetArea],
+                  ['City/Village', selected.cityTownVillage],
+                  ['Sub-District', selected.subdistrict],
+                  ['District',     selected.district],
+                  ['State',        selected.state],
+                  ['Pin Code',     selected.pinCode],
+                  ['Address',      selected.address],
+                ].map(([l,v])=>(
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:90, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right', wordBreak:'break-all' }}>{v||'—'}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Caste */}
+              <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>📋 Caste Details</h4>
+                {[
+                  ['Caste Certificate No.',  selected.casteCertificateNo],
+                  ['Issuing Authority',       selected.casteCertificateAuthority],
+                  ['Caste Validity',          selected.casteValidity],
+                  ['Validity Date',           selected.casteValidityDate?new Date(selected.casteValidityDate).toLocaleDateString('en-IN'):'—'],
+                ].map(([l,v])=>(
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:110, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right' }}>{v||'—'}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bank Details */}
+              <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                <h4 style={{ color:themeColor, marginBottom:14, fontSize:14 }}>🏦 Bank Details</h4>
+                {[
+                  ['Bank Name',    selected.bankName],
+                  ['Branch',       selected.bankBranch],
+                  ['Account No.',  selected.bankAccountNo],
+                  ['IFSC Code',    selected.ifscCode],
+                ].map(([l,v])=>(
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                    <span style={{ color:'#888', fontWeight:600, minWidth:90, flexShrink:0 }}>{l}</span>
+                    <span style={{ color:(!v||v==='—')?'#ccc':'#222', textAlign:'right', fontFamily:l==='Account No.'||l==='IFSC Code'?'monospace':'inherit' }}>{v||'—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Row 3 — Credentials + Fee Ledger */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+              {/* Credentials — only for Student Section */}
+              {role==='student_section' && (
+                <div style={{ background:'#e8f5e9', borderRadius:14, border:'1px solid #a5d6a7', padding:20 }}>
+                  <h4 style={{ color:'#2E7D32', marginBottom:14, fontSize:14 }}>🔑 Login Credentials</h4>
+                  {[
+                    ['Email (Username)', selected.email],
+                    ['Password',         selected.plainPassword || selected.tempPassword || '(set during generation)'],
+                    ['Student ID',       selected.studentId||'Not assigned yet'],
+                    ['PRN',              selected.prnNumber||'Not set yet'],
+                  ].map(([l,v])=>(
+                    <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #c8e6c9', fontSize:12 }}>
+                      <span style={{ color:'#555', fontWeight:600, minWidth:130, flexShrink:0 }}>{l}</span>
+                      <span style={{ color:'#1b5e20', fontWeight:700, fontFamily:'monospace', background:l==='Password'?'#fff3e0':'transparent', padding:l==='Password'?'1px 6px':'0', borderRadius:4 }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Fee Ledger — only for Accounts */}
+              {role==='accounts' && selected.feeLedger?.length > 0 && (
+                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                  <h4 style={{ color:'#1565C0', marginBottom:14, fontSize:14 }}>💰 Fee Payments</h4>
+                  {selected.feeLedger.map((p,i)=>(
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:12 }}>
+                      <span style={{ color:'#555' }}>{p.feeTypeLabel||p.feeType} {p.paidAt?`(${new Date(p.paidAt).toLocaleDateString('en-IN')})`:''}  </span>
+                      <span style={{ fontWeight:700, color:'#2E7D32' }}>₹{(p.amount||0).toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // LIST VIEW
-  // ─────────────────────────────────────────────────────────────────────────
-  const currentCount = admissions.filter(s=>!s.tcIssued).length;
-  const pastCount    = admissions.filter(s=>s.tcIssued).length;
-
+  // ── LIST VIEW ──────────────────────────────────────────────────────────────
   return (
     <div>
-      {msg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
-
-      {/* Current / Past / All toggle */}
-      <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-        {[
-          { k:'current', label:`🟢 Current Students (${currentCount})` },
-          { k:'past',    label:`🔴 Past Students (${pastCount})` },
-          { k:'all',     label:`📋 All (${admissions.length})` },
-        ].map(t => (
-          <button key={t.k} onClick={() => setStatusFilter(t.k)}
-            style={{ padding:'7px 16px', borderRadius:8, border:`2px solid ${statusFilter===t.k?themeColor:'#ddd'}`, background:statusFilter===t.k?themeColor:'#fff', color:statusFilter===t.k?'#fff':'#555', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Search + Filters */}
+      {msg && <div style={{ padding:'12px 16px', borderRadius:10, marginBottom:14, fontWeight:500, fontSize:14, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
       <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap', alignItems:'center' }}>
         <input type="text" placeholder="🔍 Name, email, ID, PRN, aadhar..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{ flex:1, minWidth:200, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14 }} />
@@ -577,35 +474,36 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
         <button onClick={exportCSV} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:9, padding:'9px 16px', fontSize:13, fontWeight:700, cursor:'pointer' }}>📥 CSV</button>
       </div>
 
-      {/* Count badges */}
       <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
-        <div style={{ background:'#e3f2fd', color:'#1565C0', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600 }}>Showing: {filteredAdmissions.length}</div>
+        <div style={{ background:'#e3f2fd', color:'#1565C0', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600 }}>Total: {admissions.length}</div>
+        <div style={{ background:'#f5f5f5', color:'#555', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600 }}>Showing: {filteredAdmissions.length}</div>
         {['1st Year','2nd Year','3rd Year'].map(y=>(
           <div key={y} style={{ background:'#f5f5f5', color:'#555', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600 }}>
-            {y}: {filteredAdmissions.filter(s=>s.admissionYear===y).length}
+            {y}: {admissions.filter(s=>s.admissionYear===y).length}
           </div>
         ))}
+        {canEdit && <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>✏️ Edit & Delete Enabled</div>}
+        {role==='student_section' && <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>🔑 Credentials Visible</div>}
+        {role==='scholarship' && <div style={{ background:'#f3e5f5', color:'#7B1FA2', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>🏅 Scholarship Edit Enabled</div>}
       </div>
 
-      {loading ? (
-        <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p><h3>Loading...</h3></div>
-      ) : filteredAdmissions.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">👩‍🎓</div><h3>No students found</h3></div>
-      ) : (
+      {loading ? <div className="empty-state"><p style={{fontSize:'2rem'}}>⏳</p><h3>Loading...</h3></div>
+      : filteredAdmissions.length===0 ? <div className="empty-state"><div className="empty-icon">👩‍🎓</div><h3>No students found</h3></div>
+      : (
         <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.06)' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1.8fr 1.5fr 0.7fr 1.2fr 0.9fr 0.9fr 0.6fr', background:themeColor, padding:'10px 16px', gap:8 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1.8fr 1.8fr 0.7fr 1.1fr 0.9fr 0.9fr 0.6fr', background:themeColor, padding:'12px 16px', gap:8 }}>
             {['ID','Name','Email','Cat.','Course / Year','PRN','Scholarship',''].map(h=>(
               <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
             ))}
           </div>
-          {filteredAdmissions.map((s,idx) => {
-            const sc = schColor(s.scholarshipStatus);
+          {filteredAdmissions.map((s,idx)=>{
+            const sc=schColor(s.scholarshipStatus);
             return (
-              <div key={s._id} style={{ display:'grid', gridTemplateColumns:'1fr 1.8fr 1.5fr 0.7fr 1.2fr 0.9fr 0.9fr 0.6fr', padding:'10px 16px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:s.tcIssued?'#fff8f8':idx%2===0?'#fafbff':'#fff' }}>
+              <div key={s._id} style={{ display:'grid', gridTemplateColumns:'1fr 1.8fr 1.8fr 0.7fr 1.1fr 0.9fr 0.9fr 0.6fr', padding:'10px 16px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
                 <span style={{ fontSize:10, fontFamily:'monospace', color:themeColor, fontWeight:700 }}>{s.studentId||'—'}</span>
                 <div>
                   <p style={{ fontWeight:600, fontSize:13, color:'#1a1a2e', margin:0 }}>{s.applicantName}</p>
-                  <p style={{ fontSize:10, color:s.tcIssued?'#C62828':'#888', margin:0 }}>{s.tcIssued?'🔴 TC Issued':s.phone||''}</p>
+                  <p style={{ fontSize:10, color:'#888', margin:0 }}>{s.phone||''}</p>
                 </div>
                 <div>
                   <p style={{ fontSize:11, color:'#555', margin:0 }}>{s.email}</p>
@@ -617,14 +515,23 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                   <p style={{ fontSize:10, color:'#888', margin:0 }}>{s.admissionYear}</p>
                 </div>
                 <span style={{ fontSize:10, fontFamily:'monospace', color:s.prnNumber?'#2E7D32':'#E65100', fontWeight:600 }}>{s.prnNumber||'⚠️—'}</span>
-                <span style={{ fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:8, background:sc[0], color:sc[1] }}>{(s.scholarshipStatus||'not_filled').replace(/_/g,' ')}</span>
-                <button onClick={()=>{ setSelected(s); setDetailTab('overview'); setEditMode(false); setEditData({}); setScholEdit(false); setMsg(''); }}
+                <span style={{ fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:8, background:sc[0], color:sc[1] }}>{(s.scholarshipStatus||'not_filled').replace('_',' ')}</span>
+                <button onClick={()=>{ setSelected(s); setEditMode(false); setEditData({}); setScholEdit(false); setMsg(''); }}
                   style={{ background:'#e3f2fd', color:themeColor, border:`1px solid ${themeColor}44`, borderRadius:7, padding:'5px 10px', fontSize:12, fontWeight:600, cursor:'pointer' }}>👁️</button>
               </div>
             );
           })}
         </div>
       )}
+
+      <div style={{ marginTop:12, background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'10px 16px', fontSize:12, color:'#666' }}>
+        {role==='student_section' && '🔑 Student Section: Edit, Delete & Credentials visible'}
+        {role==='scholarship' && '🏅 Scholarship Section: Scholarship status & MahaDBT edit enabled'}
+        {role==='accounts' && '💰 Accounts Section: Fee ledger visible in student detail'}
+        {role==='exam' && '📝 Exam Section: Read-only student view'}
+        {role==='principal' && '✏️ Principal: Edit & Delete enabled'}
+        {role==='readonly' && '🔒 Read-only view'}
+      </div>
     </div>
   );
 };
