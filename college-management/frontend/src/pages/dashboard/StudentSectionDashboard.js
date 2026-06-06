@@ -992,6 +992,8 @@ const printTC = (adm) => {
   w.document.write(html);
   w.document.close();
 };
+
+
 const printBonafide = (adm) => {
   const certNo  = 'BON' + new Date().getFullYear().toString().slice(-2) + '-' + Date.now().toString().slice(-4);
   const now     = new Date();
