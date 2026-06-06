@@ -1,5 +1,4 @@
-Now let me create the backend models and controllers. I'll start by creating all the necessary backend files:
-Action: file_editor create /app/backend/models/ScholarshipMaster.js --file-text "const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const scholarshipMasterSchema = new mongoose.Schema(
   {
@@ -13,6 +12,7 @@ const scholarshipMasterSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Course type is required'],
       trim: true,
+      // e.g. "B.Sc", "B.A", "B.Com"
     },
     admissionYear: {
       type: String,
@@ -24,11 +24,13 @@ const scholarshipMasterSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Academic year is required'],
       trim: true,
+      // e.g. "2025-26"
     },
+    // MahaDBT receivable amount — what govt reimburses to student
     scholarshipAmount: {
       type: Number,
       required: [true, 'Scholarship amount is required'],
-      min: [0, 'Scholarship amount cannot be negative'],
+      min: [0, 'Amount cannot be negative'],
     },
     description: {
       type: String,
@@ -39,26 +41,16 @@ const scholarshipMasterSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    createdBy: {
-      type: String,
-      default: '',
-    },
-    updatedBy: {
-      type: String,
-      default: '',
-    },
+    createdBy: { type: String, default: '' },
+    updatedBy: { type: String, default: '' },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Compound index to ensure unique combinations
+// Unique: one entry per category + course + year + academicYear
 scholarshipMasterSchema.index(
   { category: 1, courseType: 1, admissionYear: 1, academicYear: 1 },
   { unique: true }
 );
 
 module.exports = mongoose.model('ScholarshipMaster', scholarshipMasterSchema);
-"
-Observation: Create successful: /app/backend/models/ScholarshipMaster.js
