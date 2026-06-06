@@ -1303,97 +1303,13 @@ const AccountsSectionDashboard = () => {
           )}
 
           {/* ════════════════════════ EXPENSES ════════════════════════ */}
-          {activeTab === 'expenses' && (
-            <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🏗️ College Expense Tracker</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Record and monitor college expenditures.</p>
-
-              {/* Add Expense Form */}
-              <div className="form-card" style={{ marginBottom: 28 }}>
-                <h3>➕ Record New Expense</h3>
-                {expMsg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, background: expMsg.includes('✅') ? '#e8f5e9' : '#ffebee', color: expMsg.includes('✅') ? '#2E7D32' : '#C62828' }}>{expMsg}</div>}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  <div className="form-group">
-                    <label>Description *</label>
-                    <input type="text" placeholder="e.g. Stationery purchase" value={expForm.description}
-                      onChange={e => setExpForm({ ...expForm, description: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Amount (₹) *</label>
-                    <input type="number" min="0" placeholder="e.g. 500" value={expForm.amount}
-                      onChange={e => setExpForm({ ...expForm, amount: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Date *</label>
-                    <input type="date" value={expForm.date}
-                      onChange={e => setExpForm({ ...expForm, date: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Category</label>
-                    <select value={expForm.category} onChange={e => setExpForm({ ...expForm, category: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
-                      <option value="infrastructure">🏗️ Infrastructure</option>
-                      <option value="stationery">📝 Stationery</option>
-                      <option value="electricity">💡 Electricity / Utilities</option>
-                      <option value="salary">👤 Salary / Wages</option>
-                      <option value="events">🎉 Events / Functions</option>
-                      <option value="maintenance">🔧 Maintenance</option>
-                      <option value="other">📦 Other</option>
-                    </select>
-                  </div>
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label>Paid To / Vendor</label>
-                    <input type="text" placeholder="e.g. Sharma Stationery Store" value={expForm.paidTo}
-                      onChange={e => setExpForm({ ...expForm, paidTo: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                </div>
-                <button onClick={saveExpense}
-                  style={{ marginTop: 16, background: '#1565C0', color: '#fff', padding: '11px 28px', borderRadius: 8, border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                  💾 Save Expense
-                </button>
-              </div>
-
-              {/* Expense Summary */}
-              <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-                <div style={{ background: '#e3f2fd', color: '#1565C0', borderRadius: 12, padding: '12px 20px', fontWeight: 700, fontSize: 14 }}>
-                  Total Expenses: ₹{totalExpenses.toLocaleString('en-IN')}
-                </div>
-                <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 12, padding: '12px 20px', fontWeight: 700, fontSize: 14 }}>
-                  Records: {expenses.length}
-                </div>
-              </div>
-
-              {/* Expense List */}
-              {expenses.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">🏗️</div><h3>No expenses recorded yet</h3></div>
-              ) : (
-                <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr 0.8fr 0.5fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
-                    {['Description', 'Category', 'Date', 'Paid To', 'Amount', ''].map(h => (
-                      <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
-                    ))}
-                  </div>
-                  {expenses.map((exp, idx) => (
-                    <div key={exp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr 0.8fr 0.5fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-                      <span style={{ fontSize: 13, color: '#222', fontWeight: 500 }}>{exp.description}</span>
-                      <span style={{ fontSize: 12, color: '#555' }}>{exp.category}</span>
-                      <span style={{ fontSize: 12, color: '#555' }}>{exp.date}</span>
-                      <span style={{ fontSize: 12, color: '#555' }}>{exp.paidTo || '—'}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#C62828' }}>₹{Number(exp.amount).toLocaleString('en-IN')}</span>
-                      <button onClick={() => deleteExpense(exp.id)}
-                        style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-                        🗑️
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+         {activeTab === 'expenses' && (
+             <ExpenseTracker
+              user={user}
+          showToast={showToast}
+         API={API}
+       />
+      )}         
 
           {/* ════════════════════════ PAYMENT HISTORY ════════════════════════ */}
           {activeTab === 'history' && (
