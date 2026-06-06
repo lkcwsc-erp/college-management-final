@@ -928,8 +928,8 @@ const printTC = (adm) => {
       <div class="htxt">
         <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College</div>
-        <div class="haddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
         <div class="haddr">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+        <div class="haddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
         <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
       </div>
     </div>
