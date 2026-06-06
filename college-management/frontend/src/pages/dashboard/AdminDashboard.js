@@ -342,14 +342,13 @@ const AdminAchievementsTab = ({ showMessage }) => {
   const [editingId, setEditingId]       = useState(null);
   const [saving, setSaving]             = useState(false);
   const [showForm, setShowForm]         = useState(false);
-
-  const fetchAll = useCallback(() => {
+const fetchAll = useCallback(() => {
   setLoading(true);
   API.get('/achievements/all')
     .then(res => setAchievements(res.data.achievements || []))
     .catch(() => showMessage('❌ Failed to load achievements'))
     .finally(() => setLoading(false));
-}, []);
+}, [showMessage]);
 
 useEffect(() => {
   fetchAll();
