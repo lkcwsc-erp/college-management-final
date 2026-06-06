@@ -84,7 +84,7 @@ const historyText = historyExpanded
             </Link>
           </div>
           <p className="vnss-hero-line">
-            <strong>Vidyaniketan Sevabhavi Sanstha (VNSS)</strong>, Dongargav(She.)
+            <strong>Vidyaniketan Sevabhavi Sanstha (VNSS), Dongargaon(She.)</strong>
           </p>
         </div>
       </section>
