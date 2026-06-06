@@ -260,6 +260,7 @@ const AdminDashboard = () => {
     { id: 'delete_requests', label: '🗑️ Delete Requests' },
     { id: 'reports',   label: '📊 Reports' },
     { id: 'receipts',  label: '🧾 Payment Receipts' },
+    { id: 'achievements', label: '🏆 Achievements' },
   ];
 
   const roleLabel = (role) => ({
@@ -831,11 +832,12 @@ const AdminDashboard = () => {
           {/* ══ CONTACTS ══ */}
           {activeTab === 'contacts' && (
             <ContactMessagesTab
-            contacts={contacts}
-           setContacts={setContacts}
-            showMessage={showMessage}
+              contacts={contacts}
+              setContacts={setContacts}
+              showMessage={showMessage}
             />
           )}
+
           {/* ══ MESSAGING ══ */}
           {activeTab === 'reports'   && <AdminReports themeColor="#1565C0" />}
           {activeTab === 'receipts'  && <PaymentReceiptsTab themeColor="#1565C0" />}
@@ -843,6 +845,9 @@ const AdminDashboard = () => {
 
           {/* Delete Requests */}
           {activeTab === 'delete_requests' && <AdminDeleteRequestsTab />}
+
+          {/* Achievements */}
+          {activeTab === 'achievements' && <AdminAchievementsTab showMessage={showMessage} />}
 
         </div>
       </main>
@@ -1086,523 +1091,193 @@ const AdminMessagingTab = ({ user, showMessage }) => {
     </div>
   );
 };
-const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
-  const [editingId, setEditingId]   = useState(null);
-  const [replyText, setReplyText]   = useState('');
-  const [saving, setSaving]         = useState(false);
-  const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState('all'); // all | unread | replied
- 
-  const refreshContacts = () => {
-    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
+
+
+// ─── Admin Achievements Tab ──────────────────────────────────────────────────
+const ACHIEVEMENT_ICONS = ['🏆','🎖️','🌟','🔬','🎭','⚽','🤝','💡','📚','🎓','🏅','🥇','🎗️','🏛️','🔭','🎨','🏋️','🧪','💻','📜'];
+const ACHIEVEMENT_CATEGORIES = [
+  { value: 'academic',  label: '📚 Academic' },
+  { value: 'sports',    label: '⚽ Sports' },
+  { value: 'cultural',  label: '🎭 Cultural' },
+  { value: 'research',  label: '🔬 Research' },
+  { value: 'social',    label: '🤝 Social / NSS' },
+  { value: 'award',     label: '🏅 Award' },
+  { value: 'other',     label: '📦 Other' },
+];
+const BLANK_ACH = { icon: '🏆', title: '', description: '', category: 'academic', year: '', order: 0, isActive: true };
+
+const AdminAchievementsTab = ({ showMessage }) => {
+  const [achievements, setAchievements] = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [form, setForm]                 = useState(BLANK_ACH);
+  const [editingId, setEditingId]       = useState(null);
+  const [saving, setSaving]             = useState(false);
+  const [showForm, setShowForm]         = useState(false);
+
+  const fetchAll = () => {
+    setLoading(true);
+    API.get('/achievements/all')
+      .then(res => setAchievements(res.data.achievements || []))
+      .catch(() => showMessage('❌ Failed to load achievements'))
+      .finally(() => setLoading(false));
   };
- 
-  const handleMarkRead = async (id) => {
-    try {
-      await API.put(`/contact/${id}/read`);
-      refreshContacts();
-    } catch (e) { showMessage('❌ Failed to mark as read'); }
-  };
- 
-  const handleSaveReply = async (id) => {
-    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const handleSave = async () => {
+    if (!form.title.trim())       return showMessage('❌ Title is required');
+    if (!form.description.trim()) return showMessage('❌ Description is required');
     setSaving(true);
     try {
-      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
-      showMessage('✅ Reply saved successfully!');
-      setEditingId(null);
-      setReplyText('');
-      refreshContacts();
+      if (editingId) {
+        await API.put(`/achievements/${editingId}`, form);
+        showMessage('✅ Achievement updated!');
+      } else {
+        await API.post('/achievements', form);
+        showMessage('✅ Achievement added!');
+      }
+      setForm(BLANK_ACH); setEditingId(null); setShowForm(false); fetchAll();
     } catch (e) {
-      showMessage('❌ Failed to save reply');
-    } finally {
-      setSaving(false);
-    }
+      showMessage('❌ ' + (e.response?.data?.message || 'Failed to save'));
+    } finally { setSaving(false); }
   };
- 
+
+  const handleEdit = (a) => {
+    setForm({ icon: a.icon, title: a.title, description: a.description, category: a.category, year: a.year || '', order: a.order || 0, isActive: a.isActive });
+    setEditingId(a._id); setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    if (!window.confirm('Delete this achievement?')) return;
     try {
-      await API.delete(`/contact/${id}`);
-      showMessage('🗑️ Message deleted');
-      refreshContacts();
+      await API.delete(`/achievements/${id}`);
+      showMessage('🗑️ Achievement deleted'); fetchAll();
     } catch (e) { showMessage('❌ Failed to delete'); }
   };
- 
-  const filtered = contacts.filter(c => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      c.name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      c.subject.toLowerCase().includes(q) ||
-      c.message.toLowerCase().includes(q);
-    const matchFilter =
-      filter === 'all'     ? true :
-      filter === 'unread'  ? !c.isRead :
-      filter === 'replied' ? !!c.adminReply :
-      true;
-    return matchSearch && matchFilter;
-  });
- 
-  const S = {
-    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
-    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
-    body:    { padding:'14px 18px' },
-    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
-    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
-    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
-    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
-    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
+
+  const handleToggle = async (a) => {
+    try {
+      await API.put(`/achievements/${a._id}`, { ...a, isActive: !a.isActive });
+      showMessage(`${!a.isActive ? '✅ Shown' : '🙈 Hidden'} on website`); fetchAll();
+    } catch (e) { showMessage('❌ Failed to update'); }
   };
- 
+
+  const S = {
+    card:   { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:12, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:   { padding:'12px 16px' },
+    label:  { display:'block', fontWeight:600, fontSize:13, color:'#374151', marginBottom:5 },
+    input:  { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    select: { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, background:'#fff', boxSizing:'border-box' },
+    btn:    (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'7px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }),
+  };
+
   return (
     <div>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
-        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          {['all','unread','replied'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
-              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
-            </button>
-          ))}
-        </div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+        <h3 style={{ margin:0, color:'#1565C0' }}>🏆 Achievements ({achievements.length})</h3>
+        <button style={S.btn('#1565C0')} onClick={() => { setForm(BLANK_ACH); setEditingId(null); setShowForm(!showForm); }}>
+          {showForm ? '✖ Close Form' : '➕ Add Achievement'}
+        </button>
       </div>
- 
-      {/* Search */}
-      <input style={{ ...S.input, marginBottom:16 }}
-        type="text" placeholder="🔍 Search by name, email, subject..."
-        value={search} onChange={e => setSearch(e.target.value)} />
- 
-      {/* Empty state */}
-      {filtered.length === 0 ? (
-        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
-          <div style={{ fontSize:40 }}>📭</div>
-          <h3>No messages found</h3>
-        </div>
-      ) : (
-        filtered.map(c => (
-          <div key={c._id} style={S.card}>
-            {/* Card Header */}
-            <div style={S.header}>
-              <div>
-                <strong style={{ fontSize:15 }}>{c.name}</strong>
-                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
+
+      {showForm && (
+        <div style={{ ...S.card, border:'2px solid #1565C0', marginBottom:24 }}>
+          <div style={{ ...S.header, background:'#e3f2fd' }}>
+            <strong style={{ color:'#1565C0' }}>{editingId ? '✏️ Edit Achievement' : '➕ New Achievement'}</strong>
+          </div>
+          <div style={S.body}>
+            <div style={{ marginBottom:16 }}>
+              <label style={S.label}>Icon</label>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:8 }}>
+                {ACHIEVEMENT_ICONS.map(ic => (
+                  <button key={ic} onClick={() => setForm({...form, icon: ic})}
+                    style={{ fontSize:22, background: form.icon===ic ? '#e3f2fd' : 'transparent', border: form.icon===ic ? '2px solid #1565C0' : '2px solid transparent', borderRadius:8, padding:'4px 8px', cursor:'pointer' }}>
+                    {ic}
+                  </button>
+                ))}
               </div>
-              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
-                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
-                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
-                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
+              <div style={{ fontSize:28 }}>Selected: {form.icon}</div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px,1fr))', gap:14, marginBottom:14 }}>
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={S.label}>Title *</label>
+                <input style={S.input} type="text" placeholder="e.g. University Rank Holders"
+                  value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
+              </div>
+              <div>
+                <label style={S.label}>Category</label>
+                <select style={S.select} value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
+                  {ACHIEVEMENT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>Year (optional)</label>
+                <input style={S.input} type="text" placeholder="e.g. 2024-25"
+                  value={form.year} onChange={e => setForm({...form, year: e.target.value})} />
+              </div>
+              <div>
+                <label style={S.label}>Display Order</label>
+                <input style={S.input} type="number" min="0"
+                  value={form.order} onChange={e => setForm({...form, order: Number(e.target.value)})} />
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:22 }}>
+                <input type="checkbox" id="achIsActive" checked={form.isActive}
+                  onChange={e => setForm({...form, isActive: e.target.checked})}
+                  style={{ width:18, height:18, cursor:'pointer' }} />
+                <label htmlFor="achIsActive" style={{ fontWeight:600, fontSize:13, cursor:'pointer' }}>Show on website</label>
+              </div>
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={S.label}>Description *</label>
+                <textarea style={{ ...S.input, minHeight:80, resize:'vertical' }}
+                  placeholder="Describe the achievement..."
+                  value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
               </div>
             </div>
- 
-            {/* Card Body */}
-            <div style={S.body}>
-              {/* Contact info */}
-              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
-                📧 {c.email}
-                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
-              </div>
- 
-              {/* Original message */}
-              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
-                {c.message}
-              </div>
- 
-              {/* Existing reply display */}
-              {c.adminReply && editingId !== c._id && (
-                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
-                  <strong>Admin Reply:</strong> {c.adminReply}
-                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
-                </div>
-              )}
- 
-              {/* Reply editor */}
-              {editingId === c._id && (
-                <div style={{ marginBottom:12 }}>
-                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
-                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
-                  </label>
-                  <textarea style={S.textarea}
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    placeholder="Type your reply here..." />
-                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
-                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
-                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
-                    </button>
-                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
- 
-              {/* Action buttons */}
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button style={S.btn('#1565C0')}
-                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
-                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
-                </button>
-                {!c.isRead && (
-                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
-                    👁️ Mark as Read
-                  </button>
-                )}
-                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
-                  🗑️ Delete
-                </button>
-              </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button style={S.btn('#2E7D32')} onClick={handleSave} disabled={saving}>
+                {saving ? '⏳ Saving...' : (editingId ? '💾 Update' : '💾 Save')}
+              </button>
+              <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setShowForm(false); setEditingId(null); setForm(BLANK_ACH); }}>Cancel</button>
             </div>
           </div>
-        ))
-      )}
-    </div>
-  );
-};
- const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
-  const [editingId, setEditingId]   = useState(null);
-  const [replyText, setReplyText]   = useState('');
-  const [saving, setSaving]         = useState(false);
-  const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState('all'); // all | unread | replied
- 
-  const refreshContacts = () => {
-    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
-  };
- 
-  const handleMarkRead = async (id) => {
-    try {
-      await API.put(`/contact/${id}/read`);
-      refreshContacts();
-    } catch (e) { showMessage('❌ Failed to mark as read'); }
-  };
- 
-  const handleSaveReply = async (id) => {
-    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
-    setSaving(true);
-    try {
-      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
-      showMessage('✅ Reply saved successfully!');
-      setEditingId(null);
-      setReplyText('');
-      refreshContacts();
-    } catch (e) {
-      showMessage('❌ Failed to save reply');
-    } finally {
-      setSaving(false);
-    }
-  };
- 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this message? This cannot be undone.')) return;
-    try {
-      await API.delete(`/contact/${id}`);
-      showMessage('🗑️ Message deleted');
-      refreshContacts();
-    } catch (e) { showMessage('❌ Failed to delete'); }
-  };
- 
-  const filtered = contacts.filter(c => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      c.name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      c.subject.toLowerCase().includes(q) ||
-      c.message.toLowerCase().includes(q);
-    const matchFilter =
-      filter === 'all'     ? true :
-      filter === 'unread'  ? !c.isRead :
-      filter === 'replied' ? !!c.adminReply :
-      true;
-    return matchSearch && matchFilter;
-  });
- 
-  const S = {
-    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
-    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
-    body:    { padding:'14px 18px' },
-    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
-    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
-    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
-    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
-    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
-  };
- 
-  return (
-    <div>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
-        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          {['all','unread','replied'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
-              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
-            </button>
-          ))}
         </div>
-      </div>
- 
-      {/* Search */}
-      <input style={{ ...S.input, marginBottom:16 }}
-        type="text" placeholder="🔍 Search by name, email, subject..."
-        value={search} onChange={e => setSearch(e.target.value)} />
- 
-      {/* Empty state */}
-      {filtered.length === 0 ? (
+      )}
+
+      {loading ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888' }}>⏳ Loading...</div>
+      ) : achievements.length === 0 ? (
         <div style={{ textAlign:'center', padding:40, color:'#888' }}>
-          <div style={{ fontSize:40 }}>📭</div>
-          <h3>No messages found</h3>
+          <div style={{ fontSize:40 }}>🏆</div>
+          <h3>No achievements yet. Click "Add Achievement" to add one.</h3>
         </div>
       ) : (
-        filtered.map(c => (
-          <div key={c._id} style={S.card}>
-            {/* Card Header */}
+        achievements.map(a => (
+          <div key={a._id} style={{ ...S.card, opacity: a.isActive ? 1 : 0.6 }}>
             <div style={S.header}>
-              <div>
-                <strong style={{ fontSize:15 }}>{c.name}</strong>
-                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
-              </div>
-              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
-                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
-                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
-                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
-              </div>
-            </div>
- 
-            {/* Card Body */}
-            <div style={S.body}>
-              {/* Contact info */}
-              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
-                📧 {c.email}
-                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
-              </div>
- 
-              {/* Original message */}
-              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
-                {c.message}
-              </div>
- 
-              {/* Existing reply display */}
-              {c.adminReply && editingId !== c._id && (
-                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
-                  <strong>Admin Reply:</strong> {c.adminReply}
-                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
-                </div>
-              )}
- 
-              {/* Reply editor */}
-              {editingId === c._id && (
-                <div style={{ marginBottom:12 }}>
-                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
-                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
-                  </label>
-                  <textarea style={S.textarea}
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    placeholder="Type your reply here..." />
-                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
-                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
-                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
-                    </button>
-                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
-                      Cancel
-                    </button>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:26 }}>{a.icon}</span>
+                <div>
+                  <strong style={{ fontSize:14 }}>{a.title}</strong>
+                  {a.year && <span style={{ fontSize:11, color:'#1565C0', marginLeft:8 }}>📅 {a.year}</span>}
+                  <div style={{ fontSize:11, color:'#888', marginTop:2 }}>
+                    {ACHIEVEMENT_CATEGORIES.find(c=>c.value===a.category)?.label || a.category} · Order: {a.order}
                   </div>
                 </div>
-              )}
- 
-              {/* Action buttons */}
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button style={S.btn('#1565C0')}
-                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
-                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
-                </button>
-                {!c.isRead && (
-                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
-                    👁️ Mark as Read
-                  </button>
-                )}
-                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
-                  🗑️ Delete
-                </button>
               </div>
+              <span style={{ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: a.isActive?'#e8f5e9':'#ffebee', color: a.isActive?'#2E7D32':'#C62828' }}>
+                {a.isActive ? '✅ Visible' : '🙈 Hidden'}
+              </span>
             </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-};
-const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
-  const [editingId, setEditingId]   = useState(null);
-  const [replyText, setReplyText]   = useState('');
-  const [saving, setSaving]         = useState(false);
-  const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState('all'); // all | unread | replied
- 
-  const refreshContacts = () => {
-    API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
-  };
- 
-  const handleMarkRead = async (id) => {
-    try {
-      await API.put(`/contact/${id}/read`);
-      refreshContacts();
-    } catch (e) { showMessage('❌ Failed to mark as read'); }
-  };
- 
-  const handleSaveReply = async (id) => {
-    if (!replyText.trim()) { showMessage('❌ Reply cannot be empty'); return; }
-    setSaving(true);
-    try {
-      await API.put(`/contact/${id}/reply`, { adminReply: replyText });
-      showMessage('✅ Reply saved successfully!');
-      setEditingId(null);
-      setReplyText('');
-      refreshContacts();
-    } catch (e) {
-      showMessage('❌ Failed to save reply');
-    } finally {
-      setSaving(false);
-    }
-  };
- 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this message? This cannot be undone.')) return;
-    try {
-      await API.delete(`/contact/${id}`);
-      showMessage('🗑️ Message deleted');
-      refreshContacts();
-    } catch (e) { showMessage('❌ Failed to delete'); }
-  };
- 
-  const filtered = contacts.filter(c => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      c.name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      c.subject.toLowerCase().includes(q) ||
-      c.message.toLowerCase().includes(q);
-    const matchFilter =
-      filter === 'all'     ? true :
-      filter === 'unread'  ? !c.isRead :
-      filter === 'replied' ? !!c.adminReply :
-      true;
-    return matchSearch && matchFilter;
-  });
- 
-  const S = {
-    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
-    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
-    body:    { padding:'14px 18px' },
-    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
-    replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
-    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
-    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
-    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
-  };
- 
-  return (
-    <div>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
-        <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          {['all','unread','replied'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ ...S.btn(filter===f ? '#1565C0' : '#e3f2fd', filter===f ? '#fff' : '#1565C0'), textTransform:'capitalize' }}>
-              {f === 'all' ? `All (${contacts.length})` : f === 'unread' ? `Unread (${contacts.filter(c=>!c.isRead).length})` : `Replied (${contacts.filter(c=>!!c.adminReply).length})`}
-            </button>
-          ))}
-        </div>
-      </div>
- 
-      {/* Search */}
-      <input style={{ ...S.input, marginBottom:16 }}
-        type="text" placeholder="🔍 Search by name, email, subject..."
-        value={search} onChange={e => setSearch(e.target.value)} />
- 
-      {/* Empty state */}
-      {filtered.length === 0 ? (
-        <div style={{ textAlign:'center', padding:40, color:'#888' }}>
-          <div style={{ fontSize:40 }}>📭</div>
-          <h3>No messages found</h3>
-        </div>
-      ) : (
-        filtered.map(c => (
-          <div key={c._id} style={S.card}>
-            {/* Card Header */}
-            <div style={S.header}>
-              <div>
-                <strong style={{ fontSize:15 }}>{c.name}</strong>
-                <span style={{ color:'#666', fontSize:13, marginLeft:8 }}>— {c.subject}</span>
-              </div>
-              <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
-                <span style={S.badge(c.isRead)}>{c.isRead ? '✅ Read' : '🔔 New'}</span>
-                {c.adminReply && <span style={S.replBadge}>💬 Replied</span>}
-                <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
-              </div>
-            </div>
- 
-            {/* Card Body */}
             <div style={S.body}>
-              {/* Contact info */}
-              <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
-                📧 {c.email}
-                {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
-              </div>
- 
-              {/* Original message */}
-              <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
-                {c.message}
-              </div>
- 
-              {/* Existing reply display */}
-              {c.adminReply && editingId !== c._id && (
-                <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
-                  <strong>Admin Reply:</strong> {c.adminReply}
-                  {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
-                </div>
-              )}
- 
-              {/* Reply editor */}
-              {editingId === c._id && (
-                <div style={{ marginBottom:12 }}>
-                  <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
-                    ✏️ {c.adminReply ? 'Edit Reply' : 'Write Reply'}
-                  </label>
-                  <textarea style={S.textarea}
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    placeholder="Type your reply here..." />
-                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
-                    <button style={S.btn('#2E7D32')} onClick={() => handleSaveReply(c._id)} disabled={saving}>
-                      {saving ? '⏳ Saving...' : '💾 Save Reply'}
-                    </button>
-                    <button style={S.btn('#e0e7ef','#374151')} onClick={() => { setEditingId(null); setReplyText(''); }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
- 
-              {/* Action buttons */}
+              <p style={{ fontSize:13, color:'#555', margin:'0 0 12px' }}>{a.description}</p>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button style={S.btn('#1565C0')}
-                  onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
-                  {c.adminReply ? '✏️ Edit Reply' : '💬 Reply'}
+                <button style={S.btn('#1565C0')} onClick={() => handleEdit(a)}>✏️ Edit</button>
+                <button style={S.btn(a.isActive?'#455a64':'#2E7D32')} onClick={() => handleToggle(a)}>
+                  {a.isActive ? '🙈 Hide' : '👁️ Show'}
                 </button>
-                {!c.isRead && (
-                  <button style={S.btn('#455a64')} onClick={() => handleMarkRead(c._id)}>
-                    👁️ Mark as Read
-                  </button>
-                )}
-                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(c._id)}>
-                  🗑️ Delete
-                </button>
+                <button style={S.btn('#ffebee','#C62828')} onClick={() => handleDelete(a._id)}>🗑️ Delete</button>
               </div>
             </div>
           </div>
@@ -1612,12 +1287,13 @@ const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
   );
 };
 
+
 const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
   const [editingId, setEditingId]   = useState(null);
   const [replyText, setReplyText]   = useState('');
   const [saving, setSaving]         = useState(false);
   const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState('all'); // all | unread | replied
+  const [filter, setFilter]         = useState('all');
 
   const refreshContacts = () => {
     API.get('/contact').then(res => setContacts(res.data.contacts || [])).catch(() => {});
@@ -1671,19 +1347,18 @@ const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
   });
 
   const S = {
-    card:    { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
-    header:  { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
-    body:    { padding:'14px 18px' },
-    badge:   (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
+    card:      { background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', marginBottom:14, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,.05)' },
+    header:    { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'#f5f8ff', borderBottom:'1px solid #e0e7ef', flexWrap:'wrap', gap:8 },
+    body:      { padding:'14px 18px' },
+    badge:     (read) => ({ padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background: read ? '#e8f5e9' : '#fff3e0', color: read ? '#2E7D32' : '#E65100' }),
     replBadge: { padding:'3px 10px', borderRadius:99, fontSize:11, fontWeight:700, background:'#e3f2fd', color:'#1565C0' },
-    btn:     (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
-    input:   { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
-    textarea:{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
+    btn:       (bg, color='#fff') => ({ background:bg, color, border:'none', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }),
+    input:     { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db', fontSize:13, boxSizing:'border-box' },
+    textarea:  { width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #1565C0', fontSize:13, minHeight:90, resize:'vertical', boxSizing:'border-box' },
   };
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18, flexWrap:'wrap', gap:10 }}>
         <h3 style={{ margin:0, color:'#1565C0' }}>📬 Contact Messages ({contacts.length})</h3>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -1696,12 +1371,10 @@ const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
         </div>
       </div>
 
-      {/* Search */}
       <input style={{ ...S.input, marginBottom:16 }}
         type="text" placeholder="🔍 Search by name, email, subject..."
         value={search} onChange={e => setSearch(e.target.value)} />
 
-      {/* Empty state */}
       {filtered.length === 0 ? (
         <div style={{ textAlign:'center', padding:40, color:'#888' }}>
           <div style={{ fontSize:40 }}>📭</div>
@@ -1710,7 +1383,6 @@ const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
       ) : (
         filtered.map(c => (
           <div key={c._id} style={S.card}>
-            {/* Card Header */}
             <div style={S.header}>
               <div>
                 <strong style={{ fontSize:15 }}>{c.name}</strong>
@@ -1722,29 +1394,20 @@ const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
                 <small style={{ color:'#999', fontSize:11 }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</small>
               </div>
             </div>
-
-            {/* Card Body */}
             <div style={S.body}>
-              {/* Contact info */}
               <div style={{ fontSize:12, color:'#666', marginBottom:10 }}>
                 📧 {c.email}
                 {c.phone && <span style={{ marginLeft:12 }}>📞 {c.phone}</span>}
               </div>
-
-              {/* Original message */}
               <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#333', marginBottom:12, borderLeft:'3px solid #1565C0' }}>
                 {c.message}
               </div>
-
-              {/* Existing reply display */}
               {c.adminReply && editingId !== c._id && (
                 <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#2E7D32', marginBottom:12, borderLeft:'3px solid #2E7D32' }}>
                   <strong>Admin Reply:</strong> {c.adminReply}
                   {c.repliedAt && <div style={{ fontSize:11, color:'#888', marginTop:4 }}>Replied on {new Date(c.repliedAt).toLocaleString('en-IN')}</div>}
                 </div>
               )}
-
-              {/* Reply editor */}
               {editingId === c._id && (
                 <div style={{ marginBottom:12 }}>
                   <label style={{ fontWeight:600, fontSize:13, color:'#374151', display:'block', marginBottom:6 }}>
@@ -1764,8 +1427,6 @@ const ContactMessagesTab = ({ contacts, setContacts, showMessage }) => {
                   </div>
                 </div>
               )}
-
-              {/* Action buttons */}
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                 <button style={S.btn('#1565C0')}
                   onClick={() => { setEditingId(c._id); setReplyText(c.adminReply || ''); }}>
