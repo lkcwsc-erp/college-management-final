@@ -271,13 +271,13 @@ aadharNumber: {
     scholarshipAmount:  { type: Number, default: 0 },   // Scholarship deduction
     plainPassword:      { type: String, default: '' },   // For Student Section visibility
     fees:               { type: Number, default: 0 },   // Total amount paid so far
-    feesPaid:           { type: Boolean, default: false },
+    feesPaid:                  { type: Number, default: 0 },
     scholarshipEligibleAmount: { type: Number, default: 0 },
-scholarshipReceivedAmount: { type: Number, default: 0 },
-scholarshipPendingAmount: { type: Number, default: 0 },
-academicYear: { type: String, default: '' },
-scholarshipVerifiedBy: { type: String, default: '' },
-scholarshipVerifiedDate: { type: Date },
+    scholarshipReceivedAmount: { type: Number, default: 0 },
+    scholarshipPendingAmount:  { type: Number, default: 0 },
+    academicYear:              { type: String, default: '' },
+    scholarshipVerifiedBy:     { type: String, default: '' },
+    scholarshipVerifiedDate:   { type: Date },
 
     // Full ledger of every payment
     feeLedger: [{
@@ -311,46 +311,46 @@ scholarshipVerifiedDate: { type: Date },
     },
     scholarshipNote:     { type: String, default: '' },
     aadharVerificationStatus: {
-  type: String,
-  enum: ['pending', 'verified', 'rejected'],
-  default: 'pending',
-},
-aadharVerificationRemark: { type: String, default: '' },
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+    },
+    aadharVerificationRemark: { type: String, default: '' },
 
-casteCertificateVerificationStatus: {
-  type: String,
-  enum: ['pending', 'verified', 'rejected'],
-  default: 'pending',
-},
-casteCertificateVerificationRemark: { type: String, default: '' },
+    casteCertificateVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+    },
+    casteCertificateVerificationRemark: { type: String, default: '' },
 
-casteValidityVerificationStatus: {
-  type: String,
-  enum: ['pending', 'verified', 'rejected'],
-  default: 'pending',
-},
-casteValidityVerificationRemark: { type: String, default: '' },
+    casteValidityVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+    },
+    casteValidityVerificationRemark: { type: String, default: '' },
 
-incomeCertificateVerificationStatus: {
-  type: String,
-  enum: ['pending', 'verified', 'rejected'],
-  default: 'pending',
-},
-incomeCertificateVerificationRemark: { type: String, default: '' },
+    incomeCertificateVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+    },
+    incomeCertificateVerificationRemark: { type: String, default: '' },
 
-domicileVerificationStatus: {
-  type: String,
-  enum: ['pending', 'verified', 'rejected'],
-  default: 'pending',
-},
-domicileVerificationRemark: { type: String, default: '' },
+    domicileVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+    },
+    domicileVerificationRemark: { type: String, default: '' },
 
-bankPassbookVerificationStatus: {
-  type: String,
-  enum: ['pending', 'verified', 'rejected'],
-  default: 'pending',
-},
-bankPassbookVerificationRemark: { type: String, default: '' },
+    bankPassbookVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+    },
+    bankPassbookVerificationRemark: { type: String, default: '' },
     mahaDBTUsername:     { type: String, default: '' },
     mahaDBTPassword:     { type: String, default: '' },
     mahaDBTMobile:     { type: String, default: '' },
