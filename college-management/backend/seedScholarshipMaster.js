@@ -1,94 +1,93 @@
 /* ============================================================
    seedScholarshipMaster.js
-   Run once: node seedScholarshipMaster.js
-   Seeds MahaDBT receivable amounts from actual fee structure
-   Excel files (AY 2025-26)
+   Run: node seedScholarshipMaster.js
+   Seeds MahaDBT receivable amounts — AY 2025-26
+   Source: Official fee structure Excel files
    ============================================================ */
 
 require('dotenv').config();
-const mongoose         = require('mongoose');
+const mongoose          = require('mongoose');
 const ScholarshipMaster = require('./models/ScholarshipMaster');
 
-// ── MahaDBT Receivable Amounts from Excel (AY 2025-26) ─────
-//
-// B.Sc (Un-Aided):
-//   FY = Enrollment(400) + Admission(550) + Tuition(16500) +
-//        Gymkhana(700) + Lab(5250) + Library(1000) + Other(1340) = 25740
-//   SY = Admission(550) + Tuition(16500) + Gymkhana(700) +
-//        Lab(5250) + Library(1000) + Other(1340) = 25340
-//   TY = Admission(550) + Tuition(16500) + Gymkhana(700) +
-//        Lab(5250) + Library(1000) + Other(165) = 24165
-//
-// B.A (Un-Aided):
-//   FY = Enrollment(400) + Admission(550) + Tuition(5500) +
-//        Gymkhana(700) + Lab(300) + Library(1000) + Other(1540) = 9990
-//   SY = Admission(550) + Tuition(5500) + Gymkhana(700) +
-//        Lab(300) + Library(1000) + Other(1540) = 9590
-//   TY = Admission(550) + Tuition(5500) + Gymkhana(700) +
-//        Lab(300) + Library(1000) + Other(1340) = 9390
+/* ── MahaDBT Receivable Amounts (from Excel, AY 2025-26) ─────
+   B.Sc (Un-Aided):
+     FY = Enrollment(400) + Admission(550) + Tuition(16500) +
+          Gymkhana(700) + Lab(5250) + Library(1000) + Other(1340) = 26140
+     SY = Admission(550) + Tuition(16500) + Gymkhana(700) +
+          Lab(5250) + Library(1000) + Other(1340) = 25340
+     TY = same as SY                               = 25340
+
+   B.A (Un-Aided):
+     FY = Enrollment(400) + Admission(550) + Tuition(5500) +
+          Gymkhana(700) + Lab(300) + Library(1000) + Other(1540) = 9990  → official: 10390
+     SY = Admission(550) + Tuition(5500) + Gymkhana(700) +
+          Lab(300) + Library(1000) + Other(1540)                  = 9590
+     TY = same structure, Other(1340)                             = 9390
+
+   NOTE: BA FY official Excel total = 10390 (used below).
+   ─────────────────────────────────────────────────────────── */
 
 const academicYear = '2025-26';
 
-// Categories eligible for MahaDBT scholarship
-// (OPEN/EWS get lower amounts — adjust as per government notification)
-// Below uses the full MahaDBT receivable as base for SC/ST/OBC etc.
-// For OPEN/EWS categories, reduce accordingly (typically 50% or fixed amount)
+const AMOUNTS = {
+  'B.Sc': { FY: 26140, SY: 25340, TY: 25340 },
+  'B.A':  { FY: 10390, SY:  9590, TY:  9390 },
+};
 
-const bscAmounts = { FY: 25740, SY: 25340, TY: 24165 };
-const baAmounts  = { FY: 9990,  SY: 9590,  TY: 9390  };
-
+// Categories eligible for MahaDBT (OPEN is not eligible)
 const eligibleCategories = [
-  'SC', 'ST', 'OBC', 'VJ/DT(NT-A)', 'NT-B', 'NT-C', 'NT-D', 'SBC', 'SEBC',
+  'SC', 'ST', 'OBC', 'VJ/DT(NT-A)', 'NT-B', 'NT-C', 'NT-D', 'SBC', 'SEBC', 'EWS',
 ];
-// EWS typically gets a different (often partial) amount — add separately if needed
-const ewsCategories = ['EWS'];
 
 const records = [];
-
-// B.Sc — eligible categories (full amount)
-for (const category of eligibleCategories) {
-  for (const [year, amount] of Object.entries(bscAmounts)) {
-    records.push({ category, courseType: 'B.Sc', admissionYear: year, academicYear, scholarshipAmount: amount });
+for (const [courseType, yearAmts] of Object.entries(AMOUNTS)) {
+  for (const category of eligibleCategories) {
+    for (const [admissionYear, scholarshipAmount] of Object.entries(yearAmts)) {
+      records.push({ category, courseType, admissionYear, academicYear, scholarshipAmount,
+        description: `MahaDBT receivable — ${courseType} ${admissionYear} AY ${academicYear}`,
+        createdBy: 'Seed Script', isActive: true });
+    }
   }
-}
-// B.Sc — EWS (example: use same amount; update if different govt rate applies)
-for (const [year, amount] of Object.entries(bscAmounts)) {
-  records.push({ category: 'EWS', courseType: 'B.Sc', admissionYear: year, academicYear, scholarshipAmount: amount });
-}
-
-// B.A — eligible categories (full amount)
-for (const category of eligibleCategories) {
-  for (const [year, amount] of Object.entries(baAmounts)) {
-    records.push({ category, courseType: 'B.A', admissionYear: year, academicYear, scholarshipAmount: amount });
-  }
-}
-// B.A — EWS
-for (const [year, amount] of Object.entries(baAmounts)) {
-  records.push({ category: 'EWS', courseType: 'B.A', admissionYear: year, academicYear, scholarshipAmount: amount });
 }
 
 async function seed() {
   await mongoose.connect(process.env.MONGO_URI);
-  console.log('Connected to MongoDB');
+  console.log('Connected to MongoDB\n');
 
-  let created = 0, skipped = 0;
+  let created = 0, updated = 0, skipped = 0;
 
   for (const rec of records) {
     try {
-      await ScholarshipMaster.create({ ...rec, createdBy: 'Seed Script', isActive: true });
-      console.log(`✅ ${rec.category} + ${rec.courseType} + ${rec.admissionYear} = ₹${rec.scholarshipAmount}`);
-      created++;
-    } catch (err) {
-      if (err.code === 11000) {
-        console.log(`⚠️  Skip (exists): ${rec.category} + ${rec.courseType} + ${rec.admissionYear}`);
-        skipped++;
+      // Upsert — update if exists (to fix wrong amounts), create if new
+      const existing = await ScholarshipMaster.findOne({
+        category: rec.category,
+        courseType: rec.courseType,
+        admissionYear: rec.admissionYear,
+        academicYear: rec.academicYear,
+      });
+
+      if (existing) {
+        if (existing.scholarshipAmount !== rec.scholarshipAmount) {
+          existing.scholarshipAmount = rec.scholarshipAmount;
+          existing.isActive = true;
+          await existing.save();
+          console.log(`🔄 Updated: ${rec.category} + ${rec.courseType} + ${rec.admissionYear} = ₹${rec.scholarshipAmount}`);
+          updated++;
+        } else {
+          console.log(`✅ OK (no change): ${rec.category} + ${rec.courseType} + ${rec.admissionYear} = ₹${rec.scholarshipAmount}`);
+          skipped++;
+        }
       } else {
-        console.error(`❌ Error: ${err.message}`);
+        await ScholarshipMaster.create(rec);
+        console.log(`➕ Created: ${rec.category} + ${rec.courseType} + ${rec.admissionYear} = ₹${rec.scholarshipAmount}`);
+        created++;
       }
+    } catch (err) {
+      console.error(`❌ Error (${rec.category} ${rec.courseType} ${rec.admissionYear}): ${err.message}`);
     }
   }
 
-  console.log(`\nDone. Created: ${created}, Skipped: ${skipped}`);
+  console.log(`\n✅ Done. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}`);
   mongoose.disconnect();
 }
 
