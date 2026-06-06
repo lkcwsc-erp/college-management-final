@@ -52,6 +52,7 @@ app.use('/api/about', require('./routes/aboutRoutes'));
 
 // 👇 YE NAYI LINE ADD KARO
 app.use('/api/scholarships', require('./routes/scholarshipRoutes'));
+app.use('/api/expenses', require('./routes/expenseRoutes'));
 
 app.get('/', (req, res) => {
   res.json({ message: '🎓 Late Kalpana Chawla Mahila College API Running!' });
