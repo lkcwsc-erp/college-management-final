@@ -191,92 +191,6 @@ const AdmissionModal = ({ adm, onClose, onRefresh }) => {
   );
 };
 
-const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
-  const [receipts, setReceipts]     = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [search, setSearch]         = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [errMsg, setErrMsg]         = useState("");
-
-  const fetchReceipts = async () => {
-    setLoading(true); setErrMsg("");
-    try {
-      const res = await API.get("/admissions/receipts/all");
-      setReceipts(res.data.receipts || []);
-    } catch (e) { setErrMsg("Failed to load: " + (e.response?.data?.message || "Error")); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchReceipts(); }, []);
-
-  const filtered = receipts.filter(r => {
-    const q  = search.toLowerCase();
-    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q) || r.studentId?.toLowerCase().includes(q) || r.receiptNo?.toLowerCase().includes(q);
-    const mt = typeFilter === "all" || r.feeType === typeFilter;
-    const now = new Date(); let md = true;
-    if (dateFilter === "today") { const d = new Date(r.paidAt); md = d.toDateString() === now.toDateString(); }
-    else if (dateFilter === "week") { const d = new Date(r.paidAt); md = (now - d) <= 7*24*60*60*1000; }
-    else if (dateFilter === "month") { const d = new Date(r.paidAt); md = d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
-    return mq && mt && md;
-  });
-
-  const totalAmount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
-  const feeTypes = [...new Set(receipts.map(r => r.feeType).filter(Boolean))];
-
-  return (
-    <div>
-      <h2 style={{ color: themeColor, marginBottom: 4 }}>🧾 Payment Receipts</h2>
-      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>All fee receipts collected by Accounts Section.</p>
-      {errMsg && <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 14, fontSize: 14, background: "#ffebee", color: "#C62828" }}>{errMsg}</div>}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <div style={{ background: "#e8f5e9", color: "#2E7D32", borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>💰 Total: ₹{totalAmount.toLocaleString("en-IN")}</div>
-        <div style={{ background: "#e3f2fd", color: themeColor, borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>🧾 Count: {filtered.length}</div>
-      </div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <input type="text" placeholder="🔍 Name, ID, receipt no..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 9, border: "1px solid #ddd", fontSize: 14 }} />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
-          <option value="all">All Fee Types</option>
-          {feeTypes.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}
-          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
-          <option value="all">All Time</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-        </select>
-        <button onClick={fetchReceipts} style={{ padding: "9px 14px", background: "#f0f4ff", color: themeColor, border: "1px solid #ddd", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🔄</button>
-      </div>
-      {loading ? <div className="empty-state"><p style={{fontSize:"2rem"}}>⏳</p><h3>Loading...</h3></div>
-      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts found</h3></div>
-      : (
-        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e0e7ef", boxShadow: "0 2px 10px rgba(0,0,0,.06)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", background: themeColor, padding: "12px 16px", gap: 8 }}>
-            {["Receipt No","Student","Email","Fee Type","Amount","Mode","Date"].map(h => <span key={h} style={{color:"#fff",fontWeight:700,fontSize:12}}>{h}</span>)}
-          </div>
-          {filtered.map((r, idx) => (
-            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", padding: "11px 16px", gap: 8, alignItems: "center", borderBottom: "1px solid #f0f4f8", background: idx%2===0?"#fafbff":"#fff" }}>
-              <span style={{fontSize:11,fontFamily:"monospace",color:themeColor,fontWeight:700}}>{r.receiptNo||"—"}</span>
-              <div><p style={{fontWeight:600,fontSize:13,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:"#888",margin:0}}>{r.studentId||""} · {r.admissionYear||""}</p></div>
-              <span style={{fontSize:11,color:"#555"}}>{r.studentEmail}</span>
-              <span style={{fontSize:12}}>{r.feeTypeLabel||r.feeType||"—"}</span>
-              <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>₹{(r.amount||0).toLocaleString("en-IN")}</span>
-              <span style={{fontSize:11,background:r.paymentMode==="online"?"#e3f2fd":"#e8f5e9",color:r.paymentMode==="online"?"#1565C0":"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:600}}>{r.paymentMode==="online"?"🌐 Online":"💵 Cash"}</span>
-              <span style={{fontSize:11,color:"#888"}}>{r.paidAt?new Date(r.paidAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}</span>
-            </div>
-          ))}
-          <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
-            <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 const StudentSectionDashboard = () => {
   const { user, logout } = useAuth();
@@ -823,61 +737,27 @@ const printTC = (adm) => {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px;font-size:13px}
 
-    /* ── Page with dark double border ── */
+    /* ── Dark double border ── */
     .page{
-      background:white;
-      width:720px;
+      background:white;width:720px;
       border:3px double #000;
       outline:1px solid #000;
       outline-offset:-6px;
-      padding:0;
-      box-shadow:0 4px 20px rgba(0,0,0,.2)
+      padding:0;box-shadow:0 4px 20px rgba(0,0,0,.2)
     }
 
     /* ── Header ── */
-    .hdr{
-      display:flex;
-      align-items:center;
-      gap:14px;
-      border-bottom:2px solid #000;
-      padding:10px 16px
-    }
+    .hdr{display:flex;align-items:center;gap:14px;border-bottom:2px solid #000;padding:10px 16px}
     .hlogo{
-      width:72px;
-      height:72px;
-      object-fit:contain;
-      flex-shrink:0;
-      border-radius:50%;
-      border:2px solid #1a237e;
-      padding:3px;
-      background:#fff
+      width:72px;height:72px;object-fit:contain;flex-shrink:0;
+      border-radius:50%;border:2px solid #1a237e;padding:3px;background:#fff
     }
     .htxt{flex:1;text-align:center}
-    .htrust{
-      font-size:10px;
-      color:#444;
-      font-style:italic;
-      margin-bottom:2px
-    }
-    .hname{
-      font-size:17px;
-      font-weight:900;
-      color:#000;
-      line-height:1.3;
-      margin:3px 0;
-      letter-spacing:0.3px
-    }
-    .haddr{
-      font-size:10px;
-      color:#333;
-      margin-top:2px;
-      line-height:1.5
-    }
-    .hcontact{
-      font-size:9.5px;
-      color:#555;
-      margin-top:3px
-    }
+    .htrust{font-size:10px;color:#444;font-style:italic;margin-bottom:2px}
+    .hname{font-size:17px;font-weight:900;color:#000;line-height:1.3;margin:3px 0;letter-spacing:0.3px}
+    .huniv{font-size:9.5px;color:#333;margin-top:2px}
+    .haddr{font-size:9.5px;color:#333;margin-top:2px;line-height:1.5}
+    .hcontact{font-size:9px;color:#555;margin-top:3px}
 
     /* ── Title ── */
     .titlesec{text-align:center;padding:7px 0 3px;border-bottom:1.5px solid #000}
@@ -928,7 +808,7 @@ const printTC = (adm) => {
       <div class="htxt">
         <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College</div>
-        <div class="haddr">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+        <div class="huniv">Affiliated to S.N.D.T. Women's University, Mumbai</div>
         <div class="haddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
         <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
       </div>
@@ -977,7 +857,7 @@ const printTC = (adm) => {
         <div style="font-size:12px;margin-bottom:2px">Date : ${dateStr}</div>
       </div>
       <div class="fsign">
-        <div class="fsign-line">Clark</div>
+        <div class="fsign-line">Clerk</div>
       </div>
       <div class="fsign">
         <div class="fsign-line">Principal</div>
@@ -992,6 +872,7 @@ const printTC = (adm) => {
   w.document.write(html);
   w.document.close();
 };
+
 
 const printBonafide = (adm) => {
   const certNo  = 'BON' + new Date().getFullYear().toString().slice(-2) + '-' + Date.now().toString().slice(-4);
@@ -1023,7 +904,6 @@ const printBonafide = (adm) => {
     ? 'Bachelor of Arts (B.A.)' + (adm.preferredSubject?' — '+adm.preferredSubject:'')
     : (adm.courseType||'') + (adm.preferredSubject?' — '+adm.preferredSubject:'');
 
-  const logo = "/college-logo.png";
   const html = `<!DOCTYPE html><html><head><title>Bonafide Certificate</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -1031,11 +911,11 @@ const printBonafide = (adm) => {
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
     .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
-    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0}
+    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0;border-radius:50%;border:2px solid #1a237e;padding:3px;background:#fff}
     .htxt{flex:1;text-align:center}
-    .h1{font-size:11px;color:#333}
-    .h2{font-size:11px;color:#333}
+    .h1{font-size:10px;color:#444;font-style:italic}
     .h3{font-size:21px;font-weight:900;color:#000;margin:3px 0 2px}
+    .h2{font-size:10.5px;color:#333;margin-bottom:2px}
     .h4{font-size:11px;color:#000;margin-bottom:1px}
     .h5{font-size:10px;color:#555}
     /* Title */
@@ -1062,12 +942,12 @@ const printBonafide = (adm) => {
     @media print{body{background:white;padding:0}.page{box-shadow:none}}
   </style></head><body><div class="page">
     <div class="hdr">
-      <img src="${logo}" class="logo"/>
+      <img src="/college-logo.png" class="logo" onerror="this.style.display='none'"/>
       <div class="htxt">
         <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-        <div class="h2">Affiliated to S.N.D.T. Women's University, Mumbai</div>
         <div class="h3">Late Kalpana Chawla Women's Senior College</div>
-        <div class="h4">Lecture Colony, Gangakhed, Tq. Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
+        <div class="h2">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+        <div class="h4">Lecture Colony, Gangakhed, Tq. Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
         <div class="h5">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
       </div>
     </div>
@@ -1095,7 +975,10 @@ const printBonafide = (adm) => {
 
 
 const printIDCard = (adm) => {
-  const logo = "/college-logo.png";
+  const API_BASE = 'https://college-management-nnve.onrender.com';
+  const photoSrc = adm.studentPhoto
+    ? (adm.studentPhoto.startsWith('http') ? adm.studentPhoto : `${API_BASE}/uploads/${adm.studentPhoto}`)
+    : null;
 
   const validYear = new Date().getFullYear();
   const dobStr = adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}) : '--';
@@ -1134,7 +1017,7 @@ const printIDCard = (adm) => {
   </style></head><body>
   <div class="card">
     <div class="hdr">
-      <img src="${logo}" class="logo"/><br/>
+      <img src="/college-logo.png" class="logo" onerror="this.style.display='none'"/><br/>
       <span class="sanstha">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</span><br/>
       <span class="college">Late Kalpana Chawla Women's<br/>Senior College (LKCWSC)</span><br/>
       <span class="affil">Affiliated to SNDT Women's University, Mumbai</span>
@@ -1142,7 +1025,7 @@ const printIDCard = (adm) => {
     <div class="titlebar"><span class="titletext">STUDENT IDENTITY CARD</span></div>
     <div class="photowrap">
       <div class="photobox">
-        ${adm.studentPhoto ? `<img src="${adm.studentPhoto}" alt="photo"/>` : '<div style="font-size:32px;text-align:center;padding-top:20px">👩</div>'}
+        ${photoSrc ? `<img src="${photoSrc}" alt="photo" crossorigin="anonymous"/>` : '<div style="font-size:32px;text-align:center;padding-top:20px">👩</div>'}
       </div>
       <div class="stuname">${adm.applicantName||'--'}</div>
     </div>
@@ -1185,6 +1068,7 @@ const printIDCard = (adm) => {
   const w = window.open('','_blank','width=290,height=480');
   w.document.write(html); w.document.close();
 };
+
 
 
 const DOC_CONFIG = {
@@ -1911,5 +1795,91 @@ Promote to ${newYear} with ATKT?`)) return;
   );
 };
 
+
+const PaymentReceiptsTab = ({ themeColor = "#1565C0" }) => {
+  const [receipts, setReceipts]     = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [search, setSearch]         = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [errMsg, setErrMsg]         = useState("");
+
+  const fetchReceipts = async () => {
+    setLoading(true); setErrMsg("");
+    try {
+      const res = await API.get("/admissions/receipts/all");
+      setReceipts(res.data.receipts || []);
+    } catch (e) { setErrMsg("Failed to load: " + (e.response?.data?.message || "Error")); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchReceipts(); }, []);
+
+  const filtered = receipts.filter(r => {
+    const q  = search.toLowerCase();
+    const mq = !q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q) || r.studentId?.toLowerCase().includes(q) || r.receiptNo?.toLowerCase().includes(q);
+    const mt = typeFilter === "all" || r.feeType === typeFilter;
+    const now = new Date(); let md = true;
+    if (dateFilter === "today") { const d = new Date(r.paidAt); md = d.toDateString() === now.toDateString(); }
+    else if (dateFilter === "week") { const d = new Date(r.paidAt); md = (now - d) <= 7*24*60*60*1000; }
+    else if (dateFilter === "month") { const d = new Date(r.paidAt); md = d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
+    return mq && mt && md;
+  });
+
+  const totalAmount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+  const feeTypes = [...new Set(receipts.map(r => r.feeType).filter(Boolean))];
+
+  return (
+    <div>
+      <h2 style={{ color: themeColor, marginBottom: 4 }}>🧾 Payment Receipts</h2>
+      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>All fee receipts collected by Accounts Section.</p>
+      {errMsg && <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 14, fontSize: 14, background: "#ffebee", color: "#C62828" }}>{errMsg}</div>}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ background: "#e8f5e9", color: "#2E7D32", borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>💰 Total: ₹{totalAmount.toLocaleString("en-IN")}</div>
+        <div style={{ background: "#e3f2fd", color: themeColor, borderRadius: 14, padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>🧾 Count: {filtered.length}</div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <input type="text" placeholder="🔍 Name, ID, receipt no..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 9, border: "1px solid #ddd", fontSize: 14 }} />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Fee Types</option>
+          {feeTypes.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}
+          style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #ddd", fontSize: 13 }}>
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <button onClick={fetchReceipts} style={{ padding: "9px 14px", background: "#f0f4ff", color: themeColor, border: "1px solid #ddd", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🔄</button>
+      </div>
+      {loading ? <div className="empty-state"><p style={{fontSize:"2rem"}}>⏳</p><h3>Loading...</h3></div>
+      : filtered.length === 0 ? <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts found</h3></div>
+      : (
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e0e7ef", boxShadow: "0 2px 10px rgba(0,0,0,.06)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", background: themeColor, padding: "12px 16px", gap: 8 }}>
+            {["Receipt No","Student","Email","Fee Type","Amount","Mode","Date"].map(h => <span key={h} style={{color:"#fff",fontWeight:700,fontSize:12}}>{h}</span>)}
+          </div>
+          {filtered.map((r, idx) => (
+            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.8fr 1.5fr 1.2fr 1fr 1fr 1fr", padding: "11px 16px", gap: 8, alignItems: "center", borderBottom: "1px solid #f0f4f8", background: idx%2===0?"#fafbff":"#fff" }}>
+              <span style={{fontSize:11,fontFamily:"monospace",color:themeColor,fontWeight:700}}>{r.receiptNo||"—"}</span>
+              <div><p style={{fontWeight:600,fontSize:13,margin:0}}>{r.studentName}</p><p style={{fontSize:10,color:"#888",margin:0}}>{r.studentId||""} · {r.admissionYear||""}</p></div>
+              <span style={{fontSize:11,color:"#555"}}>{r.studentEmail}</span>
+              <span style={{fontSize:12}}>{r.feeTypeLabel||r.feeType||"—"}</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>₹{(r.amount||0).toLocaleString("en-IN")}</span>
+              <span style={{fontSize:11,background:r.paymentMode==="online"?"#e3f2fd":"#e8f5e9",color:r.paymentMode==="online"?"#1565C0":"#2E7D32",padding:"2px 8px",borderRadius:10,fontWeight:600}}>{r.paymentMode==="online"?"🌐 Online":"💵 Cash"}</span>
+              <span style={{fontSize:11,color:"#888"}}>{r.paidAt?new Date(r.paidAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}</span>
+            </div>
+          ))}
+          <div style={{padding:"12px 16px",background:"#f8faff",borderTop:"2px solid #e0e7ef",display:"flex",justifyContent:"flex-end",gap:20}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#2E7D32"}}>Total: ₹{totalAmount.toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default StudentSectionDashboard;
