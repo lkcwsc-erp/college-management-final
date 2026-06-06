@@ -31,6 +31,9 @@ const CATEGORY_COLORS = {
   other:         { bg: '#f5f5f5', color: '#555' },
 };
 
+// Reserved categories that get full MahaDBT benefit
+const RESERVED_CATEGORIES = ['sc','st','obc','sbc','nt-b','nt-c','nt-d','vj/dt(nt-a)','ews','sebc'];
+
 // ✅ urlKeys verified against Admission model field names
 const DOC_FIELDS = [
   { key: 'aadhar',            label: 'Aadhaar Card',         urlKey: 'aadharPhoto' },
@@ -46,6 +49,50 @@ const VERIFICATION_STATUS = {
   verified: { label: 'Verified', bg: '#e8f5e9', color: '#2E7D32' },
   rejected: { label: 'Rejected', bg: '#ffebee', color: '#C62828' },
 };
+
+// MahaDBT Receivable fee structure data
+const FEE_STRUCTURE = {
+  'B.Sc': {
+    FY: {
+      'Enrollment Fee': 400,
+      'Admission Fee':  550,
+      'Tuition Fee':    16500,
+      'Gymkhana Fee':   700,
+      'Laboratory Fee': 5250,
+      'Library Fee':    1000,
+      'Other Fee':      1740,
+    },
+    SY: {
+      'Admission Fee':  550,
+      'Tuition Fee':    16500,
+      'Gymkhana Fee':   700,
+      'Laboratory Fee': 5250,
+      'Library Fee':    1000,
+      'Other Fee':      1340,
+    },
+    TY: {
+      'Admission Fee':  550,
+      'Tuition Fee':    16500,
+      'Gymkhana Fee':   700,
+      'Laboratory Fee': 5250,
+      'Library Fee':    1000,
+      'Other Fee':      1340,
+    },
+  },
+  'B.A': {
+    FY: { 'Total Fees': 10390 },
+    SY: { 'Total Fees': 9590 },
+    TY: { 'Total Fees': 9390 },
+  },
+  'B.Com': {
+    FY: {},
+    SY: {},
+    TY: {},
+  },
+};
+
+const ALL_CATEGORIES = ['SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC','OPEN'];
+const ACADEMIC_YEARS = ['2023-24','2024-25','2025-26','2026-27'];
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
 
@@ -68,6 +115,7 @@ const ScholarshipSectionDashboard = () => {
   const [catFilter,     setCatFilter]     = useState('all');
   const [statusFilter,  setStatusFilter]  = useState('all');
   const [yearFilter,    setYearFilter]    = useState('all');
+  const [academicYear,  setAcademicYear]  = useState('all');   // ← NEW: academic year filter
   const [page,          setPage]          = useState(1);
   const [totalPages,    setTotalPages]    = useState(1);
   const [totalCount,    setTotalCount]    = useState(0);
@@ -84,12 +132,17 @@ const ScholarshipSectionDashboard = () => {
   // master tab
   const [masters,       setMasters]       = useState([]);
   const [masterLoading, setMasterLoading] = useState(false);
-  const [masterForm,    setMasterForm]    = useState({ category: '', courseType: '', admissionYear: 'FY', academicYear: '2025-26', scholarshipAmount: '', description: '' });
+  const [masterForm,    setMasterForm]    = useState({
+    categories: [],          // ← NEW: array of selected categories
+    courseType: '',
+    admissionYear: 'FY',
+    academicYear: '2025-26',
+    scholarshipAmount: '',
+    description: '',
+  });
   const [masterSaving,  setMasterSaving]  = useState(false);
   const [masterMsg,     setMasterMsg]     = useState('');
   const [editMasterId,  setEditMasterId]  = useState(null);
-  const [importFile,    setImportFile]    = useState(null);
-  const [importing,     setImporting]     = useState(false);
 
   // export
   const [exporting,     setExporting]     = useState(false);
@@ -105,19 +158,22 @@ const ScholarshipSectionDashboard = () => {
   /* ── Fetchers ─────────────────────────────── */
   const fetchDashboard = useCallback(async () => {
     try {
-      const res = await API.get('/scholarships/dashboard');
+      const params = new URLSearchParams();
+      if (academicYear !== 'all') params.append('academicYear', academicYear);
+      const res = await API.get(`/scholarships/dashboard?${params}`);
       setDashboard(res.data.dashboard);
     } catch { }
-  }, []);
+  }, [academicYear]);
 
   const fetchAdmissions = useCallback(async (pg = 1) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: pg, limit: LIMIT });
-      if (search)              params.append('search',            search);
+      if (search)                params.append('search',            search);
       if (catFilter    !== 'all') params.append('category',         catFilter);
       if (statusFilter !== 'all') params.append('scholarshipStatus', statusFilter);
       if (yearFilter   !== 'all') params.append('admissionYear',    yearFilter);
+      if (academicYear !== 'all') params.append('academicYear',     academicYear);  // ← NEW
 
       const res = await API.get(`/scholarships/register?${params}`);
       setAdmissions(res.data.students || []);
@@ -126,7 +182,7 @@ const ScholarshipSectionDashboard = () => {
       setPage(pg);
     } catch { }
     finally { setLoading(false); }
-  }, [search, catFilter, statusFilter, yearFilter]);
+  }, [search, catFilter, statusFilter, yearFilter, academicYear]);
 
   const fetchMasters = useCallback(async () => {
     setMasterLoading(true);
@@ -145,13 +201,8 @@ const ScholarshipSectionDashboard = () => {
     if (activeTab === 'master') fetchMasters();
   }, [activeTab, fetchMasters]);
 
-  /* ── View student detail
-       BUG FIX: /scholarships/register uses .select() — document URLs are NOT included.
-       Always fetch full admission from /admissions/scholarship-section/all so that
-       Cloudinary document URLs (casteCertificate, aadharPhoto, etc.) are present.
-  ────────────────────────────────────────────────────────────────────── */
+  /* ── View student detail ──────────────────── */
   const handleViewStudent = useCallback(async (adm) => {
-    // Show partial data immediately so UI feels fast
     setSelected(adm);
     setEditMode(false);
     setEditData({});
@@ -160,16 +211,12 @@ const ScholarshipSectionDashboard = () => {
     setDetailLoading(true);
 
     try {
-      // This route returns the FULL Admission document including all Cloudinary URLs
       const res = await API.get('/admissions/scholarship-section/all');
       const full = (res.data.admissions || []).find(
         a => String(a._id) === String(adm._id)
       );
-      if (full) {
-        setSelected(full); // replace partial data with complete record
-      }
+      if (full) setSelected(full);
     } catch (err) {
-      // Keep whatever partial data we already have; log for debugging
       console.warn('Could not load full admission record:', err?.response?.data?.message || err.message);
     } finally {
       setDetailLoading(false);
@@ -193,7 +240,6 @@ const ScholarshipSectionDashboard = () => {
         verifiedBy:                user?.name,
       });
       flashMsg('✅ Saved successfully!');
-      // Re-fetch full record to reflect changes
       await handleViewStudent(selected);
       setEditMode(false);
       setEditData({});
@@ -248,6 +294,7 @@ const ScholarshipSectionDashboard = () => {
       if (catFilter    !== 'all') params.append('category',          catFilter);
       if (statusFilter !== 'all') params.append('scholarshipStatus', statusFilter);
       if (yearFilter   !== 'all') params.append('admissionYear',     yearFilter);
+      if (academicYear !== 'all') params.append('academicYear',      academicYear);  // ← NEW
       const res = await API.get(`/scholarships/register/export?${params}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a');
@@ -260,17 +307,31 @@ const ScholarshipSectionDashboard = () => {
     }
   };
 
+  /* ── Master save — supports multi-category ── */
   const handleMasterSave = async () => {
+    if (!masterForm.categories || masterForm.categories.length === 0) {
+      setMasterMsg('❌ Please select at least one category');
+      return;
+    }
     setMasterSaving(true); setMasterMsg('');
     try {
       if (editMasterId) {
         await API.put(`/scholarships/master/${editMasterId}`, { ...masterForm, updatedBy: user?.name });
         setMasterMsg('✅ Updated!');
       } else {
-        await API.post('/scholarships/master', { ...masterForm, createdBy: user?.name });
-        setMasterMsg('✅ Created!');
+        // Create one record per selected category for backward compatibility
+        const promises = masterForm.categories.map(cat =>
+          API.post('/scholarships/master', {
+            ...masterForm,
+            category: cat,
+            categories: masterForm.categories,
+            createdBy: user?.name,
+          })
+        );
+        await Promise.all(promises);
+        setMasterMsg(`✅ Created ${masterForm.categories.length} record(s)!`);
       }
-      setMasterForm({ category: '', courseType: '', admissionYear: 'FY', academicYear: '2025-26', scholarshipAmount: '', description: '' });
+      setMasterForm({ categories: [], courseType: '', admissionYear: 'FY', academicYear: '2025-26', scholarshipAmount: '', description: '' });
       setEditMasterId(null);
       fetchMasters();
       setTimeout(() => setMasterMsg(''), 3000);
@@ -289,23 +350,6 @@ const ScholarshipSectionDashboard = () => {
     } catch { }
   };
 
-  const handleImport = async () => {
-    if (!importFile) return;
-    setImporting(true);
-    const fd = new FormData();
-    fd.append('file', importFile); fd.append('createdBy', user?.name);
-    try {
-      const res = await API.post('/scholarships/master/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setMasterMsg(`✅ Import done: ${res.data.results?.success?.length || 0} created`);
-      setImportFile(null);
-      fetchMasters();
-    } catch (e) {
-      setMasterMsg('❌ Import failed: ' + (e.response?.data?.message || 'Error'));
-    } finally {
-      setImporting(false);
-    }
-  };
-
   /* ── Derived ─────────────────────────────── */
   const db = dashboard || {};
 
@@ -313,7 +357,7 @@ const ScholarshipSectionDashboard = () => {
     { id: 'home',         label: '🏠 Dashboard' },
     { id: 'students',     label: '👩‍🎓 Students',   badge: db.notFilled },
     { id: 'register',     label: '📋 Register' },
-    { id: 'master',       label: '⚙️ Master Data' },
+    { id: 'master',       label: '📊 MahaDBT Receivable' },   // ← RENAMED
     { id: 'mahadbt',      label: '🌐 MahaDBT' },
     { id: 'all_students', label: '👁️ All Students' },
   ];
@@ -360,7 +404,17 @@ const ScholarshipSectionDashboard = () => {
 
         <div className="dashboard-content">
 
-          {activeTab === 'home' && <HomeDashboard db={db} user={user} onRefresh={fetchDashboard} onGoTab={setActiveTab} />}
+          {activeTab === 'home' && (
+            <HomeDashboard
+              db={db} user={user}
+              onRefresh={fetchDashboard}
+              onGoTab={setActiveTab}
+              onExport={handleExport}
+              exporting={exporting}
+              academicYear={academicYear}
+              setAcademicYear={setAcademicYear}
+            />
+          )}
 
           {(activeTab === 'students' || activeTab === 'register') && (
             <StudentsTab
@@ -369,6 +423,7 @@ const ScholarshipSectionDashboard = () => {
               catFilter={catFilter} setCatFilter={setCatFilter}
               statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               yearFilter={yearFilter} setYearFilter={setYearFilter}
+              academicYear={academicYear} setAcademicYear={setAcademicYear}
               page={page} totalPages={totalPages} totalCount={totalCount}
               onPageChange={fetchAdmissions}
               onRefresh={() => fetchAdmissions(1)}
@@ -399,12 +454,23 @@ const ScholarshipSectionDashboard = () => {
               masters={masters} loading={masterLoading}
               form={masterForm} setForm={setMasterForm}
               saving={masterSaving} msg={masterMsg} editId={editMasterId}
-              importFile={importFile} setImportFile={setImportFile} importing={importing}
               onSave={handleMasterSave}
-              onEdit={(m) => { setEditMasterId(m._id); setMasterForm({ category: m.category, courseType: m.courseType, admissionYear: m.admissionYear, academicYear: m.academicYear, scholarshipAmount: m.scholarshipAmount, description: m.description || '' }); }}
+              onEdit={(m) => {
+                setEditMasterId(m._id);
+                setMasterForm({
+                  categories:        m.categories || (m.category ? [m.category] : []),
+                  courseType:        m.courseType,
+                  admissionYear:     m.admissionYear,
+                  academicYear:      m.academicYear,
+                  scholarshipAmount: m.scholarshipAmount,
+                  description:       m.description || '',
+                });
+              }}
               onDelete={handleMasterDelete}
-              onCancelEdit={() => { setEditMasterId(null); setMasterForm({ category: '', courseType: '', admissionYear: 'FY', academicYear: '2025-26', scholarshipAmount: '', description: '' }); }}
-              onImport={handleImport}
+              onCancelEdit={() => {
+                setEditMasterId(null);
+                setMasterForm({ categories: [], courseType: '', admissionYear: 'FY', academicYear: '2025-26', scholarshipAmount: '', description: '' });
+              }}
             />
           )}
 
@@ -434,9 +500,20 @@ const ScholarshipSectionDashboard = () => {
 
 
 /* ═══════════════════════════════════════════════════════════
+   ACADEMIC YEAR FILTER (shared)
+═══════════════════════════════════════════════════════════ */
+const AcademicYearFilter = ({ value, onChange, style = {} }) => (
+  <select value={value} onChange={e => onChange(e.target.value)} style={{ ...inputStyle, ...style }}>
+    <option value="all">All Academic Years</option>
+    {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+  </select>
+);
+
+
+/* ═══════════════════════════════════════════════════════════
    HOME DASHBOARD
 ═══════════════════════════════════════════════════════════ */
-const HomeDashboard = ({ db, user, onRefresh, onGoTab }) => {
+const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, academicYear, setAcademicYear }) => {
   const cards = [
     { label: 'Total Students', value: db.totalStudents || 0, icon: '👩‍🎓', cls: 'blue' },
     { label: 'Not Filled',     value: db.notFilled     || 0, icon: '📝',  cls: 'orange' },
@@ -455,9 +532,24 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab }) => {
       <div style={{ background: 'linear-gradient(135deg,#7B1FA2,#4A148C)', padding: '20px 24px', borderRadius: 14, marginBottom: 24, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h3 style={{ margin: '0 0 4px', fontSize: 18 }}>🏅 Welcome, {user?.name}!</h3>
-          <p style={{ margin: 0, opacity: 0.85, fontSize: 14 }}>Scholarship Management — AY 2025-26</p>
+          <p style={{ margin: 0, opacity: 0.85, fontSize: 14 }}>Scholarship Management — AY {academicYear !== 'all' ? academicYear : '2025-26'}</p>
         </div>
-        <button onClick={onRefresh} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🔄 Refresh</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Academic Year Filter on dashboard */}
+          <select
+            value={academicYear}
+            onChange={e => setAcademicYear(e.target.value)}
+            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, cursor: 'pointer' }}
+          >
+            <option value="all" style={{ color: '#333' }}>All Academic Years</option>
+            {ACADEMIC_YEARS.map(y => <option key={y} value={y} style={{ color: '#333' }}>{y}</option>)}
+          </select>
+          <button onClick={onRefresh} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🔄 Refresh</button>
+          {/* Export button on dashboard */}
+          <button onClick={onExport} disabled={exporting} style={{ background: 'rgba(255,255,255,0.9)', color: '#4A148C', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+            {exporting ? '⏳...' : '📥 Export Excel'}
+          </button>
+        </div>
       </div>
 
       <div className="dash-cards" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', marginBottom: 24 }}>
@@ -504,7 +596,7 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab }) => {
 /* ═══════════════════════════════════════════════════════════
    STUDENTS TAB
 ═══════════════════════════════════════════════════════════ */
-const StudentsTab = ({ admissions, loading, search, setSearch, catFilter, setCatFilter, statusFilter, setStatusFilter, yearFilter, setYearFilter, page, totalPages, totalCount, onPageChange, onRefresh, onExport, exporting, onView, showAmounts = false }) => {
+const StudentsTab = ({ admissions, loading, search, setSearch, catFilter, setCatFilter, statusFilter, setStatusFilter, yearFilter, setYearFilter, academicYear, setAcademicYear, page, totalPages, totalCount, onPageChange, onRefresh, onExport, exporting, onView, showAmounts = false }) => {
   const themeColor = '#7B1FA2';
   return (
     <div>
@@ -523,7 +615,7 @@ const StudentsTab = ({ admissions, loading, search, setSearch, catFilter, setCat
         <input type="text" placeholder="🔍 Search name, ID, PRN, email..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200, ...inputStyle }} />
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)} style={inputStyle}>
           <option value="all">All Categories</option>
-          {['SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC','OPEN'].map(c => <option key={c} value={c.toLowerCase()}>{c}</option>)}
+          {ALL_CATEGORIES.map(c => <option key={c} value={c.toLowerCase()}>{c}</option>)}
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={inputStyle}>
           <option value="all">All Status</option>
@@ -533,6 +625,8 @@ const StudentsTab = ({ admissions, loading, search, setSearch, catFilter, setCat
           <option value="all">All Years</option>
           {['FY','SY','TY'].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
+        {/* ← NEW: Academic Year filter */}
+        <AcademicYearFilter value={academicYear} onChange={setAcademicYear} />
       </div>
 
       {loading ? <LoadingState /> : admissions.length === 0 ? <EmptyState icon="📭" msg="No students found" /> : (
@@ -595,6 +689,8 @@ const StudentsTab = ({ admissions, loading, search, setSearch, catFilter, setCat
 const StudentDetail = ({ selected, detailLoading, editMode, setEditMode, editData, setEditData, saving, autoCalcing, showPass, setShowPass, msg, onBack, onSave, onAutoCalculate, onDocVerify }) => {
   const netPayable = (selected.totalFees || 0) - (selected.scholarshipAmount || 0);
   const balance    = netPayable - (selected.feesPaid || 0);
+  const catKey = (selected.category || '').toLowerCase();
+  const isReserved = RESERVED_CATEGORIES.includes(catKey);
 
   return (
     <div>
@@ -602,6 +698,10 @@ const StudentDetail = ({ selected, detailLoading, editMode, setEditMode, editDat
         <button onClick={onBack} style={btnStyle('#f3e5f5', '#7B1FA2', '#ce93d8')}>← Back</button>
         <h2 style={{ color: '#6A1B9A', margin: 0 }}>👩‍🎓 {selected.applicantName}</h2>
         {detailLoading && <span style={{ fontSize: 12, color: '#888', background: '#f5f5f5', padding: '4px 12px', borderRadius: 20 }}>⏳ Loading documents...</span>}
+        {/* Scholarship eligibility badge */}
+        <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: isReserved ? '#e8f5e9' : '#fff3e0', color: isReserved ? '#2E7D32' : '#E65100', border: `1px solid ${isReserved ? '#a5d6a7' : '#ffcc80'}` }}>
+          {isReserved ? '✅ Full MahaDBT Benefit' : '📐 Tuition Fee Only (OPEN)'}
+        </span>
       </div>
 
       {msg && <MsgBanner msg={msg} />}
@@ -706,48 +806,23 @@ const DocVerificationCard = ({ selected, onVerify, detailLoading }) => {
                   <div>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: url ? '#1a1a2e' : '#aaa' }}>{label}</p>
                     {url ? (
-                      /* ✅ Opens Cloudinary URL in new tab */
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: 11, color: '#1565C0', textDecoration: 'underline', fontWeight: 600 }}
-                      >
+                      <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#1565C0', textDecoration: 'underline', fontWeight: 600 }}>
                         🔗 View Document
                       </a>
                     ) : (
-                      <span style={{ fontSize: 10, color: '#aaa' }}>
-                        {detailLoading ? 'Loading...' : 'Not uploaded'}
-                      </span>
+                      <span style={{ fontSize: 10, color: '#aaa' }}>{detailLoading ? 'Loading...' : 'Not uploaded'}</span>
                     )}
                   </div>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: vcfg.bg, color: vcfg.color }}>
-                  {vcfg.label}
-                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: vcfg.bg, color: vcfg.color }}>{vcfg.label}</span>
               </div>
               {url && (
                 <>
-                  <input
-                    type="text"
-                    placeholder="Remark (optional)..."
-                    value={remarks[key] ?? remark}
-                    onChange={e => setRemarks(r => ({ ...r, [key]: e.target.value }))}
-                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #e0e7ef', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
-                  />
+                  <input type="text" placeholder="Remark (optional)..." value={remarks[key] ?? remark} onChange={e => setRemarks(r => ({ ...r, [key]: e.target.value }))} style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #e0e7ef', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }} />
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => onVerify(selected._id, key, 'verified', remarks[key] ?? remark)}
-                      style={{ flex: 1, padding: '5px 0', background: status === 'verified' ? '#2E7D32' : '#e8f5e9', color: status === 'verified' ? '#fff' : '#2E7D32', border: `1px solid #a5d6a7`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                      ✅ Verify
-                    </button>
-                    <button onClick={() => onVerify(selected._id, key, 'rejected', remarks[key] ?? remark)}
-                      style={{ flex: 1, padding: '5px 0', background: status === 'rejected' ? '#C62828' : '#ffebee', color: status === 'rejected' ? '#fff' : '#C62828', border: `1px solid #ef9a9a`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                      ❌ Reject
-                    </button>
-                    <button onClick={() => onVerify(selected._id, key, 'pending', '')}
-                      style={{ padding: '5px 8px', background: '#f5f5f5', color: '#888', border: `1px solid #ddd`, borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
-                      ↩
-                    </button>
+                    <button onClick={() => onVerify(selected._id, key, 'verified', remarks[key] ?? remark)} style={{ flex: 1, padding: '5px 0', background: status === 'verified' ? '#2E7D32' : '#e8f5e9', color: status === 'verified' ? '#fff' : '#2E7D32', border: `1px solid #a5d6a7`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✅ Verify</button>
+                    <button onClick={() => onVerify(selected._id, key, 'rejected', remarks[key] ?? remark)} style={{ flex: 1, padding: '5px 0', background: status === 'rejected' ? '#C62828' : '#ffebee', color: status === 'rejected' ? '#fff' : '#C62828', border: `1px solid #ef9a9a`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>❌ Reject</button>
+                    <button onClick={() => onVerify(selected._id, key, 'pending', '')} style={{ padding: '5px 8px', background: '#f5f5f5', color: '#888', border: `1px solid #ddd`, borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>↩</button>
                   </div>
                 </>
               )}
@@ -824,66 +899,335 @@ const ScholarshipEditCard = ({ selected, editMode, setEditMode, editData, setEdi
 
 
 /* ═══════════════════════════════════════════════════════════
-   MASTER DATA TAB
+   MASTER DATA TAB  — now "MahaDBT Receivable Management"
 ═══════════════════════════════════════════════════════════ */
-const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, importFile, setImportFile, importing, onSave, onEdit, onDelete, onCancelEdit, onImport }) => {
+const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSave, onEdit, onDelete, onCancelEdit }) => {
   const themeColor = '#7B1FA2';
+  const [activeView, setActiveView] = useState('feeStructure'); // 'feeStructure' | 'records'
+  const [feeAY, setFeeAY] = useState('2025-26');
+
+  const toggleCategory = (cat) => {
+    setForm(p => {
+      const cats = p.categories || [];
+      return {
+        ...p,
+        categories: cats.includes(cat) ? cats.filter(c => c !== cat) : [...cats, cat],
+      };
+    });
+  };
+
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h2 style={{ color: themeColor, margin: '0 0 4px' }}>⚙️ Scholarship Master Data</h2>
-        <p style={{ color: '#666', margin: 0, fontSize: 14 }}>Manage category-wise MahaDBT receivable amounts</p>
-      </div>
-      {msg && <MsgBanner msg={msg} />}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 16 }}>
+          {/* ← RENAMED HEADING */}
+          <h2 style={{ color: themeColor, margin: '0 0 4px' }}>📊 MahaDBT Receivable Management</h2>
+          <p style={{ color: '#666', margin: 0, fontSize: 14 }}>Fee-wise scholarship receivable amounts per category & course</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setActiveView('feeStructure')} style={{ ...btnStyle(activeView === 'feeStructure' ? themeColor : '#f3e5f5', activeView === 'feeStructure' ? '#fff' : themeColor, '#ce93d8') }}>🏛️ Fee Structure</button>
+          <button onClick={() => setActiveView('records')} style={{ ...btnStyle(activeView === 'records' ? themeColor : '#f3e5f5', activeView === 'records' ? '#fff' : themeColor, '#ce93d8') }}>📋 Custom Records</button>
+        </div>
+      </div>
+
+      {msg && <MsgBanner msg={msg} />}
+
+      {activeView === 'feeStructure' && (
+        <FeeStructureView academicYear={feeAY} setAcademicYear={setFeeAY} themeColor={themeColor} />
+      )}
+
+      {activeView === 'records' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 20 }}>
+          {/* ── Form Panel ── */}
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
             <h4 style={{ color: themeColor, margin: '0 0 16px', fontSize: 14 }}>{editId ? '✏️ Edit Record' : '➕ Add New Record'}</h4>
-            <FormField label="Category" color={themeColor}><select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={fieldStyle}><option value="">Select Category</option>{['SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC','OPEN'].map(c => <option key={c} value={c}>{c}</option>)}</select></FormField>
-            <FormField label="Course Type" color={themeColor}><select value={form.courseType} onChange={e => setForm(p => ({ ...p, courseType: e.target.value }))} style={fieldStyle}><option value="">Select Course</option>{['B.Sc','B.A','B.Com','B.Ed','BCA','BBA'].map(c => <option key={c} value={c}>{c}</option>)}</select></FormField>
-            <FormField label="Admission Year" color={themeColor}><select value={form.admissionYear} onChange={e => setForm(p => ({ ...p, admissionYear: e.target.value }))} style={fieldStyle}>{['FY','SY','TY'].map(y => <option key={y} value={y}>{y}</option>)}</select></FormField>
-            <FormField label="Academic Year" color={themeColor}><input type="text" placeholder="e.g. 2025-26" value={form.academicYear} onChange={e => setForm(p => ({ ...p, academicYear: e.target.value }))} style={fieldStyle} /></FormField>
-            <FormField label="Scholarship Amount (₹)" color={themeColor}><input type="number" min="0" placeholder="e.g. 25740" value={form.scholarshipAmount} onChange={e => setForm(p => ({ ...p, scholarshipAmount: e.target.value }))} style={fieldStyle} /></FormField>
-            <FormField label="Description" color={themeColor}><input type="text" placeholder="Optional note..." value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} style={fieldStyle} /></FormField>
+
+            {/* Multi-category selector */}
+            <FormField label="Categories (select one or more)" color={themeColor}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {ALL_CATEGORIES.map(cat => {
+                  const selected = (form.categories || []).includes(cat);
+                  const cc = CATEGORY_COLORS[cat.toLowerCase()] || CATEGORY_COLORS.other;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggleCategory(cat)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 20,
+                        border: `2px solid ${selected ? cc.color : '#ddd'}`,
+                        background: selected ? cc.bg : '#fafafa',
+                        color: selected ? cc.color : '#888',
+                        fontSize: 12,
+                        fontWeight: selected ? 700 : 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {selected ? '✓ ' : ''}{cat}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.categories?.length > 0 && (
+                <p style={{ fontSize: 11, color: '#7B1FA2', margin: '6px 0 0', fontWeight: 600 }}>
+                  Selected: {form.categories.join(', ')}
+                </p>
+              )}
+            </FormField>
+
+            <FormField label="Course Type" color={themeColor}>
+              <select value={form.courseType} onChange={e => setForm(p => ({ ...p, courseType: e.target.value }))} style={fieldStyle}>
+                <option value="">Select Course</option>
+                {['B.Sc','B.A','B.Com','B.Ed','BCA','BBA'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Admission Year" color={themeColor}>
+              <select value={form.admissionYear} onChange={e => setForm(p => ({ ...p, admissionYear: e.target.value }))} style={fieldStyle}>
+                {['FY','SY','TY'].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Academic Year" color={themeColor}>
+              <select value={form.academicYear} onChange={e => setForm(p => ({ ...p, academicYear: e.target.value }))} style={fieldStyle}>
+                {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Scholarship Amount (₹)" color={themeColor}>
+              <input type="number" min="0" placeholder="e.g. 25740" value={form.scholarshipAmount} onChange={e => setForm(p => ({ ...p, scholarshipAmount: e.target.value }))} style={fieldStyle} />
+            </FormField>
+            <FormField label="Description" color={themeColor}>
+              <input type="text" placeholder="Optional note..." value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} style={fieldStyle} />
+            </FormField>
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-              <button onClick={onSave} disabled={saving} style={{ flex: 1, padding: '10px', background: themeColor, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontSize: 13 }}>{saving ? '⏳...' : editId ? '💾 Update' : '➕ Add'}</button>
+              <button onClick={onSave} disabled={saving} style={{ flex: 1, padding: '10px', background: themeColor, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontSize: 13 }}>
+                {saving ? '⏳...' : editId ? '💾 Update' : `➕ Add (${form.categories?.length || 0} categories)`}
+              </button>
               {editId && <button onClick={onCancelEdit} style={{ padding: '10px 14px', background: '#eee', color: '#333', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>Cancel</button>}
             </div>
           </div>
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
-            <h4 style={{ color: '#1565C0', margin: '0 0 12px', fontSize: 14 }}>📥 Import from Excel</h4>
-            <p style={{ fontSize: 12, color: '#888', margin: '0 0 10px' }}>Columns: Category | CourseType | AdmissionYear | AcademicYear | ScholarshipAmount | Description</p>
-            <input type="file" accept=".xlsx,.xls" onChange={e => setImportFile(e.target.files[0])} style={{ fontSize: 13, marginBottom: 10 }} />
-            <button onClick={onImport} disabled={!importFile || importing} style={{ width: '100%', padding: '9px', background: importFile ? '#1565C0' : '#e0e7ef', color: importFile ? '#fff' : '#aaa', border: 'none', borderRadius: 8, fontWeight: 600, cursor: importFile ? 'pointer' : 'not-allowed', fontSize: 13 }}>{importing ? '⏳ Importing...' : '📥 Import'}</button>
+
+          {/* ── Records Table ── */}
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', background: themeColor }}><span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>📋 Custom Records ({masters.length})</span></div>
+            {loading ? <LoadingState /> : masters.length === 0 ? <EmptyState icon="📋" msg="No records yet" /> : (
+              <div style={{ maxHeight: 520, overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 0.7fr 1fr 1.2fr 0.8fr', padding: '9px 16px', background: '#f8f9ff', borderBottom: '2px solid #e0e7ef', gap: 8 }}>
+                  {['Category','Course','Year','Acad. Year','Amount',''].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: '#555' }}>{h}</span>)}
+                </div>
+                {masters.map((m, idx) => {
+                  const catDisplay = m.categories?.length > 1 ? `${m.categories[0]} +${m.categories.length - 1}` : (m.category || m.categories?.[0] || '—');
+                  const cc = CATEGORY_COLORS[(m.category || m.categories?.[0] || 'other').toLowerCase()] || CATEGORY_COLORS.other;
+                  return (
+                    <div key={m._id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 0.7fr 1fr 1.2fr 0.8fr', padding: '10px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+                      <span title={m.categories?.join(', ')} style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: cc.bg, color: cc.color, cursor: 'help' }}>{catDisplay}</span>
+                      <span style={{ fontSize: 12, color: '#333' }}>{m.courseType}</span>
+                      <span style={{ fontSize: 12, color: '#555' }}>{m.admissionYear}</span>
+                      <span style={{ fontSize: 11, color: '#888' }}>{m.academicYear}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#2E7D32' }}>₹{fmt(m.scholarshipAmount)}</span>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button onClick={() => onEdit(m)} style={{ fontSize: 11, padding: '3px 8px', background: '#f3e5f5', color: themeColor, border: 'none', borderRadius: 5, cursor: 'pointer' }}>✏️</button>
+                        <button onClick={() => onDelete(m._id)} style={{ fontSize: 11, padding: '3px 8px', background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 5, cursor: 'pointer' }}>🗑️</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', background: themeColor }}><span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>📋 Master Records ({masters.length})</span></div>
-          {loading ? <LoadingState /> : masters.length === 0 ? <EmptyState icon="📋" msg="No records yet" /> : (
-            <div style={{ maxHeight: 520, overflowY: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 0.7fr 1fr 1.2fr 0.8fr', padding: '9px 16px', background: '#f8f9ff', borderBottom: '2px solid #e0e7ef', gap: 8 }}>
-                {['Category','Course','Year','Acad. Year','Amount',''].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: '#555' }}>{h}</span>)}
-              </div>
-              {masters.map((m, idx) => {
-                const cc = CATEGORY_COLORS[m.category?.toLowerCase()] || CATEGORY_COLORS.other;
-                return (
-                  <div key={m._id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 0.7fr 1fr 1.2fr 0.8fr', padding: '10px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: cc.bg, color: cc.color }}>{m.category}</span>
-                    <span style={{ fontSize: 12, color: '#333' }}>{m.courseType}</span>
-                    <span style={{ fontSize: 12, color: '#555' }}>{m.admissionYear}</span>
-                    <span style={{ fontSize: 11, color: '#888' }}>{m.academicYear}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#2E7D32' }}>₹{fmt(m.scholarshipAmount)}</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button onClick={() => onEdit(m)} style={{ fontSize: 11, padding: '3px 8px', background: '#f3e5f5', color: themeColor, border: 'none', borderRadius: 5, cursor: 'pointer' }}>✏️</button>
-                      <button onClick={() => onDelete(m._id)} style={{ fontSize: 11, padding: '3px 8px', background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 5, cursor: 'pointer' }}>🗑️</button>
-                    </div>
-                  </div>
-                );
-              })}
+      )}
+    </div>
+  );
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   FEE STRUCTURE VIEW  (professional college fee-structure UI)
+═══════════════════════════════════════════════════════════ */
+const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
+  const courses = Object.keys(FEE_STRUCTURE);
+  const [activeCourse, setActiveCourse] = useState('B.Sc');
+  const [editMode, setEditMode]         = useState(false);
+  const [feeData, setFeeData]           = useState(() => JSON.parse(JSON.stringify(FEE_STRUCTURE)));
+  const [saving, setSaving]             = useState(false);
+  const [savedMsg, setSavedMsg]         = useState('');
+
+  const years = ['FY', 'SY', 'TY'];
+
+  const getTotal = (yearData) =>
+    Object.entries(yearData).reduce((s, [k, v]) => s + (k === 'Total Fees' ? 0 : Number(v || 0)), 0) ||
+    Object.entries(yearData).reduce((s, [k, v]) => s + Number(v || 0), 0);
+
+  const handleFeeChange = (year, head, val) => {
+    setFeeData(prev => ({
+      ...prev,
+      [activeCourse]: {
+        ...prev[activeCourse],
+        [year]: { ...prev[activeCourse][year], [head]: Number(val) || 0 },
+      },
+    }));
+  };
+
+  const handleSave = () => {
+    setSaving(true);
+    // In a real app this would call an API endpoint; here we simulate a save
+    setTimeout(() => {
+      setSaving(false);
+      setEditMode(false);
+      setSavedMsg('✅ Fee structure saved locally (integrate with your API as needed)');
+      setTimeout(() => setSavedMsg(''), 4000);
+    }, 800);
+  };
+
+  const courseData = feeData[activeCourse] || {};
+
+  // Collect all unique fee heads across all years for this course
+  const allHeads = [...new Set(years.flatMap(y => Object.keys(courseData[y] || {})).filter(h => h !== 'Total Fees'))];
+
+  return (
+    <div>
+      {savedMsg && <MsgBanner msg={savedMsg} />}
+
+      {/* Controls row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        {/* Course tabs */}
+        <div style={{ display: 'flex', gap: 0, background: '#f0f4f8', borderRadius: 10, padding: 4 }}>
+          {courses.map(c => (
+            <button
+              key={c}
+              onClick={() => setActiveCourse(c)}
+              style={{
+                padding: '8px 20px',
+                borderRadius: 8,
+                border: 'none',
+                background: activeCourse === c ? themeColor : 'transparent',
+                color: activeCourse === c ? '#fff' : '#555',
+                fontWeight: activeCourse === c ? 700 : 500,
+                fontSize: 14,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {/* Academic Year */}
+          <select value={academicYear} onChange={e => setAcademicYear(e.target.value)} style={{ ...inputStyle, minWidth: 130 }}>
+            {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+
+          {/* Scholarship logic info */}
+          <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>
+            Reserved: Full Benefit &nbsp;|&nbsp; OPEN: Tuition Fee Only
+          </div>
+
+          {!editMode ? (
+            <button onClick={() => setEditMode(true)} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>✏️ Edit Fees</button>
+          ) : (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                {saving ? '⏳ Saving...' : '💾 Save'}
+              </button>
+              <button onClick={() => { setEditMode(false); setFeeData(JSON.parse(JSON.stringify(FEE_STRUCTURE))); }} style={{ padding: '8px 14px', background: '#eee', color: '#333', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Scholarship logic callout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+        <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 10, padding: '12px 16px' }}>
+          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#1565C0' }}>🎓 Reserved Categories (SC/ST/OBC/SBC/NT-B/NT-C/NT-D/VJ-DT/EWS/SEBC)</p>
+          <p style={{ margin: 0, fontSize: 12, color: '#1565C0' }}>Receive <strong>full MahaDBT benefit</strong> — all fee components are included in scholarship calculation.</p>
+        </div>
+        <div style={{ background: '#fff3e0', border: '1px solid #ffcc80', borderRadius: 10, padding: '12px 16px' }}>
+          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#E65100' }}>📐 OPEN Category</p>
+          <p style={{ margin: 0, fontSize: 12, color: '#E65100' }}>Scholarship calculated using <strong>Tuition Fee only</strong>. Other fee components are excluded.</p>
+        </div>
+      </div>
+
+      {/* Fee Structure Table */}
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
+        {/* Table header */}
+        <div style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, background: themeColor, padding: '14px 20px', gap: 8 }}>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>Fee Head</span>
+          {years.map(y => (
+            <span key={y} style={{ color: '#fff', fontWeight: 700, fontSize: 13, textAlign: 'center' }}>{y}</span>
+          ))}
+        </div>
+
+        {/* Fee rows */}
+        {allHeads.map((head, idx) => {
+          const isTuition = head === 'Tuition Fee';
+          return (
+            <div key={head} style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, padding: '12px 20px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: isTuition ? 700 : 500, color: isTuition ? '#7B1FA2' : '#333' }}>{head}</span>
+                {isTuition && (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 10, background: '#fff3e0', color: '#E65100' }}>OPEN basis</span>
+                )}
+              </div>
+              {years.map(y => {
+                const val = courseData[y]?.[head] ?? '';
+                return (
+                  <div key={y} style={{ textAlign: 'center' }}>
+                    {editMode ? (
+                      <input
+                        type="number"
+                        value={val}
+                        onChange={e => handleFeeChange(y, head, e.target.value)}
+                        style={{ width: '90px', padding: '5px 8px', borderRadius: 6, border: `2px solid ${isTuition ? '#ce93d8' : '#e0e7ef'}`, fontSize: 13, textAlign: 'right' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 13, fontWeight: val ? 600 : 400, color: val ? (isTuition ? '#7B1FA2' : '#333') : '#ccc' }}>
+                        {val ? `₹${fmt(val)}` : '—'}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+
+        {/* Totals row */}
+        <div style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, padding: '14px 20px', gap: 8, background: '#f3e5f5', borderTop: `2px solid ${themeColor}33` }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: themeColor }}>Total (Reserved)</span>
+          {years.map(y => {
+            const yearData = courseData[y] || {};
+            const total = Object.entries(yearData).reduce((s, [k, v]) => k !== 'Total Fees' ? s + Number(v || 0) : s, 0) || Number(yearData['Total Fees'] || 0);
+            return (
+              <span key={y} style={{ fontSize: 14, fontWeight: 800, color: themeColor, textAlign: 'center' }}>
+                ₹{fmt(total)}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* OPEN Category row — tuition fee only */}
+        <div style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, padding: '12px 20px', gap: 8, background: '#fff8e1', borderTop: '1px solid #ffe082' }}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#E65100' }}>Total (OPEN — Tuition Only)</span>
+          </div>
+          {years.map(y => {
+            const tuition = courseData[y]?.['Tuition Fee'] || 0;
+            return (
+              <span key={y} style={{ fontSize: 13, fontWeight: 700, color: '#E65100', textAlign: 'center' }}>
+                {tuition ? `₹${fmt(tuition)}` : '—'}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Academic Year note */}
+      <p style={{ fontSize: 12, color: '#888', marginTop: 10, textAlign: 'right' }}>
+        Showing fee structure for Academic Year: <strong>{academicYear}</strong>
+      </p>
     </div>
   );
 };
