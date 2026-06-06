@@ -1055,11 +1055,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
 
   const years = ['FY', 'SY', 'TY'];
 
-  const getTotal = (yearData) =>
-    Object.entries(yearData).reduce((s, [k, v]) => s + (k === 'Total Fees' ? 0 : Number(v || 0)), 0) ||
-    Object.entries(yearData).reduce((s, [k, v]) => s + Number(v || 0), 0);
-
-  const handleFeeChange = (year, head, val) => {
+const handleFeeChange = (year, head, val) => {
     setFeeData(prev => ({
       ...prev,
       [activeCourse]: {
