@@ -1,9 +1,9 @@
-import ExpenseTracker from '../../components/ExpenseTracker';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
+import ExpenseTracker from '../../components/ExpenseTracker';
 import StudentViewFull from './StudentViewFull';
 
 
@@ -1303,13 +1303,13 @@ const AccountsSectionDashboard = () => {
           )}
 
           {/* ════════════════════════ EXPENSES ════════════════════════ */}
-         {activeTab === 'expenses' && (
-             <ExpenseTracker
+          {activeTab === 'expenses' && (
+            <ExpenseTracker
               user={user}
-          showToast={showToast}
-         API={API}
-       />
-      )}         
+              showToast={showToast}
+              API={API}
+            />
+          )}
 
           {/* ════════════════════════ PAYMENT HISTORY ════════════════════════ */}
           {activeTab === 'history' && (
