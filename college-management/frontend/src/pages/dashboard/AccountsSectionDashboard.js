@@ -820,7 +820,7 @@ const AccountsSectionDashboard = () => {
       fetchExpenses(1);
       fetchExpStats();
     }
-  }, [activeTab]);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -1096,6 +1096,7 @@ const AccountsSectionDashboard = () => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const startEditExpense = (exp) => {
     setExpEditId(exp._id);
     setExpForm({
