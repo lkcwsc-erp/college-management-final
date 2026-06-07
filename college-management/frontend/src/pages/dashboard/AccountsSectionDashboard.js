@@ -400,7 +400,7 @@ const fetchDocFeeTypesFromAPI = useCallback(async () => {
  useEffect(() => {
   fetchDocFeeTypesFromAPI();
 // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+  }, []);
   // Submit edit for approval
   const submitEdit = (itemId, newAmounts) => {
     const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
