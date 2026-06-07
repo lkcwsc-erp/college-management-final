@@ -557,8 +557,7 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
     <div>
       <div style={{ background: 'linear-gradient(135deg,#7B1FA2,#4A148C)', padding: '20px 24px', borderRadius: 14, marginBottom: 24, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h3 style={{ margin: '0 0 4px', fontSize: 18 }}>🏅 Welcome, {user?.name}!</h3>
-          <p style={{ margin: 0, opacity: 0.85, fontSize: 14 }}>Scholarship Management — AY {academicYear !== 'all' ? academicYear : '2025-26'}</p>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>🏅 Scholarship Management</h3>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Academic Year Filter on dashboard */}
@@ -935,10 +934,19 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
   const toggleCategory = (cat) => {
     setForm(p => {
       const cats = p.categories || [];
-      return {
-        ...p,
-        categories: cats.includes(cat) ? cats.filter(c => c !== cat) : [...cats, cat],
-      };
+      const newCats = cats.includes(cat) ? cats.filter(c => c !== cat) : [...cats, cat];
+      // Auto-recalculate amount when category changes
+      const isOpen = newCats.length === 1 && newCats[0] === 'OPEN';
+      const structure = FEE_STRUCTURE[p.courseType]?.[p.admissionYear];
+      let autoAmt = p.scholarshipAmount;
+      if (structure) {
+        if (isOpen) {
+          autoAmt = structure['Tuition Fee'] || '';
+        } else if (newCats.length > 0 && !newCats.includes('OPEN')) {
+          autoAmt = Object.values(structure).reduce((s, v) => s + Number(v || 0), 0) || '';
+        }
+      }
+      return { ...p, categories: newCats, scholarshipAmount: autoAmt };
     });
   };
 
@@ -1004,13 +1012,43 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
             </FormField>
 
             <FormField label="Course Type" color={themeColor}>
-              <select value={form.courseType} onChange={e => setForm(p => ({ ...p, courseType: e.target.value }))} style={fieldStyle}>
+              <select value={form.courseType} onChange={e => {
+                const ct = e.target.value;
+                const ay = form.admissionYear;
+                const cats = form.categories || [];
+                const isOpen = cats.length === 1 && cats[0] === 'OPEN';
+                const structure = FEE_STRUCTURE[ct]?.[ay];
+                let autoAmt = '';
+                if (structure) {
+                  if (isOpen) {
+                    autoAmt = structure['Tuition Fee'] || '';
+                  } else {
+                    autoAmt = Object.values(structure).reduce((s, v) => s + Number(v || 0), 0) || '';
+                  }
+                }
+                setForm(p => ({ ...p, courseType: ct, scholarshipAmount: autoAmt }));
+              }} style={fieldStyle}>
                 <option value="">Select Course</option>
-                {['B.Sc','B.A','B.Com','B.Ed','BCA','BBA'].map(c => <option key={c} value={c}>{c}</option>)}
+                {['B.Sc','B.A'].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </FormField>
             <FormField label="Admission Year" color={themeColor}>
-              <select value={form.admissionYear} onChange={e => setForm(p => ({ ...p, admissionYear: e.target.value }))} style={fieldStyle}>
+              <select value={form.admissionYear} onChange={e => {
+                const ay = e.target.value;
+                const ct = form.courseType;
+                const cats = form.categories || [];
+                const isOpen = cats.length === 1 && cats[0] === 'OPEN';
+                const structure = FEE_STRUCTURE[ct]?.[ay];
+                let autoAmt = '';
+                if (structure) {
+                  if (isOpen) {
+                    autoAmt = structure['Tuition Fee'] || '';
+                  } else {
+                    autoAmt = Object.values(structure).reduce((s, v) => s + Number(v || 0), 0) || '';
+                  }
+                }
+                setForm(p => ({ ...p, admissionYear: ay, scholarshipAmount: autoAmt }));
+              }} style={fieldStyle}>
                 {['FY','SY','TY'].map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </FormField>
@@ -1019,8 +1057,22 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
                 {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </FormField>
+            {/* Auto-calculated amount preview */}
+            {form.scholarshipAmount !== '' && form.courseType && (
+              <div style={{ marginBottom: 10, padding: '10px 14px', borderRadius: 10, background: (form.categories||[]).includes('OPEN') ? '#fff3e0' : '#e8f5e9', border: `1px solid ${(form.categories||[]).includes('OPEN') ? '#ffcc80' : '#a5d6a7'}` }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: (form.categories||[]).includes('OPEN') ? '#E65100' : '#2E7D32' }}>
+                  {(form.categories||[]).includes('OPEN')
+                    ? '📐 OPEN: Tuition Fee only'
+                    : '✅ Reserved: Full MahaDBT benefit'}
+                </p>
+                <p style={{ margin: '3px 0 0', fontSize: 18, fontWeight: 800, color: (form.categories||[]).includes('OPEN') ? '#E65100' : '#2E7D32' }}>
+                  ₹{Number(form.scholarshipAmount).toLocaleString('en-IN')}
+                </p>
+              </div>
+            )}
             <FormField label="Scholarship Amount (₹)" color={themeColor}>
-              <input type="number" min="0" placeholder="e.g. 25740" value={form.scholarshipAmount} onChange={e => setForm(p => ({ ...p, scholarshipAmount: e.target.value }))} style={fieldStyle} />
+              <input type="number" min="0" placeholder="Auto-filled from fee structure" value={form.scholarshipAmount} onChange={e => setForm(p => ({ ...p, scholarshipAmount: e.target.value }))} style={{ ...fieldStyle, background: form.scholarshipAmount ? '#f0fff4' : '#fff' }} />
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>Auto-filled when you select Category + Course + Year. You can edit manually if needed.</p>
             </FormField>
             <FormField label="Description" color={themeColor}>
               <input type="text" placeholder="Optional note..." value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} style={fieldStyle} />
