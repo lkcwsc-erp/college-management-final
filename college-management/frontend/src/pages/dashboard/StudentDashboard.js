@@ -1861,6 +1861,24 @@ const StudentDashboard = () => {
   const [resultsLoading] = useState(false);
   const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false });
   const [examSubmitted, setExamSubmitted] = useState({ regular: false, backlog: false });
+  const [examFormRequests, setExamFormRequests] = useState([]);
+  const [examFormSubmitting, setExamFormSubmitting] = useState('');
+  const [examFormMsg, setExamFormMsg] = useState('');
+
+  const fetchExamFormRequests = () => {
+    API.get('/results/exam-form/my')
+      .then(r => {
+        const reqs = r.data.requests || [];
+        setExamFormRequests(reqs);
+        // Mark as submitted if already submitted this session
+        const settings = examSettings;
+        const reg = reqs.find(r => r.formType === 'regular' && r.semester === settings.regularSemester && r.examEvent === settings.regularExamEvent);
+        const back = reqs.find(r => r.formType === 'backlog' && r.semester === settings.backlogSemester && r.examEvent === settings.backlogExamEvent);
+        if (reg) setExamSubmitted(prev => ({ ...prev, regular: true }));
+        if (back) setExamSubmitted(prev => ({ ...prev, backlog: true }));
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     API.get('/notices').then(res => setNotices(res.data.notices || []));
@@ -1884,6 +1902,13 @@ const StudentDashboard = () => {
     // Fetch exam form settings
     API.get('/results/exam-settings')
       .then(res => setExamSettings(res.data.settings || {}))
+      .catch(() => {});
+    // Fetch student's exam form requests
+    API.get('/results/exam-form/my')
+      .then(r => {
+        const reqs = r.data.requests || [];
+        setExamFormRequests(reqs);
+      })
       .catch(() => {});
   }, [user]);
 
@@ -2724,29 +2749,44 @@ const StudentDashboard = () => {
                     <div style={{ textAlign: 'center', padding: '20px 0', color: '#888' }}>
                       <p style={{ fontSize: '2.5rem', margin: 0 }}>🔒</p>
                       <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Form Not Open Yet</p>
-                      <p style={{ fontSize: 13 }}>The Examination Section will open this form when the time comes. Check back later.</p>
+                      <p style={{ fontSize: 13 }}>The Examination Section will open this form when the time comes.</p>
                     </div>
-                  ) : examSubmitted.regular ? (
-                    <div style={{ background: '#e8f5e9', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #2E7D32' }}>
-                      <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
-                      <h4 style={{ color: '#2E7D32', margin: '8px 0 4px' }}>Regular Exam Form Submitted!</h4>
-                      <p style={{ fontSize: 13, color: '#555' }}>Your form has been submitted. The Examination Section will process it.</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ background: '#e3f2fd', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#0c4a6e' }}>
-                        <strong>ℹ️ Student Details (auto-attached):</strong><br />
-                        Name: {myAdmission?.applicantName || user?.name} | Course: {myAdmission?.courseType || 'N/A'} | Year: {myAdmission?.admissionYear || 'N/A'}
+                  ) : examFormRequests.find(r => r.formType === 'regular' && r.semester === examSettings.regularSemester && r.examEvent === examSettings.regularExamEvent) ? (() => {
+                    const req = examFormRequests.find(r => r.formType === 'regular' && r.semester === examSettings.regularSemester && r.examEvent === examSettings.regularExamEvent);
+                    return (
+                      <div style={{ background: '#e8f5e9', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #2E7D32' }}>
+                        <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
+                        <h4 style={{ color: '#2E7D32', margin: '8px 0 4px' }}>Regular Exam Form Submitted!</h4>
+                        <p style={{ fontSize: 13, color: '#555' }}>Your form has been submitted. Accounts Section will collect exam fees.</p>
+                        <div style={{ marginTop: 10, background: req.feeStatus==='collected'?'#c8e6c9':'#fff3e0', borderRadius: 8, padding: '8px 16px', fontSize: 12, color: req.feeStatus==='collected'?'#1b5e20':'#e65100', fontWeight: 600 }}>
+                          {req.feeStatus==='collected' ? `✅ Fees Paid: ₹${req.feeAmount} | Receipt: ${req.feeReceiptNo}` : '⏳ Exam Fees Pending — Visit Accounts Section'}
+                        </div>
                       </div>
-                      <p style={{ fontSize: 13, color: '#555', marginBottom: 16 }}>
-                        By submitting this form, you confirm that your fees are paid and you wish to appear for the regular examination.
-                      </p>
+                    );
+                  })() : (
+                    <div>
+                      {examFormMsg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: examFormMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color: examFormMsg.startsWith('✅')?'#2E7D32':'#C62828' }}>{examFormMsg}</div>}
+                      <div style={{ background: '#e3f2fd', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#0c4a6e' }}>
+                        <strong>ℹ️ Student Details:</strong><br />
+                        Name: {myAdmission?.applicantName || user?.name} | Course: {myAdmission?.courseType || 'N/A'} | Year: {myAdmission?.admissionYear || 'N/A'}<br/>
+                        Semester: <strong>{examSettings.regularSemester}</strong> | Exam Event: <strong>{examSettings.regularExamEvent}</strong>
+                      </div>
                       <button
-                        onClick={() => setExamSubmitted(prev => ({ ...prev, regular: true }))}
-                        style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                        📝 Submit Regular Exam Form
+                        disabled={examFormSubmitting === 'regular'}
+                        onClick={async () => {
+                          setExamFormSubmitting('regular'); setExamFormMsg('');
+                          try {
+                            await API.post('/results/exam-form/submit', { formType: 'regular' });
+                            setExamFormMsg('✅ Form submitted!');
+                            const r = await API.get('/results/exam-form/my');
+                            setExamFormRequests(r.data.requests || []);
+                          } catch(e) { setExamFormMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+                          finally { setExamFormSubmitting(''); }
+                        }}
+                        style={{ background: examFormSubmitting==='regular'?'#aaa':'#1565C0', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: examFormSubmitting==='regular'?'not-allowed':'pointer' }}>
+                        {examFormSubmitting==='regular' ? '⏳ Submitting...' : '📝 Submit Regular Exam Form'}
                       </button>
-                      <p style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>* Ensure fees are paid before submitting.</p>
+                      <p style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>* After submission, pay exam fees at the Accounts Section.</p>
                     </div>
                   )}
                 </div>
@@ -2767,21 +2807,36 @@ const StudentDashboard = () => {
                       <p style={{ fontWeight: 600, color: '#555', marginTop: 8 }}>Backlog Form Not Open</p>
                       <p style={{ fontSize: 13 }}>The Examination Section will open the KT/backlog form when required.</p>
                     </div>
-                  ) : examSubmitted.backlog ? (
-                    <div style={{ background: '#fff3e0', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #E65100' }}>
-                      <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
-                      <h4 style={{ color: '#E65100', margin: '8px 0 4px' }}>Backlog Form Submitted!</h4>
-                      <p style={{ fontSize: 13, color: '#555' }}>Your backlog form has been submitted successfully.</p>
-                    </div>
-                  ) : (
+                  ) : examFormRequests.find(r => r.formType === 'backlog' && r.semester === examSettings.backlogSemester && r.examEvent === examSettings.backlogExamEvent) ? (() => {
+                    const req = examFormRequests.find(r => r.formType === 'backlog' && r.semester === examSettings.backlogSemester && r.examEvent === examSettings.backlogExamEvent);
+                    return (
+                      <div style={{ background: '#fff3e0', borderRadius: 10, padding: 20, textAlign: 'center', border: '2px solid #E65100' }}>
+                        <p style={{ fontSize: '2rem', margin: 0 }}>✅</p>
+                        <h4 style={{ color: '#E65100', margin: '8px 0 4px' }}>Backlog Form Submitted!</h4>
+                        <p style={{ fontSize: 13, color: '#555' }}>Your backlog form has been submitted.</p>
+                        <div style={{ marginTop: 10, background: req.feeStatus==='collected'?'#c8e6c9':'#fff3e0', borderRadius: 8, padding: '8px 16px', fontSize: 12, color: req.feeStatus==='collected'?'#1b5e20':'#e65100', fontWeight: 600 }}>
+                          {req.feeStatus==='collected' ? `✅ Fees Paid: ₹${req.feeAmount} | Receipt: ${req.feeReceiptNo}` : '⏳ Exam Fees Pending — Visit Accounts Section'}
+                        </div>
+                      </div>
+                    );
+                  })() : (
                     <div>
                       <div style={{ background: '#fff3e0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#7c3d00' }}>
-                        <strong>⚠️ Backlog/KT Form:</strong> Only for students who have failed subjects in previous semesters. Ensure your KT exam fees are paid.
+                        <strong>⚠️ Backlog/KT Form:</strong> Only for students who have failed subjects in previous semesters.
                       </div>
                       <button
-                        onClick={() => setExamSubmitted(prev => ({ ...prev, backlog: true }))}
-                        style={{ background: '#E65100', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                        📝 Submit Backlog Exam Form
+                        disabled={examFormSubmitting === 'backlog'}
+                        onClick={async () => {
+                          setExamFormSubmitting('backlog'); setExamFormMsg('');
+                          try {
+                            await API.post('/results/exam-form/submit', { formType: 'backlog' });
+                            const r = await API.get('/results/exam-form/my');
+                            setExamFormRequests(r.data.requests || []);
+                          } catch(e) { setExamFormMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+                          finally { setExamFormSubmitting(''); }
+                        }}
+                        style={{ background: examFormSubmitting==='backlog'?'#aaa':'#E65100', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: examFormSubmitting==='backlog'?'not-allowed':'pointer' }}>
+                        {examFormSubmitting==='backlog' ? '⏳ Submitting...' : '📝 Submit Backlog Exam Form'}
                       </button>
                     </div>
                   )}
