@@ -16,8 +16,10 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:3000',
+    'http://localhost:5173',
     'https://dev.lkcwsc.vnssorg.com',
     'https://lkcwsc.vnssorg.com',
+    'https://college-management-nnve.onrender.com',
   ],
   credentials: true,
 }));
