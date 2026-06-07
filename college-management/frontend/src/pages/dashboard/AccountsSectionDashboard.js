@@ -582,49 +582,83 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
       )}
 
       {/* Document Fees */}
-      {feeView==='doc' && (
-        <div>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <p style={{ color:'#666', fontSize:14 }}>Set the fee charged for each document type.</p>
-            {!editDocFees2 ? (
-              <button onClick={()=>{ setDocFeeEdits2(Object.fromEntries(Object.entries(docFees).map(([k,v])=>[k,v.price]))); setEditDocFees2(true); }}
-                style={{ background:'#1565C0', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:600, fontSize:14, cursor:'pointer' }}>✏️ Edit Fees</button>
-            ) : (
-              <div style={{ display:'flex', gap:10 }}>
-                <button onClick={()=>{
-                  const updated = {...docFees};
-                  Object.entries(docFeeEdits2).forEach(([k,v])=>{ updated[k]={...updated[k],price:Number(v)||0}; });
-                  setDocFees(updated); saveDocFees(updated); setEditDocFees2(false); showToast('Document fees saved!');
-                }} style={{ background:'#2E7D32', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:700, fontSize:14, cursor:'pointer' }}>💾 Save</button>
-                <button onClick={()=>setEditDocFees2(false)} style={{ background:'#eee', color:'#333', padding:'10px 18px', borderRadius:8, border:'none', fontSize:14, cursor:'pointer' }}>Cancel</button>
-              </div>
+     {feeView==='doc' && (
+  <div>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+      <p style={{ color:'#666', fontSize:14 }}>Document fee types. Changes require Principal approval.</p>
+      <button onClick={fetchDocFeeTypesFromAPI}
+        style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90CAF9', borderRadius:8, padding:'8px 16px', fontWeight:600, fontSize:13, cursor:'pointer' }}>
+        🔄 Refresh
+      </button>
+    </div>
+
+    {/* Approved list */}
+    <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', marginBottom:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 160px 120px 80px', background:'#1565C0', padding:'14px 20px' }}>
+        {['Document Type','Fee (₹)','Status','Delete'].map(h=>(
+          <span key={h} style={{ color:'#fff', fontWeight:700 }}>{h}</span>
+        ))}
+      </div>
+      {apiDocFeeTypes.length === 0 ? (
+        <div style={{ padding:20, textAlign:'center', color:'#aaa' }}>No document types found. Add below.</div>
+      ) : apiDocFeeTypes.map((doc,idx)=>(
+        <div key={doc._id} style={{ display:'grid', gridTemplateColumns:'1fr 160px 120px 80px', padding:'14px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+          <span style={{ fontSize:15, color:'#222', fontWeight:500 }}>{doc.label}</span>
+          <span style={{ fontWeight:700, fontSize:16, color: doc.status==='approved'?'#1565C0': doc.status==='pending'?'#E65100':'#aaa' }}>
+            {doc.status==='approved' ? `₹ ${doc.price}` : doc.status==='pending' ? '⏳ Pending' : '❌ Rejected'}
+          </span>
+          <span style={{ fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:10,
+            background: doc.status==='approved'?'#e8f5e9': doc.status==='pending'?'#fff3e0':'#ffebee',
+            color: doc.status==='approved'?'#2E7D32': doc.status==='pending'?'#E65100':'#C62828' }}>
+            {doc.status==='approved'?'✅ Approved': doc.status==='pending'?'⏳ Pending':'❌ Rejected'}
+          </span>
+          <div style={{ textAlign:'center' }}>
+            {!doc.isDefault && (
+              <button onClick={async ()=>{
+                if(!window.confirm(`Delete "${doc.label}"?`)) return;
+                try {
+                  await API.delete(`/doc-fee-types/${doc._id}`);
+                  showToast('Deleted.'); fetchDocFeeTypesFromAPI();
+                } catch(e){ showToast(e.response?.data?.message||'Failed','error'); }
+              }} style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:6, padding:'4px 10px', fontSize:13, cursor:'pointer', fontWeight:700 }}>🗑️</button>
             )}
           </div>
-          <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 160px', background:'#1565C0', padding:'14px 20px' }}>
-              <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
-              <span style={{ color:'#fff', fontWeight:700, textAlign:'right' }}>Fee (₹)</span>
-            </div>
-            {Object.entries(docFees).map(([key,val],idx)=>(
-              <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 160px', padding:'16px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
-                <span style={{ fontSize:15, color:'#222', fontWeight:500 }}>{val.label}</span>
-                {editDocFees2 ? (
-                  <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:6 }}>
-                    <span style={{ color:'#555', fontWeight:600 }}>₹</span>
-                    <input type="number" min="0" value={docFeeEdits2[key]??val.price} onChange={e=>setDocFeeEdits2(prev=>({...prev,[key]:e.target.value}))}
-                      style={{ width:90, padding:'7px 10px', borderRadius:7, border:'2px solid #1565C0', fontSize:15, fontWeight:600, textAlign:'right', outline:'none' }} />
-                  </div>
-                ) : (
-                  <span style={{ textAlign:'right', fontWeight:700, fontSize:16, color:val.price>0?'#1565C0':'#aaa' }}>{val.price>0?`₹ ${val.price}`:'—'}</span>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
-      )}
+      ))}
     </div>
-  );
-};
+
+    {/* Add new */}
+    <div style={{ background:'#fff', borderRadius:14, border:'2px dashed #1565C0', padding:20 }}>
+      <h4 style={{ color:'#1565C0', marginBottom:14 }}>➕ Add New Document Type</h4>
+      <p style={{ fontSize:12, color:'#E65100', marginBottom:14 }}>⚠️ New types will go to Principal for approval before activation.</p>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr auto', gap:12, alignItems:'end' }}>
+        <div>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Document Name *</label>
+          <input type="text" placeholder="e.g. 📄 Duplicate Marksheet"
+            value={newDocLabel} onChange={e=>setNewDocLabel(e.target.value)}
+            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
+        </div>
+        <div>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Fee Amount (₹) *</label>
+          <input type="number" min="0" placeholder="e.g. 100"
+            value={newDocPrice} onChange={e=>setNewDocPrice(e.target.value)}
+            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
+        </div>
+        <button onClick={async ()=>{
+          if(!newDocLabel.trim()){ showToast('Document name required.','error'); return; }
+          try {
+            await API.post('/doc-fee-types', { label: newDocLabel.trim(), price: Number(newDocPrice)||0 });
+            showToast('✅ Submitted for Principal approval!');
+            setNewDocLabel(''); setNewDocPrice('');
+            fetchDocFeeTypesFromAPI();
+          } catch(e){ showToast(e.response?.data?.message||'Failed','error'); }
+        }} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:14, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+          📤 Submit
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 
 const AccountsStudentFeeView = ({ themeColor }) => {
@@ -638,6 +672,7 @@ const AccountsStudentFeeView = ({ themeColor }) => {
       .then(res => setStudents(res.data.admissions || []))
       .catch(() => {})
       .finally(() => setLoading(false));
+    fetchDocFeeTypesFromAPI();
   }, []);
 
   const getCourseKey = (courseType) => {
@@ -660,6 +695,17 @@ const AccountsStudentFeeView = ({ themeColor }) => {
   const totalFees    = filtered.reduce((s,st) => s + getYearFee(st), 0);
   const totalPaid    = filtered.reduce((s,st) => s + (st.feeLedger||[]).reduce((a,p)=>a+(p.amount||0),0), 0);
   const totalPending = Math.max(0, totalFees - totalPaid);
+
+  const [apiDocFeeTypes, setApiDocFeeTypes] = useState([]);
+const [newDocLabel, setNewDocLabel] = useState('');
+const [newDocPrice, setNewDocPrice] = useState('');
+
+const fetchDocFeeTypesFromAPI = useCallback(async () => {
+  try {
+    const res = await API.get('/doc-fee-types');
+    setApiDocFeeTypes(res.data.docFeeTypes || []);
+  } catch {}
+}, []);
 
   return (
     <div>
