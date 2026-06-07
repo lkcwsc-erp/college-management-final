@@ -764,8 +764,7 @@ const PrincipalDashboard = () => {
 
 
 // ─── Payment Receipts Tab ────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-const PaymentReceiptsTab = ...
+const _PaymentReceiptsTab =
   const [receipts, setReceipts]     = useState([]);
   const [loading, setLoading]       = useState(false);
   const [search, setSearch]         = useState('');
