@@ -1,6 +1,63 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api/axios';
 
+// ─── Exam Forms Detail Tab ────────────────────────────────────────────────────
+const ExamFormsDetailTab = ({ studentEmail, themeColor }) => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!studentEmail) return;
+    API.get(`/results/exam-form/by-student/${encodeURIComponent(studentEmail)}`)
+      .then(res => setRequests(res.data.requests || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [studentEmail]);
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 30 }}>⏳ Loading...</div>;
+
+  if (requests.length === 0) return (
+    <div style={{ textAlign: 'center', padding: 30, color: '#888' }}>
+      <div style={{ fontSize: '3rem' }}>📝</div>
+      <h4>No Exam Forms Submitted</h4>
+      <p style={{ fontSize: 13 }}>Student has not filled any exam form yet.</p>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {requests.map((r, i) => (
+        <div key={r._id || i} style={{ background: '#fff', borderRadius: 12, border: `1px solid ${r.formType==='regular'?'#a5d6a7':'#ffb74d'}`, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)', borderLeft: `5px solid ${r.formType==='regular'?'#2E7D32':'#E65100'}` }}>
+          <div style={{ padding: '12px 18px', background: r.formType==='regular'?'#f1f8e9':'#fff8e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: 14, color: r.formType==='regular'?'#2E7D32':'#E65100' }}>
+                {r.formType==='regular' ? '📋 Regular Exam Form' : '📋 Backlog/KT Exam Form'}
+              </span>
+              <span style={{ marginLeft: 10, fontSize: 12, color: '#666' }}>{r.semester} Semester — {r.examEvent}</span>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 12px', borderRadius: 20, background: r.feeStatus==='collected'?'#e8f5e9':'#fff3e0', color: r.feeStatus==='collected'?'#2E7D32':'#E65100' }}>
+              {r.feeStatus==='collected' ? `✅ Fees Paid: ₹${r.feeAmount}` : '⏳ Fees Pending'}
+            </span>
+          </div>
+          <div style={{ padding: '12px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
+            <span><strong>Course:</strong> {r.course}</span>
+            <span><strong>Year:</strong> {r.admissionYear}</span>
+            <span><strong>PRN:</strong> {r.prnNumber || '—'}</span>
+            <span><strong>Mobile:</strong> {r.mobileNo || '—'}</span>
+            {r.feeStatus === 'collected' && <>
+              <span><strong>Receipt No:</strong> {r.feeReceiptNo}</span>
+              <span><strong>Collected By:</strong> {r.feeCollectedBy}</span>
+              <span><strong>Payment Mode:</strong> {r.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'}</span>
+              <span><strong>Fee Date:</strong> {r.feeCollectedAt ? new Date(r.feeCollectedAt).toLocaleDateString('en-IN') : '—'}</span>
+            </>}
+            <span style={{ color: '#aaa', fontSize: 11 }}>Submitted: {new Date(r.createdAt).toLocaleDateString('en-IN')}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // ─── Role-based access config ────────────────────────────────────────────────
 // canEdit:   Student Section + Principal
 // role:      'student_section' | 'exam' | 'scholarship' | 'accounts' | 'principal' | 'readonly'
@@ -177,6 +234,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
       { id:'documents', label:'📎 Documents' },
       { id:'fees',      label:'💰 Fees',       show: role === 'accounts' || role === 'student_section' || role === 'principal' },
       { id:'scholarship',label:'🏅 Scholarship', show: role === 'scholarship' || role === 'student_section' || role === 'principal' },
+      { id:'exam_forms', label:'📝 Exam Forms',  show: role === 'exam' || role === 'accounts' || role === 'student_section' || role === 'principal' },
     ].filter(t => t.show !== false);
 
     return (
@@ -528,6 +586,11 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* ── TAB: Exam Forms ──────────────────────── */}
+            {detailTab === 'exam_forms' && (
+              <ExamFormsDetailTab studentEmail={selected.email} themeColor={themeColor} />
             )}
           </>
         )}
