@@ -659,6 +659,9 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     </div>
   </div>
 )}
+    </div>
+   );
+};
 
 
 const AccountsStudentFeeView = ({ themeColor }) => {
