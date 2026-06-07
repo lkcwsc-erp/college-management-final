@@ -357,8 +357,7 @@ const F = ({ label, value }) => (
 // ─── Fee Structure Tab Component ─────────────────────────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [feeView, setFeeView]           = useState('bsc');
-  const [editDocFees2, setEditDocFees2] = useState(false);
-  const [docFeeEdits2, setDocFeeEdits2] = useState({});
+ 
   const [apiDocFeeTypes, setApiDocFeeTypes] = useState([]);
 const [newDocLabel, setNewDocLabel] = useState('');
 const [newDocPrice, setNewDocPrice] = useState('');
@@ -398,10 +397,10 @@ const fetchDocFeeTypesFromAPI = useCallback(async () => {
   };
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
-  useEffect(() => {
+ useEffect(() => {
   fetchDocFeeTypesFromAPI();
-}, [fetchDocFeeTypesFromAPI]);
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
   // Submit edit for approval
   const submitEdit = (itemId, newAmounts) => {
     const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
@@ -714,10 +713,10 @@ const AccountsStudentFeeView = ({ themeColor }) => {
   const totalPaid    = filtered.reduce((s,st) => s + (st.feeLedger||[]).reduce((a,p)=>a+(p.amount||0),0), 0);
   const totalPending = Math.max(0, totalFees - totalPaid);
 
-  const [apiDocFeeTypes, setApiDocFeeTypes] = useState([]);
-const [newDocLabel, setNewDocLabel] = useState('');
-const [newDocPrice, setNewDocPrice] = useState('');
+  
 
+// eslint-disable-next-line no-unused-vars
+const [apiDocFeeTypes, setApiDocFeeTypes] = useState([]);
 const fetchDocFeeTypesFromAPI = useCallback(async () => {
   try {
     const res = await API.get('/doc-fee-types');
