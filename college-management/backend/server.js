@@ -26,6 +26,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Seed + register doc fee types
+const { seedDefaults } = require('./controllers/docFeeTypeController');
+seedDefaults().catch(console.error);
+app.use('/api/doc-fee-types', require('./routes/docFeeTypeRoutes'));
+
 // ── Routes ──────────────────────────────────────────────────
 app.use('/api/auth',             require('./routes/authRoutes'));
 app.use('/api/students',         require('./routes/studentRoutes'));
