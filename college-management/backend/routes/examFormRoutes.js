@@ -1,115 +1,86 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const ExamSettings    = require('../models/ExamSettings');
+const ExamFormRequest = require('../models/ExamFormRequest');
+const Admission       = require('../models/Admission');
 
-// ── In-memory exam settings (replace with DB model if needed) ────────────────
-// Using a simple JSON file approach for persistence
-const fs = require('fs');
-const path = require('path');
-const SETTINGS_FILE = path.join(__dirname, '../data/examSettings.json');
-
-const readSettings = () => {
-  try {
-    if (!fs.existsSync(path.dirname(SETTINGS_FILE))) {
-      fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
-    }
-    if (!fs.existsSync(SETTINGS_FILE)) return {
-      regularEnabled: false, backlogEnabled: false,
-      regularCourse: '', regularSemester: '', regularExamEvent: '',
-      backlogCourse: '', backlogSemester: '', backlogExamEvent: '',
-      lastUpdatedBy: '', lastUpdatedAt: null
-    };
-    return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-  } catch { return {
-    regularEnabled: false, backlogEnabled: false,
-    regularCourse: '', regularSemester: '', regularExamEvent: '',
-    backlogCourse: '', backlogSemester: '', backlogExamEvent: '',
-    lastUpdatedBy: '', lastUpdatedAt: null
-  }; }
+// ── helper: get or create settings doc ───────────────────────────────────────
+const getSettings = async () => {
+  let s = await ExamSettings.findOne({ key: 'global' });
+  if (!s) s = await ExamSettings.create({ key: 'global' });
+  return s;
 };
 
-const writeSettings = (data) => {
-  try {
-    if (!fs.existsSync(path.dirname(SETTINGS_FILE))) {
-      fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
-    }
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(data, null, 2));
-  } catch(e) { console.error('Settings write error:', e); }
-};
-
-// GET exam settings (public - student dashboard needs it too)
+// ─────────────────────────────────────────────────────────────────────────────
+// GET  /api/results/exam-settings  (all staff + student)
+// ─────────────────────────────────────────────────────────────────────────────
 router.get('/exam-settings', protect, async (req, res) => {
   try {
-    const settings = readSettings();
+    const settings = await getSettings();
     res.json({ success: true, settings });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-// PUT exam settings (exam section only)
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT  /api/results/exam-settings  (exam section + admin)
+// ─────────────────────────────────────────────────────────────────────────────
 router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
   try {
-    const current = readSettings();
-    const updated = { ...current, ...req.body, lastUpdatedBy: req.user?.name || 'Staff', lastUpdatedAt: new Date() };
-    writeSettings(updated);
-    res.json({ success: true, settings: updated });
+    const settings = await getSettings();
+    const allowed = [
+      'regularEnabled','backlogEnabled',
+      'regularCourse','regularSemester','regularExamEvent',
+      'backlogCourse','backlogSemester','backlogExamEvent',
+    ];
+    allowed.forEach(k => { if (req.body[k] !== undefined) settings[k] = req.body[k]; });
+    settings.lastUpdatedBy  = req.user?.name || 'Staff';
+    settings.lastUpdatedAt  = new Date();
+    await settings.save();
+    res.json({ success: true, settings });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-// ── Exam Form Requests ────────────────────────────────────────────────────────
-
-// POST - Student submits exam form
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/results/exam-form/submit  (student)
+// ─────────────────────────────────────────────────────────────────────────────
 router.post('/exam-form/submit', protect, authorizeRoles('student'), async (req, res) => {
   try {
-    const ExamFormRequest = require('../models/ExamFormRequest');
-    const Admission = require('../models/Admission');
-
     const { formType } = req.body;
-    const settings = readSettings();
+    const settings = await getSettings();
 
-    // Check if form is open
-    if (formType === 'regular' && !settings.regularEnabled) {
+    if (formType === 'regular' && !settings.regularEnabled)
       return res.status(400).json({ success: false, message: 'Regular exam form is not open yet.' });
-    }
-    if (formType === 'backlog' && !settings.backlogEnabled) {
+    if (formType === 'backlog' && !settings.backlogEnabled)
       return res.status(400).json({ success: false, message: 'Backlog exam form is not open yet.' });
-    }
 
-    // Get student admission info
     const admission = await Admission.findOne({ email: req.user.email, status: 'approved' });
-    if (!admission) {
+    if (!admission)
       return res.status(404).json({ success: false, message: 'No approved admission found.' });
-    }
 
-    // Check if already submitted this semester/event
-    const course = formType === 'regular' ? settings.regularCourse : settings.backlogCourse;
-    const semester = formType === 'regular' ? settings.regularSemester : settings.backlogSemester;
-    const examEvent = formType === 'regular' ? settings.regularExamEvent : settings.backlogExamEvent;
+    const semester  = formType === 'regular' ? settings.regularSemester  : settings.backlogSemester;
+    const examEvent = formType === 'regular' ? settings.regularExamEvent  : settings.backlogExamEvent;
 
     const existing = await ExamFormRequest.findOne({
-      studentEmail: req.user.email,
-      formType,
-      semester,
-      examEvent
+      studentEmail: req.user.email, formType, semester, examEvent
     });
-
-    if (existing) {
+    if (existing)
       return res.status(400).json({ success: false, message: 'You have already submitted this form.' });
-    }
 
     const formReq = await ExamFormRequest.create({
       studentEmail: req.user.email,
-      studentName: admission.applicantName,
-      studentId: admission.studentId || '',
-      prnNumber: admission.prnNumber || '',
-      course: admission.courseType || course,
-      admissionYear: admission.admissionYear || '',
+      studentName:  admission.applicantName,
+      studentId:    admission.studentId   || '',
+      prnNumber:    admission.prnNumber   || '',
+      course:       admission.courseType  || '',
+      admissionYear:admission.admissionYear || '',
       semester,
       examEvent,
-      mobileNo: admission.phone || '',
+      mobileNo:     admission.phone || '',
       formType,
     });
 
@@ -119,10 +90,11 @@ router.post('/exam-form/submit', protect, authorizeRoles('student'), async (req,
   }
 });
 
-// GET - Student gets their exam form requests
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/results/exam-form/my  (student – own requests)
+// ─────────────────────────────────────────────────────────────────────────────
 router.get('/exam-form/my', protect, authorizeRoles('student'), async (req, res) => {
   try {
-    const ExamFormRequest = require('../models/ExamFormRequest');
     const requests = await ExamFormRequest.find({ studentEmail: req.user.email }).sort({ createdAt: -1 });
     res.json({ success: true, requests });
   } catch (e) {
@@ -130,25 +102,22 @@ router.get('/exam-form/my', protect, authorizeRoles('student'), async (req, res)
   }
 });
 
-// GET - Accounts section gets all requests (with optional filters)
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/results/exam-form/all  (accounts + exam + admin)
+// ─────────────────────────────────────────────────────────────────────────────
 router.get('/exam-form/all', protect, authorizeRoles('staff_accounts', 'staff_exam', 'admin'), async (req, res) => {
   try {
-    const ExamFormRequest = require('../models/ExamFormRequest');
     const { formType, course, feeStatus, search } = req.query;
-
     const filter = {};
-    if (formType) filter.formType = formType;
-    if (course) filter.course = new RegExp(course, 'i');
+    if (formType)  filter.formType  = formType;
+    if (course)    filter.course    = new RegExp(course, 'i');
     if (feeStatus) filter.feeStatus = feeStatus;
-    if (search) {
-      filter.$or = [
-        { studentName: new RegExp(search, 'i') },
-        { studentId: new RegExp(search, 'i') },
-        { prnNumber: new RegExp(search, 'i') },
-        { studentEmail: new RegExp(search, 'i') },
-      ];
-    }
-
+    if (search)    filter.$or = [
+      { studentName: new RegExp(search, 'i') },
+      { studentId:   new RegExp(search, 'i') },
+      { prnNumber:   new RegExp(search, 'i') },
+      { studentEmail:new RegExp(search, 'i') },
+    ];
     const requests = await ExamFormRequest.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, requests });
   } catch (e) {
@@ -156,71 +125,69 @@ router.get('/exam-form/all', protect, authorizeRoles('staff_accounts', 'staff_ex
   }
 });
 
-// PUT - Accounts collects exam fee
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/results/exam-form/collect-fee/:id  (accounts + admin)
+// ─────────────────────────────────────────────────────────────────────────────
 router.put('/exam-form/collect-fee/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
   try {
-    const ExamFormRequest = require('../models/ExamFormRequest');
-    const Admission = require('../models/Admission');
     const { amount, paymentMode, transactionId } = req.body;
-
-    if (!amount || amount <= 0) {
+    if (!amount || amount <= 0)
       return res.status(400).json({ success: false, message: 'Valid amount is required.' });
-    }
 
     const formReq = await ExamFormRequest.findById(req.params.id);
-    if (!formReq) return res.status(404).json({ success: false, message: 'Request not found.' });
-    if (formReq.feeStatus === 'collected') {
+    if (!formReq)
+      return res.status(404).json({ success: false, message: 'Request not found.' });
+    if (formReq.feeStatus === 'collected')
       return res.status(400).json({ success: false, message: 'Fee already collected.' });
-    }
 
-    // Generate receipt number
-    const receiptNo = 'EXF' + Date.now().toString().slice(-7);
-    const collectedBy = req.user?.name || 'Accounts';
+    const receiptNo    = 'EXF' + Date.now().toString().slice(-7);
+    const collectedBy  = req.user?.name || 'Accounts';
 
-    // Update form request
-    formReq.feeStatus = 'collected';
-    formReq.feeAmount = amount;
-    formReq.feeReceiptNo = receiptNo;
+    formReq.feeStatus      = 'collected';
+    formReq.feeAmount      = Number(amount);
+    formReq.feeReceiptNo   = receiptNo;
     formReq.feeCollectedBy = collectedBy;
     formReq.feeCollectedAt = new Date();
-    formReq.paymentMode = paymentMode || 'cash';
+    formReq.paymentMode    = paymentMode || 'cash';
     await formReq.save();
 
-    // Also add to student feeLedger in Admission
+    // Also record in student feeLedger
     await Admission.findOneAndUpdate(
       { email: formReq.studentEmail },
-      {
-        $push: {
-          feeLedger: {
-            receiptNo,
-            feeType: 'exam_form',
-            feeTypeLabel: `Exam Form Fee (${formReq.formType === 'regular' ? 'Regular' : 'Backlog'} - ${formReq.semester} Sem - ${formReq.examEvent})`,
-            amount: Number(amount),
-            paymentMode: paymentMode || 'cash',
-            transactionId: transactionId || '',
-            collectedBy,
-            paidAt: new Date(),
-            semester: formReq.semester,
-          }
-        }
-      }
+      { $push: { feeLedger: {
+        receiptNo,
+        feeType:      'exam_form',
+        feeTypeLabel: `Exam Form Fee (${formReq.formType === 'regular' ? 'Regular' : 'Backlog'} - ${formReq.semester} Sem - ${formReq.examEvent})`,
+        amount:       Number(amount),
+        paymentMode:  paymentMode || 'cash',
+        transactionId: transactionId || '',
+        collectedBy,
+        paidAt:       new Date(),
+        semester:     formReq.semester,
+      }}}
     );
 
-    res.json({ success: true, message: 'Fee collected successfully!', receiptNo, request: formReq });
+    res.json({ success: true, message: 'Fee collected!', receiptNo, request: formReq });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-// GET - Exam section sees form submission by student (for StudentViewFull)
-router.get('/exam-form/by-student/:email', protect, authorizeRoles('staff_exam', 'staff_accounts', 'staff_student', 'admin'), async (req, res) => {
-  try {
-    const ExamFormRequest = require('../models/ExamFormRequest');
-    const requests = await ExamFormRequest.find({ studentEmail: req.params.email.toLowerCase() }).sort({ createdAt: -1 });
-    res.json({ success: true, requests });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/results/exam-form/by-student/:email  (staff – for detail view)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/exam-form/by-student/:email', protect,
+  authorizeRoles('staff_exam', 'staff_accounts', 'staff_student', 'staff_principal', 'admin'),
+  async (req, res) => {
+    try {
+      const requests = await ExamFormRequest.find({
+        studentEmail: req.params.email.toLowerCase()
+      }).sort({ createdAt: -1 });
+      res.json({ success: true, requests });
+    } catch (e) {
+      res.status(500).json({ success: false, message: e.message });
+    }
   }
-});
+);
 
 module.exports = router;
