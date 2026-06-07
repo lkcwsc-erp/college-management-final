@@ -764,7 +764,8 @@ const PrincipalDashboard = () => {
 
 
 // ─── Payment Receipts Tab ────────────────────────────────────────────────────
-const PaymentReceiptsTab = ({ themeColor = '#1565C0' }) => {
+// eslint-disable-next-line no-unused-vars
+const PaymentReceiptsTab = ...
   const [receipts, setReceipts]     = useState([]);
   const [loading, setLoading]       = useState(false);
   const [search, setSearch]         = useState('');
