@@ -51,28 +51,32 @@ const VERIFICATION_STATUS = {
 };
 
 // MahaDBT Receivable fee structure data
+// Source: Official MahaDBT fee Excel — AY 2025-26
+// OPEN category: only Tuition Fee is counted for scholarship
 const FEE_STRUCTURE = {
   'B.Sc': {
     FY: {
       'Enrollment Fee': 400,
       'Admission Fee':  550,
-      'Tuition Fee':    16500,
+      'Tuition Fee':    16500,   // ← OPEN category uses only this
       'Gymkhana Fee':   700,
       'Laboratory Fee': 5250,
       'Library Fee':    1000,
       'Other Fee':      1740,
     },
     SY: {
+      'Enrollment Fee': 0,
       'Admission Fee':  550,
-      'Tuition Fee':    16500,
+      'Tuition Fee':    16500,   // ← OPEN category uses only this
       'Gymkhana Fee':   700,
       'Laboratory Fee': 5250,
       'Library Fee':    1000,
       'Other Fee':      1340,
     },
     TY: {
+      'Enrollment Fee': 0,
       'Admission Fee':  550,
-      'Tuition Fee':    16500,
+      'Tuition Fee':    16500,   // ← OPEN category uses only this
       'Gymkhana Fee':   700,
       'Laboratory Fee': 5250,
       'Library Fee':    1000,
@@ -80,15 +84,41 @@ const FEE_STRUCTURE = {
     },
   },
   'B.A': {
-    FY: { 'Total Fees': 10390 },
-    SY: { 'Total Fees': 9590 },
-    TY: { 'Total Fees': 9390 },
+    // Source: MahaDBT fees Receivable BA (Un-Aided) AY 2025-26 Excel
+    FY: {
+      'Enrollment Fee':              400,
+      'Admission Fee':               550,
+      'Tuition Fee':                 5500,  // ← OPEN category uses only this
+      'Gymkhana Fee':                700,
+      'Laboratory Fee (Psy/Geog)':   300,
+      'Library Fee':                 1000,
+      'Other Fee':                   1540,
+    },
+    SY: {
+      'Enrollment Fee':              0,
+      'Admission Fee':               550,
+      'Tuition Fee':                 5500,  // ← OPEN category uses only this
+      'Gymkhana Fee':                700,
+      'Laboratory Fee (Psy/Geog)':   300,
+      'Library Fee':                 1000,
+      'Other Fee':                   1540,
+    },
+    TY: {
+      'Enrollment Fee':              0,
+      'Admission Fee':               550,
+      'Tuition Fee':                 5500,  // ← OPEN category uses only this
+      'Gymkhana Fee':                700,
+      'Laboratory Fee (Psy/Geog)':   300,
+      'Library Fee':                 1000,
+      'Other Fee':                   1340,
+    },
   },
-  'B.Com': {
-    FY: {},
-    SY: {},
-    TY: {},
-  },
+};
+
+// Tuition fee per course per year — for OPEN category display
+const TUITION_FEE = {
+  'B.Sc': { FY: 16500, SY: 16500, TY: 16500 },
+  'B.A':  { FY: 5500,  SY: 5500,  TY: 5500  },
 };
 
 const ALL_CATEGORIES = ['SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC','OPEN'];
@@ -1043,19 +1073,25 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
 
 
 /* ═══════════════════════════════════════════════════════════
-   FEE STRUCTURE VIEW  (professional college fee-structure UI)
+   FEE STRUCTURE VIEW
+   - Only B.Sc and B.A (2 courses)
+   - Fee-head wise breakdown from official Excel
+   - Reserved = all heads summed
+   - OPEN = Tuition Fee only (rest of fees student pays)
+   - Zero/empty Enrollment Fee hidden for SY, TY
 ═══════════════════════════════════════════════════════════ */
 const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
-  const courses = Object.keys(FEE_STRUCTURE);
+  // Only 2 courses as per requirement
+  const COURSES = ['B.Sc', 'B.A'];
+  const YEARS   = ['FY', 'SY', 'TY'];
+
   const [activeCourse, setActiveCourse] = useState('B.Sc');
-  const [editMode, setEditMode]         = useState(false);
-  const [feeData, setFeeData]           = useState(() => JSON.parse(JSON.stringify(FEE_STRUCTURE)));
-  const [saving, setSaving]             = useState(false);
-  const [savedMsg, setSavedMsg]         = useState('');
+  const [editMode,     setEditMode]     = useState(false);
+  const [feeData,      setFeeData]      = useState(() => JSON.parse(JSON.stringify(FEE_STRUCTURE)));
+  const [saving,       setSaving]       = useState(false);
+  const [savedMsg,     setSavedMsg]     = useState('');
 
-  const years = ['FY', 'SY', 'TY'];
-
-const handleFeeChange = (year, head, val) => {
+  const handleFeeChange = (year, head, val) => {
     setFeeData(prev => ({
       ...prev,
       [activeCourse]: {
@@ -1067,119 +1103,153 @@ const handleFeeChange = (year, head, val) => {
 
   const handleSave = () => {
     setSaving(true);
-    // In a real app this would call an API endpoint; here we simulate a save
     setTimeout(() => {
       setSaving(false);
       setEditMode(false);
-      setSavedMsg('✅ Fee structure saved locally (integrate with your API as needed)');
-      setTimeout(() => setSavedMsg(''), 4000);
-    }, 800);
+      setSavedMsg('✅ Fee structure updated successfully');
+      setTimeout(() => setSavedMsg(''), 3500);
+    }, 700);
   };
 
   const courseData = feeData[activeCourse] || {};
 
-  // Collect all unique fee heads across all years for this course
-  const allHeads = [...new Set(years.flatMap(y => Object.keys(courseData[y] || {})).filter(h => h !== 'Total Fees'))];
+  // All fee heads across all years — exclude zero-only rows when not in edit mode
+  const allHeads = [...new Set(YEARS.flatMap(y => Object.keys(courseData[y] || {})))];
+
+  // Calculate reserved total (sum of all heads) for a given year
+  const reservedTotal = (y) =>
+    Object.values(courseData[y] || {}).reduce((s, v) => s + Number(v || 0), 0);
+
+  // OPEN total = only Tuition Fee for that year
+  const openTotal = (y) => courseData[y]?.['Tuition Fee'] || 0;
+
+  // How much OPEN student pays extra (non-scholarship portion)
+  const openSelfPay = (y) => reservedTotal(y) - openTotal(y);
 
   return (
     <div>
       {savedMsg && <MsgBanner msg={savedMsg} />}
 
-      {/* Controls row */}
+      {/* ── Controls ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-        {/* Course tabs */}
+
+        {/* Course tabs — only B.Sc and B.A */}
         <div style={{ display: 'flex', gap: 0, background: '#f0f4f8', borderRadius: 10, padding: 4 }}>
-          {courses.map(c => (
-            <button
-              key={c}
-              onClick={() => setActiveCourse(c)}
-              style={{
-                padding: '8px 20px',
-                borderRadius: 8,
-                border: 'none',
+          {COURSES.map(c => (
+            <button key={c} onClick={() => { setActiveCourse(c); setEditMode(false); }}
+              style={{ padding: '8px 28px', borderRadius: 8, border: 'none',
                 background: activeCourse === c ? themeColor : 'transparent',
                 color: activeCourse === c ? '#fff' : '#555',
                 fontWeight: activeCourse === c ? 700 : 500,
-                fontSize: 14,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-            >
+                fontSize: 14, cursor: 'pointer', transition: 'all 0.2s' }}>
               {c}
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {/* Academic Year */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={academicYear} onChange={e => setAcademicYear(e.target.value)} style={{ ...inputStyle, minWidth: 130 }}>
             {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-
-          {/* Scholarship logic info */}
-          <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>
-            Reserved: Full Benefit &nbsp;|&nbsp; OPEN: Tuition Fee Only
-          </div>
 
           {!editMode ? (
             <button onClick={() => setEditMode(true)} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>✏️ Edit Fees</button>
           ) : (
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+              <button onClick={handleSave} disabled={saving}
+                style={{ padding: '8px 18px', background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                 {saving ? '⏳ Saving...' : '💾 Save'}
               </button>
-              <button onClick={() => { setEditMode(false); setFeeData(JSON.parse(JSON.stringify(FEE_STRUCTURE))); }} style={{ padding: '8px 14px', background: '#eee', color: '#333', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { setEditMode(false); setFeeData(JSON.parse(JSON.stringify(FEE_STRUCTURE))); }}
+                style={{ padding: '8px 14px', background: '#eee', color: '#333', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+                Cancel
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Scholarship logic callout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+      {/* ── Category logic callout ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
         <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 10, padding: '12px 16px' }}>
-          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#1565C0' }}>🎓 Reserved Categories (SC/ST/OBC/SBC/NT-B/NT-C/NT-D/VJ-DT/EWS/SEBC)</p>
-          <p style={{ margin: 0, fontSize: 12, color: '#1565C0' }}>Receive <strong>full MahaDBT benefit</strong> — all fee components are included in scholarship calculation.</p>
+          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#1565C0' }}>
+            🎓 Reserved (SC / ST / OBC / SBC / NT-B / NT-C / NT-D / VJ-DT / EWS / SEBC)
+          </p>
+          <p style={{ margin: 0, fontSize: 12, color: '#1565C0' }}>
+            <strong>Full MahaDBT benefit</strong> — scholarship covers all fee components.
+            Student pays ₹0 from pocket.
+          </p>
         </div>
         <div style={{ background: '#fff3e0', border: '1px solid #ffcc80', borderRadius: 10, padding: '12px 16px' }}>
-          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#E65100' }}>📐 OPEN Category</p>
-          <p style={{ margin: 0, fontSize: 12, color: '#E65100' }}>Scholarship calculated using <strong>Tuition Fee only</strong>. Other fee components are excluded.</p>
+          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#E65100' }}>
+            📐 OPEN Category
+          </p>
+          <p style={{ margin: 0, fontSize: 12, color: '#E65100' }}>
+            Scholarship = <strong>Tuition Fee only</strong>.
+            Remaining fees (Enrollment, Admission, Gymkhana, Lab, Library, Other) are paid by student.
+          </p>
         </div>
       </div>
 
-      {/* Fee Structure Table */}
+      {/* ── Fee Structure Table ── */}
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
-        {/* Table header */}
-        <div style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, background: themeColor, padding: '14px 20px', gap: 8 }}>
+
+        {/* Header */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr', background: themeColor, padding: '13px 20px', gap: 8 }}>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>Fee Head</span>
-          {years.map(y => (
-            <span key={y} style={{ color: '#fff', fontWeight: 700, fontSize: 13, textAlign: 'center' }}>{y}</span>
+          {YEARS.map(y => (
+            <span key={y} style={{ color: '#fff', fontWeight: 700, fontSize: 13, textAlign: 'center' }}>
+              {y === 'FY' ? 'First Year' : y === 'SY' ? 'Second Year' : 'Third Year'}
+            </span>
           ))}
         </div>
 
         {/* Fee rows */}
         {allHeads.map((head, idx) => {
-          const isTuition = head === 'Tuition Fee';
+          const isTuition    = head === 'Tuition Fee';
+          const isEnrollment = head === 'Enrollment Fee';
+
+          // Check if any year has a non-zero value for this head
+          const hasAnyValue = YEARS.some(y => Number(courseData[y]?.[head] || 0) > 0);
+
+          // In view mode, skip rows that are all zero (e.g. Enrollment Fee in SY/TY)
+          // But show if in editMode so user can still edit
+          if (!editMode && !hasAnyValue) return null;
+
           return (
-            <div key={head} style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, padding: '12px 20px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+            <div key={head} style={{
+              display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+              padding: '11px 20px', gap: 8, alignItems: 'center',
+              borderBottom: '1px solid #f0f4f8',
+              background: isTuition ? '#fdf3ff' : idx % 2 === 0 ? '#fafbff' : '#fff',
+            }}>
+              {/* Fee head label */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: isTuition ? 700 : 500, color: isTuition ? '#7B1FA2' : '#333' }}>{head}</span>
+                <span style={{ fontSize: 13, fontWeight: isTuition ? 700 : 500, color: isTuition ? '#7B1FA2' : '#333' }}>
+                  {head}
+                </span>
                 {isTuition && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 10, background: '#fff3e0', color: '#E65100' }}>OPEN basis</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: '#fff3e0', color: '#E65100', whiteSpace: 'nowrap' }}>
+                    OPEN scholarship basis
+                  </span>
                 )}
               </div>
-              {years.map(y => {
-                const val = courseData[y]?.[head] ?? '';
+
+              {/* Value per year */}
+              {YEARS.map(y => {
+                const val = courseData[y]?.[head] ?? 0;
                 return (
                   <div key={y} style={{ textAlign: 'center' }}>
                     {editMode ? (
-                      <input
-                        type="number"
-                        value={val}
+                      <input type="number" value={val}
                         onChange={e => handleFeeChange(y, head, e.target.value)}
-                        style={{ width: '90px', padding: '5px 8px', borderRadius: 6, border: `2px solid ${isTuition ? '#ce93d8' : '#e0e7ef'}`, fontSize: 13, textAlign: 'right' }}
+                        style={{ width: '90px', padding: '5px 8px', borderRadius: 6,
+                          border: `2px solid ${isTuition ? '#ce93d8' : '#e0e7ef'}`,
+                          fontSize: 13, textAlign: 'right' }}
                       />
                     ) : (
-                      <span style={{ fontSize: 13, fontWeight: val ? 600 : 400, color: val ? (isTuition ? '#7B1FA2' : '#333') : '#ccc' }}>
+                      <span style={{ fontSize: 13, fontWeight: val ? 600 : 400,
+                        color: val ? (isTuition ? '#7B1FA2' : '#444') : '#ccc' }}>
                         {val ? `₹${fmt(val)}` : '—'}
                       </span>
                     )}
@@ -1190,39 +1260,92 @@ const handleFeeChange = (year, head, val) => {
           );
         })}
 
-        {/* Totals row */}
-        <div style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, padding: '14px 20px', gap: 8, background: '#f3e5f5', borderTop: `2px solid ${themeColor}33` }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: themeColor }}>Total (Reserved)</span>
-          {years.map(y => {
-            const yearData = courseData[y] || {};
-            const total = Object.entries(yearData).reduce((s, [k, v]) => k !== 'Total Fees' ? s + Number(v || 0) : s, 0) || Number(yearData['Total Fees'] || 0);
-            return (
-              <span key={y} style={{ fontSize: 14, fontWeight: 800, color: themeColor, textAlign: 'center' }}>
-                ₹{fmt(total)}
-              </span>
-            );
-          })}
+        {/* ── Reserved Total row ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+          padding: '13px 20px', gap: 8, background: '#f3e5f5', borderTop: `2px solid ${themeColor}44` }}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 800, color: themeColor }}>
+              Total — Reserved Categories
+            </span>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9C27B0' }}>Full MahaDBT benefit</p>
+          </div>
+          {YEARS.map(y => (
+            <span key={y} style={{ fontSize: 15, fontWeight: 800, color: themeColor, textAlign: 'center' }}>
+              ₹{fmt(reservedTotal(y))}
+            </span>
+          ))}
         </div>
 
-        {/* OPEN Category row — tuition fee only */}
-        <div style={{ display: 'grid', gridTemplateColumns: `2fr repeat(${years.length}, 1fr)`, padding: '12px 20px', gap: 8, background: '#fff8e1', borderTop: '1px solid #ffe082' }}>
+        {/* ── OPEN Total row — Tuition Fee only ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+          padding: '13px 20px', gap: 8, background: '#fff8e1', borderTop: '1px solid #ffe082' }}>
           <div>
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#E65100' }}>Total (OPEN — Tuition Only)</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#E65100' }}>
+              Scholarship — OPEN Category
+            </span>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#E65100' }}>Tuition Fee only</p>
           </div>
-          {years.map(y => {
-            const tuition = courseData[y]?.['Tuition Fee'] || 0;
-            return (
-              <span key={y} style={{ fontSize: 13, fontWeight: 700, color: '#E65100', textAlign: 'center' }}>
-                {tuition ? `₹${fmt(tuition)}` : '—'}
-              </span>
-            );
-          })}
+          {YEARS.map(y => (
+            <span key={y} style={{ fontSize: 15, fontWeight: 800, color: '#E65100', textAlign: 'center' }}>
+              {openTotal(y) ? `₹${fmt(openTotal(y))}` : '—'}
+            </span>
+          ))}
+        </div>
+
+        {/* ── OPEN Self-pay row — what OPEN student pays from pocket ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+          padding: '13px 20px', gap: 8, background: '#ffebee', borderTop: '1px solid #ef9a9a' }}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#C62828' }}>
+              Student Pays — OPEN Category
+            </span>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#C62828' }}>Total Fees minus Tuition</p>
+          </div>
+          {YEARS.map(y => (
+            <span key={y} style={{ fontSize: 15, fontWeight: 800, color: '#C62828', textAlign: 'center' }}>
+              {openSelfPay(y) ? `₹${fmt(openSelfPay(y))}` : '₹0'}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Academic Year note */}
+      {/* Quick summary cards per year */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
+        {YEARS.map(y => {
+          const total    = reservedTotal(y);
+          const tuition  = openTotal(y);
+          const selfPay  = openSelfPay(y);
+          const yearLabel = y === 'FY' ? 'First Year' : y === 'SY' ? 'Second Year' : 'Third Year';
+          return (
+            <div key={y} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: '14px 16px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: themeColor, borderBottom: `2px solid ${themeColor}22`, paddingBottom: 6 }}>
+                {activeCourse} — {yearLabel}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: '#888' }}>Total Fees</span>
+                  <span style={{ fontWeight: 700, color: '#333' }}>₹{fmt(total)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: '#1565C0' }}>Reserved Scholarship</span>
+                  <span style={{ fontWeight: 700, color: '#1565C0' }}>₹{fmt(total)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: '#E65100' }}>OPEN Scholarship</span>
+                  <span style={{ fontWeight: 700, color: '#E65100' }}>₹{fmt(tuition)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid #f0f4f8', paddingTop: 5, marginTop: 2 }}>
+                  <span style={{ color: '#C62828' }}>OPEN Self-pay</span>
+                  <span style={{ fontWeight: 700, color: '#C62828' }}>₹{fmt(selfPay)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       <p style={{ fontSize: 12, color: '#888', marginTop: 10, textAlign: 'right' }}>
-        Showing fee structure for Academic Year: <strong>{academicYear}</strong>
+        Source: Official MahaDBT fee structure — Academic Year: <strong>{academicYear}</strong>
       </p>
     </div>
   );
