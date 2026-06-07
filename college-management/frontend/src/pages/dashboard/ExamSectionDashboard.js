@@ -295,7 +295,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
               {[
                 ['Student', selected.studentName],
                 ['Email', selected.studentEmail],
-                ['Branch', selected.branch || '—'],
+                ['Course', selected.branch || '—'],
                 ['Year', selected.admissionYear || '—'],
                 ['Reason', selected.reason || '—'],
               ].map(([l, v]) => (
