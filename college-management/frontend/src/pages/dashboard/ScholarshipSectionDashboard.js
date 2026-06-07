@@ -555,10 +555,7 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
   ];
   return (
     <div>
-      <div style={{ background: 'linear-gradient(135deg,#7B1FA2,#4A148C)', padding: '20px 24px', borderRadius: 14, marginBottom: 24, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>🏅 Scholarship Management</h3>
-        </div>
+      <div style={{ background: 'linear-gradient(135deg,#7B1FA2,#4A148C)', padding: '14px 20px', borderRadius: 14, marginBottom: 24, color: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Academic Year Filter on dashboard */}
           <select
@@ -574,7 +571,6 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
           <button onClick={onExport} disabled={exporting} style={{ background: 'rgba(255,255,255,0.9)', color: '#4A148C', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
             {exporting ? '⏳...' : '📥 Export Excel'}
           </button>
-        </div>
       </div>
 
       <div className="dash-cards" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', marginBottom: 24 }}>
@@ -731,20 +727,52 @@ const StudentDetail = ({ selected, detailLoading, editMode, setEditMode, editDat
 
       {msg && <MsgBanner msg={msg} />}
 
-      {/* Fee Summary Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 20 }}>
-        {[
-          { label: 'Total Fees',  value: `₹${fmt(selected.totalFees)}`,         color: '#1565C0', bg: '#e3f2fd' },
-          { label: 'Scholarship', value: `₹${fmt(selected.scholarshipAmount)}`,  color: '#7B1FA2', bg: '#f3e5f5' },
-          { label: 'Net Payable', value: `₹${fmt(netPayable)}`,                 color: '#E65100', bg: '#fff3e0' },
-          { label: 'Paid',        value: `₹${fmt(selected.feesPaid)}`,           color: '#2E7D32', bg: '#e8f5e9' },
-          { label: 'Balance',     value: `₹${fmt(balance)}`,                    color: balance > 0 ? '#C62828' : '#2E7D32', bg: balance > 0 ? '#ffebee' : '#e8f5e9' },
-        ].map(c => (
-          <div key={c.label} style={{ background: c.bg, borderRadius: 12, padding: '14px 16px', border: `1px solid ${c.color}22` }}>
-            <p style={{ margin: '0 0 2px', fontSize: 11, color: '#888', fontWeight: 600 }}>{c.label}</p>
-            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: c.color }}>{c.value}</p>
+      {/* Fee Flow Strip — shows the complete scholarship deduction flow */}
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: '16px 20px', marginBottom: 20 }}>
+        <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Fee Flow</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {/* Total Fees */}
+          <div style={{ background: '#e3f2fd', borderRadius: 10, padding: '12px 16px', border: '1px solid #90caf9', minWidth: 110, textAlign: 'center' }}>
+            <p style={{ margin: '0 0 2px', fontSize: 10, color: '#1565C0', fontWeight: 700 }}>TOTAL FEES</p>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#1565C0' }}>₹{fmt(selected.totalFees)}</p>
           </div>
-        ))}
+          {/* Arrow */}
+          <div style={{ fontSize: 18, color: '#aaa', fontWeight: 300 }}>−</div>
+          {/* Scholarship */}
+          <div style={{ background: '#f3e5f5', borderRadius: 10, padding: '12px 16px', border: '2px solid #ce93d8', minWidth: 110, textAlign: 'center' }}>
+            <p style={{ margin: '0 0 2px', fontSize: 10, color: '#7B1FA2', fontWeight: 700 }}>SCHOLARSHIP</p>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#7B1FA2' }}>₹{fmt(selected.scholarshipAmount)}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 9, color: '#AB47BC' }}>
+              {isReserved ? 'Full MahaDBT' : 'Tuition Only'}
+            </p>
+          </div>
+          {/* Equals */}
+          <div style={{ fontSize: 18, color: '#aaa', fontWeight: 300 }}>=</div>
+          {/* Net Payable */}
+          <div style={{ background: '#fff3e0', borderRadius: 10, padding: '12px 16px', border: '1px solid #ffcc80', minWidth: 110, textAlign: 'center' }}>
+            <p style={{ margin: '0 0 2px', fontSize: 10, color: '#E65100', fontWeight: 700 }}>NET PAYABLE</p>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#E65100' }}>₹{fmt(netPayable)}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 9, color: '#E65100' }}>Total − Scholarship</p>
+          </div>
+          {/* Divider */}
+          <div style={{ width: 1, height: 50, background: '#e0e7ef', margin: '0 4px' }} />
+          {/* Paid */}
+          <div style={{ background: '#e8f5e9', borderRadius: 10, padding: '12px 16px', border: '1px solid #a5d6a7', minWidth: 110, textAlign: 'center' }}>
+            <p style={{ margin: '0 0 2px', fontSize: 10, color: '#2E7D32', fontWeight: 700 }}>PAID</p>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#2E7D32' }}>₹{fmt(selected.feesPaid)}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 9, color: '#388E3C' }}>from student</p>
+          </div>
+          {/* Arrow */}
+          <div style={{ fontSize: 18, color: '#aaa', fontWeight: 300 }}>=</div>
+          {/* Balance */}
+          <div style={{ background: balance > 0 ? '#ffebee' : '#e8f5e9', borderRadius: 10, padding: '12px 16px', border: `1px solid ${balance > 0 ? '#ef9a9a' : '#a5d6a7'}`, minWidth: 110, textAlign: 'center' }}>
+            <p style={{ margin: '0 0 2px', fontSize: 10, color: balance > 0 ? '#C62828' : '#2E7D32', fontWeight: 700 }}>BALANCE DUE</p>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: balance > 0 ? '#C62828' : '#2E7D32' }}>₹{fmt(balance)}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 9, color: balance > 0 ? '#C62828' : '#2E7D32' }}>
+              {balance > 0 ? 'pending' : '✅ cleared'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Info Grid */}
