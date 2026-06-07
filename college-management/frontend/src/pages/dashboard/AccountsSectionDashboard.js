@@ -755,6 +755,9 @@ const AccountsStudentFeeView = ({ themeColor }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [search, setSearch]     = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+  const [courseFilter, setCourseFilter] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -766,7 +769,8 @@ const AccountsStudentFeeView = ({ themeColor }) => {
 
   const getCourseKey = (courseType) => {
     const ct = (courseType||'').toLowerCase();
-    return ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
+    return ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.'
+      : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
   };
 
   const getYearFee = (s) => {
@@ -775,68 +779,269 @@ const AccountsStudentFeeView = ({ themeColor }) => {
     return YEARLY_FEES[ck].years?.[s.admissionYear]?.total || 0;
   };
 
+  const getSemFees = (s) => {
+    const ck = getCourseKey(s.courseType);
+    if (!ck || !YEARLY_FEES[ck]) return { sem1: 0, sem2: 0 };
+    const yr = YEARLY_FEES[ck].years?.[s.admissionYear];
+    return { sem1: yr?.sem1 || 0, sem2: yr?.sem2 || 0 };
+  };
+
+  const getPaidBySem = (s) => {
+    const ledger = s.feeLedger || [];
+    const sem1Paid = ledger.filter(p => p.semester?.includes('I') && !p.semester?.includes('II') || p.semester === 'Sem I').reduce((a,p)=>a+(p.amount||0),0);
+    const sem2Paid = ledger.filter(p => p.semester?.includes('II') || p.semester === 'Sem II').reduce((a,p)=>a+(p.amount||0),0);
+    const totalPaid = ledger.reduce((a,p)=>a+(p.amount||0),0);
+    return { sem1Paid, sem2Paid, totalPaid };
+  };
+
   const filtered = students.filter(s => {
     const q = search.toLowerCase();
-    return !q || s.applicantName?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+    const matchSearch = !q || s.applicantName?.toLowerCase().includes(q) 
+      || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+    const matchYear = !yearFilter || s.admissionYear === yearFilter;
+    const matchCourse = !courseFilter || getCourseKey(s.courseType) === courseFilter;
+    return matchSearch && matchYear && matchCourse;
   });
 
-  const totalFees    = filtered.reduce((s,st) => s + getYearFee(st), 0);
-  const totalPaid    = filtered.reduce((s,st) => s + (st.feeLedger||[]).reduce((a,p)=>a+(p.amount||0),0), 0);
-  const totalPending = Math.max(0, totalFees - totalPaid);
+  const totalAnnualFees = filtered.reduce((s,st) => s + getYearFee(st), 0);
+  const totalPaid       = filtered.reduce((s,st) => s + getPaidBySem(st).totalPaid, 0);
+  const totalPending    = Math.max(0, totalAnnualFees - totalPaid);
+
+  // ── Export to Excel (CSV) ──
+  const exportToExcel = () => {
+    const headers = [
+      'Student Name','Student ID','Email','Course','Year',
+      'Sem I Fee','Sem II Fee','Total Annual Fee',
+      'Sem I Paid','Sem II Paid','Total Paid','Balance Due','Status'
+    ];
+    const rows = filtered.map(s => {
+      const ck = getCourseKey(s.courseType);
+      const { sem1, sem2 } = getSemFees(s);
+      const { sem1Paid, sem2Paid, totalPaid } = getPaidBySem(s);
+      const annual = getYearFee(s);
+      const balance = Math.max(0, annual - totalPaid);
+      const status = s.tcIssued ? 'TC Issued'
+        : balance === 0 && annual > 0 ? 'Fully Paid'
+        : totalPaid > 0 ? 'Partial' : 'Unpaid';
+      return [
+        s.applicantName || '',
+        s.studentId || '',
+        s.email || '',
+        ck || s.courseType || '',
+        s.admissionYear || '',
+        sem1, sem2, annual,
+        sem1Paid, sem2Paid, totalPaid,
+        balance, status
+      ];
+    });
+
+    // Summary rows at bottom
+    const summary = [
+      [], 
+      ['SUMMARY', '', '', '', '', '', '', '', '', '', '', '', ''],
+      ['Total Students', filtered.length],
+      ['Total Annual Fees', '', '', '', '', '', '', totalAnnualFees],
+      ['Total Collected', '', '', '', '', '', '', '', '', '', totalPaid],
+      ['Total Pending', '', '', '', '', '', '', '', '', '', '', totalPending],
+    ];
+
+    const allRows = [headers, ...rows, ...summary];
+    const csv = allRows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const BOM = '\uFEFF'; // For Excel Hindi/Marathi support
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    const today = new Date().toLocaleDateString('en-IN').replace(/\//g,'-');
+    a.download = `LKCWSC_Finance_Overview_${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14, marginBottom:20 }}>
+      {/* Summary Cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:12, marginBottom:20 }}>
         <div style={{ background:'#e3f2fd', borderRadius:12, padding:'14px 18px' }}>
-          <div style={{ fontSize:12, color:'#1565C0', fontWeight:600 }}>Total Annual Fees</div>
-          <div style={{ fontSize:20, fontWeight:800, color:'#0d47a1' }}>₹{totalFees.toLocaleString('en-IN')}</div>
+          <div style={{ fontSize:12, color:'#1565C0', fontWeight:600 }}>👩‍🎓 Total Students</div>
+          <div style={{ fontSize:22, fontWeight:800, color:'#0d47a1' }}>{filtered.length}</div>
+        </div>
+        <div style={{ background:'#e8eaf6', borderRadius:12, padding:'14px 18px' }}>
+          <div style={{ fontSize:12, color:'#3949AB', fontWeight:600 }}>💰 Total Annual Fees</div>
+          <div style={{ fontSize:20, fontWeight:800, color:'#1a237e' }}>₹{totalAnnualFees.toLocaleString('en-IN')}</div>
         </div>
         <div style={{ background:'#e8f5e9', borderRadius:12, padding:'14px 18px' }}>
-          <div style={{ fontSize:12, color:'#2E7D32', fontWeight:600 }}>Total Collected</div>
+          <div style={{ fontSize:12, color:'#2E7D32', fontWeight:600 }}>✅ Total Collected</div>
           <div style={{ fontSize:20, fontWeight:800, color:'#1b5e20' }}>₹{totalPaid.toLocaleString('en-IN')}</div>
         </div>
         <div style={{ background:'#ffebee', borderRadius:12, padding:'14px 18px' }}>
-          <div style={{ fontSize:12, color:'#C62828', fontWeight:600 }}>Total Pending</div>
+          <div style={{ fontSize:12, color:'#C62828', fontWeight:600 }}>⏳ Total Pending</div>
           <div style={{ fontSize:20, fontWeight:800, color:'#b71c1c' }}>₹{totalPending.toLocaleString('en-IN')}</div>
         </div>
       </div>
 
-      <input type="text" placeholder="🔍 Search student..." value={search} onChange={e=>setSearch(e.target.value)}
-        style={{ width:'100%', padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14, marginBottom:14, boxSizing:'border-box' }} />
+      {/* Filters + Export */}
+      <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap', alignItems:'center' }}>
+        <input type="text" placeholder="🔍 Search student..." value={search}
+          onChange={e=>setSearch(e.target.value)}
+          style={{ flex:1, minWidth:180, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14 }} />
+        <select value={yearFilter} onChange={e=>setYearFilter(e.target.value)}
+          style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
+          <option value="">All Years</option>
+          <option value="1st Year">1st Year</option>
+          <option value="2nd Year">2nd Year</option>
+          <option value="3rd Year">3rd Year</option>
+        </select>
+        <select value={courseFilter} onChange={e=>setCourseFilter(e.target.value)}
+          style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
+          <option value="">All Courses</option>
+          <option value="B.Sc.">B.Sc.</option>
+          <option value="B.A.">B.A.</option>
+        </select>
+        <button onClick={exportToExcel}
+          style={{ padding:'9px 20px', background:'#2E7D32', color:'#fff', border:'none', borderRadius:9, fontWeight:700, fontSize:13, cursor:'pointer' }}>
+          📥 Export Excel
+        </button>
+      </div>
 
-      {loading ? <div style={{textAlign:'center',padding:20}}>⏳</div> : (
+      {loading ? (
+        <div style={{textAlign:'center',padding:30,fontSize:20}}>⏳ Loading...</div>
+      ) : (
         <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr', background:themeColor, padding:'10px 14px', gap:8 }}>
-            {['Student','Course/Year','Annual Fee','Paid','Pending','Status'].map(h=>(
-              <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
+          {/* Table Header */}
+          <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1.2fr 1fr 1fr 1fr 1fr 1fr 0.8fr', background:themeColor, padding:'11px 16px', gap:6 }}>
+            {['Student','Course/Year','Student ID','Sem I Fee','Sem I Paid','Sem II Fee','Sem II Paid','Total Paid','Status'].map(h=>(
+              <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:11 }}>{h}</span>
             ))}
           </div>
-          {filtered.map((s,idx) => {
+
+          {filtered.length === 0 ? (
+            <div style={{padding:30,textAlign:'center',color:'#aaa'}}>No students found</div>
+          ) : filtered.map((s, idx) => {
+            const ck      = getCourseKey(s.courseType);
+            const { sem1, sem2 } = getSemFees(s);
+            const { sem1Paid, sem2Paid, totalPaid: tp } = getPaidBySem(s);
             const annual  = getYearFee(s);
-            const paid    = (s.feeLedger||[]).reduce((a,p)=>a+(p.amount||0),0);
-            const pending = Math.max(0, annual - paid);
-            const status  = s.tcIssued ? 'TC Issued' : pending === 0 && annual > 0 ? 'Fully Paid' : paid > 0 ? 'Partial' : 'Unpaid';
-            const statusColor = { 'Fully Paid':'#2E7D32', Partial:'#E65100', Unpaid:'#C62828', 'TC Issued':'#7B1FA2' }[status] || '#888';
+            const balance = Math.max(0, annual - tp);
+            const status  = s.tcIssued ? 'TC Issued'
+              : balance === 0 && annual > 0 ? 'Fully Paid'
+              : tp > 0 ? 'Partial' : 'Unpaid';
+            const statusColor = {
+              'Fully Paid':'#2E7D32', Partial:'#E65100',
+              Unpaid:'#C62828', 'TC Issued':'#7B1FA2'
+            }[status] || '#888';
+            const isExpanded = expandedId === s._id;
+
             return (
-              <div key={s._id} style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr', padding:'10px 14px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
-                <div>
-                  <p style={{ fontWeight:600, fontSize:13, margin:0 }}>{s.applicantName}</p>
-                  <p style={{ fontSize:10, color:'#888', margin:0 }}>{s.studentId||'—'}</p>
+              <div key={s._id}>
+                {/* Main Row */}
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : s._id)}
+                  style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1.2fr 1fr 1fr 1fr 1fr 1fr 0.8fr', padding:'11px 16px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isExpanded?'#f0f7ff':idx%2===0?'#fafbff':'#fff', cursor:'pointer' }}>
+                  <div>
+                    <p style={{ fontWeight:600, fontSize:13, margin:0, color:'#1a1a2e' }}>
+                      {isExpanded ? '▼ ' : '▶ '}{s.applicantName}
+                    </p>
+                    <p style={{ fontSize:10, color:'#888', margin:0 }}>{s.email}</p>
+                  </div>
+                  <span style={{ fontSize:11 }}>{ck||s.courseType} · {s.admissionYear}</span>
+                  <span style={{ fontSize:11, fontFamily:'monospace', color:'#1565C0', fontWeight:600 }}>{s.studentId||'—'}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#1565C0' }}>₹{sem1.toLocaleString('en-IN')}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color: sem1Paid>=sem1&&sem1>0?'#2E7D32':sem1Paid>0?'#E65100':'#aaa' }}>
+                    ₹{sem1Paid.toLocaleString('en-IN')}
+                  </span>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#1565C0' }}>₹{sem2.toLocaleString('en-IN')}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color: sem2Paid>=sem2&&sem2>0?'#2E7D32':sem2Paid>0?'#E65100':'#aaa' }}>
+                    ₹{sem2Paid.toLocaleString('en-IN')}
+                  </span>
+                  <span style={{ fontSize:12, fontWeight:800, color:'#1b5e20' }}>₹{tp.toLocaleString('en-IN')}</span>
+                  <span style={{ fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:10, background:`${statusColor}22`, color:statusColor, textAlign:'center' }}>
+                    {status}
+                  </span>
                 </div>
-                <span style={{ fontSize:12 }}>{s.courseType} · {s.admissionYear}</span>
-                <span style={{ fontSize:12, fontWeight:700 }}>₹{annual.toLocaleString('en-IN')}</span>
-                <span style={{ fontSize:12, fontWeight:700, color:'#2E7D32' }}>₹{paid.toLocaleString('en-IN')}</span>
-                <span style={{ fontSize:12, fontWeight:700, color: pending>0?'#C62828':'#2E7D32' }}>₹{pending.toLocaleString('en-IN')}</span>
-                <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10, background:`${statusColor}22`, color:statusColor }}>{status}</span>
+
+                {/* Expanded: ledger details */}
+                {isExpanded && (
+                  <div style={{ background:'#f8faff', borderBottom:'2px solid #e3f2fd', padding:'14px 20px' }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+                      <div style={{ background:'#e3f2fd', borderRadius:8, padding:'10px 14px', textAlign:'center' }}>
+                        <div style={{ fontSize:11, color:'#1565C0', fontWeight:600 }}>Annual Fee</div>
+                        <div style={{ fontSize:16, fontWeight:800, color:'#0d47a1' }}>₹{annual.toLocaleString('en-IN')}</div>
+                      </div>
+                      <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px', textAlign:'center' }}>
+                        <div style={{ fontSize:11, color:'#2E7D32', fontWeight:600 }}>Total Paid</div>
+                        <div style={{ fontSize:16, fontWeight:800, color:'#1b5e20' }}>₹{tp.toLocaleString('en-IN')}</div>
+                      </div>
+                      <div style={{ background: balance>0?'#ffebee':'#e8f5e9', borderRadius:8, padding:'10px 14px', textAlign:'center' }}>
+                        <div style={{ fontSize:11, color:balance>0?'#C62828':'#2E7D32', fontWeight:600 }}>Balance Due</div>
+                        <div style={{ fontSize:16, fontWeight:800, color:balance>0?'#b71c1c':'#1b5e20' }}>
+                          {balance>0 ? `₹${balance.toLocaleString('en-IN')}` : '✅ Clear'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment ledger */}
+                    <h4 style={{ color:'#1565C0', fontSize:13, marginBottom:8 }}>📋 Payment Ledger</h4>
+                    {(s.feeLedger||[]).length === 0 ? (
+                      <p style={{ fontSize:13, color:'#aaa' }}>No payments recorded yet.</p>
+                    ) : (
+                      <div style={{ border:'1px solid #e0e7ef', borderRadius:8, overflow:'hidden' }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', background:'#1565C0', padding:'8px 14px', gap:6 }}>
+                          {['Date','Fee Type','Semester','Mode','Amount'].map(h=>(
+                            <span key={h} style={{ color:'#fff', fontSize:11, fontWeight:700 }}>{h}</span>
+                          ))}
+                        </div>
+                        {(s.feeLedger||[]).map((p,i) => (
+                          <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', padding:'8px 14px', gap:6, borderBottom:'1px solid #f0f4f8', background:i%2===0?'#fafbff':'#fff', fontSize:12 }}>
+                            <span>{p.date ? new Date(p.date).toLocaleDateString('en-IN') : '—'}</span>
+                            <span>{p.feeTypeLabel || p.feeType || 'Fee'}</span>
+                            <span style={{ color:'#1565C0', fontWeight:600 }}>{p.semester || '—'}</span>
+                            <span>{p.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'}</span>
+                            <span style={{ fontWeight:700, color:'#2E7D32' }}>₹{Number(p.amount||0).toLocaleString('en-IN')}</span>
+                          </div>
+                        ))}
+                        {/* Ledger total */}
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr', padding:'8px 14px', gap:6, background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
+                          <span style={{ fontWeight:800, fontSize:12, color:'#1a237e', gridColumn:'1/5' }}>Total Paid</span>
+                          <span style={{ fontWeight:800, fontSize:13, color:'#1a237e' }}>₹{tp.toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
+
+          {/* Table Footer Totals */}
+          {filtered.length > 0 && (
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1.2fr 1fr 1fr 1fr 1fr 1fr 0.8fr', padding:'12px 16px', gap:6, background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
+              <span style={{ fontWeight:800, fontSize:13, color:'#1a237e', gridColumn:'1/4' }}>
+                TOTAL ({filtered.length} students)
+              </span>
+              <span style={{ fontWeight:800, fontSize:12, color:'#1a237e' }}>
+                ₹{filtered.reduce((s,st)=>s+getSemFees(st).sem1,0).toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontWeight:800, fontSize:12, color:'#2E7D32' }}>
+                ₹{filtered.reduce((s,st)=>s+getPaidBySem(st).sem1Paid,0).toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontWeight:800, fontSize:12, color:'#1a237e' }}>
+                ₹{filtered.reduce((s,st)=>s+getSemFees(st).sem2,0).toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontWeight:800, fontSize:12, color:'#2E7D32' }}>
+                ₹{filtered.reduce((s,st)=>s+getPaidBySem(st).sem2Paid,0).toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontWeight:800, fontSize:13, color:'#1b5e20' }}>
+                ₹{totalPaid.toLocaleString('en-IN')}
+              </span>
+              <span></span>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
