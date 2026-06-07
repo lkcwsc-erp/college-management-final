@@ -936,7 +936,11 @@ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlo
       setSettingMsg(`✅ ${isRegular ? 'Regular' : 'Backlog'} exam form OPENED for students!`);
       setTimeout(() => setSettingMsg(''), 4000);
       setOpenFormModal(null);
-    } catch (e) { setSettingMsg('❌ Failed to update settings.'); }
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || 'Unknown error';
+      const status = e?.response?.status || 'no status';
+      setSettingMsg(`❌ Failed to update settings. [${status}] ${msg}`);
+    }
     finally { setSavingSettings(false); }
   };
 
@@ -948,7 +952,11 @@ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlo
       setExamSettings(res.data.settings || payload);
       setSettingMsg(`✅ ${type === 'regularEnabled' ? 'Regular' : 'Backlog'} exam form CLOSED.`);
       setTimeout(() => setSettingMsg(''), 4000);
-    } catch (e) { setSettingMsg('❌ Failed to update.'); }
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || 'Unknown error';
+      const status = e?.response?.status || 'no status';
+      setSettingMsg(`❌ Failed to update. [${status}] ${msg}`);
+    }
     finally { setSavingSettings(false); }
   };
 
