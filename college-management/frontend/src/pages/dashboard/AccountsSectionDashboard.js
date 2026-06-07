@@ -1064,8 +1064,7 @@ const AccountsSectionDashboard = () => {
       fd.append('billNumber',   expForm.billNumber);
       fd.append('academicYear', expForm.academicYear);
       fd.append('remarks',      expForm.remarks);
-      if (expForm.billFile) fd.append('bill'., expForm.billFile);
-
+      if (expForm.billFile) fd.append('bill', expForm.billFile);
       if (expEditId) {
         await API.put(`/expenses/${expEditId}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         setExpMsg('✅ Expense updated!');
