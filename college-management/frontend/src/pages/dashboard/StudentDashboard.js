@@ -1801,13 +1801,13 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
 
       {/* Workflow info */}
       {docType && (
-        <div style={{ marginBottom: 14, background: '#f8faff', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#555' }}>
-          {docType==='TC' && '📋 Workflow: You → Accounts (fee) → Exam Section (result verify) → Principal → Student Section (print)'}
-          {docType==='BONAFIDE' && '📋 Workflow: You → Accounts (fee) → Student Section (print)'}
-          {docType==='ID_CARD' && '📋 Workflow: You → Accounts (fee) → Student Section (issue)'}
-          {docType==='MARKSHEET' && '📋 Workflow: You → Exam Section (process) → Student Section (issue)'}
-        </div>
-      )}
+  <div style={{ marginBottom: 14, background: '#f8faff', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#555' }}>
+    {docType==='TC' && '📋 Workflow: You → Accounts (fee) → Exam Section → Principal → Student Section (print)'}
+    {docType==='BONAFIDE' && '📋 Workflow: You → Accounts (fee) → Student Section (print)'}
+    {docType==='ID_CARD' && '📋 Workflow: You → Accounts (fee) → Student Section (issue)'}
+    {docType==='MARKSHEET' && '📋 Workflow: You → Exam Section (process & issue)'}
+  </div>
+)}
 
       <button onClick={handleSubmit} disabled={submitting || (docType==='TC' && tcAlreadyIssued)}
         style={{ background: submitting||(!docType)||(docType==='TC'&&tcAlreadyIssued)?'#aaa':'#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
@@ -2612,12 +2612,12 @@ const StudentDashboard = () => {
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <span>📝 Submitted</span>
                                 {req.documentType === 'MARKSHEET' ? (
-                                  <>
-                                    <span>→</span>
-                                    <span style={{ color: req.examVerifiedDate ? '#2E7D32' : '#999', fontWeight: req.examVerifiedDate ? 600 : 400 }}>{req.examVerifiedDate ? '✅' : '⏳'} Exam Section</span>
-                                    <span>→</span>
-                                    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? 600 : 400 }}>{req.status === 'completed' ? '✅' : '⏳'} Student Section</span>
-                                  </>
+  <>
+    <span>→</span>
+    <span style={{ color: req.status === 'completed' ? '#2E7D32' : '#999', fontWeight: req.status === 'completed' ? 600 : 400 }}>
+      {req.status === 'completed' ? '✅' : '⏳'} Exam Section
+    </span>
+  </>
                                 ) : (
                                   <>
                                     <span>→</span>
