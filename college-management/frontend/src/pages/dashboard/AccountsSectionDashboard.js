@@ -973,37 +973,36 @@ const AccountsSectionDashboard = () => {
   // Expense tracker — API-backed
   // ─────────────────────────────────────────────────────────────────────────
   const EXPENSE_CATEGORIES = [
-    { value: 'academic_resources',      label: '📚 Academic Resources' },
-    { value: 'library_expenses',        label: '📖 Library Expenses' },
-    { value: 'laboratory_expenses',     label: '🔬 Laboratory Expenses' },
-    { value: 'office_administration',   label: '🗂️ Office Administration' },
-    { value: 'internet_communication',  label: '🌐 Internet & Communication' },
-    { value: 'website_erp_maintenance', label: '💻 Website & ERP Maintenance' },
-    { value: 'faculty_development',     label: '👩‍🏫 Faculty Development' },
-    { value: 'student_activities',      label: '🎓 Student Activities' },
-    { value: 'scholarships_welfare',    label: '🎖️ Scholarships & Student Welfare' },
-    { value: 'building_development',    label: '🏗️ Building Development' },
-    { value: 'electrical_maintenance',  label: '⚡ Electrical Maintenance' },
-    { value: 'water_sanitation',        label: '🚿 Water & Sanitation' },
-    { value: 'university_govt_fees',    label: '🏛️ University / Government Fees' },
-    { value: 'it_software',             label: '🖥️ IT & Software' },
-    { value: 'vehicle_travel',          label: '🚗 Vehicle & Travel' },
-    { value: 'infrastructure',          label: '🔩 Infrastructure' },
-    { value: 'stationery',              label: '📝 Stationery' },
-    { value: 'electricity',             label: '💡 Electricity / Utilities' },
-    { value: 'salary',                  label: '👤 Salary / Wages' },
-    { value: 'events',                  label: '🎉 Events / Functions' },
-    { value: 'maintenance',             label: '🔧 Maintenance' },
-    { value: 'other',                   label: '📦 Other' },
-  ];
-
+  { value: 'academic_resources',     label: '📚 Academic Resources' },
+  { value: 'library',                label: '📖 Library Expenses' },
+  { value: 'laboratory',             label: '🔬 Laboratory Expenses' },
+  { value: 'office_administration',  label: '🗂️ Office Administration' },
+  { value: 'internet_communication', label: '🌐 Internet & Communication' },
+  { value: 'website_erp',            label: '💻 Website & ERP Maintenance' },
+  { value: 'faculty_development',    label: '👩‍🏫 Faculty Development' },
+  { value: 'student_activities',     label: '🎓 Student Activities' },
+  { value: 'scholarships_welfare',   label: '🎖️ Scholarships & Student Welfare' },
+  { value: 'building_development',   label: '🏗️ Building Development' },
+  { value: 'electrical_maintenance', label: '⚡ Electrical Maintenance' },
+  { value: 'water_sanitation',       label: '🚿 Water & Sanitation' },
+  { value: 'university_govt_fees',   label: '🏛️ University / Government Fees' },
+  { value: 'it_software',            label: '🖥️ IT & Software' },
+  { value: 'vehicle_travel',         label: '🚗 Vehicle & Travel' },
+  { value: 'infrastructure',         label: '🔩 Infrastructure' },
+  { value: 'stationery',             label: '📝 Stationery' },
+  { value: 'electricity',            label: '💡 Electricity / Utilities' },
+  { value: 'salary',                 label: '👤 Salary / Wages' },
+  { value: 'events',                 label: '🎉 Events / Functions' },
+  { value: 'maintenance',            label: '🔧 Maintenance' },
+  { value: 'other',                  label: '📦 Other' },
+];
   const PAYMENT_MODES = [
-    { value: 'cash',           label: '💵 Cash' },
-    { value: 'upi',            label: '📱 UPI' },
-    { value: 'bank_transfer',  label: '🏦 Bank Transfer' },
-    { value: 'cheque',         label: '📋 Cheque' },
-    { value: 'online_payment', label: '🌐 Online Payment' },
-  ];
+  { value: 'cash',          label: '💵 Cash' },
+  { value: 'upi',           label: '📱 UPI' },
+  { value: 'bank_transfer', label: '🏦 Bank Transfer' },
+  { value: 'cheque',        label: '📋 Cheque' },
+  { value: 'online',        label: '🌐 Online Payment' },
+];
 
   // Generate academic year options e.g. "2023-24", "2024-25", "2025-26"
   const genAcademicYears = () => {
@@ -1065,7 +1064,7 @@ const AccountsSectionDashboard = () => {
       fd.append('billNumber',   expForm.billNumber);
       fd.append('academicYear', expForm.academicYear);
       fd.append('remarks',      expForm.remarks);
-      if (expForm.billFile) fd.append('billFile', expForm.billFile);
+      if (expForm.billFile) fd.append('bill'., expForm.billFile);
 
       if (expEditId) {
         await API.put(`/expenses/${expEditId}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
