@@ -1,96 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import API from '../api/axios';
 import './Notifications.css';
 
-const TYPE_CONFIG = {
-  general:   { label: 'General',   color: '#1565C0', bg: '#e3f2fd' },
-  exam:      { label: 'Exam',      color: '#E65100', bg: '#fff3e0' },
-  admission: { label: 'Admission', color: '#2E7D32', bg: '#e8f5e9' },
-  event:     { label: 'Event',     color: '#7B1FA2', bg: '#f3e5f5' },
-  holiday:   { label: 'Holiday',   color: '#C62828', bg: '#ffebee' },
+const notifications = [
+  { id: 1, type: 'admission', label: 'Admissions', date: 'May 20, 2026', title: 'Admissions Open for 2026-27', desc: 'Applications are now open for B.A. and B.Sc. first year admissions for the academic year 2026-27. Last date to apply is June 30, 2026.', isNew: true },
+  { id: 2, type: 'exam', label: 'Examination', date: 'May 18, 2026', title: 'Semester Exam Timetable Released', desc: 'The timetable for the upcoming semester examinations has been released. Students are advised to check the notice board and college website.', isNew: true },
+  { id: 3, type: 'event', label: 'Event', date: 'May 15, 2026', title: 'Annual Cultural Festival – Udaan 2026', desc: 'The annual cultural festival "Udaan 2026" will be held on June 10-12. Registrations for cultural events are open till June 1.', isNew: false },
+  { id: 4, type: 'scholarship', label: 'Scholarship', date: 'May 12, 2026', title: 'Government Scholarship Applications', desc: 'Students eligible for EBC, OBC, SC, ST scholarships for 2025-26 are requested to submit renewal applications by May 31, 2026.', isNew: false },
+  { id: 5, type: 'general', label: 'General', date: 'May 10, 2026', title: 'Library Timing Change', desc: 'The college library will now remain open from 8:00 AM to 6:00 PM on all working days. Students are encouraged to make use of this facility.', isNew: false },
+  { id: 6, type: 'exam', label: 'Examination', date: 'May 5, 2026', title: 'Hall Tickets for Semester Exams', desc: 'Hall tickets for semester examinations are available for download from the student portal. Contact the office for any discrepancies.', isNew: false },
+];
+
+const typeColors = {
+  admission: '#1565C0',
+  exam: '#6a1b9a',
+  event: '#e65100',
+  scholarship: '#2e7d32',
+  general: '#37474f',
 };
 
 const Notifications = () => {
-  const [notices, setNotices]     = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [filter, setFilter]       = useState('all');
-  const [search, setSearch]       = useState('');
+  const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    API.get('/notices')
-      .then(res => setNotices(res.data.notices || []))
-      .catch(() => setNotices([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const filtered = notices.filter(n => {
-    const mf = filter === 'all' || n.category === filter;
-    const ms = !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase());
-    return mf && ms;
-  });
+  const filtered = filter === 'all'
+    ? notifications
+    : notifications.filter(n => n.type === filter);
 
   return (
-    <div>
+    <>
       <Navbar />
-      <div className="page-header" style={{ background: 'linear-gradient(135deg,#1565C0,#0d47a1)', color: '#fff', padding: '40px 20px', textAlign: 'center' }}>
-        <h1 style={{ color: '#fff', marginBottom: 8 }}>📢 Notifications & Notices</h1>
-        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16 }}>Stay updated with the latest announcements from the college</p>
-      </div>
+      <div className="notif-page">
 
-      <div style={{ maxWidth: 900, margin: '30px auto', padding: '0 20px 60px' }}>
-        {/* Search + Filter */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input type="text" placeholder="🔍 Search notices..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: 200, padding: '10px 16px', borderRadius: 10, border: '1px solid #ddd', fontSize: 14 }} />
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {['all', 'general', 'exam', 'admission', 'event', 'holiday'].map(f => (
-              <button key={f} onClick={() => setFilter(f)}
-                style={{ padding: '8px 16px', borderRadius: 20, border: `2px solid ${filter === f ? '#1565C0' : '#ddd'}`, background: filter === f ? '#1565C0' : '#fff', color: filter === f ? '#fff' : '#555', fontWeight: 600, fontSize: 13, cursor: 'pointer', textTransform: 'capitalize' }}>
-                {f === 'all' ? '🌐 All' : f}
+        {/* HERO */}
+        <section className="notif-hero">
+          <p className="notif-hero-tag">Stay Updated</p>
+          <h1>Notifications</h1>
+          <p className="notif-hero-sub">
+            Latest announcements, exam schedules, events, and important updates from the college.
+          </p>
+        </section>
+
+        {/* FILTER TABS */}
+        <section className="notif-filters">
+          <div className="notif-filters-inner">
+            {['all', 'admission', 'exam', 'event', 'scholarship', 'general'].map(f => (
+              <button
+                key={f}
+                className={`notif-filter-btn ${filter === f ? 'active' : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, fontSize: '2rem' }}>⏳</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📭</div>
-            <h3>No notices found</h3>
-            <p>Check back later for new announcements.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {filtered.map(n => {
-              const cfg = TYPE_CONFIG[n.category] || TYPE_CONFIG.general;
-              const isNew = (new Date() - new Date(n.createdAt)) < 7 * 24 * 60 * 60 * 1000;
-              return (
-                <div key={n._id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 22, borderLeft: `5px solid ${cfg.color}`, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <h3 style={{ color: '#1a1a2e', fontSize: 16, margin: 0 }}>{n.title}</h3>
-                      {isNew && <span style={{ background: '#C62828', color: '#fff', fontSize: 10, padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>NEW</span>}
-                      <span style={{ background: cfg.bg, color: cfg.color, fontSize: 11, padding: '3px 10px', borderRadius: 10, fontWeight: 600 }}>{cfg.label}</span>
-                    </div>
-                    <span style={{ fontSize: 12, color: '#aaa', flexShrink: 0 }}>
-                      {new Date(n.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </span>
-                  </div>
-                  <p style={{ color: '#555', fontSize: 14, lineHeight: 1.6, margin: 0 }}>{n.content}</p>
-                  {n.attachment && (
-                    <img src={n.attachment} alt="attachment" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, marginTop: 12, objectFit: 'contain' }} />
-                  )}
+        {/* NOTIFICATIONS LIST */}
+        <section className="notif-section">
+          <div className="notif-inner">
+            {filtered.map(n => (
+              <div className="notif-card" key={n.id}>
+                <div className="notif-card-left">
+                  <span
+                    className="notif-type-badge"
+                    style={{ background: typeColors[n.type] }}
+                  >
+                    {n.label}
+                  </span>
+                  <span className="notif-date">{n.date}</span>
                 </div>
-              );
-            })}
+                <div className="notif-card-body">
+                  <div className="notif-title-row">
+                    <h3>{n.title}</h3>
+                    {n.isNew && <span className="notif-new-badge">NEW</span>}
+                  </div>
+                  <p>{n.desc}</p>
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="notif-empty">No notifications found.</div>
+            )}
           </div>
-        )}
+        </section>
+
       </div>
       <Footer />
-    </div>
+    </>
   );
 };
 
