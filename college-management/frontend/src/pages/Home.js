@@ -258,10 +258,10 @@ const Home = () => {
               <div className="testimonial-stars">★★★★★</div>
               <p>"This college didn't just teach me Science — it taught me to dream. The faculty believed in me when I doubted myself. Today, I'm pursuing my Master's at a top university."</p>
               <div className="testimonial-author">
-                <div className="testimonial-avatar">PS</div>
+                <div className="testimonial-avatar">NG</div>
                 <div>
-                  <strong>Priyanka Shinde</strong>
-                  <span>BSc Graduate, 2023</span>
+                  <strong>Ghatge Nikita Sanjay </strong>
+                  <span>BSc Graduate,2018-2022</span>
                 </div>
               </div>
             </div>
@@ -269,10 +269,22 @@ const Home = () => {
               <div className="testimonial-stars">★★★★★</div>
               <p>"The supportive environment here is unmatched. I gained confidence, made lifelong friends, and developed skills that helped me clear my government job exam."</p>
               <div className="testimonial-author">
-                <div className="testimonial-avatar">AK</div>
+                <div className="testimonial-avatar">AL</div>
                 <div>
-                  <strong>Aditi Kulkarni</strong>
-                  <span>BA Graduate, 2022</span>
+                  <strong>Lahane Amruta Keshav</strong>
+                  <span>Bsc Graduate, 2018-2021</span>
+                </div>
+              </div>
+            </div>
+            <div className="testimonials-grid">
+            <div className="testimonial-card">
+              <div className="testimonial-stars">★★★★★</div>
+              <p>"This college gave me more than an education — it gave me confidence to chase bigger goals. The support of my teachers shaped the person I am today."</p>
+              <div className="testimonial-author">
+                <div className="testimonial-avatar">PG</div>
+                <div>
+                  <strong>Gaikwad Pooja Shivaji </strong>
+                  <span>BA Graduate,2017-2021</span>
                 </div>
               </div>
             </div>
@@ -280,10 +292,10 @@ const Home = () => {
               <div className="testimonial-stars">★★★★★</div>
               <p>"Coming from a small village, I was nervous. But the teachers and seniors made me feel at home. My time here shaped who I am today — independent and ambitious."</p>
               <div className="testimonial-author">
-                <div className="testimonial-avatar">SM</div>
+                <div className="testimonial-avatar">SA</div>
                 <div>
-                  <strong>Sneha More</strong>
-                  <span>BA Graduate, 2024</span>
+                  <strong>Ambure Sita Bhanudas</strong>
+                  <span>BA Graduate, 2017-2020</span>
                 </div>
               </div>
             </div>
