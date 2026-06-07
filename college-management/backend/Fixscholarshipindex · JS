@@ -1,61 +1,27 @@
-/* ============================================================
-   fixScholarshipIndex.js
-   Run ONCE: node fixScholarshipIndex.js
-
-   Problem: Old unique index on { category, courseType, admissionYear, academicYear }
-            blocks new records where category = null (new model uses categories[])
-   Fix:     Drop the old index. Mongoose will create the new non-unique index.
-   ============================================================ */
-
+/* fixScholarshipIndex.js — run ONCE then delete */
 require('dotenv').config();
 const mongoose = require('mongoose');
 
 async function fix() {
   await mongoose.connect(process.env.MONGO_URI);
-  console.log('✅ Connected to MongoDB\n');
+  const col = mongoose.connection.db.collection('scholarshipmasters');
 
-  const db         = mongoose.connection.db;
-  const collection = db.collection('scholarshipmasters');
+  // Show all indexes before
+  console.log('\n--- BEFORE ---');
+  const before = await col.indexes();
+  before.forEach(i => console.log(i.name, i.unique ? '⚠️ UNIQUE' : '✅'));
 
-  // List all current indexes so we can see what exists
-  const indexes = await collection.indexes();
-  console.log('📋 Current indexes:');
-  indexes.forEach(idx => console.log(' -', JSON.stringify(idx.key), idx.unique ? '(UNIQUE)' : ''));
+  // Drop ALL indexes except _id (safest — mongoose recreates correct ones on restart)
+  await col.dropIndexes();
+  console.log('\n🗑️  All indexes dropped');
 
-  // Drop the old problematic unique index
-  const OLD_INDEX = 'category_1_courseType_1_admissionYear_1_academicYear_1';
-  try {
-    await collection.dropIndex(OLD_INDEX);
-    console.log(`\n🗑️  Dropped old index: ${OLD_INDEX}`);
-  } catch (err) {
-    if (err.code === 27) {
-      console.log(`\n✅ Index "${OLD_INDEX}" does not exist — nothing to drop.`);
-    } else {
-      console.error('\n❌ Error dropping index:', err.message);
-    }
-  }
-
-  // Also drop any other old unique indexes that may conflict
-  const otherOldIndexes = [
-    'category_1_courseType_1_admissionYear_1',
-    'category_1_courseType_1_academicYear_1',
-  ];
-  for (const idx of otherOldIndexes) {
-    try {
-      await collection.dropIndex(idx);
-      console.log(`🗑️  Dropped extra old index: ${idx}`);
-    } catch (e) {
-      // Ignore — index may not exist
-    }
-  }
-
-  // Verify — list indexes again
-  const newIndexes = await collection.indexes();
-  console.log('\n📋 Indexes after fix:');
-  newIndexes.forEach(idx => console.log(' -', JSON.stringify(idx.key), idx.unique ? '(UNIQUE ⚠️)' : '(non-unique ✅)'));
+  // Show after
+  console.log('\n--- AFTER ---');
+  const after = await col.indexes();
+  after.forEach(i => console.log(i.name, i.unique ? '⚠️ UNIQUE' : '✅'));
 
   await mongoose.disconnect();
-  console.log('\n✅ Done. Now run: node seedScholarshipMaster.js');
+  console.log('\n✅ Done — restart your server now');
 }
 
 fix().catch(console.error);
