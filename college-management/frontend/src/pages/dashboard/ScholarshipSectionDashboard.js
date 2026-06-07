@@ -571,6 +571,7 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
           <button onClick={onExport} disabled={exporting} style={{ background: 'rgba(255,255,255,0.9)', color: '#4A148C', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
             {exporting ? '⏳...' : '📥 Export Excel'}
           </button>
+        </div>
       </div>
 
       <div className="dash-cards" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', marginBottom: 24 }}>
