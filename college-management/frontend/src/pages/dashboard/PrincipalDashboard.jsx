@@ -764,6 +764,7 @@ const PrincipalDashboard = () => {
 
 
 // ─── Payment Receipts Tab ────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 const _PaymentReceiptsTab = ({ themeColor }) => {
   const [receipts, setReceipts]     = useState([]);
   const [loading, setLoading]       = useState(false);
