@@ -689,6 +689,7 @@ const AccountsStudentFeeView = ({ themeColor }) => {
       .catch(() => {})
       .finally(() => setLoading(false));
     fetchDocFeeTypesFromAPI();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getCourseKey = (courseType) => {
