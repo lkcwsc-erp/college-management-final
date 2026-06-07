@@ -764,7 +764,7 @@ const PrincipalDashboard = () => {
 
 
 // ─── Payment Receipts Tab ────────────────────────────────────────────────────
-const _PaymentReceiptsTab =
+const _PaymentReceiptsTab = () => {
   const [receipts, setReceipts]     = useState([]);
   const [loading, setLoading]       = useState(false);
   const [search, setSearch]         = useState('');
