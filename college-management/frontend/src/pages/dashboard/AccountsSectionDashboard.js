@@ -756,24 +756,13 @@ const AccountsStudentFeeView = ({ themeColor }) => {
   const [loading, setLoading]   = useState(false);
   const [search, setSearch]     = useState('');
 
-  // ── FIXED: declare fetchDocFeeTypesFromAPI BEFORE useEffect ──
-  // eslint-disable-next-line no-unused-vars
-  const [apiDocFeeTypes, setApiDocFeeTypes] = useState([]);
-  const fetchDocFeeTypesFromAPI = useCallback(async () => {
-    try {
-      const res = await API.get('/doc-fee-types');
-      setApiDocFeeTypes(res.data.docFeeTypes || []);
-    } catch {}
-  }, []);
-
   useEffect(() => {
     setLoading(true);
     API.get('/admissions/staff-view/all')
       .then(res => setStudents(res.data.admissions || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-    fetchDocFeeTypesFromAPI();
-  }, [fetchDocFeeTypesFromAPI]);
+  }, []);
 
   const getCourseKey = (courseType) => {
     const ct = (courseType||'').toLowerCase();
@@ -894,10 +883,8 @@ const AccountsSectionDashboard = () => {
   const [admScholarshipLabel, setAdmScholarshipLabel] = useState('');
   const [admLoading2, setAdmLoading2]           = useState(false);
 
-  // ── NEW: doc fee types for Collect Fees modal ──────────────────────────────
-  const [admDocFeeTypes, setAdmDocFeeTypes]     = useState([]);   // approved list
+  // ── Doc fee selection for Collect Fees modal (localStorage-based) ──────────
   const [admDocFeeType, setAdmDocFeeType]       = useState(null); // selected item
-  const [admDocFeesLoading, setAdmDocFeesLoading] = useState(false);
 
   // ── Expenses ───────────────────────────────────────────────────────────────
   const [expenses, setExpenses]     = useState([]);
@@ -1064,7 +1051,7 @@ const AccountsSectionDashboard = () => {
               return { sr:i+1, particular:item.name, amount:yearAmt };
             }).filter(r => r.amount > 0)
         : admCollectDocMode && admDocFeeType
-          ? [{ sr:1, particular:admDocFeeType.label, amount:Number(admFeeAmt) }]
+          ? [{ sr:1, particular:admDocFeeType.name, amount:Number(admFeeAmt) }]
           : [];
 
       const entry = {
@@ -1552,13 +1539,6 @@ const AccountsSectionDashboard = () => {
                           setAdmCollectDocMode(false);
                           setSelectedFeeItems({});
                           setAdmMsg('');
-
-                          // Fetch approved doc fee types for modal's Document Fees tab
-                          setAdmDocFeesLoading(true);
-                          API.get('/doc-fee-types')
-                            .then(r => setAdmDocFeeTypes((r.data.docFeeTypes||[]).filter(d=>d.status==='approved')))
-                            .catch(()=>{})
-                            .finally(()=>setAdmDocFeesLoading(false));
 
                           // Auto-fetch MahaDBT scholarship
                           if (adm.category && adm.courseType && adm.admissionYear) {
