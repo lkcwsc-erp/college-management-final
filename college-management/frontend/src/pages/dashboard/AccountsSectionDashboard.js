@@ -788,7 +788,7 @@ const AccountsStudentFeeView = ({ themeColor }) => {
 
   const getPaidBySem = (s) => {
     const ledger = s.feeLedger || [];
-    const sem1Paid = ledger.filter(p => p.semester?.includes('I') && !p.semester?.includes('II') || p.semester === 'Sem I').reduce((a,p)=>a+(p.amount||0),0);
+    const sem1Paid = ledger.filter(p => (p.semester?.includes('I') && !p.semester?.includes('II')) || p.semester === 'Sem I').reduce((a,p)=>a+(p.amount||0),0);
     const sem2Paid = ledger.filter(p => p.semester?.includes('II') || p.semester === 'Sem II').reduce((a,p)=>a+(p.amount||0),0);
     const totalPaid = ledger.reduce((a,p)=>a+(p.amount||0),0);
     return { sem1Paid, sem2Paid, totalPaid };
