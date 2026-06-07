@@ -359,6 +359,18 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [feeView, setFeeView]           = useState('bsc');
   const [editDocFees2, setEditDocFees2] = useState(false);
   const [docFeeEdits2, setDocFeeEdits2] = useState({});
+  const [apiDocFeeTypes, setApiDocFeeTypes] = useState([]);
+const [newDocLabel, setNewDocLabel] = useState('');
+const [newDocPrice, setNewDocPrice] = useState('');
+
+const fetchDocFeeTypesFromAPI = useCallback(async () => {
+  try {
+    const res = await API.get('/doc-fee-types');
+    setApiDocFeeTypes(res.data.docFeeTypes || []);
+  } catch (err) {
+    console.error(err);
+  }
+}, []);
   const [customFees, setCustomFees]     = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_custom_fees') || '{}'); } catch { return {}; }
   });
@@ -386,6 +398,9 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   };
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
+  useEffect(() => {
+  fetchDocFeeTypesFromAPI();
+}, [fetchDocFeeTypesFromAPI]);
 
   // Submit edit for approval
   const submitEdit = (itemId, newAmounts) => {
