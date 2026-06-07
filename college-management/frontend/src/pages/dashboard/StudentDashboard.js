@@ -1860,25 +1860,9 @@ const StudentDashboard = () => {
   const [results, setResults] = useState([]);
   const [resultsLoading] = useState(false);
   const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false });
-  const [examSubmitted, setExamSubmitted] = useState({ regular: false, backlog: false });
   const [examFormRequests, setExamFormRequests] = useState([]);
   const [examFormSubmitting, setExamFormSubmitting] = useState('');
   const [examFormMsg, setExamFormMsg] = useState('');
-
-  const fetchExamFormRequests = () => {
-    API.get('/results/exam-form/my')
-      .then(r => {
-        const reqs = r.data.requests || [];
-        setExamFormRequests(reqs);
-        // Mark as submitted if already submitted this session
-        const settings = examSettings;
-        const reg = reqs.find(r => r.formType === 'regular' && r.semester === settings.regularSemester && r.examEvent === settings.regularExamEvent);
-        const back = reqs.find(r => r.formType === 'backlog' && r.semester === settings.backlogSemester && r.examEvent === settings.backlogExamEvent);
-        if (reg) setExamSubmitted(prev => ({ ...prev, regular: true }));
-        if (back) setExamSubmitted(prev => ({ ...prev, backlog: true }));
-      })
-      .catch(() => {});
-  };
 
   useEffect(() => {
     API.get('/notices').then(res => setNotices(res.data.notices || []));
