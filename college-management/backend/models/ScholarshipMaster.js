@@ -1,3 +1,6 @@
+/* ============================================================
+   models/ScholarshipMaster.js
+   ============================================================ */
 const mongoose = require('mongoose');
 
 const scholarshipMasterSchema = new mongoose.Schema(
@@ -5,7 +8,19 @@ const scholarshipMasterSchema = new mongoose.Schema(
     categories: [
       {
         type: String,
-        enum: ['OPEN','SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC'],
+        enum: [
+          'OPEN',
+          'SC',
+          'ST',
+          'OBC',
+          'VJ/DT(NT-A)',
+          'NT-B',
+          'NT-C',
+          'NT-D',
+          'SBC',
+          'EWS',
+          'SEBC',
+        ],
       },
     ],
     courseType: {
@@ -29,6 +44,12 @@ const scholarshipMasterSchema = new mongoose.Schema(
       required: [true, 'MahaDBT Receivable amount is required'],
       min: [0, 'Amount cannot be negative'],
     },
+    // Tuition fee only — used for OPEN category scholarship calculation
+    tuitionFee: {
+      type: Number,
+      default: 0,
+      min: [0, 'Tuition fee cannot be negative'],
+    },
     description: {
       type: String,
       trim: true,
@@ -44,7 +65,7 @@ const scholarshipMasterSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// No unique constraint — same course+year can have multiple category groups
+// Index for fast lookup — not unique (same course+year can have reserved + OPEN records)
 scholarshipMasterSchema.index({ courseType: 1, admissionYear: 1, academicYear: 1 });
 
 module.exports = mongoose.model('ScholarshipMaster', scholarshipMasterSchema);
