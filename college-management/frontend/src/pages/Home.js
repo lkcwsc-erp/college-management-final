@@ -276,7 +276,6 @@ const Home = () => {
                 </div>
               </div>
             </div>
-            <div className="testimonials-grid">
             <div className="testimonial-card">
               <div className="testimonial-stars">★★★★★</div>
               <p>"This college gave me more than an education — it gave me confidence to chase bigger goals. The support of my teachers shaped the person I am today."</p>
