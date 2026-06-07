@@ -115,11 +115,7 @@ const FEE_STRUCTURE = {
   },
 };
 
-// Tuition fee per course per year — for OPEN category display
-const TUITION_FEE = {
-  'B.Sc': { FY: 16500, SY: 16500, TY: 16500 },
-  'B.A':  { FY: 5500,  SY: 5500,  TY: 5500  },
-};
+
 
 const ALL_CATEGORIES = ['SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC','OPEN'];
 const ACADEMIC_YEARS = ['2023-24','2024-25','2025-26','2026-27'];
@@ -1206,8 +1202,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
 
         {/* Fee rows */}
         {allHeads.map((head, idx) => {
-          const isTuition    = head === 'Tuition Fee';
-          const isEnrollment = head === 'Enrollment Fee';
+          const isTuition = head === 'Tuition Fee';
 
           // Check if any year has a non-zero value for this head
           const hasAnyValue = YEARS.some(y => Number(courseData[y]?.[head] || 0) > 0);
