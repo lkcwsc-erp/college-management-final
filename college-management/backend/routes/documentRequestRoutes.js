@@ -5,11 +5,13 @@ const Admission       = require('../models/Admission');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 const DOC_LABELS = {
-  ID_CARD:   '🪪 ID Card',
-  MARKSHEET: '📄 Marksheet',
-  MIGRATION: '📜 Migration Certificate',
-  TC:        '🎓 Transfer Certificate (TC)',
-  BONAFIDE:  '📋 Bonafide Certificate',
+  ID_CARD:           '🪪 ID Card',
+  MARKSHEET:         '📄 Marksheet',
+  MIGRATION:         '📜 Migration Certificate',
+  TC:                '🎓 Transfer Certificate (TC)',
+  BONAFIDE:          '📋 Bonafide Certificate',
+  PROVISIONAL_DEGREE:'📜 Provisional Degree Certificate',
+  DEGREE:            '🎓 Degree Certificate',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,7 +28,10 @@ router.post('/', protect, async (req, res) => {
     const admission = await Admission.findOne({ email: req.user.email });
 
     // Marksheet goes directly to Exam Section (no accounts fee needed)
-    const initialStatus = documentType === 'MARKSHEET' ? 'pending_exam' : 'pending_accounts';
+    const newDocTypes = ['PROVISIONAL_DEGREE', 'DEGREE', 'MIGRATION', 'BONAFIDE'];
+    const initialStatus = documentType === 'MARKSHEET' ? 'pending_exam'
+      : newDocTypes.includes(documentType) ? 'pending_student_section'
+      : 'pending_accounts';
 
     const data = {
       student:           req.user._id,
@@ -329,5 +334,51 @@ router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// ─── ADMIN ROUTES ─────────────────────────────────────────────────────────────
+router.get('/admin/all', protect, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const requests = await DocumentRequest.find({
+      documentType: { $in: ['PROVISIONAL_DEGREE','DEGREE','MIGRATION','BONAFIDE'] },
+      status: { $nin: ['pending_accounts','pending_exam'] }
+    }).sort({ createdAt: -1 });
+    res.json({ success: true, requests });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/admin/approve/:id', protect, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const doc = await DocumentRequest.findByIdAndUpdate(req.params.id, {
+      status: 'pending_principal',
+      adminNotes: req.body.notes || '',
+      adminApprovedDate: new Date(),
+      adminApprovedBy: req.user.name,
+    }, { new: true });
+    res.json({ success: true, request: doc });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/admin/reject/:id', protect, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const doc = await DocumentRequest.findByIdAndUpdate(req.params.id, {
+      status: 'rejected_by_admin',
+      adminNotes: req.body.reason || '',
+    }, { new: true });
+    res.json({ success: true, request: doc });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// Student Section forwards new doc type requests to Admin
+router.put('/student-section/forward/:id', protect, authorizeRoles('staff_student'), async (req, res) => {
+  try {
+    const doc = await DocumentRequest.findByIdAndUpdate(req.params.id, {
+      status: 'pending_admin',
+      studentSectionNotes: req.body.notes || '',
+      studentSectionDate: new Date(),
+    }, { new: true });
+    res.json({ success: true, request: doc });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 
 module.exports = router;
