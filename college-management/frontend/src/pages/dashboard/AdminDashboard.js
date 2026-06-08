@@ -854,6 +854,7 @@ const AdminDashboard = () => {
     { id: 'delete_requests', label: '🗑️ Delete Requests' },
     { id: 'reports',   label: '📊 Reports' },
     { id: 'receipts',  label: '🧾 Payment Receipts' },
+    { id: 'doc_requests', label: '📋 Document Requests' },
     { id: 'achievements', label: '🏆 Achievements' },
   ];
 
@@ -1440,11 +1441,185 @@ const AdminDashboard = () => {
           {/* Delete Requests */}
           {activeTab === 'delete_requests' && <AdminDeleteRequestsTab />}
 
+          {/* Document Requests */}
+          {activeTab === 'doc_requests' && <AdminDocRequestsTab showMessage={showMessage} />}
+
           {/* Achievements */}
           {activeTab === 'achievements' && <AdminAchievementsTab showMessage={showMessage} />}
 
         </div>
       </main>
+    </div>
+  );
+};
+
+
+// ─── Admin Document Requests Tab ─────────────────────────────────────────────
+const DOC_CFG_ADMIN = {
+  TC:                 { label: 'Transfer Certificate',           icon: '🎓', color: '#1565C0', bg: '#e3f2fd', fee: 0 },
+  BONAFIDE:           { label: 'Bonafide Certificate',           icon: '📋', color: '#7B1FA2', bg: '#f3e5f5', fee: 200 },
+  ID_CARD:            { label: 'ID Card',                        icon: '🪪', color: '#2E7D32', bg: '#e8f5e9', fee: 0 },
+  MARKSHEET:          { label: 'Marksheet',                      icon: '📄', color: '#E65100', bg: '#fff3e0', fee: 0 },
+  MIGRATION:          { label: 'Migration Certificate',          icon: '📜', color: '#795548', bg: '#efebe9', fee: 200 },
+  PROVISIONAL_DEGREE: { label: 'Provisional Degree Certificate', icon: '📜', color: '#0277BD', bg: '#e1f5fe', fee: 100 },
+  DEGREE:             { label: 'Degree Certificate',             icon: '🎓', color: '#1B5E20', bg: '#E8F5E9', fee: 100 },
+};
+
+const AdminDocRequestsTab = ({ showMessage }) => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [filter, setFilter]     = useState('pending_admin');
+  const [search, setSearch]     = useState('');
+  const [saving, setSaving]     = useState('');
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectNote, setRejectNote]   = useState('');
+
+  const fetchRequests = useCallback(() => {
+    setLoading(true);
+    API.get('/document-requests/admin/all')
+      .then(res => setRequests(res.data.requests || []))
+      .catch(() => showMessage('❌ Failed to load'))
+      .finally(() => setLoading(false));
+  }, [showMessage]);
+
+  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  const handleApprove = async (req) => {
+    setSaving(req._id);
+    try {
+      await API.put(`/document-requests/admin/approve/${req._id}`, { notes: 'Approved by Admin' });
+      showMessage('✅ Approved — forwarded to Principal');
+      fetchRequests();
+    } catch (e) { showMessage('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSaving(''); }
+  };
+
+  const handleReject = async () => {
+    if (!rejectNote.trim()) return;
+    setSaving(rejectModal._id);
+    try {
+      await API.put(`/document-requests/admin/reject/${rejectModal._id}`, { reason: rejectNote });
+      showMessage('✅ Request rejected');
+      setRejectModal(null); setRejectNote('');
+      fetchRequests();
+    } catch (e) { showMessage('❌ Failed'); }
+    finally { setSaving(''); }
+  };
+
+  const ss = (s) => ({
+    pending_student_section: { bg: '#e3f2fd', color: '#1565C0', label: '⏳ At Student Section' },
+    pending_admin:           { bg: '#fff3e0', color: '#E65100', label: '🔄 Pending Admin Review' },
+    rejected_by_admin:       { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Admin' },
+    pending_principal:       { bg: '#f3e5f5', color: '#7B1FA2', label: '🔄 At Principal' },
+    rejected_by_principal:   { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Principal' },
+    pending_generation:      { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Issue' },
+    completed:               { bg: '#e3f2fd', color: '#1565C0', label: '🏁 Issued' },
+  }[s] || { bg: '#f5f5f5', color: '#888', label: s });
+
+  const filtered = requests.filter(r => {
+    const mf = filter === 'all' || r.status === filter;
+    const q = search.toLowerCase();
+    return mf && (!q || r.studentName?.toLowerCase().includes(q) || r.studentEmail?.toLowerCase().includes(q));
+  });
+
+  const pendingCount = requests.filter(r => r.status === 'pending_admin').length;
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📋 Document Requests</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+        Review and approve student document requests for: Bonafide (₹200), Provisional Degree (₹100), Degree (₹100), Migration (₹200).
+      </p>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Pending Review', count: pendingCount, color: '#E65100', bg: '#fff3e0' },
+          { label: 'Total', count: requests.length, color: '#1565C0', bg: '#e3f2fd' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>
+            {p.label}: {p.count}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="text" placeholder="🔍 Search..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
+        <select value={filter} onChange={e => setFilter(e.target.value)}
+          style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+          <option value="pending_admin">⏳ Pending Review</option>
+          <option value="all">All</option>
+          <option value="pending_principal">🔄 At Principal</option>
+          <option value="completed">🏁 Issued</option>
+        </select>
+        <button onClick={fetchRequests} style={{ padding: '9px 14px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, cursor: 'pointer' }}>🔄</button>
+      </div>
+
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 26, maxWidth: 440, width: '100%' }}>
+            <h3 style={{ color: '#C62828', marginBottom: 12 }}>❌ Reject Request</h3>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 14 }}>{rejectModal.studentName} — {DOC_CFG_ADMIN[rejectModal.documentType]?.label}</p>
+            <textarea rows="3" value={rejectNote} onChange={e => setRejectNote(e.target.value)} placeholder="Reason..."
+              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <button onClick={handleReject} disabled={!rejectNote.trim() || saving === rejectModal._id}
+                style={{ background: '#C62828', color: '#fff', padding: '10px 22px', borderRadius: 8, border: 'none', fontWeight: 700, cursor: 'pointer' }}>
+                {saving === rejectModal._id ? '⏳...' : '❌ Confirm'}
+              </button>
+              <button onClick={() => { setRejectModal(null); setRejectNote(''); }}
+                style={{ background: '#eee', color: '#333', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div style={{ textAlign: 'center', padding: 40, fontSize: '2rem' }}>⏳</div>
+      : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#888', background: '#f8faff', borderRadius: 12 }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>📭</div>
+          <p>No document requests found.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map(req => {
+            const cfg = DOC_CFG_ADMIN[req.documentType] || { label: req.documentType, icon: '📄', color: '#555', bg: '#f5f5f5' };
+            const st  = ss(req.status);
+            const isPending = req.status === 'pending_admin';
+            return (
+              <div key={req._id} style={{ background: '#fff', border: `1px solid ${isPending ? '#fbbf24' : '#e0e7ef'}`, borderRadius: 12, padding: 18, borderLeft: `5px solid ${cfg.color}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{cfg.icon}</span>
+                    <div>
+                      <h4 style={{ color: cfg.color, fontSize: 15, margin: 0 }}>{cfg.label}</h4>
+                      {cfg.fee > 0 && <span style={{ fontSize: 11, color: '#2E7D32', fontWeight: 600 }}>Fee: ₹{cfg.fee}</span>}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 12px', borderRadius: 20, background: st.bg, color: st.color }}>{st.label}</span>
+                </div>
+                <div style={{ fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
+                  <span><strong>Student:</strong> {req.studentName}</span>
+                  <span><strong>Email:</strong> {req.studentEmail}</span>
+                  <span><strong>Branch:</strong> {req.branch || '—'}</span>
+                  <span><strong>Year:</strong> {req.admissionYear || '—'}</span>
+                  {req.reason && <span style={{ gridColumn: '1/-1' }}><strong>Reason:</strong> {req.reason}</span>}
+                </div>
+                {isPending && (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => handleApprove(req)} disabled={saving === req._id}
+                      style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      {saving === req._id ? '⏳...' : '✅ Approve → Principal'}
+                    </button>
+                    <button onClick={() => { setRejectModal(req); setRejectNote(''); }}
+                      style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      ❌ Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
