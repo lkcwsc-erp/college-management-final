@@ -215,6 +215,19 @@ const AdminMessagingTab = ({ user, showMessage }) => {
     setSending(true);
     try {
       const res = await API.post('/auth/send-message', { recipients, subject, message });
+
+      // If target is staff_student, also save as notice for dashboard visibility
+      if (target === 'staff_student') {
+        await API.post('/notices', {
+          title: subject,
+          content: message,
+          targetAudience: 'staff_student',
+          category: 'general',
+          isHighlighted: true,
+          isActive: true,
+        });
+      }
+
       setMsg(`✅ Sent to ${res.data.sent} recipient(s).${res.data.failed > 0 ? ` ${res.data.failed} failed.` : ''}`);
       setSubject(''); setMessage(''); setSelected([]);
       setTimeout(() => setMsg(''), 5000);
