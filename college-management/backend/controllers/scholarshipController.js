@@ -264,6 +264,7 @@ exports.autoCalculateScholarship = async (req, res) => {
 /* ============================================================
    3. SCHOLARSHIP DASHBOARD STATISTICS
    GET /api/scholarships/dashboard
+   — Extended with caste-wise breakdown and MahaDBT receivable
    ============================================================ */
 exports.getScholarshipDashboard = async (req, res) => {
   try {
@@ -281,6 +282,14 @@ exports.getScholarshipDashboard = async (req, res) => {
       eligibleAgg,
       receivedAgg,
       pendingAgg,
+      // ── NEW: caste-wise admission counts ──────────────────
+      casteWiseCounts,
+      // ── NEW: caste-wise scholarship amounts ───────────────
+      casteWiseAmounts,
+      // ── NEW: caste-wise form status breakdown ─────────────
+      casteWiseStatus,
+      // ── NEW: course-wise counts ───────────────────────────
+      courseWiseCounts,
     ] = await Promise.all([
       Admission.countDocuments(filter),
       Admission.countDocuments({ ...filter, scholarshipStatus: 'not_filled' }),
@@ -291,11 +300,99 @@ exports.getScholarshipDashboard = async (req, res) => {
       Admission.aggregate([{ $match: filter }, { $group: { _id: null, total: { $sum: '$scholarshipEligibleAmount' } } }]),
       Admission.aggregate([{ $match: filter }, { $group: { _id: null, total: { $sum: '$scholarshipReceivedAmount' } } }]),
       Admission.aggregate([{ $match: filter }, { $group: { _id: null, total: { $sum: '$scholarshipPendingAmount'  } } }]),
+
+      // Caste-wise total admissions
+      Admission.aggregate([
+        { $match: filter },
+        { $group: {
+          _id: { $toUpper: '$category' },
+          count: { $sum: 1 },
+        }},
+        { $sort: { count: -1 } },
+      ]),
+
+      // Caste-wise scholarship amounts
+      Admission.aggregate([
+        { $match: filter },
+        { $group: {
+          _id: { $toUpper: '$category' },
+          totalEligible: { $sum: '$scholarshipEligibleAmount' },
+          totalReceived: { $sum: '$scholarshipReceivedAmount' },
+          totalPending:  { $sum: '$scholarshipPendingAmount'  },
+          count:         { $sum: 1 },
+        }},
+        { $sort: { count: -1 } },
+      ]),
+
+      // Caste-wise form status (filled vs not_filled)
+      Admission.aggregate([
+        { $match: filter },
+        { $group: {
+          _id: {
+            category: { $toUpper: '$category' },
+            status:    '$scholarshipStatus',
+          },
+          count: { $sum: 1 },
+        }},
+      ]),
+
+      // Course-wise admission counts
+      Admission.aggregate([
+        { $match: filter },
+        { $group: {
+          _id: '$courseType',
+          count:    { $sum: 1 },
+          filled:   { $sum: { $cond: [{ $ne: ['$scholarshipStatus', 'not_filled'] }, 1, 0] } },
+          notFilled:{ $sum: { $cond: [{ $eq: ['$scholarshipStatus', 'not_filled'] }, 1, 0] } },
+        }},
+        { $sort: { count: -1 } },
+      ]),
     ]);
+
+    // ── Transform caste-wise status into a nested map ──────
+    // { SC: { not_filled: 10, filled: 5, approved: 3, ... }, ... }
+    const casteStatusMap = {};
+    casteWiseStatus.forEach(({ _id, count }) => {
+      const cat = _id.category || 'UNKNOWN';
+      const st  = _id.status   || 'not_filled';
+      if (!casteStatusMap[cat]) casteStatusMap[cat] = {};
+      casteStatusMap[cat][st] = count;
+    });
+
+    // ── Merge caste counts + amounts + status into one array ──
+    const amountMap = {};
+    casteWiseAmounts.forEach(a => {
+      amountMap[a._id || 'UNKNOWN'] = {
+        totalEligible: a.totalEligible || 0,
+        totalReceived: a.totalReceived || 0,
+        totalPending:  a.totalPending  || 0,
+      };
+    });
+
+    const casteBreakdown = casteWiseCounts.map(({ _id, count }) => {
+      const cat    = _id || 'UNKNOWN';
+      const amt    = amountMap[cat] || { totalEligible: 0, totalReceived: 0, totalPending: 0 };
+      const status = casteStatusMap[cat] || {};
+      const filledCount = (status.filled || 0) + (status.approved || 0) +
+                          (status.rejected || 0) + (status.disbursed || 0);
+      return {
+        category:      cat,
+        totalAdmissions: count,
+        formFilled:    filledCount,
+        formNotFilled: status.not_filled || 0,
+        approved:      status.approved   || 0,
+        rejected:      status.rejected   || 0,
+        disbursed:     status.disbursed  || 0,
+        totalEligibleAmount: amt.totalEligible,
+        totalReceivedAmount: amt.totalReceived,
+        totalPendingAmount:  amt.totalPending,
+      };
+    });
 
     return res.status(200).json({
       success: true,
       dashboard: {
+        // ── Existing summary ──
         totalStudents,
         notFilled,
         filled,
@@ -305,6 +402,14 @@ exports.getScholarshipDashboard = async (req, res) => {
         totalEligibleAmount: eligibleAgg[0]?.total || 0,
         totalReceivedAmount: receivedAgg[0]?.total || 0,
         totalPendingAmount:  pendingAgg[0]?.total  || 0,
+        // ── NEW: breakdown arrays ──
+        casteBreakdown,    // [{category, totalAdmissions, formFilled, formNotFilled, ...amounts}]
+        courseBreakdown: courseWiseCounts.map(c => ({
+          course:     c._id || 'Unknown',
+          count:      c.count,
+          filled:     c.filled,
+          notFilled:  c.notFilled,
+        })),
       },
     });
   } catch (error) {
