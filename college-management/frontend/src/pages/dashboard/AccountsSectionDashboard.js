@@ -1016,15 +1016,23 @@ const FeeStructureManager = ({ user, docFees, setDocFees, saveDocFees, showToast
       {/* ══════════════════════════════════════
           SUB-TAB 3 — DOCUMENT FEES
       ══════════════════════════════════════ */}
-      {subTab === 'doc' && (() => {
-        const [editMode, setEditMode] = React.useState(false);
-        const [edits, setEdits]       = React.useState({});
-        if (!docFees) return (
-          <div style={{ padding:'30px', textAlign:'center', color:'#aaa' }}>
-            Document fees not available in this context.
-          </div>
-        );
-        return (
+      {subTab === 'doc' && (
+        <DocFeesPanel docFees={docFees} setDocFees={setDocFees} saveDocFees={saveDocFees} showToast={showToast} flash={flash} fmt={fmt} />
+      )}
+    </div>
+  );
+};
+
+/* ── Document Fees Panel — separate component (hooks rules) ── */
+const DocFeesPanel = ({ docFees, setDocFees, saveDocFees, showToast, flash, fmt }) => {
+  const [editMode, setEditMode] = useState(false);
+  const [edits, setEdits]       = useState({});
+  if (!docFees) return (
+    <div style={{ padding:'30px', textAlign:'center', color:'#aaa' }}>
+      Document fees not available in this context.
+    </div>
+  );
+  return (
           <div>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
               <div>
