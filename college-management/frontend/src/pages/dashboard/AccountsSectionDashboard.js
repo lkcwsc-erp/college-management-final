@@ -362,9 +362,6 @@ const F = ({ label, value }) => (
      2. MahaDBT Receivable (ScholarshipMaster)
    Full CRUD — Add / Edit / Delete per fee item.
    ============================================================ */
-import React, { useState, useEffect, useCallback } from 'react';
-import API from '../../api/axios';
-
 /* ── constants ─────────────────────────────────────────────── */
 const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27', '2027-28'];
 const COURSES        = ['B.Sc.', 'B.A.'];
