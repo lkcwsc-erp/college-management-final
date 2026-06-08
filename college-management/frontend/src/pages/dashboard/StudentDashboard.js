@@ -1737,9 +1737,12 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
             style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
             <option value="">— Select —</option>
             <option value="TC" disabled={tcAlreadyIssued}>🎓 Transfer Certificate (TC){tcAlreadyIssued?' — Already Issued':''}</option>
-            <option value="BONAFIDE">📋 Bonafide Certificate</option>
+            <option value="BONAFIDE">📋 Bonafide Certificate — ₹200</option>
             <option value="ID_CARD">🪪 ID Card</option>
             <option value="MARKSHEET">📄 Marksheet</option>
+            <option value="PROVISIONAL_DEGREE">📜 Provisional Degree Certificate — ₹100</option>
+            <option value="DEGREE">🎓 Degree Certificate — ₹100</option>
+            <option value="MIGRATION">📜 Migration Certificate — ₹200</option>
           </select>
         </div>
         <div>
