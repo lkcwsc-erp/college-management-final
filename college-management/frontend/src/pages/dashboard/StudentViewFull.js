@@ -68,6 +68,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [search, setSearch]           = useState('');
   const [yearFilter, setYearFilter]   = useState('all');
   const [catFilter, setCatFilter]     = useState('all');
+  const [academicYearFilter, setAcademicYearFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('current'); // 'current' | 'past' | 'all'
   const [selected, setSelected]       = useState(null);
   const [detailTab, setDetailTab]     = useState('overview');
@@ -225,12 +226,13 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
       || s.studentId?.toLowerCase().includes(q) || s.prnNumber?.toLowerCase().includes(q)
       || s.aadharNumber?.toLowerCase().includes(q) || s.phone?.includes(q);
     const my = yearFilter === 'all' || s.admissionYear === yearFilter;
+    const mac = academicYearFilter === 'all' || s.academicYear === academicYearFilter;
     const mc = catFilter === 'all' || (s.category||'other').toLowerCase() === catFilter;
     // Current = tcIssued false or not set; Past = tcIssued true
     const ms = statusFilter === 'all' ? true
       : statusFilter === 'current' ? !s.tcIssued
       : s.tcIssued === true;
-    return mq && my && mc && ms;
+    return mq && my && mac && mc && ms;
   });
 
   // ── Row detail field renderer ─────────────────────────────────────────────
@@ -682,6 +684,10 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
           <option value="1st Year">1st Year</option>
           <option value="2nd Year">2nd Year</option>
           <option value="3rd Year">3rd Year</option>
+        </select>
+        <select value={academicYearFilter} onChange={e=>setAcademicYearFilter(e.target.value)} style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
+          <option value="all">All Academic Years</option>
+          {['2023-24','2024-25','2025-26','2026-27'].map(y=><option key={y} value={y}>{y}</option>)}
         </select>
         <select value={catFilter} onChange={e=>setCatFilter(e.target.value)} style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
           <option value="all">All Categories</option>
