@@ -553,11 +553,34 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
     { label: 'Total Received', value: db.totalReceivedAmount || 0, color: '#2E7D32', bg: '#e8f5e9' },
     { label: 'Total Pending',  value: db.totalPendingAmount  || 0, color: '#E65100', bg: '#fff3e0' },
   ];
+
+  const casteBreakdown = db.casteBreakdown || [];
+  const courseBreakdown = db.courseBreakdown || [];
+
+  // Category colour map for caste badges
+  const getCasteStyle = (cat) => {
+    const c = (cat || '').toUpperCase();
+    const map = {
+      SC: { bg: '#e3f2fd', color: '#1565C0', border: '#90caf9' },
+      ST: { bg: '#e8f5e9', color: '#2E7D32', border: '#a5d6a7' },
+      OBC: { bg: '#fff3e0', color: '#E65100', border: '#ffcc80' },
+      SBC: { bg: '#f3e5f5', color: '#7B1FA2', border: '#ce93d8' },
+      'NT-B': { bg: '#fce4ec', color: '#880E4F', border: '#f48fb1' },
+      'NT-C': { bg: '#fce4ec', color: '#880E4F', border: '#f48fb1' },
+      'NT-D': { bg: '#fce4ec', color: '#880E4F', border: '#f48fb1' },
+      'VJ/DT(NT-A)': { bg: '#fce4ec', color: '#880E4F', border: '#f48fb1' },
+      EWS: { bg: '#e0f2f1', color: '#00695C', border: '#80cbc4' },
+      SEBC: { bg: '#fff8e1', color: '#F57F17', border: '#ffe082' },
+      OPEN: { bg: '#f5f5f5', color: '#555', border: '#e0e0e0' },
+    };
+    return map[c] || { bg: '#f5f5f5', color: '#555', border: '#e0e0e0' };
+  };
+
   return (
     <div>
+      {/* ── Top control bar ── */}
       <div style={{ background: 'linear-gradient(135deg,#7B1FA2,#4A148C)', padding: '14px 20px', borderRadius: 14, marginBottom: 24, color: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Academic Year Filter on dashboard */}
           <select
             value={academicYear}
             onChange={e => setAcademicYear(e.target.value)}
@@ -567,13 +590,13 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
             {ACADEMIC_YEARS.map(y => <option key={y} value={y} style={{ color: '#333' }}>{y}</option>)}
           </select>
           <button onClick={onRefresh} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🔄 Refresh</button>
-          {/* Export button on dashboard */}
           <button onClick={onExport} disabled={exporting} style={{ background: 'rgba(255,255,255,0.9)', color: '#4A148C', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
             {exporting ? '⏳...' : '📥 Export Excel'}
           </button>
         </div>
       </div>
 
+      {/* ── Summary cards ── */}
       <div className="dash-cards" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', marginBottom: 24 }}>
         {cards.map(c => (
           <div key={c.label} className={`dash-card ${c.cls}`} style={{ cursor: 'pointer' }} onClick={() => onGoTab('students')}>
@@ -583,6 +606,7 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
         ))}
       </div>
 
+      {/* ── Amount cards ── */}
       <h3 style={{ margin: '0 0 14px', color: '#333', fontSize: 15 }}>💰 Scholarship Amounts</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 28 }}>
         {amtCards.map(c => (
@@ -593,6 +617,167 @@ const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, acad
         ))}
       </div>
 
+      {/* ══════════════════════════════════════════════════════════
+          CASTE-WISE BREAKDOWN — main new section
+      ══════════════════════════════════════════════════════════ */}
+      <h3 style={{ margin: '0 0 14px', color: '#7B1FA2', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+        🗂️ Caste-wise Admission & Scholarship Breakdown
+        <span style={{ fontSize: 11, fontWeight: 500, color: '#888', background: '#f5f5f5', borderRadius: 20, padding: '2px 10px' }}>
+          {casteBreakdown.length} categories
+        </span>
+      </h3>
+
+      {casteBreakdown.length === 0 ? (
+        <div style={{ background: '#fafbff', borderRadius: 14, border: '1px solid #e0e7ef', padding: '32px', textAlign: 'center', color: '#aaa', marginBottom: 28 }}>
+          📭 No caste-wise data yet
+        </div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', marginBottom: 28 }}>
+          {/* Table Header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.2fr 0.7fr 0.9fr 0.9fr 0.8fr 0.8fr 1fr 1fr 1fr',
+            background: '#7B1FA2', padding: '12px 16px', gap: 8
+          }}>
+            {['Category','Total','Filled ✅','Not Filled 📝','Approved','Disbursed','Eligible Amt','Received Amt','Pending Amt'].map(h => (
+              <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 11 }}>{h}</span>
+            ))}
+          </div>
+
+          {casteBreakdown.map((row, idx) => {
+            const cs = getCasteStyle(row.category);
+            const total = row.totalAdmissions || 1;
+            const fillPct = Math.round(((row.formFilled || 0) / total) * 100);
+            return (
+              <div key={row.category} style={{
+                display: 'grid',
+                gridTemplateColumns: '1.2fr 0.7fr 0.9fr 0.9fr 0.8fr 0.8fr 1fr 1fr 1fr',
+                padding: '13px 16px', gap: 8, alignItems: 'center',
+                borderBottom: '1px solid #f0f4f8',
+                background: idx % 2 === 0 ? '#fafbff' : '#fff',
+              }}>
+                {/* Category badge */}
+                <div>
+                  <span style={{
+                    display: 'inline-block', fontSize: 12, fontWeight: 800,
+                    padding: '4px 12px', borderRadius: 20,
+                    background: cs.bg, color: cs.color, border: `1px solid ${cs.border}`,
+                    letterSpacing: 0.5,
+                  }}>{row.category}</span>
+                  {/* Mini fill progress bar */}
+                  <div style={{ marginTop: 4, height: 4, borderRadius: 4, background: '#f0f4f8', overflow: 'hidden', width: '90%' }}>
+                    <div style={{ width: `${fillPct}%`, height: '100%', background: cs.color, borderRadius: 4, transition: 'width 0.5s' }} />
+                  </div>
+                  <span style={{ fontSize: 10, color: '#aaa' }}>{fillPct}% filled</span>
+                </div>
+
+                {/* Total admissions */}
+                <span style={{ fontSize: 16, fontWeight: 800, color: '#333' }}>{row.totalAdmissions}</span>
+
+                {/* Form filled */}
+                <div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#2E7D32' }}>{row.formFilled}</span>
+                  <span style={{ fontSize: 11, color: '#aaa', display: 'block' }}>
+                    {row.approved > 0 && `✅ ${row.approved} approved`}
+                  </span>
+                </div>
+
+                {/* Not filled */}
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#E65100' }}>{row.formNotFilled}</span>
+
+                {/* Approved */}
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#2E7D32' }}>{row.approved}</span>
+
+                {/* Disbursed */}
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#7B1FA2' }}>{row.disbursed}</span>
+
+                {/* Eligible Amount */}
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1565C0' }}>
+                    {row.totalEligibleAmount > 0 ? `₹${fmt(row.totalEligibleAmount)}` : '—'}
+                  </span>
+                </div>
+
+                {/* Received Amount */}
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#2E7D32' }}>
+                    {row.totalReceivedAmount > 0 ? `₹${fmt(row.totalReceivedAmount)}` : '—'}
+                  </span>
+                </div>
+
+                {/* Pending Amount */}
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: row.totalPendingAmount > 0 ? '#C62828' : '#aaa' }}>
+                    {row.totalPendingAmount > 0 ? `₹${fmt(row.totalPendingAmount)}` : '₹0'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* ── Totals row ── */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.2fr 0.7fr 0.9fr 0.9fr 0.8fr 0.8fr 1fr 1fr 1fr',
+            padding: '12px 16px', gap: 8, alignItems: 'center',
+            background: '#4A148C', borderTop: '2px solid #7B1FA2'
+          }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>TOTAL</span>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{db.totalStudents || 0}</span>
+            <span style={{ color: '#a5d6a7', fontWeight: 800, fontSize: 14 }}>
+              {casteBreakdown.reduce((s, r) => s + (r.formFilled || 0), 0)}
+            </span>
+            <span style={{ color: '#ffcc80', fontWeight: 800, fontSize: 14 }}>
+              {casteBreakdown.reduce((s, r) => s + (r.formNotFilled || 0), 0)}
+            </span>
+            <span style={{ color: '#a5d6a7', fontWeight: 700, fontSize: 13 }}>
+              {casteBreakdown.reduce((s, r) => s + (r.approved || 0), 0)}
+            </span>
+            <span style={{ color: '#ce93d8', fontWeight: 700, fontSize: 13 }}>
+              {casteBreakdown.reduce((s, r) => s + (r.disbursed || 0), 0)}
+            </span>
+            <span style={{ color: '#90caf9', fontWeight: 700, fontSize: 13 }}>
+              ₹{fmt(db.totalEligibleAmount || 0)}
+            </span>
+            <span style={{ color: '#a5d6a7', fontWeight: 700, fontSize: 13 }}>
+              ₹{fmt(db.totalReceivedAmount || 0)}
+            </span>
+            <span style={{ color: '#ef9a9a', fontWeight: 700, fontSize: 13 }}>
+              ₹{fmt(db.totalPendingAmount || 0)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Course-wise breakdown (new) ── */}
+      {courseBreakdown.length > 0 && (
+        <>
+          <h3 style={{ margin: '0 0 14px', color: '#1565C0', fontSize: 15 }}>📚 Course-wise Summary</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 12, marginBottom: 28 }}>
+            {courseBreakdown.map(c => {
+              const pct = Math.round(((c.filled || 0) / (c.count || 1)) * 100);
+              return (
+                <div key={c.course} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: '#1565C0' }}>{c.course}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: '#333' }}>{c.count}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 6, background: '#f0f4f8', overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: '#1565C0', borderRadius: 6 }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: '#2E7D32' }}>✅ Filled: {c.filled}</span>
+                    <span style={{ color: '#E65100' }}>📝 Pending: {c.notFilled}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: '#aaa', display: 'block', textAlign: 'right', marginTop: 4 }}>{pct}% filled</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ── Status Breakdown ── */}
       <h3 style={{ margin: '0 0 14px', color: '#333', fontSize: 15 }}>📊 Status Breakdown</h3>
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden' }}>
         {Object.entries(STATUS_CONFIG).map(([key, cfg], idx) => {
