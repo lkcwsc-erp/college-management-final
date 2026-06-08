@@ -29,7 +29,7 @@ const Achievements = () => {
   return (
     <div>
       <Navbar />
-      <div style={{ background: 'linear-gradient(135deg,#7B1FA2,#4a0072)', color: '#fff', padding: '40px 20px', textAlign: 'center' }}>
+      <div style={{ background: 'linear-gradient(135deg,#1565C0,#0d47a1)', color: '#fff', padding: '40px 20px', textAlign: 'center' }}>
         <h1 style={{ color: '#fff', marginBottom: 8 }}>🏆 Our Achievements</h1>
         <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16 }}>Celebrating excellence in academics, sports, and beyond</p>
       </div>
@@ -39,7 +39,7 @@ const Achievements = () => {
         <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap', justifyContent: 'center' }}>
           {['all', 'academic', 'sports', 'cultural', 'award', 'other'].map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              style={{ padding: '8px 20px', borderRadius: 20, border: `2px solid ${filter === f ? '#7B1FA2' : '#ddd'}`, background: filter === f ? '#7B1FA2' : '#fff', color: filter === f ? '#fff' : '#555', fontWeight: 600, fontSize: 13, cursor: 'pointer', textTransform: 'capitalize' }}>
+              style={{ padding: '8px 20px', borderRadius: 20, border: `2px solid ${filter === f ? '#1565C0' : '#ddd'}`, background: filter === f ? '#1565C0' : '#fff', color: filter === f ? '#fff' : '#555', fontWeight: 600, fontSize: 13, cursor: 'pointer', textTransform: 'capitalize' }}>
               {f === 'all' ? '🌟 All' : f}
             </button>
           ))}
