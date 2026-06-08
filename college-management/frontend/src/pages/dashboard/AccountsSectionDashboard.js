@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
 import StudentViewFull from './StudentViewFull';
+import ExamFeeRequestsTab from './ExamFeeRequestsTab';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -997,6 +998,7 @@ const AccountsSectionDashboard = () => {
     { id: 'home',       label: '🏠 Dashboard' },
     { id: 'doc_req',    label: '📄 Document Requests', badge: pendingDocCount },
     { id: 'adm_fees',   label: '💰 Collect Fees', badge: unpaidAdmCount },
+    { id: 'exam_req',   label: '📝 Student Exam Form Requests' },
     { id: 'fee_struct', label: '💼 Fee Structure' },
     { id: 'expenses',   label: '🏗️ College Expenses' },
     { id: 'history',    label: '🧾 Payment History' },
@@ -1443,6 +1445,10 @@ const AccountsSectionDashboard = () => {
               <p style={{ color: '#666', marginBottom: 14, fontSize: 14 }}>View complete student information. Click 👁️ to see details including fee history.</p>
               <StudentViewFull canEdit={false} themeColor="#1565C0" role="accounts" />
             </div>
+          )}
+
+          {activeTab === 'exam_req' && (
+            <ExamFeeRequestsTab themeColor="#1565C0" onToast={showToast} />
           )}
         </div>
       </main>
