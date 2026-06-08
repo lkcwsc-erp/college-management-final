@@ -14,7 +14,7 @@ const documentRequestSchema = new mongoose.Schema({
   // Document type
   documentType: {
     type: String,
-    enum: ['ID_CARD', 'MARKSHEET', 'MIGRATION', 'TC', 'BONAFIDE'],
+    enum: ['ID_CARD', 'MARKSHEET', 'MIGRATION', 'TC', 'BONAFIDE', 'PROVISIONAL_DEGREE', 'DEGREE'],
     required: true
   },
   documentTypeLabel: { type: String, default: '' },
