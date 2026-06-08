@@ -1854,6 +1854,7 @@ const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
+  const [profileTab, setProfileTab] = useState('personal');
   const [notices, setNotices] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
   const [myAdmission, setMyAdmission] = useState(null);
@@ -2249,168 +2250,172 @@ const StudentDashboard = () => {
           )}
 
           {/* ============ PROFILE TAB ============ */}
-          {activeTab === 'profile' && (
-            <div>
-              <h3 style={{ marginBottom: 20, color: '#1565C0' }}>👤 My Profile</h3>
-              {!myAdmission ? (
-                <div className="empty-state"><div className="empty-icon">👤</div><h3>No profile data</h3></div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {activeTab === 'profile' && (() => {
+  const profileTabs = [
+    { id: 'personal',  label: '👤 Personal' },
+    { id: 'academic',  label: '🎓 Current Academic' },
+    { id: 'previous',  label: '📚 Previous Academic' },
+    { id: 'address',   label: '🏠 Address' },
+    { id: 'bank',      label: '🏦 Bank Details' },
+  ];
+  const FieldRow = ({ label, value, mono }) => !value || value === '—' ? null : (
+    <div style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
+      <span style={{ color:'#888', fontWeight:600, minWidth:130, flexShrink:0 }}>{label}</span>
+      <span style={{ color:'#222', textAlign:'right', wordBreak:'break-all', fontFamily: mono?'monospace':'inherit', fontWeight: mono?700:400 }}>{value}</span>
+    </div>
+  );
+  return (
+    <div>
+      <h3 style={{ marginBottom:16, color:'#1565C0' }}>👤 My Profile</h3>
+      {!myAdmission ? (
+        <div className="empty-state"><div className="empty-icon">👤</div><h3>No profile data</h3></div>
+      ) : (
+        <>
+          {/* Top card — photo + name + ID */}
+          <div style={{ background:'linear-gradient(135deg,#1565C0,#0d47a1)', borderRadius:16, padding:'20px', display:'flex', alignItems:'center', gap:16, flexWrap:'wrap', marginBottom:20 }}>
+            <div style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.5)', overflow:'hidden', background:'#e3f2fd', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {myAdmission.studentPhoto
+                ? <img src={docUrl(myAdmission.studentPhoto)} alt="Student" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e=>e.target.style.display='none'} />
+                : <span style={{ fontSize:'2rem' }}>👩‍🎓</span>}
+            </div>
+            <div style={{ flex:1, minWidth:200 }}>
+              <h2 style={{ color:'#fff', margin:'0 0 4px', fontSize:'1.3rem' }}>{myAdmission.applicantName || user?.name}</h2>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                {myAdmission.studentId
+                  ? <span style={{ background:'rgba(255,255,255,0.2)', color:'#fff', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700, fontFamily:'monospace' }}>🎓 {myAdmission.studentId}</span>
+                  : <span style={{ background:'#fff3e0', color:'#E65100', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:600 }}>⏳ ID Pending</span>}
+                <span style={{ background:'rgba(255,255,255,0.15)', color:'#fff', padding:'3px 12px', borderRadius:20, fontSize:12 }}>{getCourseFull(myAdmission.courseType)} · {myAdmission.admissionYear}</span>
+                <span style={{ background: myAdmission.status==='approved'?'#e8f5e9':'#fff3e0', color: myAdmission.status==='approved'?'#2E7D32':'#E65100', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:600 }}>
+                  {myAdmission.status==='approved'?'✅ Approved':'⏳ Under Review'}
+                </span>
+              </div>
+            </div>
+          </div>
 
-                  {/* Top card — photo + name + ID */}
-                  <div style={{ background: 'linear-gradient(135deg,#1565C0,#0d47a1)', borderRadius: 16, padding: '24px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-                    <div style={{ width: 90, height: 90, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', overflow: 'hidden', background: '#e3f2fd', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {myAdmission.studentPhoto
-                        ? <img src={docUrl(myAdmission.studentPhoto)} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display='none'} />
-                        : <span style={{ fontSize: '2.5rem' }}>👩‍🎓</span>}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <h2 style={{ color: '#fff', margin: '0 0 4px', fontSize: '1.4rem' }}>{myAdmission.applicantName || user?.name}</h2>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
-                        {myAdmission.studentId
-                          ? <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>🎓 {myAdmission.studentId}</span>
-                          : <span style={{ background: '#fff3e0', color: '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>⏳ ID Pending</span>}
-                        <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '3px 12px', borderRadius: 20, fontSize: 12 }}>{getCourseFull(myAdmission.courseType)} · {myAdmission.admissionYear}</span>
-                        <span style={{ background: myAdmission.status === 'approved' ? '#e8f5e9' : '#fff3e0', color: myAdmission.status === 'approved' ? '#2E7D32' : '#E65100', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                          {myAdmission.status === 'approved' ? '✅ Approved' : '⏳ Under Review'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+          {/* Sub-tab navigation */}
+          <div style={{ display:'flex', gap:4, marginBottom:20, background:'#f0f4f8', borderRadius:12, padding:5, flexWrap:'wrap' }}>
+            {profileTabs.map(t => (
+              <button key={t.id} onClick={() => setProfileTab(t.id)}
+                style={{ flex:1, minWidth:100, padding:'8px 10px', borderRadius:9, border:'none', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap',
+                  background: profileTab===t.id ? '#1565C0' : 'transparent',
+                  color: profileTab===t.id ? '#fff' : '#555' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-                  {/* Details grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+          {/* ── PERSONAL ── */}
+          {profileTab === 'personal' && (
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+              <h4 style={{ color:'#1565C0', marginBottom:16, fontSize:15, borderBottom:'2px solid #e3f2fd', paddingBottom:8 }}>👤 Personal Details</h4>
+              <FieldRow label="Full Name"       value={myAdmission.applicantName} />
+              <FieldRow label="Father's Name"   value={myAdmission.fatherName} />
+              <FieldRow label="Mother's Name"   value={myAdmission.motherName} />
+              <FieldRow label="Date of Birth"   value={myAdmission.dateOfBirth ? new Date(myAdmission.dateOfBirth).toLocaleDateString('en-IN') : '—'} />
+              <FieldRow label="Gender"          value={myAdmission.gender} />
+              <FieldRow label="Blood Group"     value={myAdmission.bloodGroup} />
+              <FieldRow label="Religion"        value={myAdmission.religion} />
+              <FieldRow label="Category"        value={myAdmission.category?.toUpperCase()} />
+              <FieldRow label="Caste"           value={myAdmission.caste} />
+              <FieldRow label="Marital Status"  value={myAdmission.isMarried ? 'Married' : 'Unmarried'} />
+              <FieldRow label="Mobile"          value={myAdmission.phone} />
+              <FieldRow label="Parent Phone"    value={myAdmission.parentPhone || myAdmission.fatherPhone || myAdmission.motherPhone} />
+              <FieldRow label="Email"           value={myAdmission.email} />
+              <FieldRow label="Aadhar No."      value={myAdmission.aadharNumber} mono />
+              <FieldRow label="Family Income"   value={myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'} />
+              <FieldRow label="Guardian Name"   value={myAdmission.guardianName} />
+              <FieldRow label="Guardian Phone"  value={myAdmission.guardianPhone} />
+            </div>
+          )}
 
-                    {/* Personal */}
-                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
-                      <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>👤 Personal Details</h4>
-                      {[
-                        ['Full Name',      myAdmission.applicantName],
-                        ["Father's Name",  myAdmission.fatherName],
-                        ["Mother's Name",  myAdmission.motherName],
-                        ['Date of Birth',  myAdmission.dateOfBirth ? new Date(myAdmission.dateOfBirth).toLocaleDateString('en-IN') : '—'],
-                        ['Gender',         myAdmission.gender],
-                        ['Blood Group',    myAdmission.bloodGroup],
-                        ['Religion',       myAdmission.religion],
-                        ['Category',       myAdmission.category?.toUpperCase()],
-                        ['Caste',          myAdmission.caste],
-                        ['Marital Status', myAdmission.isMarried ? 'Married' : 'Unmarried'],
-                        ['Mobile',           myAdmission.phone],
-                        ['Parent Phone',     myAdmission.parentPhone || myAdmission.fatherPhone || myAdmission.motherPhone],
-                        ['Email',            myAdmission.email],
-                        ['Aadhar No.',       myAdmission.aadharNumber],
-                        ['Family Income',    myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'],
-                        ['Guardian Name',    myAdmission.guardianName],
-                        ['Guardian Phone',   myAdmission.guardianPhone],
-                      ].map(([l, v]) => v && v !== '—' ? (
-                        <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
-                          <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
-                          <span style={{ color: '#222', textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
-                        </div>
-                      ) : null)}
-                    </div>
+          {/* ── CURRENT ACADEMIC ── */}
+          {profileTab === 'academic' && (
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+              <h4 style={{ color:'#1565C0', marginBottom:16, fontSize:15, borderBottom:'2px solid #e3f2fd', paddingBottom:8 }}>🎓 Current Academic Details</h4>
+              <FieldRow label="Student ID"       value={myAdmission.studentId} mono />
+              <FieldRow label="PRN Number"       value={myAdmission.prnNumber} mono />
+              <FieldRow label="ABC / APAR ID"    value={myAdmission.aparIdNumber} mono />
+              <FieldRow label="Course"           value={getCourseFull(myAdmission.courseType)} />
+              <FieldRow label="Preferred Subject" value={myAdmission.preferredSubject} />
+              <FieldRow label="Admission Year"   value={myAdmission.admissionYear} />
+              <FieldRow label="Academic Year"    value={myAdmission.academicYear} />
+              <FieldRow label="Admission Type"   value={myAdmission.admissionType} />
+              <FieldRow label="Roll Number"      value={myAdmission.rollNumber} mono />
+            </div>
+          )}
 
-                    {/* Academic + Address */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
-                        <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🎓 Academic Details</h4>
-                        {[
-                          ['Student ID',    myAdmission.studentId],
-                          ['PRN Number',    myAdmission.prnNumber],
-                          ['ABC / APAR ID', myAdmission.aparIdNumber],
-                          ['Course',        getCourseFull(myAdmission.courseType)],
-                          ['Subject',       myAdmission.preferredSubject],
-                          ['Year',          myAdmission.admissionYear],
-                          ['SSC School',    myAdmission.sscSchoolName],
-                          ['SSC %',         myAdmission.sscPercentage ? `${myAdmission.sscPercentage}%` : '—'],
-                          ['HSC College',   myAdmission.hscCollegeName],
-                          ['HSC Stream',    myAdmission.hscStream],
-                          ['HSC %',         myAdmission.hscPercentage ? `${myAdmission.hscPercentage}%` : '—'],
-                        ].map(([l, v]) => v && v !== '—' ? (
-                          <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
-                            <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
-                            <span style={{ color: '#222', textAlign: 'right' }}>{v}</span>
-                          </div>
-                        ) : null)}
-                      </div>
+          {/* ── PREVIOUS ACADEMIC ── */}
+          {profileTab === 'previous' && (
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+              <h4 style={{ color:'#1565C0', marginBottom:16, fontSize:15, borderBottom:'2px solid #e3f2fd', paddingBottom:8 }}>📚 Previous Academic Details</h4>
+              <div style={{ marginBottom:16 }}>
+                <div style={{ background:'#e3f2fd', borderRadius:10, padding:'8px 14px', fontSize:12, fontWeight:700, color:'#1565C0', marginBottom:10 }}>🏫 SSC (10th)</div>
+                <FieldRow label="School Name"   value={myAdmission.sscSchoolName} />
+                <FieldRow label="Board"         value={myAdmission.sscBoard} />
+                <FieldRow label="Year"          value={myAdmission.sscPassingYear} />
+                <FieldRow label="Percentage"    value={myAdmission.sscPercentage ? `${myAdmission.sscPercentage}%` : '—'} />
+                <FieldRow label="Seat No."      value={myAdmission.sscSeatNumber} mono />
+              </div>
+              <div>
+                <div style={{ background:'#e8f5e9', borderRadius:10, padding:'8px 14px', fontSize:12, fontWeight:700, color:'#2E7D32', marginBottom:10 }}>🏫 HSC (12th)</div>
+                <FieldRow label="College Name"  value={myAdmission.hscCollegeName} />
+                <FieldRow label="Board"         value={myAdmission.hscBoard} />
+                <FieldRow label="Stream"        value={myAdmission.hscStream} />
+                <FieldRow label="Year"          value={myAdmission.hscPassingYear} />
+                <FieldRow label="Percentage"    value={myAdmission.hscPercentage ? `${myAdmission.hscPercentage}%` : '—'} />
+                <FieldRow label="Seat No."      value={myAdmission.hscSeatNumber} mono />
+              </div>
+            </div>
+          )}
 
-                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
-                        <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🏠 Address</h4>
-                        {[
-                          ['House No.',     myAdmission.houseNumber],
-                          ['Street/Area',   myAdmission.streetArea],
-                          ['City/Village',  myAdmission.cityTownVillage],
-                          ['District',      myAdmission.district],
-                          ['State',         myAdmission.state],
-                          ['Pin Code',      myAdmission.pinCode],
-                        ].map(([l, v]) => v && v !== '—' ? (
-                          <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
-                            <span style={{ color: '#888', fontWeight: 600, minWidth: 100 }}>{l}</span>
-                            <span style={{ color: '#222', textAlign: 'right' }}>{v}</span>
-                          </div>
-                        ) : null)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bank Details */}
-                  <div>
-
-                    {/* Bank Details */}
-                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 18 }}>
-                      <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14, borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>🏦 Bank Details</h4>
-                      {[
-                        ['Bank Name',        myAdmission.bankName],
-                        ['Account No.',      myAdmission.bankAccountNumber],
-                        ['IFSC Code',        myAdmission.bankIfscCode],
-                        ['Branch',           myAdmission.bankBranch],
-                        ['Account Holder',   myAdmission.bankAccountHolder || myAdmission.applicantName],
-                      ].map(([l, v]) => v && v !== '—' ? (
-                        <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5', fontSize: 12 }}>
-                          <span style={{ color: '#888', fontWeight: 600, minWidth: 120 }}>{l}</span>
-                          <span style={{ color: '#222', textAlign: 'right', fontFamily: l === 'Account No.' || l === 'IFSC Code' ? 'monospace' : 'inherit', fontWeight: l === 'Account No.' ? 700 : 400 }}>{v}</span>
-                        </div>
-                      ) : null)}
-                      {!myAdmission.bankName && !myAdmission.bankAccountNumber && (
-                        <p style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '12px 0' }}>No bank details added yet.</p>
-                      )}
-                    </div>
-
-                  </div>
-
-                  {/* Issued Documents */}
-                  <div style={{ background: '#e8f5e9', borderRadius: 14, border: '1px solid #a5d6a7', padding: 16 }}>
-                      <h4 style={{ color: '#2E7D32', marginBottom: 12, fontSize: 14 }}>📦 Documents Collected from College</h4>
-                      {myRequests.filter(r => r.status === 'completed').length === 0 && (
-                        <p style={{ fontSize: 13, color: '#555' }}>No documents collected yet.</p>
-                      )}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                        {myRequests.filter(r => r.status === 'completed').map((r, i) => (
-                          <div key={i} style={{ background: '#fff', borderRadius: 10, border: '1px solid #c8e6c9', padding: '10px 16px', fontSize: 12, minWidth: 170 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                              <span style={{ fontSize: 18 }}>
-                                {r.documentType==='TC'?'📄':r.documentType==='BONAFIDE'?'📋':r.documentType==='ID_CARD'?'🪪':r.documentType==='MARKSHEET'?'📝':'📃'}
-                              </span>
-                              <span style={{ fontWeight: 800, color: '#1b5e20', fontSize: 13 }}>{r.documentTypeLabel || r.documentType}</span>
-                            </div>
-                            {r.documentType === 'MARKSHEET' && r.marksheetSemester && (
-                              <div style={{ color: '#1565C0', fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
-                                {r.marksheetSemester} · {r.marksheetSession === 'mar_apr' ? 'March / April' : 'Nov / December'} {r.marksheetYear}
-                              </div>
-                            )}
-                            {r.reason && <div style={{ color: '#666', fontSize: 11, marginBottom: 2 }}>Purpose: {r.reason}</div>}
-                            <div style={{ color: '#888', fontSize: 10 }}>
-                              Issued: {new Date(r.updatedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+          {/* ── ADDRESS ── */}
+          {profileTab === 'address' && (
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+              <h4 style={{ color:'#1565C0', marginBottom:16, fontSize:15, borderBottom:'2px solid #e3f2fd', paddingBottom:8 }}>🏠 Address Details</h4>
+              <FieldRow label="House No."      value={myAdmission.houseNumber} />
+              <FieldRow label="Street / Area"  value={myAdmission.streetArea} />
+              <FieldRow label="City / Village" value={myAdmission.cityTownVillage} />
+              <FieldRow label="Taluka"         value={myAdmission.taluka} />
+              <FieldRow label="District"       value={myAdmission.district} />
+              <FieldRow label="State"          value={myAdmission.state} />
+              <FieldRow label="Pin Code"       value={myAdmission.pinCode} mono />
+              {myAdmission.houseNumber && (
+                <div style={{ marginTop:14, background:'#f8faff', borderRadius:10, padding:'10px 14px', fontSize:12, color:'#555', lineHeight:1.6 }}>
+                  📍 {[myAdmission.houseNumber, myAdmission.streetArea, myAdmission.cityTownVillage, myAdmission.taluka, myAdmission.district, myAdmission.state, myAdmission.pinCode].filter(Boolean).join(', ')}
                 </div>
               )}
             </div>
           )}
+
+          {/* ── BANK DETAILS ── */}
+          {profileTab === 'bank' && (
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+              <h4 style={{ color:'#1565C0', marginBottom:16, fontSize:15, borderBottom:'2px solid #e3f2fd', paddingBottom:8 }}>🏦 Bank Details</h4>
+              {!myAdmission.bankName && !myAdmission.bankAccountNumber ? (
+                <div style={{ textAlign:'center', padding:'30px 0', color:'#aaa' }}>
+                  <div style={{ fontSize:'2rem', marginBottom:8 }}>🏦</div>
+                  <p>No bank details added yet.</p>
+                </div>
+              ) : (
+                <>
+                  <FieldRow label="Bank Name"       value={myAdmission.bankName} />
+                  <FieldRow label="Account No."     value={myAdmission.bankAccountNumber} mono />
+                  <FieldRow label="IFSC Code"       value={myAdmission.bankIfscCode} mono />
+                  <FieldRow label="Branch"          value={myAdmission.bankBranch} />
+                  <FieldRow label="Account Holder"  value={myAdmission.bankAccountHolder || myAdmission.applicantName} />
+                  <div style={{ marginTop:14, background:'#e8f5e9', borderRadius:10, padding:'10px 14px', fontSize:12, color:'#2E7D32', fontWeight:600 }}>
+                    ✅ Bank details are used for MahaDBT scholarship disbursement.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+})()}
+
 
           {activeTab === 'fees' && (
             <div>
