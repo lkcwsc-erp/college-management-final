@@ -151,6 +151,23 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     finally { setScholSaving(false); }
   };
 
+  // Auto-calculate scholarship amount from ScholarshipMaster
+  const handleAutoFillAmount = async () => {
+    if (!selected?._id) return;
+    setScholSaving(true);
+    try {
+      const res = await API.post(`/scholarships/calculate/${selected._id}`);
+      const amt = res.data.data?.scholarshipEligibleAmount || res.data.data?.scholarshipAmount || 0;
+      setScholData(p => ({ ...p, scholarshipAmount: amt }));
+      setMsg(`✅ Auto-filled: ₹${Number(amt).toLocaleString('en-IN')} (${res.data.data?.categoryType === 'reserved' ? 'Full MahaDBT' : 'Tuition Fee only — OPEN'})`);
+      setTimeout(() => setMsg(''), 4000);
+    } catch (e) {
+      setMsg('❌ ' + (e.response?.data?.message || 'Auto-fill failed — check ScholarshipMaster records'));
+      setTimeout(() => setMsg(''), 4000);
+    }
+    finally { setScholSaving(false); }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -528,6 +545,20 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                 {scholEdit && (
                   <div style={{ background:'#f3e5f5', border:'1px solid #ce93d8', borderRadius:14, padding:20 }}>
                     <h4 style={{ color:'#7B1FA2', marginBottom:14 }}>🏅 Edit Scholarship Details</h4>
+
+                    {/* Auto-fill info strip */}
+                    <div style={{ background:'#fff', border:'1px solid #ce93d8', borderRadius:10, padding:'10px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+                      <div style={{ fontSize:13, color:'#555' }}>
+                        <strong>Category:</strong> {(selected.category||'—').toUpperCase()} &nbsp;|&nbsp;
+                        <strong>Course:</strong> {selected.courseType||'—'} &nbsp;|&nbsp;
+                        <strong>Year:</strong> {selected.admissionYear||'—'}
+                      </div>
+                      <button onClick={handleAutoFillAmount} disabled={scholSaving}
+                        style={{ background:'#7B1FA2', color:'#fff', border:'none', borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                        🔄 Auto-fill Amount from MahaDBT Master
+                      </button>
+                    </div>
+
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                       {[
                         { key:'scholarshipStatus', label:'Status', type:'select', options:['not_filled','filled','approved','rejected','disbursed'] },
@@ -541,12 +572,32 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                         <div key={f.key}>
                           <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#7B1FA2', marginBottom:5 }}>{f.label}</label>
                           {f.type==='select'
-                            ? <select value={scholData[f.key]||''} onChange={e=>setScholData(p=>({...p,[f.key]:e.target.value}))}
+                            ? <select value={scholData[f.key]||''} onChange={async e => {
+                                const newStatus = e.target.value;
+                                setScholData(p=>({...p,[f.key]:newStatus}));
+                                // Auto-fill amount when status set to approved
+                                if (newStatus === 'approved' && !scholData.scholarshipAmount) {
+                                  try {
+                                    const res = await API.post(`/scholarships/calculate/${selected._id}`);
+                                    const amt = res.data.data?.scholarshipEligibleAmount || 0;
+                                    if (amt > 0) setScholData(p=>({...p, scholarshipAmount: amt}));
+                                  } catch {}
+                                }
+                              }}
                                 style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #ce93d8', fontSize:13, boxSizing:'border-box' }}>
                                 {f.options.map(o=><option key={o} value={o}>{o.replace(/_/g,' ')}</option>)}
                               </select>
-                            : <input type={f.type} value={scholData[f.key]||''} onChange={e=>setScholData(p=>({...p,[f.key]:e.target.value}))}
-                                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #ce93d8', fontSize:13, boxSizing:'border-box' }} />
+                            : <div style={{ position:'relative' }}>
+                                <input type={f.type} value={scholData[f.key]||''} onChange={e=>setScholData(p=>({...p,[f.key]:e.target.value}))}
+                                  style={{ width:'100%', padding:'9px 12px', borderRadius:8, border: f.key==='scholarshipAmount' && scholData.scholarshipAmount > 0 ? '2px solid #7B1FA2' : '2px solid #ce93d8', fontSize: f.key==='scholarshipAmount' ? 16 : 13, fontWeight: f.key==='scholarshipAmount' ? 700 : 400, boxSizing:'border-box', background: f.key==='scholarshipAmount' && scholData.scholarshipAmount > 0 ? '#fdf3ff' : '#fff' }} />
+                                {f.key==='scholarshipAmount' && (
+                                  <div style={{ fontSize:11, color:'#7B1FA2', marginTop:3, fontWeight:600 }}>
+                                    {scholData.scholarshipAmount > 0
+                                      ? `Net payable = ₹${Math.max(0,(selected.totalFees||0) - Number(scholData.scholarshipAmount)).toLocaleString('en-IN')}`
+                                      : 'Click "Auto-fill" to set from MahaDBT Master'}
+                                  </div>
+                                )}
+                              </div>
                           }
                         </div>
                       ))}
