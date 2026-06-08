@@ -1661,7 +1661,19 @@ const AccountsSectionDashboard = () => {
                 {/* Fee summary */}
                 {selGross > 0 && (
                   <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 16px', marginTop:10 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4 }}>
+                    {/* Selected items list */}
+                    {yearItems.filter(i => selectedFeeItems[i.id]).length > 0 && (
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:'#888', marginBottom:6, textTransform:'uppercase', letterSpacing:0.5 }}>Selected Items</div>
+                        {yearItems.filter(i => selectedFeeItems[i.id]).map(item => (
+                          <div key={item.id} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'4px 0', borderBottom:'1px solid #f0f4f8' }}>
+                            <span style={{ color:'#444' }}>{item.name}</span>
+                            <span style={{ fontWeight:600, color: item.section === 'University' ? '#1565C0' : '#2E7D32' }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4, borderTop:'1px solid #e0e7ef', paddingTop:8 }}>
                       <span style={{ color:'#555' }}>Selected Total</span>
                       <span style={{ fontWeight:700 }}>₹{selGross.toLocaleString('en-IN')}</span>
                     </div>
