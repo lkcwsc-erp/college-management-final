@@ -48,6 +48,7 @@ app.use('/api/about',            require('./routes/aboutRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
 app.use('/api/scholarships',     require('./routes/scholarshipRoutes')); // ← Scholarship module
 app.use('/api/achievements', require('./routes/achievementRoutes'));
+app.use('/api/resources',    require('./routes/resourceRoutes'));
 app.get('/', (req, res) => {
   res.json({ message: '🎓 Late Kalpana Chawla Mahila College API Running!' });
 });
