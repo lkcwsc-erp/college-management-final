@@ -124,10 +124,10 @@ const Faculty = () => {
                         : `${process.env.REACT_APP_API_URL}/uploads/${member.photo}`)
                         : '/college-logo.png'}
                       alt={member.name}
-                  onError={(e) => { e.target.src = '/new college logo.png'; }}
+                  onError={(e) => { e.target.src = '/college-logo.png'; }}
                   />
                   ) : (
-                    <img src="/new college logo.png" alt="College Logo" style={{width:'80px', height:'80px', objectFit:'contain', borderRadius:'50%'}} />
+                    <img src="/college-logo.png" alt="College Logo" style={{width:'80px', height:'80px', objectFit:'contain', borderRadius:'50%'}} />
                   )}
                 </div>
                 <div className="faculty-info">
