@@ -1024,70 +1024,64 @@ const FeeStructureManager = ({ user, docFees, setDocFees, saveDocFees, showToast
 };
 
 /* ── Document Fees Panel — separate component (hooks rules) ── */
-const DocFeesPanel = ({ docFees, setDocFees, saveDocFees, showToast, flash, fmt }) => {
+const DocFeesPanel = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [editMode, setEditMode] = useState(false);
-  const [edits, setEdits]       = useState({});
-  if (!docFees) return (
-    <div style={{ padding:'30px', textAlign:'center', color:'#aaa' }}>
-      Document fees not available in this context.
-    </div>
-  );
+  const [edits, setEdits] = useState({});
+  const fmtN = n => Number(n||0).toLocaleString('en-IN');
+  const bStyle = (bg, color) => ({ padding:'9px 18px', background:bg, color, border:'none', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer' });
+
+  if (!docFees) return null;
+
   return (
-          <div>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-              <div>
-                <h3 style={{ color:'#1565C0', margin:'0 0 4px' }}>📄 Document Fee Amounts</h3>
-                <p style={{ color:'#666', fontSize:13, margin:0 }}>Fee charged per document type for students.</p>
-              </div>
-              {!editMode ? (
-                <button onClick={()=>{ setEdits(Object.fromEntries(Object.entries(docFees).map(([k,v])=>[k,v.price]))); setEditMode(true); }}
-                  style={btn('#1565C0','#fff')}>✏️ Edit Fees</button>
-              ) : (
-                <div style={{ display:'flex', gap:8 }}>
-                  <button onClick={()=>{
-                    const updated = {...docFees};
-                    Object.entries(edits).forEach(([k,v])=>{ updated[k]={...updated[k],price:Number(v)||0}; });
-                    setDocFees(updated);
-                    if (saveDocFees) saveDocFees(updated);
-                    if (showToast) showToast('Document fees saved!');
-                    else flash('✅ Document fees saved!');
-                    setEditMode(false);
-                  }} style={btn('#2E7D32','#fff')}>💾 Save</button>
-                  <button onClick={()=>setEditMode(false)} style={btn('#eee','#333')}>Cancel</button>
-                </div>
-              )}
-            </div>
-            <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 180px', background:'#1565C0', padding:'12px 20px' }}>
-                <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
-                <span style={{ color:'#fff', fontWeight:700, textAlign:'right' }}>Fee (₹)</span>
-              </div>
-              {Object.entries(docFees).map(([key,val],idx) => (
-                <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 180px', padding:'14px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
-                  <span style={{ fontSize:14, color:'#222', fontWeight:500 }}>{val.label}</span>
-                  {editMode ? (
-                    <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:6 }}>
-                      <span style={{ color:'#555', fontWeight:600 }}>₹</span>
-                      <input type="number" min="0" value={edits[key]??val.price}
-                        onChange={e=>setEdits(p=>({...p,[key]:e.target.value}))}
-                        style={{ width:100, padding:'7px 10px', borderRadius:7, border:'2px solid #1565C0', fontSize:15, fontWeight:600, textAlign:'right' }} />
-                    </div>
-                  ) : (
-                    <span style={{ textAlign:'right', fontWeight:700, fontSize:16, color:val.price>0?'#1565C0':'#aaa' }}>
-                      {val.price > 0 ? `₹ ${fmt(val.price)}` : '—'}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+        <div>
+          <h3 style={{ color:'#1565C0', margin:'0 0 4px' }}>📄 Document Fee Amounts</h3>
+          <p style={{ color:'#666', fontSize:13, margin:0 }}>Fee charged per document type for students.</p>
+        </div>
+        {!editMode ? (
+          <button onClick={() => { setEdits(Object.fromEntries(Object.entries(docFees).map(([k,v]) => [k, v.price]))); setEditMode(true); }}
+            style={bStyle('#1565C0','#fff')}>✏️ Edit Fees</button>
+        ) : (
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => {
+              const updated = {...docFees};
+              Object.entries(edits).forEach(([k,v]) => { updated[k] = {...updated[k], price: Number(v)||0}; });
+              setDocFees(updated);
+              if (saveDocFees) saveDocFees(updated);
+              if (showToast) showToast('Document fees saved!');
+              setEditMode(false);
+            }} style={bStyle('#2E7D32','#fff')}>💾 Save</button>
+            <button onClick={() => setEditMode(false)} style={bStyle('#eee','#333')}>Cancel</button>
           </div>
-        );
-      })()}
+        )}
+      </div>
+      <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 180px', background:'#1565C0', padding:'12px 20px' }}>
+          <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
+          <span style={{ color:'#fff', fontWeight:700, textAlign:'right' }}>Fee (₹)</span>
+        </div>
+        {Object.entries(docFees).map(([key, val], idx) => (
+          <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 180px', padding:'14px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background: idx%2===0 ? '#fafbff' : '#fff' }}>
+            <span style={{ fontSize:14, color:'#222', fontWeight:500 }}>{val.label}</span>
+            {editMode ? (
+              <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:6 }}>
+                <span style={{ color:'#555', fontWeight:600 }}>₹</span>
+                <input type="number" min="0" value={edits[key] ?? val.price}
+                  onChange={e => setEdits(p => ({...p, [key]: e.target.value}))}
+                  style={{ width:100, padding:'7px 10px', borderRadius:7, border:'2px solid #1565C0', fontSize:15, fontWeight:600, textAlign:'right' }} />
+              </div>
+            ) : (
+              <span style={{ textAlign:'right', fontWeight:700, fontSize:16, color: val.price > 0 ? '#1565C0' : '#aaa' }}>
+                {val.price > 0 ? `₹ ${fmtN(val.price)}` : '—'}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
-
-
 
 // ─── Fee Structure Tab — alias to FeeStructureManager ────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast, user }) => {
