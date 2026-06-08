@@ -1,0 +1,27 @@
+/* ============================================================
+   routes/collegeFeeStructureRoutes.js
+   ============================================================ */
+const express = require('express');
+const router  = express.Router();
+const ctrl    = require('../controllers/collegeFeeStructureController');
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+
+const adminAccounts = protect, authorizeAccountsAdmin = authorizeRoles('admin', 'staff_accounts');
+
+// ── Seed defaults (admin only) ─────────────────────────────
+router.post('/seed-defaults', protect, authorizeRoles('admin'), ctrl.seedDefaults);
+
+// ── CRUD on full structure ─────────────────────────────────
+// NOTE: /seed-defaults MUST come before /:id
+router.get   ('/',    ctrl.getAllFeeStructures);
+router.get   ('/:id', ctrl.getFeeStructureById);
+router.post  ('/',    protect, authorizeRoles('admin', 'staff_accounts'), ctrl.createFeeStructure);
+router.put   ('/:id', protect, authorizeRoles('admin', 'staff_accounts'), ctrl.updateFeeStructure);
+router.delete('/:id', protect, authorizeRoles('admin'),                   ctrl.deleteFeeStructure);
+
+// ── Individual item operations ─────────────────────────────
+router.post  ('/:id/item',          protect, authorizeRoles('admin', 'staff_accounts'), ctrl.addFeeItem);
+router.patch ('/:id/item',          protect, authorizeRoles('admin', 'staff_accounts'), ctrl.updateFeeItem);
+router.delete('/:id/item/:itemId',  protect, authorizeRoles('admin', 'staff_accounts'), ctrl.deleteFeeItem);
+
+module.exports = router;
