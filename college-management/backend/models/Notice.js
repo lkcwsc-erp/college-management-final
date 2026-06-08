@@ -10,9 +10,11 @@ const noticeSchema = new mongoose.Schema({
   },
   targetAudience: {
     type: String,
-    enum: ['all', 'student', 'staff'],
+    enum: ['all', 'student', 'staff', 'staff_student'],
     default: 'all'
   },
+  isHighlighted: { type: Boolean, default: false },
+  readBy: [{ type: String }], // array of emails who have read
   attachment: { type: String, default: '' },
   isActive:          { type: Boolean, default: true },
   specificRecipients: [{ type: String }],
