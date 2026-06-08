@@ -10,4 +10,28 @@ router.post('/', protect, authorizeRoles('admin', 'staff'), createNotice);
 router.put('/:id', protect, authorizeRoles('admin', 'staff'), updateNotice);
 router.delete('/:id', protect, authorizeRoles('admin'), deleteNotice);
 
+// Student Section — get messages from Admin
+router.get('/staff-student', protect, authorizeRoles('staff_student'), async (req, res) => {
+  try {
+    const notices = await require('../models/Notice').find({
+      targetAudience: { $in: ['staff_student', 'staff', 'all'] },
+      isActive: true
+    }).sort({ createdAt: -1 });
+    res.json({ success: true, notices });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// Mark notice as read
+router.put('/mark-read/:id', protect, async (req, res) => {
+  try {
+    const notice = await require('../models/Notice').findByIdAndUpdate(
+      req.params.id,
+      { $addToSet: { readBy: req.user.email } },
+      { new: true }
+    );
+    res.json({ success: true, notice });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
 module.exports = router;
