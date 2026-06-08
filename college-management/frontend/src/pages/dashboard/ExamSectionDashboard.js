@@ -894,25 +894,28 @@ const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
-const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlogEnabled: false, regularCourse: '', regularSemester: '', regularExamEvent: '', backlogCourse: '', backlogSemester: '', backlogExamEvent: '', lastUpdatedBy: '', lastUpdatedAt: null });
-  const [openFormModal, setOpenFormModal] = useState(null);
+  const [publishedForms, setPublishedForms] = useState([]);
+  const [openFormModal, setOpenFormModal] = useState(null);   // 'regular' | 'backlog' | null
   const [formDraft, setFormDraft] = useState({ course: '', semester: '', examEvent: '' });
   const [settingMsg, setSettingMsg] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
 
-  useEffect(() => {
-    API.get('/results/exam-settings')
-      .then(res => setExamSettings(res.data.settings || {}))
+  const fetchPublished = () => {
+    API.get('/results/exam-form/published')
+      .then(res => setPublishedForms(res.data.published || []))
       .catch(() => {});
-  }, []);
+  };
+
+  useEffect(() => { fetchPublished(); }, []);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
- const handleOpenFormClick = (type) => {
+  const handleOpenFormClick = (type) => {
     setOpenFormModal(type);
     setFormDraft({ course: '', semester: '', examEvent: '' });
   };
 
+  // Publish a new exam form for students (course + semester + exam event)
   const submitOpenForm = async () => {
     if (!formDraft.course || !formDraft.semester || !formDraft.examEvent) {
       alert('Please select Course, Semester, and Exam Event.');
@@ -920,49 +923,46 @@ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlo
     }
     setSavingSettings(true);
     try {
-      const isRegular = openFormModal === 'regular';
-      const payload = {
-        regularEnabled:   isRegular ? true : examSettings.regularEnabled,
-        backlogEnabled:   !isRegular ? true : examSettings.backlogEnabled,
-        regularCourse:    isRegular ? formDraft.course    : examSettings.regularCourse,
-        regularSemester:  isRegular ? formDraft.semester  : examSettings.regularSemester,
-        regularExamEvent: isRegular ? formDraft.examEvent : examSettings.regularExamEvent,
-        backlogCourse:    !isRegular ? formDraft.course    : examSettings.backlogCourse,
-        backlogSemester:  !isRegular ? formDraft.semester  : examSettings.backlogSemester,
-        backlogExamEvent: !isRegular ? formDraft.examEvent : examSettings.backlogExamEvent,
-      };
-      const res = await API.put('/results/exam-settings', payload);
-      setExamSettings(res.data.settings || payload);
-      setSettingMsg(`✅ ${isRegular ? 'Regular' : 'Backlog'} exam form OPENED for students!`);
+      await API.post('/results/exam-form/publish', {
+        formType:  openFormModal,
+        course:    formDraft.course,
+        semester:  formDraft.semester,
+        examEvent: formDraft.examEvent,
+      });
+      fetchPublished();
+      setSettingMsg(`✅ ${openFormModal === 'regular' ? 'Regular' : 'Backlog'} exam form published for ${formDraft.course} ${formDraft.semester} Sem students!`);
       setTimeout(() => setSettingMsg(''), 4000);
       setOpenFormModal(null);
     } catch (e) {
       const msg = e?.response?.data?.message || e?.message || 'Unknown error';
       const status = e?.response?.status || 'no status';
-      setSettingMsg(`❌ Failed to update settings. [${status}] ${msg}`);
+      setSettingMsg(`❌ Failed to publish. [${status}] ${msg}`);
     }
     finally { setSavingSettings(false); }
   };
 
-  const closeExamForm = async (type) => {
+  // Unpublish (remove) an already-published exam form
+  const unpublishForm = async (id) => {
+    if (!window.confirm('Unpublish this exam form? Students will no longer see it.')) return;
     setSavingSettings(true);
     try {
-      const payload = { ...examSettings, [type]: false };
-      const res = await API.put('/results/exam-settings', payload);
-      setExamSettings(res.data.settings || payload);
-      setSettingMsg(`✅ ${type === 'regularEnabled' ? 'Regular' : 'Backlog'} exam form CLOSED.`);
+      await API.delete(`/results/exam-form/published/${id}`);
+      fetchPublished();
+      setSettingMsg('✅ Exam form unpublished.');
       setTimeout(() => setSettingMsg(''), 4000);
     } catch (e) {
       const msg = e?.response?.data?.message || e?.message || 'Unknown error';
-      const status = e?.response?.status || 'no status';
-      setSettingMsg(`❌ Failed to update. [${status}] ${msg}`);
+      setSettingMsg(`❌ Failed to unpublish. ${msg}`);
     }
     finally { setSavingSettings(false); }
   };
 
+  const regularPublished = publishedForms.filter(f => f.formType === 'regular');
+  const backlogPublished = publishedForms.filter(f => f.formType === 'backlog');
+
   const tabs = [
     { id: 'home',          label: '🏠 Dashboard' },
-    { id: 'exam_toggle',   label: '🔛 Exam Form Toggle' },
+    { id: 'publish',       label: '📤 Publish Exam Form' },
     { id: 'upload_result', label: '📊 Upload Result' },
     { id: 'tc_verify',     label: '📄 TC Verification' },
     { id: 'marksheet',     label: '📋 Marksheet Requests' },
@@ -1004,29 +1004,29 @@ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlo
 
               {/* Exam form status cards */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                <div style={{ background: examSettings.regularEnabled ? 'linear-gradient(135deg,#e8f5e9,#f0fff4)' : '#f5f5f5', border: `2px solid ${examSettings.regularEnabled ? '#2E7D32' : '#e0e0e0'}`, borderRadius: 14, padding: 20 }}>
+                <div style={{ background: regularPublished.length ? 'linear-gradient(135deg,#e8f5e9,#f0fff4)' : '#f5f5f5', border: `2px solid ${regularPublished.length ? '#2E7D32' : '#e0e0e0'}`, borderRadius: 14, padding: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <h4 style={{ color: examSettings.regularEnabled ? '#2E7D32' : '#888', margin: '0 0 4px' }}>📋 Regular Exam Form</h4>
-                      <p style={{ fontSize: 13, color: '#666', margin: 0 }}>{examSettings.regularEnabled ? '✅ Open for students' : '🔒 Closed'}</p>
+                      <h4 style={{ color: regularPublished.length ? '#2E7D32' : '#888', margin: '0 0 4px' }}>📋 Regular Exam Form</h4>
+                      <p style={{ fontSize: 13, color: '#666', margin: 0 }}>{regularPublished.length ? `✅ ${regularPublished.length} form(s) published` : '🔒 None published'}</p>
                     </div>
-                    <div style={{ fontSize: 28 }}>{examSettings.regularEnabled ? '🟢' : '🔴'}</div>
+                    <div style={{ fontSize: 28 }}>{regularPublished.length ? '🟢' : '🔴'}</div>
                   </div>
                 </div>
-                <div style={{ background: examSettings.backlogEnabled ? 'linear-gradient(135deg,#fff3e0,#fffbf0)' : '#f5f5f5', border: `2px solid ${examSettings.backlogEnabled ? '#E65100' : '#e0e0e0'}`, borderRadius: 14, padding: 20 }}>
+                <div style={{ background: backlogPublished.length ? 'linear-gradient(135deg,#fff3e0,#fffbf0)' : '#f5f5f5', border: `2px solid ${backlogPublished.length ? '#E65100' : '#e0e0e0'}`, borderRadius: 14, padding: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <h4 style={{ color: examSettings.backlogEnabled ? '#E65100' : '#888', margin: '0 0 4px' }}>📋 Backlog / KT Form</h4>
-                      <p style={{ fontSize: 13, color: '#666', margin: 0 }}>{examSettings.backlogEnabled ? '✅ Open for students' : '🔒 Closed'}</p>
+                      <h4 style={{ color: backlogPublished.length ? '#E65100' : '#888', margin: '0 0 4px' }}>📋 Backlog / KT Form</h4>
+                      <p style={{ fontSize: 13, color: '#666', margin: 0 }}>{backlogPublished.length ? `✅ ${backlogPublished.length} form(s) published` : '🔒 None published'}</p>
                     </div>
-                    <div style={{ fontSize: 28 }}>{examSettings.backlogEnabled ? '🟢' : '🔴'}</div>
+                    <div style={{ fontSize: 28 }}>{backlogPublished.length ? '🟢' : '🔴'}</div>
                   </div>
                 </div>
               </div>
 
               <div className="dash-cards">
-                <div className="dash-card blue" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('exam_toggle')}>
-                  <div className="dash-card-icon">🔛</div><div><h3>Toggle</h3><p>Exam Forms</p></div>
+                <div className="dash-card blue" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('publish')}>
+                  <div className="dash-card-icon">📤</div><div><h3>Publish</h3><p>Exam Forms</p></div>
                 </div>
                 <div className="dash-card orange" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('upload_result')}>
                   <div className="dash-card-icon">📊</div><div><h3>Upload</h3><p>Results</p></div>
@@ -1041,82 +1041,64 @@ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlo
             </div>
           )}
 
-          {/* ══ EXAM FORM TOGGLE ══ */}
-          {activeTab === 'exam_toggle' && (
+          {/* ══ PUBLISH EXAM FORM ══ */}
+          {activeTab === 'publish' && (
             <div>
-              <h2 style={{ color: '#f57c00', marginBottom: 4 }}>🔛 Exam Form Toggle</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Enable or disable exam forms for students. Students can only fill forms when you open them.</p>
+              <h2 style={{ color: '#f57c00', marginBottom: 4 }}>📤 Publish Exam Form</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Choose a form type, select Course, Semester and Exam Event, then publish it. Only matching course &amp; year students will see it in their dashboard.</p>
 
               {settingMsg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: settingMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: settingMsg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{settingMsg}</div>}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                {/* Regular Exam */}
-                <div style={{ background: '#fff', borderRadius: 16, border: `2px solid ${examSettings.regularEnabled ? '#2E7D32' : '#e0e0e0'}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-                  <div style={{ background: examSettings.regularEnabled ? 'linear-gradient(135deg,#1b5e20,#2E7D32)' : '#9e9e9e', padding: '20px 24px' }}>
-                    <h3 style={{ color: '#fff', margin: '0 0 4px', fontSize: 16 }}>📋 Regular Examination Form</h3>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0 }}>
-                      {examSettings.regularEnabled ? '✅ Currently OPEN — Students can fill this form' : '🔒 Currently CLOSED — Students cannot fill this form'}
-                    </p>
-                  </div>
-                  <div style={{ padding: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                      <div style={{ fontSize: 40 }}>{examSettings.regularEnabled ? '🟢' : '🔴'}</div>
-                      <div>
-                        <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 4px', color: examSettings.regularEnabled ? '#2E7D32' : '#C62828' }}>
-                          {examSettings.regularEnabled ? 'OPEN' : 'CLOSED'}
-                        </p>
-                        {examSettings.lastUpdatedBy && <p style={{ fontSize: 12, color: '#888', margin: 0 }}>Last updated by: {examSettings.lastUpdatedBy}</p>}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                     <button onClick={() => handleOpenFormClick('regular')} disabled={savingSettings || examSettings.regularEnabled}
-                        style={{ flex: 1, background: examSettings.regularEnabled ? '#eee' : '#2E7D32', color: examSettings.regularEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: examSettings.regularEnabled ? 'not-allowed' : 'pointer' }}>
-                        🟢 Open Form
-                      </button>
-                     <button onClick={() => closeExamForm('regularEnabled')} disabled={savingSettings || !examSettings.regularEnabled}
-                        style={{ flex: 1, background: !examSettings.regularEnabled ? '#eee' : '#C62828', color: !examSettings.regularEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: !examSettings.regularEnabled ? 'not-allowed' : 'pointer' }}>
-                        🔴 Close Form
-                      </button>
-                    </div>
-                  </div>
+              {/* Two publish options */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 28 }}>
+                <div style={{ background: 'linear-gradient(135deg,#1b5e20,#2E7D32)', borderRadius: 16, padding: 24, color: '#fff', boxShadow: '0 4px 14px rgba(0,0,0,.1)' }}>
+                  <div style={{ fontSize: 38 }}>📋</div>
+                  <h3 style={{ margin: '8px 0 4px', fontSize: 18 }}>Regular Exam Form</h3>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,.85)', marginBottom: 18 }}>For students appearing in the current semester examination.</p>
+                  <button onClick={() => handleOpenFormClick('regular')} disabled={savingSettings}
+                    style={{ width: '100%', background: '#fff', color: '#2E7D32', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                    ➕ Publish Regular Form
+                  </button>
                 </div>
 
-                {/* Backlog Exam */}
-                <div style={{ background: '#fff', borderRadius: 16, border: `2px solid ${examSettings.backlogEnabled ? '#E65100' : '#e0e0e0'}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-                  <div style={{ background: examSettings.backlogEnabled ? 'linear-gradient(135deg,#bf360c,#E65100)' : '#9e9e9e', padding: '20px 24px' }}>
-                    <h3 style={{ color: '#fff', margin: '0 0 4px', fontSize: 16 }}>📋 Backlog / KT Examination Form</h3>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0 }}>
-                      {examSettings.backlogEnabled ? '✅ Currently OPEN — Students can fill KT form' : '🔒 Currently CLOSED — Students cannot fill KT form'}
-                    </p>
-                  </div>
-                  <div style={{ padding: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                      <div style={{ fontSize: 40 }}>{examSettings.backlogEnabled ? '🟢' : '🔴'}</div>
-                      <div>
-                        <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 4px', color: examSettings.backlogEnabled ? '#E65100' : '#C62828' }}>
-                          {examSettings.backlogEnabled ? 'OPEN' : 'CLOSED'}
-                        </p>
-                        {examSettings.lastUpdatedBy && <p style={{ fontSize: 12, color: '#888', margin: 0 }}>Last updated by: {examSettings.lastUpdatedBy}</p>}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                     <button onClick={() => handleOpenFormClick('backlog')} disabled={savingSettings || examSettings.backlogEnabled}
-                        style={{ flex: 1, background: examSettings.backlogEnabled ? '#eee' : '#E65100', color: examSettings.backlogEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: examSettings.backlogEnabled ? 'not-allowed' : 'pointer' }}>
-                        🟢 Open Form
-                      </button>
-                    <button onClick={() => closeExamForm('backlogEnabled')} disabled={savingSettings || !examSettings.backlogEnabled}
-                        style={{ flex: 1, background: !examSettings.backlogEnabled ? '#eee' : '#C62828', color: !examSettings.backlogEnabled ? '#aaa' : '#fff', border: 'none', borderRadius: 9, padding: '12px', fontSize: 14, fontWeight: 700, cursor: !examSettings.backlogEnabled ? 'not-allowed' : 'pointer' }}>
-                        🔴 Close Form
-                      </button>
-                    </div>
-                  </div>
+                <div style={{ background: 'linear-gradient(135deg,#bf360c,#E65100)', borderRadius: 16, padding: 24, color: '#fff', boxShadow: '0 4px 14px rgba(0,0,0,.1)' }}>
+                  <div style={{ fontSize: 38 }}>📋</div>
+                  <h3 style={{ margin: '8px 0 4px', fontSize: 18 }}>Backlog Exam Form</h3>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,.85)', marginBottom: 18 }}>For students having backlog / KT subjects from previous semesters.</p>
+                  <button onClick={() => handleOpenFormClick('backlog')} disabled={savingSettings}
+                    style={{ width: '100%', background: '#fff', color: '#E65100', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                    ➕ Publish Backlog Form
+                  </button>
                 </div>
               </div>
 
-              <div style={{ marginTop: 20, background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 12, padding: '14px 18px', fontSize: 13, color: '#7c5e00' }}>
-                ⚠️ <strong>Important:</strong> When you open a form, all students can immediately see and fill it in their dashboard.
-                When you close it, the form becomes locked and students cannot submit. Use this at the start and end of exam season.
-              </div>
+              {/* Currently published forms */}
+              <h3 style={{ color: '#333', fontSize: 16, marginBottom: 12 }}>📌 Currently Published Forms</h3>
+              {publishedForms.length === 0 ? (
+                <div style={{ background: '#f9fafb', border: '1px dashed #d1d5db', borderRadius: 12, padding: 28, textAlign: 'center', color: '#888' }}>
+                  No exam forms published yet. Use the buttons above to publish a form.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {publishedForms.map(f => (
+                    <div key={f._id} style={{ background: '#fff', borderRadius: 12, border: `1px solid ${f.formType==='regular'?'#a5d6a7':'#ffb74d'}`, borderLeft: `5px solid ${f.formType==='regular'?'#2E7D32':'#E65100'}`, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, boxShadow: '0 2px 8px rgba(0,0,0,.04)' }}>
+                      <div>
+                        <span style={{ fontWeight: 700, color: f.formType==='regular'?'#2E7D32':'#E65100', fontSize: 14 }}>
+                          {f.formType==='regular' ? '📋 Regular' : '📋 Backlog'} Exam Form
+                        </span>
+                        <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>
+                          <strong>{f.course}</strong> · {f.semester} Semester · {f.examEvent}
+                          {f.admissionYear ? <span style={{ color: '#888' }}> · {f.admissionYear}</span> : null}
+                        </div>
+                      </div>
+                      <button onClick={() => unpublishForm(f._id)} disabled={savingSettings}
+                        style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ffcdd2', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                        🗑️ Unpublish
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1124,9 +1106,9 @@ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlo
             <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
               <div style={{ background:'#fff', borderRadius:16, padding:32, minWidth:340, maxWidth:420, boxShadow:'0 8px 32px rgba(0,0,0,0.18)' }}>
                 <h3 style={{ marginBottom:4, color: openFormModal==='regular' ? '#1b5e20' : '#bf360c' }}>
-                  {openFormModal==='regular' ? '📋 Open Regular Exam Form' : '📋 Open Backlog/KT Exam Form'}
+                  {openFormModal==='regular' ? '📤 Publish Regular Exam Form' : '📤 Publish Backlog/KT Exam Form'}
                 </h3>
-                <p style={{ color:'#666', fontSize:13, marginBottom:20 }}>Select details before opening the form for students.</p>
+                <p style={{ color:'#666', fontSize:13, marginBottom:20 }}>Select Course, Semester and Exam Event, then publish for students.</p>
 
                 <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Course *</label>
                 <select value={formDraft.course} onChange={e => setFormDraft(p=>({...p, course:e.target.value}))}
@@ -1155,7 +1137,7 @@ const [examSettings, setExamSettings] = useState({ regularEnabled: false, backlo
                   </button>
                   <button onClick={submitOpenForm} disabled={savingSettings}
                     style={{ flex:2, padding:'11px', borderRadius:9, border:'none', background: openFormModal==='regular'?'#2E7D32':'#E65100', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:14 }}>
-                    {savingSettings ? 'Opening...' : '✅ Open Form for Students'}
+                    {savingSettings ? 'Publishing...' : '📤 Publish exam form for students'}
                   </button>
                 </div>
               </div>
