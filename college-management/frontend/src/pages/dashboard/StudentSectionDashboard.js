@@ -350,6 +350,9 @@ const StudentSectionDashboard = () => {
               {tab.id === 'admissions' && admissions.length > 0 && (
                 <span style={{ marginLeft: '8px', background: '#E65100', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700' }}>{admissions.length}</span>
               )}
+              {tab.id === 'messages' && unreadMsgCount > 0 && (
+                <span style={{ marginLeft: '8px', background: '#dc3545', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700' }}>{unreadMsgCount}</span>
+              )}
             </button>
           ))}
         </nav>
@@ -1082,11 +1085,13 @@ const printIDCard = (adm) => {
 
 
 const DOC_CONFIG = {
-  TC:        { label: 'Transfer Certificate', icon: '📄', color: '#1565C0', bg: '#e3f2fd' },
-  BONAFIDE:  { label: 'Bonafide Certificate',  icon: '📜', color: '#7B1FA2', bg: '#f3e5f5' },
-  ID_CARD:   { label: 'ID Card',               icon: '🪪', color: '#2E7D32', bg: '#e8f5e9' },
-  MARKSHEET: { label: 'Marksheet',             icon: '📋', color: '#E65100', bg: '#fff3e0' },
-  MIGRATION: { label: 'Migration Certificate', icon: '📜', color: '#795548', bg: '#efebe9' },
+  TC:                 { label: 'Transfer Certificate',           icon: '📄', color: '#1565C0', bg: '#e3f2fd' },
+  BONAFIDE:           { label: 'Bonafide Certificate',           icon: '📜', color: '#7B1FA2', bg: '#f3e5f5', fee: 200 },
+  ID_CARD:            { label: 'ID Card',                        icon: '🪪', color: '#2E7D32', bg: '#e8f5e9' },
+  MARKSHEET:          { label: 'Marksheet',                      icon: '📋', color: '#E65100', bg: '#fff3e0' },
+  MIGRATION:          { label: 'Migration Certificate',          icon: '📜', color: '#795548', bg: '#efebe9', fee: 200 },
+  PROVISIONAL_DEGREE: { label: 'Provisional Degree Certificate', icon: '📜', color: '#0277BD', bg: '#e1f5fe', fee: 100 },
+  DEGREE:             { label: 'Degree Certificate',             icon: '🎓', color: '#1B5E20', bg: '#E8F5E9', fee: 100 },
 };
 
 const AllDocumentsTab = ({ user }) => {
@@ -1175,7 +1180,10 @@ const AllDocumentsTab = ({ user }) => {
   const pending = requests.filter(r => r.status === 'pending_generation').length;
 
   const statusStyle = (s) => ({
-    pending_accounts:      { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Accounts' },
+    pending_student_section:{ bg: '#e3f2fd', color: '#1565C0', label: '⏳ At Student Section' },
+    pending_admin:           { bg: '#fff3e0', color: '#E65100', label: '🔄 At Admin' },
+    rejected_by_admin:       { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Admin' },
+    pending_accounts:        { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Accounts' },
     rejected_by_accounts:  { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Accounts' },
     pending_exam:          { bg: '#e3f2fd', color: '#1565C0', label: '🔍 At Exam Section' },
     rejected_by_exam:      { bg: '#ffebee', color: '#C62828', label: '❌ Rejected by Exam' },
@@ -1941,27 +1949,13 @@ const StudentSectionMessagesTab = ({ user, onUnreadCount }) => {
           <p style={{ color:'#666', fontSize:14 }}>Important messages and notices from Administration.</p>
         </div>
         <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-          {unreadCount > 0 && (
-            <span style={{ background:'#dc3545', color:'#fff', borderRadius:20, padding:'4px 14px', fontSize:13, fontWeight:700 }}>
-              {unreadCount} Unread
-            </span>
-          )}
-          {unreadCount > 0 && (
-            <button onClick={markAllRead}
-              style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90CAF9', borderRadius:9, padding:'7px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-              ✅ Mark All Read
-            </button>
-          )}
-          <button onClick={fetchMessages}
-            style={{ background:'#f0f4f8', color:'#555', border:'1px solid #ddd', borderRadius:9, padding:'7px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-            🔄 Refresh
-          </button>
+          {unreadCount > 0 && <span style={{ background:'#dc3545', color:'#fff', borderRadius:20, padding:'4px 14px', fontSize:13, fontWeight:700 }}>{unreadCount} Unread</span>}
+          {unreadCount > 0 && <button onClick={markAllRead} style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90CAF9', borderRadius:9, padding:'7px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }}>✅ Mark All Read</button>}
+          <button onClick={fetchMessages} style={{ background:'#f0f4f8', color:'#555', border:'1px solid #ddd', borderRadius:9, padding:'7px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }}>🔄 Refresh</button>
         </div>
       </div>
-
-      {loading ? (
-        <div style={{ textAlign:'center', padding:40, fontSize:'2rem' }}>⏳</div>
-      ) : messages.length === 0 ? (
+      {loading ? <div style={{ textAlign:'center', padding:40, fontSize:'2rem' }}>⏳</div>
+      : messages.length === 0 ? (
         <div style={{ textAlign:'center', padding:60, color:'#888', background:'#f8faff', borderRadius:14 }}>
           <div style={{ fontSize:'3rem', marginBottom:10 }}>📭</div>
           <h3>No messages yet</h3>
@@ -1973,44 +1967,21 @@ const StudentSectionMessagesTab = ({ user, onUnreadCount }) => {
             const isUnread  = !readIds.includes(msg._id);
             const isHighlit = msg.isHighlighted;
             return (
-              <div key={msg._id}
-                onClick={() => markRead(msg._id)}
-                style={{
-                  background: isHighlit ? '#fffde7' : isUnread ? '#f0f7ff' : '#fff',
-                  border: `2px solid ${isHighlit ? '#ffd600' : isUnread ? '#1565C0' : '#e0e7ef'}`,
-                  borderRadius: 12,
-                  padding: 18,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  borderLeft: `5px solid ${isHighlit ? '#ffd600' : isUnread ? '#1565C0' : '#e0e7ef'}`,
-                }}>
+              <div key={msg._id} onClick={() => markRead(msg._id)}
+                style={{ background: isHighlit?'#fffde7':isUnread?'#f0f7ff':'#fff', border:`2px solid ${isHighlit?'#ffd600':isUnread?'#1565C0':'#e0e7ef'}`, borderRadius:12, padding:18, cursor:'pointer', borderLeft:`5px solid ${isHighlit?'#ffd600':isUnread?'#1565C0':'#e0e7ef'}` }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:8, marginBottom:8 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    {isUnread && (
-                      <span style={{ width:10, height:10, borderRadius:'50%', background:'#1565C0', display:'inline-block', flexShrink:0 }} />
-                    )}
-                    {isHighlit && (
-                      <span style={{ background:'#ffd600', color:'#333', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10 }}>⭐ Important</span>
-                    )}
-                    <h4 style={{ margin:0, fontSize:15, color: isUnread?'#0d47a1':'#1a1a2e', fontWeight: isUnread?800:600 }}>
-                      {msg.title}
-                    </h4>
+                    {isUnread && <span style={{ width:10, height:10, borderRadius:'50%', background:'#1565C0', display:'inline-block', flexShrink:0 }} />}
+                    {isHighlit && <span style={{ background:'#ffd600', color:'#333', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10 }}>⭐ Important</span>}
+                    <h4 style={{ margin:0, fontSize:15, color:isUnread?'#0d47a1':'#1a1a2e', fontWeight:isUnread?800:600 }}>{msg.title}</h4>
                   </div>
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                    {isUnread ? (
-                      <span style={{ background:'#1565C0', color:'#fff', fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:10 }}>● Unread</span>
-                    ) : (
-                      <span style={{ background:'#e8f5e9', color:'#2E7D32', fontSize:11, fontWeight:600, padding:'2px 10px', borderRadius:10 }}>✓ Read</span>
-                    )}
-                    <span style={{ fontSize:11, color:'#aaa' }}>
-                      {new Date(msg.createdAt).toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}
-                    </span>
+                    {isUnread ? <span style={{ background:'#1565C0', color:'#fff', fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:10 }}>● Unread</span>
+                    : <span style={{ background:'#e8f5e9', color:'#2E7D32', fontSize:11, fontWeight:600, padding:'2px 10px', borderRadius:10 }}>✓ Read</span>}
+                    <span style={{ fontSize:11, color:'#aaa' }}>{new Date(msg.createdAt).toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
                   </div>
                 </div>
                 <p style={{ margin:0, fontSize:14, color:'#444', lineHeight:1.6, whiteSpace:'pre-wrap' }}>{msg.content}</p>
-                {msg.postedBy && (
-                  <p style={{ margin:'8px 0 0', fontSize:11, color:'#888' }}>— Admin</p>
-                )}
               </div>
             );
           })}
