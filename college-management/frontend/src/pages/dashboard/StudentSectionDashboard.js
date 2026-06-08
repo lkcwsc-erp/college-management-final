@@ -817,7 +817,7 @@ const printTC = (adm) => {
 
     <!-- Header -->
     <div class="hdr">
-      <img src="/college-logo.png" class="hlogo" alt="Logo" onerror="this.style.display='none'"/>
+      <img src="${window.location.origin}/college-logo.png" class="hlogo" alt="Logo" onerror="this.style.display='none'"/>
       <div class="htxt">
         <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College</div>
@@ -955,7 +955,7 @@ const printBonafide = (adm) => {
     @media print{body{background:white;padding:0}.page{box-shadow:none}}
   </style></head><body><div class="page">
     <div class="hdr">
-      <img src="/college-logo.png" class="logo" onerror="this.style.display='none'"/>
+      <img src="${window.location.origin}/college-logo.png" class="logo" onerror="this.style.display='none'"/>
       <div class="htxt">
         <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="h3">Late Kalpana Chawla Women's Senior College</div>
@@ -1030,7 +1030,7 @@ const printIDCard = (adm) => {
   </style></head><body>
   <div class="card">
     <div class="hdr">
-      <img src="/college-logo.png" class="logo" onerror="this.style.display='none'"/><br/>
+      <img src="${window.location.origin}/college-logo.png" class="logo" onerror="this.style.display='none'"/><br/>
       <span class="sanstha">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</span><br/>
       <span class="college">Late Kalpana Chawla Women's<br/>Senior College (LKCWSC)</span><br/>
       <span class="affil">Affiliated to SNDT Women's University, Mumbai</span>
