@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
 import StudentViewFull from './StudentViewFull';
-import FeeStructureManager from './FeeStructureManager';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -355,7 +354,737 @@ const F = ({ label, value }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── Fee Structure Tab — now DB-backed via FeeStructureManager ───────────────
+/* ============================================================
+   FeeStructureManager.jsx
+   Tab component for Admin / Accounts dashboard.
+   Manages both:
+     1. College Total Fee Structure (per item, per semester)
+     2. MahaDBT Receivable (ScholarshipMaster)
+   Full CRUD — Add / Edit / Delete per fee item.
+   ============================================================ */
+import React, { useState, useEffect, useCallback } from 'react';
+import API from '../../api/axios';
+
+/* ── constants ─────────────────────────────────────────────── */
+const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27', '2027-28'];
+const COURSES        = ['B.Sc.', 'B.A.'];
+const SECTIONS       = ['University', 'College'];
+const SEM_LABELS     = ['Sem I', 'Sem II', 'Sem III', 'Sem IV', 'Sem V', 'Sem VI'];
+const YEAR_SEM_IDX   = { FY: [0,1], SY: [2,3], TY: [4,5] };
+const YEAR_LABELS    = { FY: 'First Year', SY: 'Second Year', TY: 'Third Year' };
+
+const RESERVED_CATS = ['SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC'];
+const ALL_CATS      = [...RESERVED_CATS, 'OPEN'];
+
+const fmt = n => Number(n||0).toLocaleString('en-IN');
+
+/* ── style helpers ──────────────────────────────────────────── */
+const th = { color:'#fff', fontWeight:700, fontSize:12, padding:'9px 10px', textAlign:'left' };
+const td = { padding:'9px 10px', fontSize:13, borderBottom:'1px solid #f0f4f8', verticalAlign:'middle' };
+const inp = { padding:'7px 10px', borderRadius:7, border:'2px solid #e0e7ef', fontSize:13, width:'100%', boxSizing:'border-box' };
+const btn = (bg,color,border='transparent') => ({
+  padding:'7px 14px', background:bg, color, border:`1px solid ${border}`,
+  borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer',
+});
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN COMPONENT
+═══════════════════════════════════════════════════════════ */
+const FeeStructureManager = ({ user, docFees, setDocFees, saveDocFees, showToast }) => {
+  const [subTab, setSubTab]   = useState('total');   // 'total' | 'mahadbt' | 'doc'
+  const [ay, setAy]           = useState('2025-26');
+  const [course, setCourse]   = useState('B.Sc.');
+  const [msg, setMsg]         = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // ── Total fee structure state ──
+  const [structures, setStructures] = useState([]);  // all docs from API
+  const [activeDoc,  setActiveDoc]  = useState(null); // currently selected {_id, items, yearTotals}
+
+  // ── Inline edit state ──
+  const [editItemId,  setEditItemId]  = useState(null); // item.id being edited
+  const [editValues,  setEditValues]  = useState({});   // { name, section, s:[...] }
+  const [saving,      setSaving]      = useState(false);
+
+  // ── Add new item form ──
+  const [showAdd,   setShowAdd]   = useState(false);
+  const [newItem,   setNewItem]   = useState({ name:'', section:'College', s:[0,0,0,0,0,0] });
+
+  // ── MahaDBT master state ──
+  const [masters,       setMasters]       = useState([]);
+  const [masterLoading, setMasterLoading] = useState(false);
+  const [editMasterId,  setEditMasterId]  = useState(null);
+  const [masterForm,    setMasterForm]    = useState({
+    categories:[], courseType:'', admissionYear:'FY', academicYear:'2025-26', scholarshipAmount:'', description:'',
+  });
+  const [masterSaving, setMasterSaving] = useState(false);
+
+  const flash = (m, delay=3500) => { setMsg(m); setTimeout(()=>setMsg(''), delay); };
+
+  /* ── Fetch total fee structures ── */
+  const fetchStructures = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/fee-structure');
+      setStructures(res.data.structures || []);
+    } catch { flash('❌ Failed to load fee structures'); }
+    finally { setLoading(false); }
+  }, []);
+
+  /* ── Fetch MahaDBT masters ── */
+  const fetchMasters = useCallback(async () => {
+    setMasterLoading(true);
+    try {
+      const res = await API.get('/scholarships/master');
+      setMasters(res.data.scholarships || []);
+    } catch {}
+    finally { setMasterLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchStructures(); fetchMasters(); }, [fetchStructures, fetchMasters]);
+
+  /* ── Derive active doc from course + ay ── */
+  useEffect(() => {
+    const doc = structures.find(s => s.courseType === course && s.academicYear === ay);
+    setActiveDoc(doc || null);
+    setEditItemId(null);
+  }, [structures, course, ay]);
+
+  /* ── Seed defaults ── */
+  const handleSeedDefaults = async () => {
+    if (!window.confirm(`Seed default fee structure for AY ${ay}? (Safe — skips if already exists)`)) return;
+    try {
+      const res = await API.post('/fee-structure/seed-defaults', { academicYear: ay, createdBy: user?.name });
+      flash('✅ ' + res.data.results.map(r => `${r.course}: ${r.status}`).join(' | '));
+      fetchStructures();
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Seed failed')); }
+  };
+
+  /* ── Create new structure ── */
+  const handleCreateStructure = async () => {
+    if (!window.confirm(`Create empty fee structure for ${course} AY ${ay}?`)) return;
+    try {
+      await API.post('/fee-structure', { courseType: course, academicYear: ay, items: [], createdBy: user?.name });
+      flash('✅ Empty structure created — now add fee items below');
+      fetchStructures();
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Create failed')); }
+  };
+
+  /* ── Start editing an item ── */
+  const startEdit = (item) => {
+    setEditItemId(item.id);
+    setEditValues({ name: item.name, section: item.section, s: [...item.s] });
+  };
+
+  /* ── Save edited item ── */
+  const saveItem = async () => {
+    if (!activeDoc) return;
+    setSaving(true);
+    try {
+      const res = await API.patch(`/fee-structure/${activeDoc._id}/item`, {
+        itemId: editItemId, ...editValues, updatedBy: user?.name,
+      });
+      setActiveDoc({ ...res.data.structure });
+      setStructures(prev => prev.map(s => s._id === activeDoc._id ? res.data.structure : s));
+      setEditItemId(null);
+      flash('✅ Fee item updated');
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Update failed')); }
+    finally { setSaving(false); }
+  };
+
+  /* ── Delete item ── */
+  const deleteItem = async (itemId, itemName) => {
+    if (!activeDoc) return;
+    if (!window.confirm(`Delete "${itemName}"? This cannot be undone.`)) return;
+    try {
+      const res = await API.delete(`/fee-structure/${activeDoc._id}/item/${itemId}`);
+      setActiveDoc({ ...res.data.structure });
+      setStructures(prev => prev.map(s => s._id === activeDoc._id ? res.data.structure : s));
+      flash('✅ Item deleted');
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Delete failed')); }
+  };
+
+  /* ── Add new item ── */
+  const addItem = async () => {
+    if (!newItem.name.trim()) { flash('❌ Enter fee item name'); return; }
+    if (!activeDoc) { flash('❌ Select or create a fee structure first'); return; }
+    try {
+      const res = await API.post(`/fee-structure/${activeDoc._id}/item`, {
+        ...newItem, updatedBy: user?.name,
+      });
+      setActiveDoc({ ...res.data.structure });
+      setStructures(prev => prev.map(s => s._id === activeDoc._id ? res.data.structure : s));
+      setNewItem({ name:'', section:'College', s:[0,0,0,0,0,0] });
+      setShowAdd(false);
+      flash('✅ Fee item added');
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Add failed')); }
+  };
+
+  /* ── Delete full structure ── */
+  const deleteStructure = async () => {
+    if (!activeDoc) return;
+    if (!window.confirm(`Delete entire fee structure for ${course} AY ${ay}? This is a soft delete.`)) return;
+    try {
+      await API.delete(`/fee-structure/${activeDoc._id}`);
+      flash('✅ Fee structure deactivated');
+      fetchStructures();
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Delete failed')); }
+  };
+
+  /* ── MahaDBT master CRUD ── */
+  const handleMasterSave = async () => {
+    if (!masterForm.categories.length) { flash('❌ Select at least one category'); return; }
+    if (!masterForm.courseType || !masterForm.scholarshipAmount) { flash('❌ Fill all required fields'); return; }
+    setMasterSaving(true);
+    try {
+      if (editMasterId) {
+        await API.put(`/scholarships/master/${editMasterId}`, { ...masterForm, updatedBy: user?.name });
+        flash('✅ MahaDBT record updated');
+      } else {
+        await API.post('/scholarships/master', { ...masterForm, createdBy: user?.name });
+        flash('✅ MahaDBT record created');
+      }
+      setEditMasterId(null);
+      setMasterForm({ categories:[], courseType:'', admissionYear:'FY', academicYear:'2025-26', scholarshipAmount:'', description:'' });
+      fetchMasters();
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Save failed')); }
+    finally { setMasterSaving(false); }
+  };
+
+  const handleMasterDelete = async (id, label) => {
+    if (!window.confirm(`Delete MahaDBT record: ${label}?`)) return;
+    try {
+      await API.delete(`/scholarships/master/${id}`);
+      flash('✅ Deleted');
+      fetchMasters();
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Delete failed')); }
+  };
+
+  /* ── helpers ── */
+  const yearTotal = (items, yearKey) => {
+    if (!items) return 0;
+    const [i0, i1] = YEAR_SEM_IDX[yearKey];
+    return items.reduce((s, item) => s + (item.s[i0]||0) + (item.s[i1]||0), 0);
+  };
+
+  const uItems = activeDoc?.items?.filter(i => i.section === 'University') || [];
+  const cItems = activeDoc?.items?.filter(i => i.section === 'College')    || [];
+
+  /* ═══════════════════════════════════════════════════════════
+     RENDER
+  ═══════════════════════════════════════════════════════════ */
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
+        <div>
+          <h2 style={{ color:'#1565C0', margin:'0 0 4px' }}>🏛️ Fee Structure Manager</h2>
+          <p style={{ color:'#666', margin:0, fontSize:14 }}>Manage college fees & MahaDBT receivable — edit, add, delete per item</p>
+        </div>
+      </div>
+
+      {/* Sub-tab toggle */}
+      <div style={{ display:'flex', gap:0, background:'#f0f4f8', borderRadius:10, padding:4, marginBottom:20, width:'fit-content' }}>
+        {[
+          { id:'total',   label:'🏛️ Total College Fees' },
+          { id:'mahadbt', label:'📊 MahaDBT Receivable' },
+          { id:'doc',     label:'📄 Document Fees' },
+        ].map(t => (
+          <button key={t.id} onClick={()=>setSubTab(t.id)} style={{
+            padding:'9px 24px', borderRadius:8, border:'none',
+            background: subTab===t.id ? '#1565C0' : 'transparent',
+            color:       subTab===t.id ? '#fff'    : '#555',
+            fontWeight:  subTab===t.id ? 700       : 500,
+            fontSize:13, cursor:'pointer', transition:'all 0.2s',
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* Flash message */}
+      {msg && (
+        <div style={{ padding:'11px 16px', borderRadius:10, marginBottom:16, fontWeight:600, fontSize:14,
+          background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee',
+          color:      msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>
+          {msg}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════
+          SUB-TAB 1 — TOTAL COLLEGE FEES
+      ══════════════════════════════════════ */}
+      {subTab === 'total' && (
+        <div>
+          {/* Controls */}
+          <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
+            <select value={course} onChange={e=>setCourse(e.target.value)} style={{ ...inp, width:130 }}>
+              {COURSES.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={ay} onChange={e=>setAy(e.target.value)} style={{ ...inp, width:130 }}>
+              {ACADEMIC_YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+            </select>
+            {!activeDoc ? (
+              <>
+                <button onClick={handleSeedDefaults} style={btn('#e3f2fd','#1565C0','#90caf9')}>
+                  📥 Load 2025-26 Defaults
+                </button>
+                <button onClick={handleCreateStructure} style={btn('#e8f5e9','#2E7D32','#a5d6a7')}>
+                  ➕ Create Empty
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={()=>setShowAdd(v=>!v)} style={btn('#1565C0','#fff')}>
+                  {showAdd ? '✕ Cancel Add' : '➕ Add Fee Item'}
+                </button>
+                <button onClick={deleteStructure} style={btn('#ffebee','#C62828','#ef9a9a')}>
+                  🗑️ Delete Structure
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Year totals summary bar */}
+          {activeDoc && (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
+              {Object.entries(YEAR_LABELS).map(([key, label]) => {
+                const total = yearTotal(activeDoc.items, key);
+                return (
+                  <div key={key} style={{ background:'#e3f2fd', border:'1px solid #90caf9', borderRadius:12, padding:'14px 18px' }}>
+                    <p style={{ margin:'0 0 4px', fontSize:12, fontWeight:700, color:'#1565C0' }}>{label}</p>
+                    <p style={{ margin:0, fontSize:22, fontWeight:800, color:'#0d47a1' }}>₹{fmt(total)}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add new item form */}
+          {showAdd && activeDoc && (
+            <div style={{ background:'#f8faff', border:'2px dashed #1565C0', borderRadius:12, padding:18, marginBottom:20 }}>
+              <h4 style={{ color:'#1565C0', margin:'0 0 14px', fontSize:14 }}>➕ Add New Fee Item</h4>
+              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:12, marginBottom:12 }}>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:700, color:'#555', display:'block', marginBottom:5 }}>Item Name *</label>
+                  <input style={inp} value={newItem.name} onChange={e=>setNewItem(p=>({...p,name:e.target.value}))} placeholder="e.g. New Development Fee" />
+                </div>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:700, color:'#555', display:'block', marginBottom:5 }}>Section *</label>
+                  <select style={inp} value={newItem.section} onChange={e=>setNewItem(p=>({...p,section:e.target.value}))}>
+                    {SECTIONS.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              {/* 6 semester inputs */}
+              <p style={{ fontSize:12, fontWeight:700, color:'#555', margin:'0 0 8px' }}>Amount per Semester (₹)</p>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8, marginBottom:14 }}>
+                {SEM_LABELS.map((sl,i) => (
+                  <div key={i}>
+                    <label style={{ fontSize:11, color:'#888', display:'block', marginBottom:3 }}>{sl}</label>
+                    <input type="number" min="0" style={{ ...inp, textAlign:'right' }}
+                      value={newItem.s[i]} onChange={e=>{
+                        const s=[...newItem.s]; s[i]=Number(e.target.value)||0;
+                        setNewItem(p=>({...p,s}));
+                      }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={addItem} style={btn('#1565C0','#fff')}>✅ Add Item</button>
+                <button onClick={()=>setShowAdd(false)} style={btn('#eee','#555')}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* No structure found */}
+          {!loading && !activeDoc && (
+            <div style={{ background:'#fafbff', borderRadius:14, border:'1px solid #e0e7ef', padding:'40px', textAlign:'center', color:'#aaa' }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
+              <p style={{ fontSize:15, fontWeight:600, color:'#555' }}>No fee structure found for {course} AY {ay}</p>
+              <p style={{ fontSize:13, color:'#aaa' }}>Click "Load 2025-26 Defaults" to seed from Excel data, or "Create Empty" to start fresh.</p>
+            </div>
+          )}
+
+          {/* Fee items table */}
+          {activeDoc && (
+            <>
+              {[
+                { label:'🎓 University Fees (A)', items: uItems, bg:'#e8eaf6', hbg:'#3949AB' },
+                { label:'🏫 College Fees (B)',    items: cItems, bg:'#e8f5e9', hbg:'#2E7D32' },
+              ].map(({ label, items, bg, hbg }) => (
+                <div key={label} style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', overflow:'hidden', marginBottom:20 }}>
+                  <div style={{ background:hbg, padding:'11px 16px' }}>
+                    <span style={{ color:'#fff', fontWeight:800, fontSize:14 }}>{label}</span>
+                  </div>
+
+                  {/* Header */}
+                  <div style={{ display:'grid', gridTemplateColumns:'2.5fr repeat(6,1fr) 1fr 80px', background:'#f8f9ff', borderBottom:'2px solid #e0e7ef' }}>
+                    <div style={th}>Fee Item</div>
+                    {SEM_LABELS.map(sl=><div key={sl} style={{ ...th, color:'#555', fontSize:11 }}>{sl}</div>)}
+                    <div style={{ ...th, color:'#555' }}>Year Totals</div>
+                    <div style={th}></div>
+                  </div>
+
+                  {items.length === 0 && (
+                    <div style={{ padding:'20px', textAlign:'center', color:'#aaa', fontSize:13 }}>No items in this section</div>
+                  )}
+
+                  {items.map(item => {
+                    const isEditing = editItemId === item.id;
+                    const vals = isEditing ? editValues : item;
+                    const fyT  = (vals.s[0]||0)+(vals.s[1]||0);
+                    const syT  = (vals.s[2]||0)+(vals.s[3]||0);
+                    const tyT  = (vals.s[4]||0)+(vals.s[5]||0);
+
+                    return (
+                      <div key={item.id} style={{
+                        display:'grid', gridTemplateColumns:'2.5fr repeat(6,1fr) 1fr 80px',
+                        alignItems:'center',
+                        background: isEditing ? '#fffde7' : '#fff',
+                        borderBottom:'1px solid #f0f4f8',
+                      }}>
+                        {/* Name */}
+                        <div style={td}>
+                          {isEditing ? (
+                            <input style={inp} value={vals.name}
+                              onChange={e=>setEditValues(p=>({...p,name:e.target.value}))} />
+                          ) : (
+                            <span style={{ fontSize:13, fontWeight:500, color:'#222' }}>{item.name}</span>
+                          )}
+                        </div>
+
+                        {/* 6 semester amounts */}
+                        {[0,1,2,3,4,5].map(i => (
+                          <div key={i} style={td}>
+                            {isEditing ? (
+                              <input type="number" min="0"
+                                style={{ ...inp, width:72, textAlign:'right', padding:'5px 6px' }}
+                                value={vals.s[i]}
+                                onChange={e=>{
+                                  const s=[...vals.s]; s[i]=Number(e.target.value)||0;
+                                  setEditValues(p=>({...p,s}));
+                                }} />
+                            ) : (
+                              <span style={{ fontSize:12, color: item.s[i] ? '#333' : '#ccc', fontWeight: item.s[i] ? 600 : 400 }}>
+                                {item.s[i] ? `₹${fmt(item.s[i])}` : '—'}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Year totals mini */}
+                        <div style={{ ...td, fontSize:11, color:'#888', lineHeight:1.6 }}>
+                          <span style={{ display:'block' }}>FY: <b>₹{fmt(fyT)}</b></span>
+                          <span style={{ display:'block' }}>SY: <b>₹{fmt(syT)}</b></span>
+                          <span style={{ display:'block' }}>TY: <b>₹{fmt(tyT)}</b></span>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ ...td, display:'flex', gap:4, justifyContent:'center' }}>
+                          {isEditing ? (
+                            <>
+                              <button onClick={saveItem} disabled={saving}
+                                style={{ padding:'4px 8px', background:'#2E7D32', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                                {saving ? '⏳' : '💾'}
+                              </button>
+                              <button onClick={()=>setEditItemId(null)}
+                                style={{ padding:'4px 8px', background:'#eee', color:'#555', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>
+                                ✕
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={()=>startEdit(item)}
+                                style={{ padding:'4px 8px', background:'#e3f2fd', color:'#1565C0', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>
+                                ✏️
+                              </button>
+                              <button onClick={()=>deleteItem(item.id, item.name)}
+                                style={{ padding:'4px 8px', background:'#ffebee', color:'#C62828', border:'none', borderRadius:6, fontSize:11, cursor:'pointer' }}>
+                                🗑️
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Section subtotal */}
+                  {items.length > 0 && (
+                    <div style={{ display:'grid', gridTemplateColumns:'2.5fr repeat(6,1fr) 1fr 80px', background: hbg+'22', borderTop:`2px solid ${hbg}44` }}>
+                      <div style={{ ...td, fontWeight:800, color:'#333' }}>Subtotal ({label.split(' ')[0]})</div>
+                      {[0,1,2,3,4,5].map(i=>(
+                        <div key={i} style={{ ...td, fontWeight:700, color:'#333' }}>
+                          {items.reduce((s,it)=>s+(it.s[i]||0),0) > 0
+                            ? `₹${fmt(items.reduce((s,it)=>s+(it.s[i]||0),0))}`
+                            : '—'}
+                        </div>
+                      ))}
+                      <div style={{ ...td, fontSize:11, color:'#555' }}>
+                        {Object.entries(YEAR_LABELS).map(([k,l])=>(
+                          <span key={k} style={{ display:'block' }}>
+                            {k}: <b>₹{fmt(yearTotal(items,k))}</b>
+                          </span>
+                        ))}
+                      </div>
+                      <div style={td}></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Grand total row */}
+              <div style={{ background:'#1565C0', borderRadius:12, padding:'14px 20px', display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
+                {Object.entries(YEAR_LABELS).map(([key, label]) => (
+                  <div key={key} style={{ textAlign:'center' }}>
+                    <p style={{ margin:'0 0 2px', fontSize:12, color:'rgba(255,255,255,0.75)', fontWeight:600 }}>
+                      {label} — Grand Total
+                    </p>
+                    <p style={{ margin:0, fontSize:22, fontWeight:800, color:'#fff' }}>
+                      ₹{fmt(yearTotal(activeDoc.items, key))}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════
+          SUB-TAB 2 — MAHADBT RECEIVABLE
+      ══════════════════════════════════════ */}
+      {subTab === 'mahadbt' && (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.8fr', gap:20 }}>
+
+          {/* ── Form panel ── */}
+          <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+            <h4 style={{ color:'#7B1FA2', margin:'0 0 16px', fontSize:14 }}>
+              {editMasterId ? '✏️ Edit Record' : '➕ Add New Record'}
+            </h4>
+
+            {/* Categories multi-select */}
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'#555', display:'block', marginBottom:8 }}>
+                Categories *
+              </label>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {ALL_CATS.map(cat => {
+                  const sel = masterForm.categories.includes(cat);
+                  return (
+                    <button key={cat} type="button" onClick={()=>{
+                      const cats = sel
+                        ? masterForm.categories.filter(c=>c!==cat)
+                        : [...masterForm.categories, cat];
+                      setMasterForm(p=>({...p, categories:cats}));
+                    }} style={{
+                      padding:'4px 10px', borderRadius:20, fontSize:12, cursor:'pointer', fontWeight: sel ? 700 : 500,
+                      border:`2px solid ${sel ? '#7B1FA2' : '#ddd'}`,
+                      background: sel ? '#f3e5f5' : '#fafafa',
+                      color:      sel ? '#7B1FA2' : '#888',
+                    }}>
+                      {sel && '✓ '}{cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {[
+              { label:'Course Type *', field:'courseType', type:'select', opts:['','B.Sc.','B.A.'] },
+              { label:'Admission Year *', field:'admissionYear', type:'select', opts:['FY','SY','TY'] },
+              { label:'Academic Year *', field:'academicYear', type:'select', opts:ACADEMIC_YEARS },
+            ].map(({ label, field, type, opts }) => (
+              <div key={field} style={{ marginBottom:12 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:'#555', display:'block', marginBottom:5 }}>{label}</label>
+                <select style={inp} value={masterForm[field]} onChange={e=>setMasterForm(p=>({...p,[field]:e.target.value}))}>
+                  {opts.map(o=><option key={o} value={o}>{o||'Select...'}</option>)}
+                </select>
+              </div>
+            ))}
+
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'#555', display:'block', marginBottom:5 }}>
+                MahaDBT Receivable Amount (₹) *
+              </label>
+              <input type="number" min="0" style={{ ...inp, fontSize:18, fontWeight:700, textAlign:'right' }}
+                value={masterForm.scholarshipAmount}
+                onChange={e=>setMasterForm(p=>({...p, scholarshipAmount:e.target.value}))}
+                placeholder="e.g. 26140" />
+              <p style={{ fontSize:11, color:'#7B1FA2', margin:'4px 0 0' }}>
+                Reserved categories = full amount. OPEN = Tuition Fee only.
+              </p>
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'#555', display:'block', marginBottom:5 }}>Description</label>
+              <input style={inp} value={masterForm.description} onChange={e=>setMasterForm(p=>({...p,description:e.target.value}))} placeholder="Optional note..." />
+            </div>
+
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={handleMasterSave} disabled={masterSaving}
+                style={{ flex:1, padding:'10px', background:'#7B1FA2', color:'#fff', border:'none', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                {masterSaving ? '⏳...' : editMasterId ? '💾 Update' : '➕ Add Record'}
+              </button>
+              {editMasterId && (
+                <button onClick={()=>{
+                  setEditMasterId(null);
+                  setMasterForm({ categories:[], courseType:'', admissionYear:'FY', academicYear:'2025-26', scholarshipAmount:'', description:'' });
+                }} style={{ padding:'10px 14px', background:'#eee', color:'#333', border:'none', borderRadius:8, cursor:'pointer' }}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ── Records table ── */}
+          <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', overflow:'hidden' }}>
+            <div style={{ background:'#7B1FA2', padding:'13px 18px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ color:'#fff', fontWeight:800, fontSize:14 }}>
+                📊 MahaDBT Records ({masters.length})
+              </span>
+              <select value={ay} onChange={e=>setAy(e.target.value)}
+                style={{ padding:'5px 10px', borderRadius:7, border:'1px solid rgba(255,255,255,0.4)', background:'rgba(255,255,255,0.15)', color:'#fff', fontSize:12 }}>
+                <option value="all" style={{ color:'#333' }}>All Years</option>
+                {ACADEMIC_YEARS.map(y=><option key={y} value={y} style={{ color:'#333' }}>{y}</option>)}
+              </select>
+            </div>
+
+            {masterLoading ? (
+              <div style={{ padding:'30px', textAlign:'center', color:'#aaa' }}>⏳ Loading...</div>
+            ) : (
+              <>
+                <div style={{ display:'grid', gridTemplateColumns:'1.4fr 0.9fr 0.6fr 0.9fr 1.1fr 0.8fr', padding:'9px 14px', background:'#f8f9ff', borderBottom:'2px solid #e0e7ef', gap:8 }}>
+                  {['Category','Course','Year','Acad Year','Amount (₹)',''].map(h=>(
+                    <span key={h} style={{ fontSize:11, fontWeight:700, color:'#555' }}>{h}</span>
+                  ))}
+                </div>
+                <div style={{ maxHeight:520, overflowY:'auto' }}>
+                  {masters
+                    .filter(m => ay === 'all' || m.academicYear === ay)
+                    .map((m, idx) => {
+                      const catDisplay = m.categories?.length > 1
+                        ? `${m.categories[0]} +${m.categories.length-1}`
+                        : m.category || m.categories?.[0] || '—';
+                      const isOpen = m.categories?.includes('OPEN') && m.categories?.length === 1;
+                      return (
+                        <div key={m._id} style={{
+                          display:'grid', gridTemplateColumns:'1.4fr 0.9fr 0.6fr 0.9fr 1.1fr 0.8fr',
+                          padding:'10px 14px', gap:8, alignItems:'center',
+                          borderBottom:'1px solid #f0f4f8',
+                          background: idx%2===0 ? '#fafbff' : '#fff',
+                        }}>
+                          <div>
+                            <span title={m.categories?.join(', ')} style={{
+                              fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:8, cursor:'help',
+                              background: isOpen ? '#fff3e0' : '#e8f5e9',
+                              color:      isOpen ? '#E65100' : '#2E7D32',
+                            }}>{catDisplay}</span>
+                          </div>
+                          <span style={{ fontSize:12, color:'#333' }}>{m.courseType}</span>
+                          <span style={{ fontSize:12, color:'#555' }}>{m.admissionYear}</span>
+                          <span style={{ fontSize:11, color:'#888' }}>{m.academicYear}</span>
+                          <span style={{ fontSize:14, fontWeight:800, color: isOpen ? '#E65100' : '#2E7D32' }}>
+                            ₹{fmt(m.scholarshipAmount || m.mahaDBTReceivable)}
+                          </span>
+                          <div style={{ display:'flex', gap:4 }}>
+                            <button onClick={()=>{
+                              setEditMasterId(m._id);
+                              setMasterForm({
+                                categories:    m.categories || (m.category ? [m.category] : []),
+                                courseType:    m.courseType,
+                                admissionYear: m.admissionYear,
+                                academicYear:  m.academicYear,
+                                scholarshipAmount: m.scholarshipAmount || m.mahaDBTReceivable || '',
+                                description:   m.description || '',
+                              });
+                            }} style={{ fontSize:11, padding:'3px 8px', background:'#f3e5f5', color:'#7B1FA2', border:'none', borderRadius:5, cursor:'pointer' }}>✏️</button>
+                            <button onClick={()=>handleMasterDelete(
+                              m._id,
+                              `${(m.categories||[]).join('+')} ${m.courseType} ${m.admissionYear} ${m.academicYear}`
+                            )} style={{ fontSize:11, padding:'3px 8px', background:'#ffebee', color:'#C62828', border:'none', borderRadius:5, cursor:'pointer' }}>🗑️</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  {masters.filter(m => ay==='all' || m.academicYear===ay).length === 0 && (
+                    <div style={{ padding:'30px', textAlign:'center', color:'#aaa', fontSize:13 }}>
+                      No MahaDBT records found for {ay === 'all' ? 'any year' : ay}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {/* ══════════════════════════════════════
+          SUB-TAB 3 — DOCUMENT FEES
+      ══════════════════════════════════════ */}
+      {subTab === 'doc' && (() => {
+        const [editMode, setEditMode] = React.useState(false);
+        const [edits, setEdits]       = React.useState({});
+        if (!docFees) return (
+          <div style={{ padding:'30px', textAlign:'center', color:'#aaa' }}>
+            Document fees not available in this context.
+          </div>
+        );
+        return (
+          <div>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+              <div>
+                <h3 style={{ color:'#1565C0', margin:'0 0 4px' }}>📄 Document Fee Amounts</h3>
+                <p style={{ color:'#666', fontSize:13, margin:0 }}>Fee charged per document type for students.</p>
+              </div>
+              {!editMode ? (
+                <button onClick={()=>{ setEdits(Object.fromEntries(Object.entries(docFees).map(([k,v])=>[k,v.price]))); setEditMode(true); }}
+                  style={btn('#1565C0','#fff')}>✏️ Edit Fees</button>
+              ) : (
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={()=>{
+                    const updated = {...docFees};
+                    Object.entries(edits).forEach(([k,v])=>{ updated[k]={...updated[k],price:Number(v)||0}; });
+                    setDocFees(updated);
+                    if (saveDocFees) saveDocFees(updated);
+                    if (showToast) showToast('Document fees saved!');
+                    else flash('✅ Document fees saved!');
+                    setEditMode(false);
+                  }} style={btn('#2E7D32','#fff')}>💾 Save</button>
+                  <button onClick={()=>setEditMode(false)} style={btn('#eee','#333')}>Cancel</button>
+                </div>
+              )}
+            </div>
+            <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 180px', background:'#1565C0', padding:'12px 20px' }}>
+                <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
+                <span style={{ color:'#fff', fontWeight:700, textAlign:'right' }}>Fee (₹)</span>
+              </div>
+              {Object.entries(docFees).map(([key,val],idx) => (
+                <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 180px', padding:'14px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+                  <span style={{ fontSize:14, color:'#222', fontWeight:500 }}>{val.label}</span>
+                  {editMode ? (
+                    <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:6 }}>
+                      <span style={{ color:'#555', fontWeight:600 }}>₹</span>
+                      <input type="number" min="0" value={edits[key]??val.price}
+                        onChange={e=>setEdits(p=>({...p,[key]:e.target.value}))}
+                        style={{ width:100, padding:'7px 10px', borderRadius:7, border:'2px solid #1565C0', fontSize:15, fontWeight:600, textAlign:'right' }} />
+                    </div>
+                  ) : (
+                    <span style={{ textAlign:'right', fontWeight:700, fontSize:16, color:val.price>0?'#1565C0':'#aaa' }}>
+                      {val.price > 0 ? `₹ ${fmt(val.price)}` : '—'}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+};
+
+
+
+// ─── Fee Structure Tab — alias to FeeStructureManager ────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast, user }) => {
   return <FeeStructureManager user={user} docFees={docFees} setDocFees={setDocFees} saveDocFees={saveDocFees} showToast={showToast} />;
 };
