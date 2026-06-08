@@ -346,6 +346,7 @@ const PrincipalDashboard = () => {
     { id: 'admissions',   label: '📝 Admission Approvals' },
     { id: 'tc',           label: '🎓 TC Approvals' },
     { id: 'doc_requests', label: '📋 Document Requests' },
+    { id: 'resources',    label: '📚 Resources' },
     { id: 'reports',      label: '📊 College Reports' },
     { id: 'staff',        label: '👥 Staff Overview' },
     { id: 'notices',      label: '📢 Important Notices' },
@@ -611,6 +612,9 @@ const PrincipalDashboard = () => {
           {/* ── COLLEGE REPORTS ── */}
           {/* ── DOC REQUESTS ── */}
           {activeTab === 'doc_requests' && <PrincipalDocRequestsTab />}
+
+          {/* ── RESOURCES ── */}
+          {activeTab === 'resources' && <PrincipalResourcesTab />}
 
 
           {activeTab === 'reports' && (
@@ -1316,6 +1320,223 @@ const PrincipalDocRequestsTab = () => {
                     </button>
                   </div>
                 )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// ─── Principal Resources Tab ──────────────────────────────────────────────────
+const TYPE_CONFIG = {
+  study_material:  { label: 'Study Material',   icon: '📄', color: '#1565C0', bg: '#e3f2fd' },
+  syllabus:        { label: 'Syllabus',          icon: '📋', color: '#7B1FA2', bg: '#f3e5f5' },
+  question_paper:  { label: 'Question Papers',   icon: '📝', color: '#E65100', bg: '#fff3e0' },
+  elibrary:        { label: 'E-Library',         icon: '📚', color: '#2E7D32', bg: '#e8f5e9' },
+  other:           { label: 'Other',             icon: '📎', color: '#795548', bg: '#efebe9' },
+};
+
+const BLANK_RES = { title:'', description:'', type:'study_material', link:'', course:'', year:'', icon:'📄', isActive:true };
+
+const PrincipalResourcesTab = () => {
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [msg, setMsg]             = useState('');
+  const [form, setForm]           = useState({ ...BLANK_RES });
+  const [editId, setEditId]       = useState(null);
+  const [saving, setSaving]       = useState(false);
+  const [filterType, setFilterType] = useState('all');
+  const [showForm, setShowForm]   = useState(false);
+
+  const fetchResources = () => {
+    setLoading(true);
+    API.get('/resources')
+      .then(res => setResources(res.data.resources || []))
+      .catch(() => setMsg('❌ Failed to load resources'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchResources(); }, []);
+
+  const showMsg = (m) => { setMsg(m); setTimeout(() => setMsg(''), 4000); };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { showMsg('❌ Title required'); return; }
+    setSaving(true);
+    try {
+      if (editId) {
+        await API.put(`/resources/${editId}`, form);
+        showMsg('✅ Resource updated!');
+      } else {
+        await API.post('/resources', form);
+        showMsg('✅ Resource added!');
+      }
+      setForm({ ...BLANK_RES }); setEditId(null); setShowForm(false);
+      fetchResources();
+    } catch (e) { showMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this resource?')) return;
+    try {
+      await API.delete(`/resources/${id}`);
+      showMsg('✅ Deleted');
+      fetchResources();
+    } catch { showMsg('❌ Failed to delete'); }
+  };
+
+  const handleEdit = (r) => {
+    setForm({ title: r.title, description: r.description||'', type: r.type||'study_material', link: r.link||'', course: r.course||'', year: r.year||'', icon: r.icon||'📄', isActive: r.isActive });
+    setEditId(r._id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const filtered = filterType === 'all' ? resources : resources.filter(r => r.type === filterType);
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+        <div>
+          <h2 style={{ color:'#C62828', marginBottom:4 }}>📚 Resources</h2>
+          <p style={{ color:'#666', fontSize:14 }}>Post study materials, syllabus, question papers and e-library links for students.</p>
+        </div>
+        <button onClick={() => { setShowForm(!showForm); setForm({ ...BLANK_RES }); setEditId(null); }}
+          style={{ background:'#C62828', color:'#fff', border:'none', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          {showForm ? '✕ Cancel' : '➕ Add Resource'}
+        </button>
+      </div>
+
+      {msg && <div style={{ padding:'12px 16px', borderRadius:10, marginBottom:14, fontSize:14, fontWeight:500, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
+
+      {/* Add/Edit Form */}
+      {showForm && (
+        <div style={{ background:'#fff', borderRadius:14, border:'2px solid #C62828', padding:22, marginBottom:24 }}>
+          <h4 style={{ color:'#C62828', marginBottom:16 }}>{editId ? '✏️ Edit Resource' : '➕ Add New Resource'}</h4>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Title *</label>
+              <input type="text" placeholder="e.g. B.Sc. Chemistry Syllabus 2025" value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Type</label>
+              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value, icon: TYPE_CONFIG[e.target.value]?.icon || '📄' }))}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }}>
+                {Object.entries(TYPE_CONFIG).map(([k,v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Course</label>
+              <select value={form.course} onChange={e => setForm(f => ({ ...f, course: e.target.value }))}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }}>
+                <option value="">All Courses</option>
+                <option value="B.Sc.">B.Sc.</option>
+                <option value="B.A.">B.A.</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Year</label>
+              <select value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14 }}>
+                <option value="">All Years</option>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+              </select>
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Link / URL</label>
+              <input type="text" placeholder="https://..." value={form.link}
+                onChange={e => setForm(f => ({ ...f, link: e.target.value }))}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, marginBottom:5 }}>Description</label>
+              <textarea rows="2" placeholder="Brief description..." value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, resize:'vertical', boxSizing:'border-box' }} />
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <input type="checkbox" id="resActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} />
+              <label htmlFor="resActive" style={{ fontSize:13, fontWeight:600 }}>Active (visible to students)</label>
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:10 }}>
+            <button onClick={handleSave} disabled={saving}
+              style={{ background:'#C62828', color:'#fff', border:'none', borderRadius:8, padding:'10px 26px', fontSize:14, fontWeight:700, cursor:'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? '⏳ Saving...' : editId ? '💾 Update' : '✅ Add Resource'}
+            </button>
+            <button onClick={() => { setShowForm(false); setForm({ ...BLANK_RES }); setEditId(null); }}
+              style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 18px', fontSize:14, cursor:'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filter */}
+      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
+        {[['all','🗂️ All'], ...Object.entries(TYPE_CONFIG).map(([k,v]) => [k, `${v.icon} ${v.label}`])].map(([k,l]) => (
+          <button key={k} onClick={() => setFilterType(k)}
+            style={{ padding:'6px 14px', borderRadius:20, border:`2px solid ${filterType===k?'#C62828':'#ddd'}`, background: filterType===k?'#C62828':'#fff', color: filterType===k?'#fff':'#555', fontWeight:600, fontSize:12, cursor:'pointer' }}>
+            {l} {k === 'all' ? `(${resources.length})` : `(${resources.filter(r=>r.type===k).length})`}
+          </button>
+        ))}
+      </div>
+
+      {loading ? <div style={{ textAlign:'center', padding:40, fontSize:'2rem' }}>⏳</div>
+      : filtered.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:'#888', background:'#f8faff', borderRadius:12 }}>
+          <div style={{ fontSize:'2.5rem', marginBottom:8 }}>📭</div>
+          <p>No resources posted yet.</p>
+          <button onClick={() => setShowForm(true)} style={{ marginTop:12, background:'#C62828', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>➕ Add First Resource</button>
+        </div>
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>
+          {filtered.map(r => {
+            const cfg = TYPE_CONFIG[r.type] || TYPE_CONFIG.other;
+            return (
+              <div key={r._id} style={{ background:'#fff', borderRadius:12, border:`1px solid ${r.isActive?'#e0e7ef':'#f5f5f5'}`, padding:16, opacity: r.isActive?1:0.6 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:22 }}>{r.icon || cfg.icon}</span>
+                    <div>
+                      <h4 style={{ margin:0, fontSize:14, color:'#1a1a2e' }}>{r.title}</h4>
+                      <span style={{ fontSize:11, background: cfg.bg, color: cfg.color, padding:'2px 8px', borderRadius:10, fontWeight:600 }}>{cfg.label}</span>
+                    </div>
+                  </div>
+                  {!r.isActive && <span style={{ fontSize:10, background:'#f5f5f5', color:'#aaa', padding:'2px 8px', borderRadius:10 }}>Hidden</span>}
+                </div>
+                {r.description && <p style={{ fontSize:12, color:'#666', marginBottom:8 }}>{r.description}</p>}
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+                  {r.course && <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', padding:'2px 8px', borderRadius:8, fontWeight:600 }}>{r.course}</span>}
+                  {r.year   && <span style={{ fontSize:11, background:'#e8f5e9', color:'#2E7D32', padding:'2px 8px', borderRadius:8, fontWeight:600 }}>{r.year}</span>}
+                </div>
+                {r.link && (
+                  <a href={r.link} target="_blank" rel="noreferrer"
+                    style={{ display:'inline-block', fontSize:12, color:'#1565C0', fontWeight:600, marginBottom:10 }}>
+                    🔗 Open Link
+                  </a>
+                )}
+                <div style={{ display:'flex', gap:8, borderTop:'1px solid #f0f4f8', paddingTop:10 }}>
+                  <button onClick={() => handleEdit(r)}
+                    style={{ flex:1, background:'#e3f2fd', color:'#1565C0', border:'none', borderRadius:7, padding:'6px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    ✏️ Edit
+                  </button>
+                  <button onClick={() => handleDelete(r._id)}
+                    style={{ flex:1, background:'#ffebee', color:'#C62828', border:'none', borderRadius:7, padding:'6px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    🗑️ Delete
+                  </button>
+                </div>
+                <div style={{ fontSize:10, color:'#aaa', marginTop:6 }}>
+                  Added: {new Date(r.createdAt).toLocaleDateString('en-IN')} {r.createdBy ? `by ${r.createdBy}` : ''}
+                </div>
               </div>
             );
           })}
