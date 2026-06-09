@@ -29,6 +29,14 @@ const admissionYearToNum = (ay) => {
   return 0;
 };
 
+// normalize course: 'B.A.' / 'BA' / 'Bachelor of Arts' -> 'ba'
+const normCourse = (c) => {
+  const s = String(c || '').toLowerCase();
+  if (s.includes('b.sc') || s.includes('bsc') || s.includes('science')) return 'bsc';
+  if (s.includes('b.a')  || s.includes('ba')  || s.includes('arts'))    return 'ba';
+  return s.replace(/[^a-z0-9]/g, '');
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // (legacy) GET/PUT exam-settings — kept for backward compatibility
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,14 +126,16 @@ router.get('/exam-form/available', protect, authorizeRoles('student'), async (re
     if (!admission)
       return res.json({ success: true, forms: [] });
 
-    const myCourse  = admission.courseType || '';
+ const myCourseN = normCourse(admission.courseType);
     const myYearNum = admissionYearToNum(admission.admissionYear);
 
-    const published = await PublishedExamForm.find({ active: true, course: myCourse }).sort({ createdAt: -1 });
+    const published = await PublishedExamForm.find({ active: true }).sort({ createdAt: -1 });
 
-    // year filter: only show forms whose year matches the student's year
-    const matched = published.filter(p => !myYearNum || !p.yearNum || p.yearNum === myYearNum);
-
+    // match course (format-tolerant) + year
+    const matched = published.filter(p =>
+      normCourse(p.course) === myCourseN &&
+      (!myYearNum || !p.yearNum || p.yearNum === myYearNum)
+    );
     const myReqs = await ExamFormRequest.find({ studentEmail: req.user.email });
 
     const forms = matched.map(p => {
