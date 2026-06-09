@@ -1956,71 +1956,11 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
       
 
             {/* Provisional Degree extra fields */}
-      {docType === 'PROVISIONAL_DEGREE' && (
-        <div style={{ background: '#e8f5e9', borderRadius: 10, padding: 14, marginBottom: 14 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#2E7D32', marginBottom: 10 }}>📜 Provisional Degree Details</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Passing Year *</label>
-              <select value={provYear} onChange={e => setProvYear(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #a5d6a7', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                {[2020,2021,2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Session</label>
-              <select value={provSession} onChange={e => setProvSession(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #a5d6a7', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                <option value="mar_apr">March / April</option>
-                <option value="nov_dec">November / December</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* Degree extra fields */}
-      {docType === 'DEGREE' && (
-        <div style={{ background: '#e3f2fd', borderRadius: 10, padding: 14, marginBottom: 14 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#1565C0', marginBottom: 10 }}>🎓 Degree Certificate Details</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Passing Year *</label>
-              <select value={provYear} onChange={e => setProvYear(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                {[2020,2021,2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Course Completed</label>
-              <input type="text" placeholder="e.g. Bachelor of Science (B.Sc.)" value={provCourse} onChange={e => setProvCourse(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #90CAF9', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Migration extra fields */}
-      {docType === 'MIGRATION' && (
-        <div style={{ background: '#fff3e0', borderRadius: 10, padding: 14, marginBottom: 14 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#E65100', marginBottom: 10 }}>📜 Migration Certificate Details</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Migrating To (College/University)</label>
-              <input type="text" placeholder="e.g. Mumbai University" value={migrateTo} onChange={e => setMigrateTo(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #FFB74D', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Purpose</label>
-              <input type="text" placeholder="e.g. Higher Studies, Job etc." value={migrateFor} onChange={e => setMigrateFor(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #FFB74D', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Workflow info */}
       {docType && (
