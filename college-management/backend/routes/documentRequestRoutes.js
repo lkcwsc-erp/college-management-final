@@ -81,7 +81,7 @@ router.get('/my', protect, async (req, res) => {
 // ACCOUNTS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 
-router.get('/accounts/all', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+router.get('/accounts/all', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
       $or: [{ status: 'pending_accounts' }, { accountsApprovedBy: { $ne: '' } }]
@@ -93,7 +93,7 @@ router.get('/accounts/all', protect, authorizeRoles('staff_accounts', 'admin'), 
 });
 
 // Accounts approves — TC→pending_exam, others→pending_generation
-router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { notes } = req.body;
     const request = await DocumentRequest.findById(req.params.id);
@@ -120,7 +120,7 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
   }
 });
 
-router.put('/accounts/reject/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+router.put('/accounts/reject/:id', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { reason } = req.body;
     const request = await DocumentRequest.findByIdAndUpdate(req.params.id, {
@@ -143,7 +143,7 @@ router.put('/accounts/reject/:id', protect, authorizeRoles('staff_accounts', 'ad
 // ─────────────────────────────────────────────────────────────────────────────
 
 // All requests for Exam Section (TC pending_exam + Marksheet pending_exam)
-router.get('/exam/all', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+router.get('/exam/all', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
       $or: [
@@ -160,7 +160,7 @@ router.get('/exam/all', protect, authorizeRoles('staff_exam', 'admin'), async (r
 // Exam Section approves
 // TC → pending_principal
 // Marksheet → pending_generation
-router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { notes, resultStatus } = req.body;
     const request = await DocumentRequest.findById(req.params.id);
@@ -194,7 +194,7 @@ router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin'), 
   }
 });
 
-router.put('/exam/reject/:id', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+router.put('/exam/reject/:id', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { reason } = req.body;
     const request = await DocumentRequest.findByIdAndUpdate(req.params.id, {
@@ -279,7 +279,7 @@ router.put('/principal/reject/:id', protect, authorizeRoles('staff_principal', '
 // STUDENT SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 
-router.get('/student-section/all', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.get('/student-section/all', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
       $or: [{ status: 'pending_generation' }, { status: 'completed' }]
@@ -290,7 +290,7 @@ router.get('/student-section/all', protect, authorizeRoles('staff_student', 'adm
   }
 });
 
-router.put('/student-section/complete/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.put('/student-section/complete/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { notes } = req.body;
     const request = await DocumentRequest.findByIdAndUpdate(req.params.id, {
@@ -317,7 +317,7 @@ router.put('/student-section/complete/:id', protect, authorizeRoles('staff_stude
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/', protect, authorizeRoles('admin'), async (req, res) => {
+router.get('/', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, requests });
@@ -326,7 +326,7 @@ router.get('/', protect, authorizeRoles('admin'), async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.delete('/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     await DocumentRequest.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Deleted' });
@@ -336,7 +336,7 @@ router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
 });
 
 // ─── ADMIN ROUTES ─────────────────────────────────────────────────────────────
-router.get('/admin/all', protect, authorizeRoles('admin'), async (req, res) => {
+router.get('/admin/all', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
       documentType: { $in: ['PROVISIONAL_DEGREE','DEGREE','MIGRATION','BONAFIDE'] },
@@ -346,7 +346,7 @@ router.get('/admin/all', protect, authorizeRoles('admin'), async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/admin/approve/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.put('/admin/approve/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const doc = await DocumentRequest.findByIdAndUpdate(req.params.id, {
       status: 'pending_principal',
@@ -358,7 +358,7 @@ router.put('/admin/approve/:id', protect, authorizeRoles('admin'), async (req, r
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/admin/reject/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.put('/admin/reject/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const doc = await DocumentRequest.findByIdAndUpdate(req.params.id, {
       status: 'rejected_by_admin',
@@ -369,7 +369,7 @@ router.put('/admin/reject/:id', protect, authorizeRoles('admin'), async (req, re
 });
 
 // Student Section forwards new doc type requests to Admin
-router.put('/student-section/forward/:id', protect, authorizeRoles('staff_student'), async (req, res) => {
+router.put('/student-section/forward/:id', protect, authorizeRoles('staff_student', 'staff_principal'), async (req, res) => {
   try {
     const doc = await DocumentRequest.findByIdAndUpdate(req.params.id, {
       status: 'pending_admin',
