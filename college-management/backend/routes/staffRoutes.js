@@ -1,63 +1,19 @@
 const express = require('express');
 const router = express.Router();
-
 const {
-  getAllStaff,
-  getStaffById,
-  getMyProfile,
-  createStaff,
-  updateStaff,
-  deleteStaff,
-  staffLogin
-} = require('../controllers/staffController');
+  submitEnquiry,
+  getAllEnquiries,
+  updateEnquiryStatus,
+  deleteEnquiry
+} = require('../controllers/enqueryControllers');
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
-const {
-  protect,
-  authorizeRoles
-} = require('../middleware/authMiddleware');
+// Public - student form submit karega
+router.post('/', submitEnquiry);
 
-router.post('/login', staffLogin);
-
-router.get(
-  '/',
-  protect,
-  authorizeRoles('admin'),
-  getAllStaff
-);
-
-router.get(
-  '/my-profile',
-  protect,
-  authorizeRoles('staff'),
-  getMyProfile
-);
-
-router.get(
-  '/:id',
-  protect,
-  authorizeRoles('admin'),
-  getStaffById
-);
-
-router.post(
-  '/',
-  protect,
-  authorizeRoles('admin'),
-  createStaff
-);
-
-router.put(
-  '/:id',
-  protect,
-  authorizeRoles('admin'),
-  updateStaff
-);
-
-router.delete(
-  '/:id',
-  protect,
-  authorizeRoles('admin'),
-  deleteStaff
-);
+// Protected - staff dekhega
+router.get('/', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), getAllEnquiries);
+router.put('/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), updateEnquiryStatus);
+router.delete('/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), deleteEnquiry);
 
 module.exports = router;
