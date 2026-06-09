@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 });
 
 // Admin — create
-router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
+router.post('/', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const a = await Achievement.create({ ...req.body, createdBy: req.user.name || req.user.email });
     res.status(201).json({ success: true, achievement: a });
@@ -28,7 +28,7 @@ router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
 });
 
 // Admin — update
-router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.put('/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const a = await Achievement.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json({ success: true, achievement: a });
@@ -36,7 +36,7 @@ router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
 });
 
 // Admin — delete
-router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.delete('/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     await Achievement.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Deleted' });
