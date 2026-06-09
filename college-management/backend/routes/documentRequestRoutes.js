@@ -21,7 +21,7 @@ const DOC_LABELS = {
 // Submit request
 router.post('/', protect, async (req, res) => {
   try {
-    const { documentType, reason, urgency, marksheetSemester, marksheetSession, marksheetYear } = req.body;
+    const { documentType, reason, urgency, marksheetSemester, marksheetSession, marksheetYear, marksheetAcadYear, lastExamYear, lastExamSem, lastExamSession, lastExamResult, lastExamPercent, lastExamCollege, provYear, provSession, provCourse, migrateTo, migrateFor } = req.body;
     if (!Object.keys(DOC_LABELS).includes(documentType))
       return res.status(400).json({ success: false, message: 'Invalid document type' });
 
@@ -45,6 +45,18 @@ router.post('/', protect, async (req, res) => {
       marksheetSemester: marksheetSemester || '',
       marksheetSession:  marksheetSession  || '',
       marksheetYear:     marksheetYear     || '',
+      marksheetAcadYear: marksheetAcadYear || '',
+      lastExamYear:      lastExamYear      || '',
+      lastExamSem:       lastExamSem       || '',
+      lastExamSession:   lastExamSession   || '',
+      lastExamResult:    lastExamResult    || '',
+      lastExamPercent:   lastExamPercent   || '',
+      lastExamCollege:   lastExamCollege   || '',
+      provYear:          provYear          || '',
+      provSession:       provSession       || '',
+      provCourse:        provCourse        || '',
+      migrateTo:         migrateTo         || '',
+      migrateFor:        migrateFor        || '',
       status:            initialStatus,
     };
 
