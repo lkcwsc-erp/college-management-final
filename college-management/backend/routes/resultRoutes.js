@@ -268,4 +268,32 @@ router.delete(
   deleteResult
 );
 
+// ── Student: Submit own result (for last degree/TC) ─────────────────────────
+router.post('/student-submit', protect, async (req, res) => {
+  try {
+    const { semester, year, examSession, subjects, percentage, totalMarks, obtainedMarks, result } = req.body;
+    const Result = require('../models/Result');
+    const newResult = new Result({
+      student: req.user._id,
+      studentEmail: req.user.email,
+      studentName: req.user.name,
+      semester: Number(semester),
+      year: Number(year),
+      examSession,
+      subjects: subjects || [],
+      percentage: Number(percentage),
+      totalMarks: Number(totalMarks),
+      obtainedMarks: Number(obtainedMarks),
+      result: result || 'pass',
+      submittedByStudent: true,
+      verifiedByExam: false,
+    });
+    await newResult.save();
+    res.json({ success: true, message: 'Result submitted successfully' });
+  } catch(error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
 module.exports = router;
