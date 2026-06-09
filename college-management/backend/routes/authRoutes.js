@@ -42,7 +42,7 @@ router.get('/me', protect, getMe);
 router.put('/update-profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
 
-module.exports = router;
+
 
 // ── Send credentials email to student ──────────────────────────────────────
 router.post('/send-credentials', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
@@ -81,3 +81,5 @@ router.post('/send-message', protect, authorizeRoles('admin', 'staff_principal')
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+module.exports = router;
