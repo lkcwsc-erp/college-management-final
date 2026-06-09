@@ -1347,47 +1347,29 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
        
 
       {/* Quick summary cards per year */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
-        {YEARS.map(y => {
-          const total    = reservedTotal(y);
-          const tuition  = openTotal(y);
-          const selfPay  = openSelfPay(y);
-          const yearLabel = y === 'FY' ? 'First Year' : y === 'SY' ? 'Second Year' : 'Third Year';
-          return (
-            <div key={y} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: '14px 16px' }}>
-              <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: themeColor, borderBottom: `2px solid ${themeColor}22`, paddingBottom: 6 }}>
-                {activeCourse} — {yearLabel}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span style={{ color: '#888' }}>Total Fees</span>
-                  <span style={{ fontWeight: 700, color: '#333' }}>₹{fmt(total)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span style={{ color: '#1565C0' }}>Reserved Scholarship</span>
-                  <span style={{ fontWeight: 700, color: '#1565C0' }}>₹{fmt(total)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span style={{ color: '#E65100' }}>OPEN Scholarship</span>
-                  <span style={{ fontWeight: 700, color: '#E65100' }}>₹{fmt(tuition)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid #f0f4f8', paddingTop: 5, marginTop: 2 }}>
-                  <span style={{ color: '#C62828' }}>OPEN Self-pay</span>
-                  <span style={{ fontWeight: 700, color: '#C62828' }}>₹{fmt(selfPay)}</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
+  {YEARS.map(y => {
+    const total = reservedTotal(y);
+    const yearLabel = y === 'FY' ? 'First Year' : y === 'SY' ? 'Second Year' : 'Third Year';
+    return (
+      <div key={y} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: '14px 16px' }}>
+        <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: themeColor, borderBottom: `2px solid ${themeColor}22`, paddingBottom: 6 }}>
+          {activeCourse} — {yearLabel}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span style={{ color: '#888' }}>Total Fees</span>
+            <span style={{ fontWeight: 700, color: '#333' }}>₹{fmt(total)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span style={{ color: '#1565C0' }}>Reserved Scholarship</span>
+            <span style={{ fontWeight: 700, color: '#1565C0' }}>₹{fmt(total)}</span>
+          </div>
+        </div>
       </div>
-
-      <p style={{ fontSize: 12, color: '#888', marginTop: 10, textAlign: 'right' }}>
-        Source: Official MahaDBT fee structure — Academic Year: <strong>{academicYear}</strong>
-      </p>
-    </div>
-  );
-};
-
+    );
+  })}
+</div>
 
 /* ═══════════════════════════════════════════════════════════
    MAHADBT TAB
