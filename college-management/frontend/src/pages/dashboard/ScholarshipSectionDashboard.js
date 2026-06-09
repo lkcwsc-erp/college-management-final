@@ -1301,9 +1301,11 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
                 <span style={{ fontSize: 13, fontWeight: isTuition ? 700 : 500, color: isTuition ? '#7B1FA2' : '#333' }}>
                   {head}
                 </span>
-               
+              </div>
+            </div>
 
               {/* Value per year */}
+              {YEARS.map(y => {
               {YEARS.map(y => {
                 const val = courseData[y]?.[head] ?? 0;
                 return (
@@ -1344,7 +1346,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
           ))}
         </div>
 
-       
+      </div>
 
       {/* Quick summary cards per year */}
 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
