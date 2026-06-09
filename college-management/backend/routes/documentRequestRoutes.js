@@ -102,7 +102,8 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
       return res.status(400).json({ success: false, message: 'Not pending in Accounts' });
 
     const isTC = request.documentType === 'TC';
-    request.status            = isTC ? 'pending_exam' : 'pending_generation';
+    // TC: Accounts → Principal → Exam Section → Student Section
+    request.status            = isTC ? 'pending_principal' : 'pending_generation';
     request.accountsApprovedBy   = req.user.name || req.user.email;
     request.accountsApprovedDate = new Date();
     request.accountsNotes        = notes || '';
@@ -339,7 +340,6 @@ router.delete('/:id', protect, authorizeRoles('admin', 'staff_principal'), async
 router.get('/admin/all', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
-      documentType: { $in: ['PROVISIONAL_DEGREE','DEGREE','MIGRATION','BONAFIDE'] },
       status: { $nin: ['pending_accounts','pending_exam'] }
     }).sort({ createdAt: -1 });
     res.json({ success: true, requests });
