@@ -22,4 +22,8 @@ const resultSchema = new mongoose.Schema({
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
+  submittedByStudent: { type: Boolean, default: false },
+  verifiedByExam:    { type: Boolean, default: false },
+  examSession:       { type: String, default: '' },
+
 module.exports = mongoose.model('Result', resultSchema);
