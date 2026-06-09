@@ -1864,6 +1864,7 @@ const StudentDashboard = () => {
   const [results, setResults] = useState([]);
   const [resultsLoading] = useState(false);
   const [availableForms, setAvailableForms] = useState([]);   // published forms matching this student
+  // eslint-disable-next-line no-unused-vars
   const [examFormRequests, setExamFormRequests] = useState([]);
   const [examFormSubmitting, setExamFormSubmitting] = useState('');
   const [examFormMsg, setExamFormMsg] = useState('');
