@@ -1737,12 +1737,12 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
             style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
             <option value="">— Select —</option>
             <option value="TC" disabled={tcAlreadyIssued}>🎓 Transfer Certificate (TC){tcAlreadyIssued?' — Already Issued':''}</option>
-            <option value="BONAFIDE">📋 Bonafide Certificate — ₹200</option>
+            <option value="BONAFIDE">📋 Bonafide Certificate</option>
             <option value="ID_CARD">🪪 ID Card</option>
             <option value="MARKSHEET">📄 Marksheet</option>
-            <option value="PROVISIONAL_DEGREE">📜 Provisional Degree Certificate — ₹100</option>
-            <option value="DEGREE">🎓 Degree Certificate — ₹100</option>
-            <option value="MIGRATION">📜 Migration Certificate — ₹200</option>
+            <option value="PROVISIONAL_DEGREE">📜 Provisional Degree Certificate</option>
+            <option value="DEGREE">🎓 Degree Certificate</option>
+            <option value="MIGRATION">📜 Migration Certificate</option>
           </select>
         </div>
         <div>
@@ -1850,6 +1850,311 @@ const getCourseFull = (ct) => {
 };
 
 
+// ─── Last Degree / TC Tab ────────────────────────────────────────────────────
+const LastDegreeTab = ({ myAdmission, user }) => {
+  const [activeSection, setActiveSection] = useState('result'); // 'result' | 'provisional' | 'degree' | 'migration'
+  const [resultForm, setResultForm] = useState({
+    semester: '', year: new Date().getFullYear().toString(), examSession: '',
+    subjects: [{ name: '', maxMarks: 100, obtainedMarks: '' }],
+  });
+  const [provForm, setProvForm] = useState({ rollNo: '', examYear: '', examSession: '', percentage: '', remarks: '' });
+  const [degForm, setDegForm]   = useState({ rollNo: '', convocationYear: '', percentage: '', honours: '' });
+  const [migForm, setMigForm]   = useState({ reason: '', destinationCollege: '', destinationCity: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [myResults, setMyResults] = useState([]);
+
+  React.useEffect(() => {
+    API.get('/results/my').then(r => setMyResults(r.data.results || [])).catch(() => {});
+  }, []);
+
+  const addSubject = () => setResultForm(f => ({ ...f, subjects: [...f.subjects, { name: '', maxMarks: 100, obtainedMarks: '' }] }));
+  const removeSubject = (i) => setResultForm(f => ({ ...f, subjects: f.subjects.filter((_, idx) => idx !== i) }));
+  const updateSubject = (i, field, val) => setResultForm(f => {
+    const subs = [...f.subjects]; subs[i] = { ...subs[i], [field]: val }; return { ...f, subjects: subs };
+  });
+
+  const handleResultSubmit = async () => {
+    if (!resultForm.semester || !resultForm.year || !resultForm.examSession) { setMsg('❌ Please fill semester, year and session.'); return; }
+    if (resultForm.subjects.some(s => !s.name || s.obtainedMarks === '')) { setMsg('❌ Please fill all subject names and marks.'); return; }
+    setSubmitting(true);
+    try {
+      const subjects = resultForm.subjects.map(s => ({ name: s.name, maxMarks: Number(s.maxMarks), obtainedMarks: Number(s.obtainedMarks) }));
+      const totalMax  = subjects.reduce((s, x) => s + x.maxMarks, 0);
+      const totalObt  = subjects.reduce((s, x) => s + x.obtainedMarks, 0);
+      const percentage = totalMax > 0 ? Math.round((totalObt / totalMax) * 100 * 10) / 10 : 0;
+      const atkt = subjects.filter(s => s.obtainedMarks < s.maxMarks * 0.35).length;
+      const result = atkt === subjects.length ? 'fail' : atkt > 0 ? 'atkt' : percentage >= 60 ? 'distinction' : 'pass';
+      await API.post('/results/student-submit', {
+        semester: resultForm.semester,
+        year: Number(resultForm.year),
+        examSession: resultForm.examSession,
+        subjects, percentage,
+        totalMarks: totalMax, obtainedMarks: totalObt, result,
+        studentEmail: user?.email,
+        studentName: myAdmission?.applicantName || user?.name,
+      });
+      setMsg('✅ Result submitted! Exam Section will verify it.');
+      setResultForm({ semester: '', year: new Date().getFullYear().toString(), examSession: '', subjects: [{ name: '', maxMarks: 100, obtainedMarks: '' }] });
+      API.get('/results/my').then(r => setMyResults(r.data.results || [])).catch(() => {});
+    } catch(e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDocSubmit = async (docType, extraData) => {
+    setSubmitting(true);
+    try {
+      await API.post('/document-requests', { documentType: docType, reason: extraData.reason || '', urgency: 'normal', ...extraData });
+      setMsg(`✅ ${docType === 'PROVISIONAL_DEGREE' ? 'Provisional Degree' : docType === 'DEGREE' ? 'Degree' : 'Migration'} request submitted!`);
+      if (docType === 'PROVISIONAL_DEGREE') setProvForm({ rollNo: '', examYear: '', examSession: '', percentage: '', remarks: '' });
+      if (docType === 'DEGREE') setDegForm({ rollNo: '', convocationYear: '', percentage: '', honours: '' });
+      if (docType === 'MIGRATION') setMigForm({ reason: '', destinationCollege: '', destinationCity: '' });
+    } catch(e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setSubmitting(false); }
+  };
+
+  const sections = [
+    { id: 'result',      label: '📊 Last Year Result', color: '#1565C0' },
+    { id: 'provisional', label: '📜 Provisional Degree', color: '#7B1FA2' },
+    { id: 'degree',      label: '🎓 Degree Certificate', color: '#2E7D32' },
+    { id: 'migration',   label: '📦 Migration Certificate', color: '#E65100' },
+  ];
+
+  const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' };
+  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 5 };
+
+  return (
+    <div>
+      <h3 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 Last Degree / TC</h3>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Submit your last year examination result and apply for degree/migration certificates.</p>
+
+      {msg && (
+        <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828', fontWeight: 500 }}>
+          {msg}
+        </div>
+      )}
+
+      {/* Section tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#f0f4f8', borderRadius: 12, padding: 5, flexWrap: 'wrap' }}>
+        {sections.map(s => (
+          <button key={s.id} onClick={() => { setActiveSection(s.id); setMsg(''); }}
+            style={{ flex: 1, minWidth: 120, padding: '9px 12px', borderRadius: 9, border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+              background: activeSection === s.id ? s.color : 'transparent',
+              color: activeSection === s.id ? '#fff' : '#555' }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── RESULT SECTION ── */}
+      {activeSection === 'result' && (
+        <div>
+          {/* Submitted results */}
+          {myResults.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <h4 style={{ color: '#1565C0', marginBottom: 12, fontSize: 14 }}>📋 My Submitted Results</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {myResults.map((r, i) => (
+                  <div key={i} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, borderLeft: `4px solid ${r.result==='pass'||r.result==='distinction'?'#2E7D32':'#C62828'}` }}>
+                    <div>
+                      <span style={{ fontWeight: 700, color: '#1565C0', fontSize: 14 }}>Semester {r.semester} — {r.year}</span>
+                      <span style={{ marginLeft: 10, fontSize: 12, color: '#888' }}>{r.examSession}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: '#1565C0' }}>{r.percentage}%</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20, background: (r.result==='pass'||r.result==='distinction') ? '#e8f5e9' : (r.result==='atkt') ? '#fff3e0' : '#ffebee', color: (r.result==='pass'||r.result==='distinction') ? '#2E7D32' : (r.result==='atkt') ? '#E65100' : '#C62828' }}>
+                        {r.result === 'distinction' ? '🏅 Distinction' : r.result === 'pass' ? '✅ Pass' : r.result === 'atkt' ? '⚠️ ATKT' : '❌ Fail'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add result form */}
+          <div style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 14, padding: 20 }}>
+            <h4 style={{ color: '#1565C0', marginBottom: 16, fontSize: 14 }}>➕ Add Last Year Examination Result</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 16 }}>
+              <div>
+                <label style={labelStyle}>Semester *</label>
+                <select value={resultForm.semester} onChange={e => setResultForm(f => ({ ...f, semester: e.target.value }))} style={inputStyle}>
+                  <option value="">— Select —</option>
+                  {['I','II','III','IV','V','VI'].map(s => <option key={s} value={s}>Semester {s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Exam Session *</label>
+                <select value={resultForm.examSession} onChange={e => setResultForm(f => ({ ...f, examSession: e.target.value }))} style={inputStyle}>
+                  <option value="">— Select —</option>
+                  <option value="mar_apr">March / April</option>
+                  <option value="nov_dec">November / December</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Year *</label>
+                <select value={resultForm.year} onChange={e => setResultForm(f => ({ ...f, year: e.target.value }))} style={inputStyle}>
+                  {[2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Subjects */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Subjects & Marks *</label>
+                <button onClick={addSubject} style={{ background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Add Subject</button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 0.5fr', gap: 6, background: '#f0f4f8', padding: '6px 10px', borderRadius: 8, marginBottom: 6 }}>
+                {['Subject Name','Max Marks','Obtained Marks',''].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: '#555' }}>{h}</span>)}
+              </div>
+              {resultForm.subjects.map((sub, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 0.5fr', gap: 6, marginBottom: 6 }}>
+                  <input type="text" placeholder={`Subject ${i+1}`} value={sub.name} onChange={e => updateSubject(i, 'name', e.target.value)} style={{ ...inputStyle, padding: '8px 10px' }} />
+                  <input type="number" value={sub.maxMarks} onChange={e => updateSubject(i, 'maxMarks', e.target.value)} style={{ ...inputStyle, padding: '8px 10px' }} />
+                  <input type="number" placeholder="0" value={sub.obtainedMarks} onChange={e => updateSubject(i, 'obtainedMarks', e.target.value)} style={{ ...inputStyle, padding: '8px 10px', borderColor: sub.obtainedMarks !== '' && Number(sub.obtainedMarks) < sub.maxMarks * 0.35 ? '#ef9a9a' : '#ddd' }} />
+                  {i > 0 && <button onClick={() => removeSubject(i)} style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 16 }}>×</button>}
+                </div>
+              ))}
+              {/* Live percentage */}
+              {resultForm.subjects.some(s => s.obtainedMarks !== '') && (() => {
+                const totalMax = resultForm.subjects.reduce((s, x) => s + Number(x.maxMarks || 0), 0);
+                const totalObt = resultForm.subjects.reduce((s, x) => s + Number(x.obtainedMarks || 0), 0);
+                const pct = totalMax > 0 ? Math.round((totalObt / totalMax) * 1000) / 10 : 0;
+                const atkt = resultForm.subjects.filter(s => s.obtainedMarks !== '' && Number(s.obtainedMarks) < Number(s.maxMarks) * 0.35).length;
+                const res = atkt === resultForm.subjects.length ? 'fail' : atkt > 0 ? 'atkt' : pct >= 60 ? 'distinction' : 'pass';
+                const resColor = res === 'pass' || res === 'distinction' ? '#2E7D32' : res === 'atkt' ? '#E65100' : '#C62828';
+                return (
+                  <div style={{ background: '#f8faff', border: '1px solid #e0e7ef', borderRadius: 8, padding: '8px 14px', marginTop: 8, display: 'flex', gap: 20, fontSize: 13 }}>
+                    <span>Total: <strong>{totalObt}/{totalMax}</strong></span>
+                    <span>Percentage: <strong style={{ color: resColor }}>{pct}%</strong></span>
+                    <span>Result: <strong style={{ color: resColor }}>{res.toUpperCase()}</strong></span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <button onClick={handleResultSubmit} disabled={submitting}
+              style={{ background: submitting ? '#aaa' : '#1565C0', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 28px', fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+              {submitting ? '⏳ Submitting...' : '📤 Submit Result'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── PROVISIONAL DEGREE ── */}
+      {activeSection === 'provisional' && (
+        <div style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 14, padding: 20 }}>
+          <h4 style={{ color: '#7B1FA2', marginBottom: 6, fontSize: 15 }}>📜 Provisional Degree Certificate Application</h4>
+          <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>Apply for provisional degree certificate after passing final year examination.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Roll Number</label>
+              <input type="text" placeholder="Your exam roll number" value={provForm.rollNo} onChange={e => setProvForm(f => ({...f, rollNo: e.target.value}))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Exam Year</label>
+              <select value={provForm.examYear} onChange={e => setProvForm(f => ({...f, examYear: e.target.value}))} style={inputStyle}>
+                <option value="">— Select Year —</option>
+                {[2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Exam Session</label>
+              <select value={provForm.examSession} onChange={e => setProvForm(f => ({...f, examSession: e.target.value}))} style={inputStyle}>
+                <option value="">— Select —</option>
+                <option value="mar_apr">March / April</option>
+                <option value="nov_dec">November / December</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Final Percentage / CGPA</label>
+              <input type="text" placeholder="e.g. 72.5% or 7.8 CGPA" value={provForm.percentage} onChange={e => setProvForm(f => ({...f, percentage: e.target.value}))} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Purpose / Remarks</label>
+            <input type="text" placeholder="e.g. For job application, higher studies admission..." value={provForm.remarks} onChange={e => setProvForm(f => ({...f, remarks: e.target.value}))} style={inputStyle} />
+          </div>
+          <div style={{ background: '#f3e5f5', borderRadius: 9, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#7B1FA2' }}>
+            📋 Workflow: You → Student Section → Admin → Principal → Approved → Issued
+          </div>
+          <button onClick={() => handleDocSubmit('PROVISIONAL_DEGREE', { reason: provForm.remarks || 'Provisional Degree Certificate', provForm })} disabled={submitting}
+            style={{ background: submitting ? '#aaa' : '#7B1FA2', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 28px', fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+            {submitting ? '⏳...' : '📤 Submit Application'}
+          </button>
+        </div>
+      )}
+
+      {/* ── DEGREE CERTIFICATE ── */}
+      {activeSection === 'degree' && (
+        <div style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 14, padding: 20 }}>
+          <h4 style={{ color: '#2E7D32', marginBottom: 6, fontSize: 15 }}>🎓 Degree Certificate Application</h4>
+          <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>Apply for original degree certificate after convocation.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Roll Number</label>
+              <input type="text" placeholder="Your exam roll number" value={degForm.rollNo} onChange={e => setDegForm(f => ({...f, rollNo: e.target.value}))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Convocation Year</label>
+              <select value={degForm.convocationYear} onChange={e => setDegForm(f => ({...f, convocationYear: e.target.value}))} style={inputStyle}>
+                <option value="">— Select Year —</option>
+                {[2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Final Percentage / CGPA</label>
+              <input type="text" placeholder="e.g. 72.5% or 7.8 CGPA" value={degForm.percentage} onChange={e => setDegForm(f => ({...f, percentage: e.target.value}))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Honours / Distinction (if any)</label>
+              <input type="text" placeholder="e.g. First Class with Distinction" value={degForm.honours} onChange={e => setDegForm(f => ({...f, honours: e.target.value}))} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ background: '#e8f5e9', borderRadius: 9, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#2E7D32' }}>
+            📋 Workflow: You → Student Section → Admin → Principal → Approved → Issued
+          </div>
+          <button onClick={() => handleDocSubmit('DEGREE', { reason: 'Degree Certificate — Convocation ' + degForm.convocationYear, degForm })} disabled={submitting}
+            style={{ background: submitting ? '#aaa' : '#2E7D32', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 28px', fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+            {submitting ? '⏳...' : '📤 Submit Application'}
+          </button>
+        </div>
+      )}
+
+      {/* ── MIGRATION ── */}
+      {activeSection === 'migration' && (
+        <div style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 14, padding: 20 }}>
+          <h4 style={{ color: '#E65100', marginBottom: 6, fontSize: 15 }}>📦 Migration Certificate Application</h4>
+          <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>Apply for migration certificate to join another university or institution.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Destination College / University</label>
+              <input type="text" placeholder="Name of the college/university you are joining" value={migForm.destinationCollege} onChange={e => setMigForm(f => ({...f, destinationCollege: e.target.value}))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>City</label>
+              <input type="text" placeholder="City of destination college" value={migForm.destinationCity} onChange={e => setMigForm(f => ({...f, destinationCity: e.target.value}))} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Reason for Migration *</label>
+            <input type="text" placeholder="e.g. Admission in PG course, job transfer, family relocation..." value={migForm.reason} onChange={e => setMigForm(f => ({...f, reason: e.target.value}))} style={inputStyle} />
+          </div>
+          <div style={{ background: '#fff3e0', borderRadius: 9, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#E65100' }}>
+            📋 Workflow: You → Student Section → Admin → Principal → Approved → Issued
+          </div>
+          <button onClick={() => handleDocSubmit('MIGRATION', { reason: migForm.reason || 'Migration Certificate', migForm })} disabled={submitting || !migForm.reason}
+            style={{ background: submitting || !migForm.reason ? '#aaa' : '#E65100', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 28px', fontSize: 14, fontWeight: 700, cursor: submitting || !migForm.reason ? 'not-allowed' : 'pointer' }}>
+            {submitting ? '⏳...' : '📤 Submit Application'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -1915,6 +2220,7 @@ const StudentDashboard = () => {
     { id: 'scholarship', label: '🏅 Scholarship' },
     { id: 'attendance', label: '📊 Attendance' },
     { id: 'academic_year', label: '📅 Academic Year' },
+    { id: 'lastdegree', label: '🎓 Last Degree / TC' },
     { id: 'notices', label: '📢 Notices' },
   ];
 
@@ -2954,6 +3260,11 @@ const StudentDashboard = () => {
                 <div className="empty-state"><div className="empty-icon">📅</div><h3>No admission data found</h3></div>
               )}
             </div>
+          )}
+
+          {/* ============ LAST DEGREE / TC TAB ============ */}
+          {activeTab === 'lastdegree' && (
+            <LastDegreeTab myAdmission={myAdmission} user={user} />
           )}
 
           {/* ============ NOTICES TAB ============ */}
