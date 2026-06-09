@@ -1864,7 +1864,7 @@ const StudentDashboard = () => {
   const [results, setResults] = useState([]);
   const [resultsLoading] = useState(false);
   const [availableForms, setAvailableForms] = useState([]);   // published forms matching this student
-  const [examFormRequests, setExamFormRequests] = useState([]);
+  
   const [examFormSubmitting, setExamFormSubmitting] = useState('');
   const [examFormMsg, setExamFormMsg] = useState('');
 
@@ -1876,6 +1876,13 @@ const StudentDashboard = () => {
       .then(r => setExamFormRequests(r.data.requests || []))
       .catch(() => {});
   };
+
+  
+// AFTER:
+const fetchExamForms = () => {
+  API.get('/results/exam-form/available')
+    .then(res => setAvailableForms(res.data.forms || []))
+    .catch(() => {});
 
   useEffect(() => {
     API.get('/notices').then(res => setNotices(res.data.notices || []));
