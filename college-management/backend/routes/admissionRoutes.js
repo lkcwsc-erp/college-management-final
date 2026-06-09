@@ -96,7 +96,7 @@ router.post('/', uploadFields, async (req, res) => {
 });
 
 // ========== ADMIN: Get All ==========
-router.get('/', protect, authorizeRoles('admin'), async (req, res) => {
+router.get('/', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const admissions = await Admission.find()
       .populate('course', 'name type code')
@@ -121,7 +121,7 @@ router.get('/by-email/:email', protect, async (req, res) => {
 });
 
 // ========== STUDENT SECTION: View Pending ==========
-router.get('/student-section/pending', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.get('/student-section/pending', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const admissions = await Admission.find({ studentSectionStatus: 'pending' })
       .populate('course', 'name type code')
@@ -133,7 +133,7 @@ router.get('/student-section/pending', protect, authorizeRoles('staff_student', 
 });
 
 // ========== STUDENT SECTION: View All ==========
-router.get('/student-section/all', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.get('/student-section/all', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const admissions = await Admission.find()
       .populate('course', 'name type code')
@@ -147,7 +147,7 @@ router.get('/student-section/all', protect, authorizeRoles('staff_student', 'adm
 router.get(
   '/student-section/approved',
   protect,
-  authorizeRoles('staff_student', 'admin'),
+  authorizeRoles('staff_student', 'admin', 'staff_principal'),
   async (req, res) => {
     try {
       const admissions = await Admission.find({ status: 'approved' })
@@ -168,7 +168,7 @@ router.get(
 );
 
 // ========== STUDENT SECTION: Approve & Forward to Principal ==========
-router.put('/staff-approve/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.put('/staff-approve/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { notes } = req.body;
     const admission = await Admission.findById(req.params.id);
@@ -194,7 +194,7 @@ router.put('/staff-approve/:id', protect, authorizeRoles('staff_student', 'admin
 });
 
 // ========== STUDENT SECTION: Reject ==========
-router.put('/staff-reject/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.put('/staff-reject/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { reason } = req.body;
     if (!reason)
@@ -410,7 +410,7 @@ router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', '
 });
 
 // ========== MARK ADMISSION FEES PAID ==========
-router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { fees, paymentMode, transactionId, receiptNo, collectedBy, feeType, feeTypeLabel, semester, totalFees, scholarshipAmount } = req.body;
     const admission = await Admission.findById(req.params.id);
@@ -492,7 +492,7 @@ router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_stud
     res.status(500).json({ success: false, message: error.message });
   }
 });
-router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarship', 'admin'), async (req, res) => {
+router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarship', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const admissions = await Admission.find({ status: 'approved' })
       .populate('course', 'name type')
@@ -504,7 +504,7 @@ router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarshi
 });
 
 // ========== UPDATE MAHADBT CREDENTIALS ==================================
-router.put('/update-mahadbt/:id', protect, authorizeRoles('staff_scholarship', 'admin'), async (req, res) => {
+router.put('/update-mahadbt/:id', protect, authorizeRoles('staff_scholarship', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { mahaDBTUsername, mahaDBTPassword, mahaDBTAppNo, scholarshipStatus, scholarshipNote, scholarshipAmount } = req.body;
     const update = {};
@@ -552,7 +552,7 @@ router.get('/staff-view/all', protect, authorizeRoles('staff_exam', 'staff_schol
     res.status(500).json({ success: false, message: error.message });
   }
 });
-router.put('/update-scholarship/:id', protect, authorizeRoles('staff_accounts', 'staff_scholarship', 'admin'), async (req, res) => {
+router.put('/update-scholarship/:id', protect, authorizeRoles('staff_accounts', 'staff_scholarship', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { scholarshipAmount, scholarshipStatus, scholarshipNote } = req.body;
     const admission = await Admission.findByIdAndUpdate(
@@ -572,7 +572,7 @@ router.put('/update-scholarship/:id', protect, authorizeRoles('staff_accounts', 
 });
 
 // ========== GET ALL APPROVED ADMISSIONS (for Accounts) ==========
-router.get('/accounts-section/all', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+router.get('/accounts-section/all', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const admissions = await Admission.find({ status: 'approved' })
       .populate('course', 'name type code fees')
@@ -600,7 +600,7 @@ router.put('/update-prn/:id', protect, authorizeRoles('staff_student', 'staff_pr
 });
 
 // ========== CARRY FORWARD (SY / TY) ==========
-router.put('/carry-forward/:id', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.put('/carry-forward/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { newYear } = req.body; // '2nd Year' or '3rd Year'
     const validYears = ['2nd Year', '3rd Year'];
@@ -639,7 +639,7 @@ router.put('/update-documents/:id', protect, authorizeRoles('staff_student', 'st
 });
 
 // ========== GET RESULTS BY EMAIL (for carry forward check) ==========
-router.get('/results-by-email/:email', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.get('/results-by-email/:email', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const Result = require('../models/Result');
     const Student = require('../models/Student');
@@ -656,7 +656,7 @@ router.get('/results-by-email/:email', protect, authorizeRoles('staff_student', 
 });
   
 // ========== DELETE ==========
-router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.delete('/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     await Admission.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Application deleted' });
@@ -666,7 +666,7 @@ router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
 });
 
 // ========== UPDATE (Admin) — must be LAST to avoid catching named routes ==========
-router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.put('/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const admission = await Admission.findByIdAndUpdate(req.params.id, req.body, { new: true })
       .populate('course', 'name type');
@@ -680,7 +680,7 @@ router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
 
 
 // ── Delete request from Student Section (goes to Admin) ───────────────────
-router.post('/request-delete', protect, authorizeRoles('staff_student', 'admin'), async (req, res) => {
+router.post('/request-delete', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { admissionId, studentName, studentEmail, studentId, reason, requestedBy } = req.body;
     // Store as a pending delete request in the admission record
@@ -697,7 +697,7 @@ router.post('/request-delete', protect, authorizeRoles('staff_student', 'admin')
 });
 
 // ── Admin approves delete ──────────────────────────────────────────────────
-router.delete('/admin-delete/:id', protect, authorizeRoles('admin'), async (req, res) => {
+router.delete('/admin-delete/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     await Admission.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Student record deleted by Admin.' });
@@ -707,7 +707,7 @@ router.delete('/admin-delete/:id', protect, authorizeRoles('admin'), async (req,
 });
 
 // ── Get pending delete requests (Admin) ───────────────────────────────────
-router.get('/pending-deletes', protect, authorizeRoles('admin'), async (req, res) => {
+router.get('/pending-deletes', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
     const pending = await Admission.find({ deleteRequested: true }).select('applicantName email studentId deleteReason deleteRequestedBy deleteRequestedAt');
     res.json({ success: true, pending });
