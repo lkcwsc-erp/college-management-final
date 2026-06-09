@@ -1953,66 +1953,7 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
       )}
 
             {/* TC / Degree — Last Examination Result */}
-      {(docType === 'TC' || docType === 'DEGREE' || docType === 'PROVISIONAL_DEGREE') && (
-        <div style={{ background: '#e8eaf6', borderRadius: 10, padding: 16, marginBottom: 14, border: '1px solid #9fa8da' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#1a237e', marginBottom: 12 }}>
-            📊 Last Examination Details <span style={{ fontSize: 11, fontWeight: 400, color: '#555' }}>(Fill as per marksheet)</span>
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Last Semester *</label>
-              <select value={lastExamSem} onChange={e => setLastExamSem(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                {['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Session *</label>
-              <select value={lastExamSession} onChange={e => setLastExamSession(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                <option value="mar_apr">March / April</option>
-                <option value="nov_dec">November / December</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Year *</label>
-              <select value={lastExamYear} onChange={e => setLastExamYear(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                {[2020,2021,2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Result</label>
-              <select value={lastExamResult} onChange={e => setLastExamResult(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                <option value="pass">✅ Pass</option>
-                <option value="distinction">🏅 Distinction</option>
-                <option value="atkt">⚠️ ATKT</option>
-                <option value="fail">❌ Fail</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Percentage / CGPA</label>
-              <input type="text" placeholder="e.g. 72.50%" value={lastExamPercent} onChange={e => setLastExamPercent(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>College Name</label>
-              <input type="text" placeholder="Late Kalpana Chawla Women's College" value={lastExamCollege} onChange={e => setLastExamCollege(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-          </div>
-          <div style={{ marginTop: 10, background: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#3949ab' }}>
-            ℹ️ These details will be used by Student Section while issuing your {docType === 'TC' ? 'Transfer Certificate' : 'Degree Certificate'}.
-          </div>
-        </div>
-      )}
+      
 
             {/* Provisional Degree extra fields */}
       {docType === 'PROVISIONAL_DEGREE' && (
