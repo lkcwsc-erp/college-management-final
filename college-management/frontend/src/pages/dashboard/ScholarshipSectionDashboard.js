@@ -1301,12 +1301,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
                 <span style={{ fontSize: 13, fontWeight: isTuition ? 700 : 500, color: isTuition ? '#7B1FA2' : '#333' }}>
                   {head}
                 </span>
-                {isTuition && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: '#fff3e0', color: '#E65100', whiteSpace: 'nowrap' }}>
-                    OPEN scholarship basis
-                  </span>
-                )}
-              </div>
+               
 
               {/* Value per year */}
               {YEARS.map(y => {
@@ -1349,38 +1344,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
           ))}
         </div>
 
-        {/* ── OPEN Total row — Tuition Fee only ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
-          padding: '13px 20px', gap: 8, background: '#fff8e1', borderTop: '1px solid #ffe082' }}>
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#E65100' }}>
-              Scholarship — OPEN Category
-            </span>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#E65100' }}>Tuition Fee only</p>
-          </div>
-          {YEARS.map(y => (
-            <span key={y} style={{ fontSize: 15, fontWeight: 800, color: '#E65100', textAlign: 'center' }}>
-              {openTotal(y) ? `₹${fmt(openTotal(y))}` : '—'}
-            </span>
-          ))}
-        </div>
-
-        {/* ── OPEN Self-pay row — what OPEN student pays from pocket ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
-          padding: '13px 20px', gap: 8, background: '#ffebee', borderTop: '1px solid #ef9a9a' }}>
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#C62828' }}>
-              Student Pays — OPEN Category
-            </span>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#C62828' }}>Total Fees minus Tuition</p>
-          </div>
-          {YEARS.map(y => (
-            <span key={y} style={{ fontSize: 15, fontWeight: 800, color: '#C62828', textAlign: 'center' }}>
-              {openSelfPay(y) ? `₹${fmt(openSelfPay(y))}` : '₹0'}
-            </span>
-          ))}
-        </div>
-      </div>
+       
 
       {/* Quick summary cards per year */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
