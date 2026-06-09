@@ -1306,7 +1306,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
 
               {/* Value per year */}
               {YEARS.map(y => {
-              {YEARS.map(y => {
+              
                 const val = courseData[y]?.[head] ?? 0;
                 return (
                   <div key={y} style={{ textAlign: 'center' }}>
