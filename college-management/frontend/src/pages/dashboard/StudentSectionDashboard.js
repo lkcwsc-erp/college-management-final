@@ -1307,6 +1307,19 @@ const AllDocumentsTab = ({ user }) => {
                   {req.reason && <span style={{gridColumn:'1/-1'}}><strong>Reason:</strong> {req.reason}</span>}
                   {req.accountsNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Accounts: {req.accountsNotes}</span>}
                   {req.principalNotes && <span style={{gridColumn:'1/-1',color:'#777',fontStyle:'italic'}}>Principal: {req.principalNotes}</span>}
+                  {(req.documentType === 'TC' || req.documentType === 'DEGREE' || req.documentType === 'PROVISIONAL_DEGREE') && req.lastExamYear && (
+                    <div style={{gridColumn:'1/-1', background:'#e8eaf6', borderRadius:8, padding:'10px 14px', marginTop:6}}>
+                      <strong style={{color:'#1a237e', fontSize:12}}>📊 Last Exam Details:</strong>
+                      <div style={{display:'flex', flexWrap:'wrap', gap:12, marginTop:6, fontSize:12}}>
+                        {req.lastExamSem && <span><strong>Semester:</strong> {req.lastExamSem}</span>}
+                        {req.lastExamSession && <span><strong>Session:</strong> {req.lastExamSession === 'mar_apr' ? 'March/April' : 'Nov/Dec'}</span>}
+                        {req.lastExamYear && <span><strong>Year:</strong> {req.lastExamYear}</span>}
+                        {req.lastExamResult && <span><strong>Result:</strong> {req.lastExamResult.toUpperCase()}</span>}
+                        {req.lastExamPercent && <span><strong>Percentage:</strong> {req.lastExamPercent}</span>}
+                        {req.lastExamCollege && <span><strong>College:</strong> {req.lastExamCollege}</span>}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {req.status === 'completed' && req.generatedBy && (
                   <div style={{ padding: '6px 18px 10px', fontSize: 12, color: '#7B1FA2', fontWeight: 600, borderTop: '1px solid #f0f4f8' }}>
