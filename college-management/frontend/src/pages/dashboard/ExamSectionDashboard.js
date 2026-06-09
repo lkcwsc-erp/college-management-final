@@ -889,6 +889,14 @@ const ExamDataTab = () => {
 };
 
 
+// Which semesters belong to each academic year (used by Publish Exam Form).
+// Year select karne par sirf us year ke 2 semester hi dikhenge.
+const SEM_BY_YEAR = {
+  '1st Year': ['1st', '2nd'],
+  '2nd Year': ['3rd', '4th'],
+  '3rd Year': ['5th', '6th'],
+};
+
 // ─── Main ExamSectionDashboard ────────────────────────────────────────────────
 const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
@@ -896,7 +904,7 @@ const ExamSectionDashboard = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [publishedForms, setPublishedForms] = useState([]);
   const [openFormModal, setOpenFormModal] = useState(null);   // 'regular' | 'backlog' | null
-  const [formDraft, setFormDraft] = useState({ course: '', semester: '', examEvent: '' });
+  const [formDraft, setFormDraft] = useState({ course: '', year: '', semester: '', examEvent: '' });
   const [settingMsg, setSettingMsg] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -912,25 +920,26 @@ const ExamSectionDashboard = () => {
 
   const handleOpenFormClick = (type) => {
     setOpenFormModal(type);
-    setFormDraft({ course: '', semester: '', examEvent: '' });
+    setFormDraft({ course: '', year: '', semester: '', examEvent: '' });
   };
 
-  // Publish a new exam form for students (course + semester + exam event)
+  // Publish a new exam form for students (course + year + semester + exam event)
   const submitOpenForm = async () => {
-    if (!formDraft.course || !formDraft.semester || !formDraft.examEvent) {
-      alert('Please select Course, Semester, and Exam Event.');
+    if (!formDraft.course || !formDraft.year || !formDraft.semester || !formDraft.examEvent) {
+      alert('Please select Course, Year, Semester, and Exam Event.');
       return;
     }
     setSavingSettings(true);
     try {
       await API.post('/results/exam-form/publish', {
-        formType:  openFormModal,
-        course:    formDraft.course,
-        semester:  formDraft.semester,
-        examEvent: formDraft.examEvent,
+        formType:      openFormModal,
+        course:        formDraft.course,
+        semester:      formDraft.semester,
+        examEvent:     formDraft.examEvent,
+        admissionYear: formDraft.year,   // form sirf isi year ke students ko jayega
       });
       fetchPublished();
-      setSettingMsg(`✅ ${openFormModal === 'regular' ? 'Regular' : 'Backlog'} exam form published for ${formDraft.course} ${formDraft.semester} Sem students!`);
+      setSettingMsg(`✅ ${openFormModal === 'regular' ? 'Regular' : 'Backlog'} exam form published for ${formDraft.course} ${formDraft.year} students!`);
       setTimeout(() => setSettingMsg(''), 4000);
       setOpenFormModal(null);
     } catch (e) {
@@ -1045,7 +1054,7 @@ const ExamSectionDashboard = () => {
           {activeTab === 'publish' && (
             <div>
               <h2 style={{ color: '#f57c00', marginBottom: 4 }}>📤 Publish Exam Form</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Choose a form type, select Course, Semester and Exam Event, then publish it. Only matching course &amp; year students will see it in their dashboard.</p>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Choose a form type, select Course, Year and Exam Event, then publish it. Only matching course &amp; year students will see it in their dashboard.</p>
 
               {settingMsg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontWeight: 500, fontSize: 14, background: settingMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: settingMsg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{settingMsg}</div>}
 
@@ -1108,7 +1117,7 @@ const ExamSectionDashboard = () => {
                 <h3 style={{ marginBottom:4, color: openFormModal==='regular' ? '#1b5e20' : '#bf360c' }}>
                   {openFormModal==='regular' ? '📤 Publish Regular Exam Form' : '📤 Publish Backlog/KT Exam Form'}
                 </h3>
-                <p style={{ color:'#666', fontSize:13, marginBottom:20 }}>Select Course, Semester and Exam Event, then publish for students.</p>
+                <p style={{ color:'#666', fontSize:13, marginBottom:20 }}>Select Course, Year, Semester and Exam Event, then publish for students.</p>
 
                 <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Course *</label>
                 <select value={formDraft.course} onChange={e => setFormDraft(p=>({...p, course:e.target.value}))}
@@ -1118,11 +1127,21 @@ const ExamSectionDashboard = () => {
                   <option value='BSc'>BSc</option>
                 </select>
 
+                <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Year *</label>
+                <select value={formDraft.year} onChange={e => setFormDraft(p=>({...p, year:e.target.value, semester:''}))}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1.5px solid #ddd', marginBottom:16, fontSize:14 }}>
+                  <option value=''>-- Select Year --</option>
+                  <option value='1st Year'>1st Year</option>
+                  <option value='2nd Year'>2nd Year</option>
+                  <option value='3rd Year'>3rd Year</option>
+                </select>
+
                 <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Semester *</label>
                 <select value={formDraft.semester} onChange={e => setFormDraft(p=>({...p, semester:e.target.value}))}
-                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1.5px solid #ddd', marginBottom:16, fontSize:14 }}>
-                  <option value=''>-- Select Semester --</option>
-                  {['1st','2nd','3rd','4th','5th','6th'].map(s=><option key={s} value={s}>{s} Semester</option>)}
+                  disabled={!formDraft.year}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1.5px solid #ddd', marginBottom:16, fontSize:14, background: formDraft.year ? '#fff' : '#f5f5f5' }}>
+                  <option value=''>{formDraft.year ? '-- Select Semester --' : '-- Select Year first --'}</option>
+                  {(SEM_BY_YEAR[formDraft.year] || []).map(s=><option key={s} value={s}>{s} Semester</option>)}
                 </select>
 
                 <label style={{ fontWeight:700, fontSize:13, display:'block', marginBottom:6 }}>Exam Event *</label>
