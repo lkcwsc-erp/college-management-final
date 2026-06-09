@@ -208,7 +208,6 @@ exports.autoCalculateScholarship = async (req, res) => {
       categories: { $elemMatch: { $regex: new RegExp(`^${category}$`, 'i') } },
       courseType,
       admissionYear,
-      academicYear: academicYear || '',
       isActive: true,
     });
 
