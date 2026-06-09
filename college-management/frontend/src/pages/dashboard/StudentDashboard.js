@@ -1869,20 +1869,10 @@ const StudentDashboard = () => {
   const [examFormMsg, setExamFormMsg] = useState('');
 
   const fetchExamForms = () => {
-    API.get('/results/exam-form/available')
-      .then(res => setAvailableForms(res.data.forms || []))
-      .catch(() => {});
-    API.get('/results/exam-form/my')
-      .then(r => setExamFormRequests(r.data.requests || []))
-      .catch(() => {});
-  };
-
-  
-// AFTER:
-const fetchExamForms = () => {
   API.get('/results/exam-form/available')
     .then(res => setAvailableForms(res.data.forms || []))
     .catch(() => {});
+};
 
   useEffect(() => {
     API.get('/notices').then(res => setNotices(res.data.notices || []));
