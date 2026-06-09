@@ -958,11 +958,91 @@ const PrincipalPassFailReport = () => {
 
 
 // ─── Staff Overview Tab ───────────────────────────────────────────────────────
+const ROLE_AUTHORITIES = {
+  staff_student: {
+    label: 'Student Section Staff', icon: '👩‍🎓', color: '#1565C0', bg: '#e3f2fd',
+    authorities: [
+      '📝 Admission Enquiry Management',
+      '🎓 Pending Admission Approval (Forward to Principal)',
+      '👥 Generate Student Login Credentials',
+      '📄 Issue TC / Bonafide / ID Card',
+      '🔢 Update PRN / ABC ID',
+      '🎓 SY/TY Carry Forward',
+      '📋 Document Request Processing',
+      '📬 Receive Admin Messages',
+      '🧾 View Payment Receipts',
+      '👩‍🎓 View/Edit All Students',
+    ],
+  },
+  staff_accounts: {
+    label: 'Accounts Section Staff', icon: '💰', color: '#2E7D32', bg: '#e8f5e9',
+    authorities: [
+      '💰 Collect Student Fees',
+      '🧾 Generate Fee Receipts',
+      '📄 Document Fee Collection',
+      '💼 View/Edit Fee Structure',
+      '🏗️ Record College Expenses',
+      '📊 Finance Overview Dashboard',
+      '📋 Document Request Fee Collection',
+      '📥 Export Financial Reports',
+      '👩‍🎓 View All Students',
+    ],
+  },
+  staff_exam: {
+    label: 'Exam Section Staff', icon: '📝', color: '#E65100', bg: '#fff3e0',
+    authorities: [
+      '📋 Publish Exam Forms (Regular/Backlog)',
+      '📝 View Student Exam Form Requests',
+      '📊 Upload Student Results',
+      '📈 Pass/Fail/ATKT Report',
+      '✅ Verify TC (Result Verification)',
+      '🔍 Document Request Verification',
+      '📁 Academic Year Result Management',
+    ],
+  },
+  staff_scholarship: {
+    label: 'Scholarship Section Staff', icon: '🏅', color: '#7B1FA2', bg: '#f3e5f5',
+    authorities: [
+      '🎖️ MahaDBT Scholarship Management',
+      '📋 View Student Scholarship Status',
+      '✅ Approve/Update Scholarship Forms',
+      '💰 Scholarship Amount Entry',
+      '📊 Academic Year-wise Scholarship Data',
+      '📥 Export Scholarship Reports',
+    ],
+  },
+  staff_principal: {
+    label: 'Principal Office Staff', icon: '🏛️', color: '#C62828', bg: '#ffebee',
+    authorities: [
+      '📋 Assist Principal in Document Work',
+      '📢 Post Important Notices',
+      '📁 Manage College Resources',
+      '👁️ View All Student Records',
+    ],
+  },
+  admin: {
+    label: 'Administrator', icon: '⚙️', color: '#333', bg: '#f5f5f5',
+    authorities: [
+      '👥 Full Staff Management (Add/Edit/Delete)',
+      '👩‍🎓 Full Student Management',
+      '📚 Course Add/Edit/Delete',
+      '🏆 Achievement Add/Edit/Delete',
+      '📢 Notice Add/Edit/Delete',
+      '✉️ Send Messages to All Staff/Students',
+      '🖼️ Gallery Management',
+      '📋 All Document Requests',
+      '💼 Fee Structure Approval',
+      '📊 Full Reports Access',
+    ],
+  },
+};
+
 const PrincipalStaffTab = () => {
-  const [staff, setStaff]       = useState([]);
-  const [faculty, setFaculty]   = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [view, setView]         = useState('staff'); // 'staff' | 'faculty'
+  const [staff, setStaff]     = useState([]);
+  const [faculty, setFaculty] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [view, setView]       = useState('authority');
+  const [expandedRole, setExpandedRole] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -976,34 +1056,21 @@ const PrincipalStaffTab = () => {
     .finally(() => setLoading(false));
   }, []);
 
-  const roleLabel = (role) => ({
-    staff_student:     '👩‍🎓 Student Section',
-    staff_accounts:    '💰 Accounts',
-    staff_exam:        '📝 Exam Section',
-    staff_scholarship: '🏅 Scholarship',
-    staff_principal:   '🏛️ Principal Office',
-    admin:             '⚙️ Admin',
-  }[role] || role);
-
-  const roleColor = (role) => ({
-    staff_student:     '#1565C0',
-    staff_accounts:    '#2E7D32',
-    staff_exam:        '#E65100',
-    staff_scholarship: '#7B1FA2',
-    staff_principal:   '#C62828',
-    admin:             '#333',
-  }[role] || '#555');
+  const staffByRole = {};
+  staff.forEach(s => {
+    if (!staffByRole[s.role]) staffByRole[s.role] = [];
+    staffByRole[s.role].push(s);
+  });
 
   return (
     <div>
-      <h2 style={{ color: '#C62828', marginBottom: 4 }}>👥 Staff & Faculty Overview</h2>
-      <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>All staff members and teaching faculty at a glance.</p>
+      <h2 style={{ color: '#C62828', marginBottom: 4 }}>👥 Staff, Faculty & Authorities</h2>
+      <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>Staff authorities, role-wise members, and teaching faculty overview.</p>
 
-      {/* Toggle */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 20, background: '#f0f4f8', borderRadius: 10, padding: 4, width: 'fit-content' }}>
-        {[['staff', `🧑‍💼 Staff (${staff.length})`], ['faculty', `👩‍🏫 Faculty (${faculty.length})`]].map(([id, label]) => (
+        {[['authority', '🔐 Authorities'], ['staff', `🧑‍💼 Staff (${staff.length})`], ['faculty', `👩‍🏫 Faculty (${faculty.length})`]].map(([id, label]) => (
           <button key={id} onClick={() => setView(id)}
-            style={{ padding: '8px 20px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            style={{ padding: '8px 18px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
               background: view === id ? '#C62828' : 'transparent', color: view === id ? '#fff' : '#555' }}>
             {label}
           </button>
@@ -1012,31 +1079,91 @@ const PrincipalStaffTab = () => {
 
       {loading ? <div style={{ textAlign: 'center', padding: 40, fontSize: '2rem' }}>⏳</div> : (
 
-        view === 'staff' ? (
+        view === 'authority' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Object.entries(ROLE_AUTHORITIES).map(([role, info]) => {
+              const members = staffByRole[role] || [];
+              const isExpanded = expandedRole === role;
+              return (
+                <div key={role} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${info.color}33`, overflow: 'hidden' }}>
+                  <div onClick={() => setExpandedRole(isExpanded ? null : role)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', cursor: 'pointer', background: info.bg, borderLeft: `5px solid ${info.color}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 24 }}>{info.icon}</span>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: 15, color: info.color }}>{info.label}</h4>
+                        <span style={{ fontSize: 12, color: '#888' }}>{members.length} member{members.length !== 1 ? 's' : ''} assigned</span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 18, color: info.color }}>{isExpanded ? '▲' : '▼'}</span>
+                  </div>
+                  {isExpanded && (
+                    <div style={{ padding: '16px 20px' }}>
+                      <h5 style={{ color: info.color, marginBottom: 10, fontSize: 13 }}>🔐 Authorities & Permissions</h5>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 6, marginBottom: members.length > 0 ? 16 : 0 }}>
+                        {info.authorities.map((auth, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#444', background: info.bg, padding: '6px 12px', borderRadius: 8 }}>
+                            <span style={{ color: info.color }}>✓</span>{auth}
+                          </div>
+                        ))}
+                      </div>
+                      {members.length > 0 && (
+                        <div>
+                          <h5 style={{ color: '#555', marginBottom: 10, fontSize: 13 }}>👤 Assigned Members ({members.length})</h5>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+                            {members.map(m => (
+                              <div key={m._id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f8faff', borderRadius: 10, padding: '10px 14px', border: '1px solid #e0e7ef' }}>
+                                <div style={{ width: 36, height: 36, borderRadius: '50%', background: info.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0, overflow: 'hidden' }}>
+                                  {m.photo ? <img src={m.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : info.icon}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{m.name}</div>
+                                  <div style={{ fontSize: 11, color: '#888' }}>{m.email}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {members.length === 0 && <div style={{ fontSize: 13, color: '#aaa', fontStyle: 'italic' }}>⚠️ No staff assigned yet.</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
+
+        : view === 'staff' ? (
           staff.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: '#888' }}><div style={{ fontSize: '2.5rem' }}>👥</div><p>No staff records found.</p></div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-              {staff.map(s => (
-                <div key={s._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: `4px solid ${roleColor(s.role)}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                      {s.photo ? <img src={s.photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} /> : '🧑‍💼'}
+              {staff.map(s => {
+                const info = ROLE_AUTHORITIES[s.role] || { label: s.role, icon: '👤', color: '#555', bg: '#f5f5f5' };
+                return (
+                  <div key={s._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: `4px solid ${info.color}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: info.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, overflow: 'hidden' }}>
+                        {s.photo ? <img src={s.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : info.icon}
+                      </div>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: 14, color: '#1a1a2e' }}>{s.name}</h4>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: info.color, background: info.bg, padding: '2px 8px', borderRadius: 8 }}>{info.label}</span>
+                      </div>
                     </div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: 14, color: '#1a1a2e' }}>{s.name}</h4>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: roleColor(s.role), background: roleColor(s.role) + '15', padding: '2px 8px', borderRadius: 8 }}>{roleLabel(s.role)}</span>
+                    <div style={{ fontSize: 12, color: '#666' }}>
+                      <div>📧 {s.email}</div>
+                      {s.phone && <div style={{ marginTop: 4 }}>📞 {s.phone}</div>}
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: '#666' }}>
-                    <div>📧 {s.email}</div>
-                    {s.phone && <div style={{ marginTop: 4 }}>📞 {s.phone}</div>}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )
-        ) : (
+        )
+
+        : (
           faculty.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: '#888' }}><div style={{ fontSize: '2.5rem' }}>👩‍🏫</div><p>No faculty records found.</p></div>
           ) : (
@@ -1045,9 +1172,7 @@ const PrincipalStaffTab = () => {
                 <div key={f._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: '4px solid #1565C0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                     <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e3f2fd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, overflow: 'hidden' }}>
-                      {f.photo
-                        ? <img src={f.photo.startsWith('http') ? f.photo : `${process.env.REACT_APP_API_URL}/uploads/${f.photo}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-                        : '👩‍🏫'}
+                      {f.photo ? <img src={f.photo.startsWith('http') ? f.photo : `${process.env.REACT_APP_API_URL}/uploads/${f.photo}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} /> : '👩‍🏫'}
                     </div>
                     <div>
                       <h4 style={{ margin: 0, fontSize: 14, color: '#1a1a2e' }}>{f.name}</h4>
@@ -1069,6 +1194,7 @@ const PrincipalStaffTab = () => {
     </div>
   );
 };
+
 
 
 const PrincipalNoticesTab = () => {
