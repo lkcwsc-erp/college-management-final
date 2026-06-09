@@ -209,7 +209,8 @@ const printTC = (adm) => {
       <div class="row"><span class="rnum">2.</span><span class="rlabel">Mother's Name</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.motherName||''}"/></span></div>
       <div class="row"><span class="rnum">3.</span><span class="rlabel">Caste &amp; Sub-Caste</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.caste||''}"/></span></div>
       <div class="row"><span class="rnum">4.</span><span class="rlabel">Place of Birth</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">5.</span><span class="rlabel">Nationality</span><span class="rcolon">:</span>
+      <div class="row">
+      <span class="rnum">5.</span><span class="rlabel">Nationality</span><span class="rcolon">:</span>
         <span class="rval"><input type="text" value="Indian" style="min-width:120px"/></span></div>
       <div class="row">
       <span class="rnum">6.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
