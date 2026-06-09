@@ -211,7 +211,8 @@ const printTC = (adm) => {
       <div class="row"><span class="rnum">4.</span><span class="rlabel">Place of Birth</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
       <div class="row"><span class="rnum">5.</span><span class="rlabel">Nationality</span><span class="rcolon">:</span>
         <span class="rval"><input type="text" value="Indian" style="min-width:120px"/></span></div>
-      <div class="row"><span class="rnum">6.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
+      <div class="row">
+      <span class="rnum">6.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
         <span class="rval"> <input type="text" value="${dobStr}" style="min-width:120px"/> </span>
       </div>
       <div class="row"> <span class="rnum">7.</span><span class="rlabel">(In Words)</span><span class="rcolon">:</span>
