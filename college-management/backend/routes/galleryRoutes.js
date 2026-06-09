@@ -33,8 +33,8 @@ const upload = multer({
 
 // Routes
 router.get('/', getAllGallery);
-router.post('/', protect, authorizeRoles('admin'), upload.single('image'), createGallery);
-router.put('/:id', protect, authorizeRoles('admin'), upload.single('image'), updateGallery);
-router.delete('/:id', protect, authorizeRoles('admin'), deleteGallery);
+router.post('/', protect, authorizeRoles('admin', 'staff_principal'), upload.single('image'), createGallery);
+router.put('/:id', protect, authorizeRoles('admin', 'staff_principal'), upload.single('image'), updateGallery);
+router.delete('/:id', protect, authorizeRoles('admin', 'staff_principal'), deleteGallery);
 
 module.exports = router;
