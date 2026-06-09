@@ -47,7 +47,7 @@ router.get('/exam-settings', protect, async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const settings = await getSettings();
     const allowed = [
@@ -67,7 +67,7 @@ router.put('/exam-settings', protect, authorizeRoles('staff_exam', 'admin'), asy
 // POST /api/results/exam-form/publish  (exam section + admin)
 // body: { formType, course, semester, examEvent }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/exam-form/publish', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+router.post('/exam-form/publish', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { formType, course, semester, examEvent } = req.body;
     if (!formType || !course || !semester || !examEvent)
@@ -98,7 +98,7 @@ router.post('/exam-form/publish', protect, authorizeRoles('staff_exam', 'admin')
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/results/exam-form/published  (exam section + admin)
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/exam-form/published', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+router.get('/exam-form/published', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const published = await PublishedExamForm.find({ active: true }).sort({ createdAt: -1 });
     res.json({ success: true, published });
@@ -108,7 +108,7 @@ router.get('/exam-form/published', protect, authorizeRoles('staff_exam', 'admin'
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/results/exam-form/published/:id  (unpublish)
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/exam-form/published/:id', protect, authorizeRoles('staff_exam', 'admin'), async (req, res) => {
+router.delete('/exam-form/published/:id', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     await PublishedExamForm.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Exam form unpublished.' });
@@ -220,7 +220,7 @@ router.get('/exam-form/my', protect, authorizeRoles('student'), async (req, res)
 // GET /api/results/exam-form/all  (accounts + exam + admin)
 // supports filters: formType, course, feeStatus, search (prn / studentId / name)
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/exam-form/all', protect, authorizeRoles('staff_accounts', 'staff_exam', 'admin'), async (req, res) => {
+router.get('/exam-form/all', protect, authorizeRoles('staff_accounts', 'staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { formType, course, feeStatus, search } = req.query;
     const filter = {};
@@ -241,7 +241,7 @@ router.get('/exam-form/all', protect, authorizeRoles('staff_accounts', 'staff_ex
 // ─────────────────────────────────────────────────────────────────────────────
 // PUT /api/results/exam-form/collect-fee/:id  (accounts + admin)
 // ─────────────────────────────────────────────────────────────────────────────
-router.put('/exam-form/collect-fee/:id', protect, authorizeRoles('staff_accounts', 'admin'), async (req, res) => {
+router.put('/exam-form/collect-fee/:id', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { amount, paymentMode, transactionId } = req.body;
     if (!amount || amount <= 0)
