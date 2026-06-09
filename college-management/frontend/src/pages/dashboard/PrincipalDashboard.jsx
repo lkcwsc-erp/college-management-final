@@ -959,56 +959,118 @@ const PrincipalPassFailReport = () => {
 
 // ─── Staff Overview Tab ───────────────────────────────────────────────────────
 const PrincipalStaffTab = () => {
-  const [staff, setStaff]     = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [staff, setStaff]       = useState([]);
+  const [faculty, setFaculty]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [view, setView]         = useState('staff'); // 'staff' | 'faculty'
 
   useEffect(() => {
     setLoading(true);
-    API.get('/auth/staff')
-      .then(res => setStaff(res.data.staff || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      API.get('/auth/staff'),
+      API.get('/faculty'),
+    ]).then(([sRes, fRes]) => {
+      setStaff(sRes.data.staff || []);
+      setFaculty(fRes.data.faculty || []);
+    }).catch(() => {})
+    .finally(() => setLoading(false));
   }, []);
 
   const roleLabel = (role) => ({
     staff_student:     '👩‍🎓 Student Section',
-    staff_accounts:    '💰 Accounts Section',
+    staff_accounts:    '💰 Accounts',
     staff_exam:        '📝 Exam Section',
-    staff_scholarship: '🏅 Scholarship Section',
-    staff_principal:   '🎓 Principal',
+    staff_scholarship: '🏅 Scholarship',
+    staff_principal:   '🏛️ Principal Office',
     admin:             '⚙️ Admin',
   }[role] || role);
 
+  const roleColor = (role) => ({
+    staff_student:     '#1565C0',
+    staff_accounts:    '#2E7D32',
+    staff_exam:        '#E65100',
+    staff_scholarship: '#7B1FA2',
+    staff_principal:   '#C62828',
+    admin:             '#333',
+  }[role] || '#555');
+
   return (
     <div>
-      <h2 style={{ color: '#C62828', marginBottom: 4 }}>👥 Staff Overview</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>All staff members and their roles.</p>
-      {loading ? <div className="empty-state"><p style={{ fontSize: '2rem' }}>⏳</p></div>
-        : staff.length === 0 ? <div className="empty-state"><div className="empty-icon">👥</div><h3>No staff found</h3></div>
-          : (
-            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr', background: '#C62828', padding: '12px 16px', gap: 8 }}>
-                {['Name', 'Email', 'Role', 'Status'].map(h => <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>)}
-              </div>
-              {staff.map((s, idx) => (
-                <div key={s._id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>{s.name}</p>
-                    <p style={{ fontSize: 11, color: '#888', margin: 0 }}>{s.phone || ''}</p>
+      <h2 style={{ color: '#C62828', marginBottom: 4 }}>👥 Staff & Faculty Overview</h2>
+      <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>All staff members and teaching faculty at a glance.</p>
+
+      {/* Toggle */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 20, background: '#f0f4f8', borderRadius: 10, padding: 4, width: 'fit-content' }}>
+        {[['staff', `🧑‍💼 Staff (${staff.length})`], ['faculty', `👩‍🏫 Faculty (${faculty.length})`]].map(([id, label]) => (
+          <button key={id} onClick={() => setView(id)}
+            style={{ padding: '8px 20px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              background: view === id ? '#C62828' : 'transparent', color: view === id ? '#fff' : '#555' }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? <div style={{ textAlign: 'center', padding: 40, fontSize: '2rem' }}>⏳</div> : (
+
+        view === 'staff' ? (
+          staff.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: '#888' }}><div style={{ fontSize: '2.5rem' }}>👥</div><p>No staff records found.</p></div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+              {staff.map(s => (
+                <div key={s._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: `4px solid ${roleColor(s.role)}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                      {s.photo ? <img src={s.photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} /> : '🧑‍💼'}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 14, color: '#1a1a2e' }}>{s.name}</h4>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: roleColor(s.role), background: roleColor(s.role) + '15', padding: '2px 8px', borderRadius: 8 }}>{roleLabel(s.role)}</span>
+                    </div>
                   </div>
-                  <span style={{ fontSize: 12, color: '#555' }}>{s.email}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#C62828' }}>{roleLabel(s.role)}</span>
-                  <span style={{ fontSize: 12, background: '#e8f5e9', color: '#2E7D32', padding: '2px 10px', borderRadius: 10, fontWeight: 600 }}>Active</span>
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    <div>📧 {s.email}</div>
+                    {s.phone && <div style={{ marginTop: 4 }}>📞 {s.phone}</div>}
+                  </div>
                 </div>
               ))}
             </div>
-          )}
+          )
+        ) : (
+          faculty.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: '#888' }}><div style={{ fontSize: '2.5rem' }}>👩‍🏫</div><p>No faculty records found.</p></div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+              {faculty.map(f => (
+                <div key={f._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: 16, borderLeft: '4px solid #1565C0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e3f2fd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, overflow: 'hidden' }}>
+                      {f.photo
+                        ? <img src={f.photo.startsWith('http') ? f.photo : `${process.env.REACT_APP_API_URL}/uploads/${f.photo}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                        : '👩‍🏫'}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 14, color: '#1a1a2e' }}>{f.name}</h4>
+                      <div style={{ fontSize: 12, color: '#1565C0', fontWeight: 600 }}>{f.designation}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    {f.department && <div>🏫 {f.department}</div>}
+                    {f.qualification && <div style={{ marginTop: 2 }}>🎓 {f.qualification}</div>}
+                    {f.experience && <div style={{ marginTop: 2 }}>⏱ {f.experience}</div>}
+                    {f.email && <div style={{ marginTop: 2 }}>📧 {f.email}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )
+      )}
     </div>
   );
 };
 
 
-// ─── Notices Tab ─────────────────────────────────────────────────────────────
 const PrincipalNoticesTab = () => {
   const [notices, setNotices]     = useState([]);
   const [loading, setLoading]     = useState(false);
