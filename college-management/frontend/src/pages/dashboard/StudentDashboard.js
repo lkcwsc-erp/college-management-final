@@ -224,10 +224,10 @@ const printTC = (adm) => {
       <div class="row"><span class="rnum">10.</span><span class="rlabel">Progress</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Satisfactory"/></span></div>
       <div class="row"><span class="rnum">11.</span><span class="rlabel">Conduct</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Good"/></span></div>
       <div class="row"><span class="rnum">12.</span><span class="rlabel">Date of Leaving</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${dateStr}"/></span></div>
-      <div class="row"><span class="rnum">11.</span><span class="rlabel">Standard in which studying and since when</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${courseFull + (adm.admissionYear?' ('+adm.admissionYear+')':'')}"/></span></div>
-      <div class="row"><span class="rnum">13.</span><span class="rlabel">Reason of Leaving College</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">14.</span><span class="rlabel">Remarks</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row" style="border-bottom:none;padding-top:8px"><span class="rnum">15.</span><span style="flex:1;font-weight:bold">Certified that the above information is in accordance with the college record.</span></div>
+      <div class="row"><span class="rnum">13.</span><span class="rlabel">Standard in which studying and since when</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${courseFull + (adm.admissionYear?' ('+adm.admissionYear+')':'')}"/></span></div>
+      <div class="row"><span class="rnum">14.</span><span class="rlabel">Reason of Leaving College</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row"><span class="rnum">15.</span><span class="rlabel">Remarks</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row" style="border-bottom:none;padding-top:8px"><span class="rnum">16.</span><span style="flex:1;font-weight:bold">Certified that the above information is in accordance with the college record.</span></div>
     </div>
 
     <div class="foot">
