@@ -12,8 +12,8 @@ const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 router.post('/', submitEnquiry);
 
 // Protected - staff dekhega
-router.get('/', protect, authorizeRoles('staff_student', 'admin'), getAllEnquiries);
-router.put('/:id', protect, authorizeRoles('staff_student', 'admin'), updateEnquiryStatus);
-router.delete('/:id', protect, authorizeRoles('staff_student', 'admin'), deleteEnquiry);
+router.get('/', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), getAllEnquiries);
+router.put('/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), updateEnquiryStatus);
+router.delete('/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), deleteEnquiry);
 
 module.exports = router;
