@@ -16,7 +16,7 @@ const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 router.post(
   '/',
   protect,
-  authorizeRoles('staff_exam', 'staff', 'admin'),
+  authorizeRoles('staff_exam', 'staff', 'admin', 'staff_principal'),
   uploadResult
 );
 
@@ -24,7 +24,7 @@ router.post(
 router.get(
   '/',
   protect,
-  authorizeRoles('staff_exam', 'admin'),
+  authorizeRoles('staff_exam', 'admin', 'staff_principal'),
   getAllResults
 );
 
@@ -40,7 +40,7 @@ router.get(
 router.post(
   '/upload-by-email',
   protect,
-  authorizeRoles('staff_exam', 'admin'),
+  authorizeRoles('staff_exam', 'admin', 'staff_principal'),
   async (req, res) => {
     try {
       const Result = require('../models/Result');
@@ -169,7 +169,7 @@ router.post(
 router.get(
   '/exam-section/all',
   protect,
-  authorizeRoles('staff_exam', 'admin'),
+  authorizeRoles('staff_exam', 'admin', 'staff_principal'),
   async (req, res) => {
     try {
       const Result = require('../models/Result');
@@ -195,7 +195,7 @@ router.get(
 router.get(
   '/by-email/:email',
   protect,
-  authorizeRoles('staff_exam', 'staff_student', 'admin'),
+  authorizeRoles('staff_exam', 'staff_student', 'admin', 'staff_principal'),
   async (req, res) => {
     try {
       const Result = require('../models/Result');
@@ -250,21 +250,21 @@ router.get(
 router.get(
   '/:studentId',
   protect,
-  authorizeRoles('staff_exam', 'staff', 'admin'),
+  authorizeRoles('staff_exam', 'staff', 'admin', 'staff_principal'),
   getResultByStudent
 );
 
 router.put(
   '/:id',
   protect,
-  authorizeRoles('staff_exam', 'staff', 'admin'),
+  authorizeRoles('staff_exam', 'staff', 'admin', 'staff_principal'),
   updateResult
 );
 
 router.delete(
   '/:id',
   protect,
-  authorizeRoles('staff_exam', 'admin'),
+  authorizeRoles('staff_exam', 'admin', 'staff_principal'),
   deleteResult
 );
 
