@@ -1700,7 +1700,9 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
   const [lastExamSem, setLastExamSem]           = useState('');
   const [lastExamSession, setLastExamSession]   = useState('');
   const [lastExamResult, setLastExamResult]     = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [lastExamPercent, setLastExamPercent]   = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [lastExamCollege, setLastExamCollege]   = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg]           = useState('');
@@ -1764,6 +1766,8 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
             <option value="ID_CARD">🪪 ID Card</option>
             <option value="MARKSHEET">📄 Marksheet</option>
             <option value="PROVISIONAL_DEGREE">📜 Provisional Degree Certificate</option>
+            <option value="DEGREE">🎓 Degree Certificate</option>
+            <option value="MIGRATION">📜 Migration Certificate</option>
           </select>
         </div>
         <div>
@@ -1829,7 +1833,7 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
           <p style={{ fontSize: 13, fontWeight: 700, color: '#1a237e', marginBottom: 12 }}>
             📊 Last Examination Details <span style={{ fontSize: 11, fontWeight: 400, color: '#555' }}>(Fill as per marksheet)</span>
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Last Semester *</label>
               <select value={lastExamSem} onChange={e => setLastExamSem(e.target.value)}
@@ -1856,28 +1860,16 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
               </select>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Result</label>
-              <select value={lastExamResult} onChange={e => setLastExamResult(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13 }}>
-                <option value="">— Select —</option>
-                <option value="pass">✅ Pass</option>
-                <option value="distinction">🏅 Distinction</option>
-                <option value="atkt">⚠️ ATKT</option>
-                <option value="fail">❌ Fail</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Percentage / CGPA</label>
-              <input type="text" placeholder="e.g. 72.50%" value={lastExamPercent} onChange={e => setLastExamPercent(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>College Name</label>
-              <input type="text" placeholder="Late Kalpana Chawla Women's College" value={lastExamCollege} onChange={e => setLastExamCollege(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13, boxSizing: 'border-box' }} />
-            </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Result</label>
+            <select value={lastExamResult} onChange={e => setLastExamResult(e.target.value)}
+              style={{ width: '250px', padding: '9px 12px', borderRadius: 8, border: '1px solid #9fa8da', fontSize: 13 }}>
+              <option value="">— Select —</option>
+              <option value="pass">✅ Pass</option>
+              <option value="distinction">🏅 Distinction</option>
+              <option value="atkt">⚠️ ATKT</option>
+              <option value="fail">❌ Fail</option>
+            </select>
           </div>
           <div style={{ marginTop: 10, background: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#3949ab' }}>
             ℹ️ These details will be used by Student Section while issuing your {docType === 'TC' ? 'Transfer Certificate' : 'Degree Certificate'}.
@@ -1955,12 +1947,11 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
             {/* TC / Degree — Last Examination Result */}
       
 
-            {/* Provisional Degree extra fields */}
+            
+
       
 
-      {/* Degree extra fields */}
-
-      {/* Migration extra fields */}
+      
 
       {/* Workflow info */}
       {docType && (
@@ -2373,21 +2364,18 @@ const StudentDashboard = () => {
 
 
   const tabs = [
-    { id: 'home', label: '🏠 Dashboard' },
-    { id: 'application', label: '📋 My Application' },
-    { id: 'profile', label: '👤 My Profile' },
-    { id: 'fees', label: '💰 My Fees' },
-    { id: 'documents', label: '📄 Request Documents' },
-    { id: 'results', label: '🎓 Results' },
-    { id: 'examform', label: '📝 Exam Form' },
-    { id: 'scholarship', label: '🏅 Scholarship' },
-    { id: 'attendance', label: '📊 Attendance' },
-    { id: 'last_degree', label: '🎓 Last Degree / TC' },
-    { id: 'degree_form', label: '🎓 Degree Form' },
-    { id: 'migration_form', label: '📜 Migration Form' },
+    { id: 'home',          label: '🏠 Dashboard' },
+    { id: 'application',   label: '📋 My Application' },
+    { id: 'profile',       label: '👤 My Profile' },
+    { id: 'fees',          label: '💰 My Fees' },
+    { id: 'documents',     label: '📄 Request Documents' },
+    { id: 'results',       label: '🎓 Results' },
+    { id: 'examform',      label: '📝 Exam Form' },
+    { id: 'scholarship',   label: '🏅 Scholarship' },
+    { id: 'attendance',    label: '📊 Attendance' },
+    { id: 'last_degree',   label: '🎓 Last Degree / TC' },
     { id: 'academic_year', label: '📅 Academic Year' },
-    { id: 'lastdegree', label: '🎓 Last Degree / TC' },
-    { id: 'notices', label: '📢 Notices' },
+    { id: 'notices',       label: '📢 Notices' },
   ];
 
   const getStatusStyle = (status) => {
@@ -3540,347 +3528,6 @@ const StudentDashboard = () => {
               </div>
             </div>
           )}
-
-          {/* ============ DEGREE FORM TAB ============ */}
-          {activeTab === 'degree_form' && (() => {
-            const DegreeFormTab = () => {
-              const [form, setForm] = React.useState({
-                applicantName: myAdmission?.applicantName || '',
-                motherName: myAdmission?.motherName || '',
-                fatherName: myAdmission?.fatherName || '',
-                dateOfBirth: myAdmission?.dateOfBirth ? new Date(myAdmission.dateOfBirth).toLocaleDateString('en-IN') : '',
-                email: myAdmission?.email || user?.email || '',
-                phone: myAdmission?.phone || '',
-                studentId: myAdmission?.studentId || '',
-                prnNumber: myAdmission?.prnNumber || '',
-                aparId: myAdmission?.aparIdNumber || '',
-                courseType: myAdmission?.courseType || '',
-                admissionYear: myAdmission?.admissionYear || '',
-                passingYear: '',
-                examSession: '',
-                percentage: '',
-                classDivision: '',
-                subjects: '',
-                lastCollege: "Late Kalpana Chawla Women's Senior College, Gangakhed",
-                university: "S.N.D.T. Women's University, Mumbai",
-                address: [myAdmission?.houseNumber, myAdmission?.streetArea, myAdmission?.cityTownVillage, myAdmission?.district].filter(Boolean).join(', '),
-                purpose: '',
-              });
-              const [submitted, setSubmitted] = React.useState(false);
-              const [submitting, setSubmitting] = React.useState(false);
-              const [msg, setMsg] = React.useState('');
-
-              const handleSubmit = async () => {
-                if (!form.passingYear || !form.examSession) { setMsg('❌ Please fill Passing Year and Exam Session.'); return; }
-                setSubmitting(true);
-                try {
-                  await API.post('/document-requests', {
-                    documentType: 'DEGREE',
-                    reason: form.purpose || 'Degree Certificate Application',
-                    urgency: 'normal',
-                    provYear: form.passingYear,
-                    provSession: form.examSession,
-                    provCourse: form.courseType,
-                    lastExamYear: form.passingYear,
-                    lastExamResult: form.classDivision,
-                    lastExamPercent: form.percentage,
-                    lastExamCollege: form.lastCollege,
-                  });
-                  setSubmitted(true);
-                  setMsg('✅ Degree Certificate form submitted successfully!');
-                } catch(e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-                finally { setSubmitting(false); }
-              };
-
-              const alreadyApplied = myRequests.some(r => r.documentType === 'DEGREE');
-              const isIssued = myRequests.some(r => r.documentType === 'DEGREE' && r.status === 'completed');
-
-              return (
-                <div>
-                  <h3 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 Degree Certificate Form</h3>
-                  <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Application for Degree Certificate from S.N.D.T. Women's University, Mumbai.</p>
-
-                  {isIssued && <div style={{ background: '#e8f5e9', border: '2px solid #2E7D32', borderRadius: 12, padding: 16, marginBottom: 20, fontWeight: 700, color: '#2E7D32', fontSize: 14 }}>✅ Your Degree Certificate has been issued.</div>}
-                  {alreadyApplied && !isIssued && <div style={{ background: '#fff3e0', border: '1px solid #FFB74D', borderRadius: 12, padding: 16, marginBottom: 20, fontSize: 13, color: '#E65100', fontWeight: 600 }}>⏳ Your Degree Certificate application is already submitted and is being processed.</div>}
-                  {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 600 }}>{msg}</div>}
-
-                  {!alreadyApplied && !submitted && (
-                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
-
-                      {/* College header */}
-                      <div style={{ textAlign: 'center', borderBottom: '2px solid #1565C0', paddingBottom: 16, marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, color: '#555' }}>Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-                        <div style={{ fontSize: 16, fontWeight: 900, color: '#1565C0', margin: '4px 0' }}>Late Kalpana Chawla Women's Senior College</div>
-                        <div style={{ fontSize: 12, color: '#555' }}>Affiliated to S.N.D.T. Women's University, Mumbai | Gangakhed, Dist. Parbhani</div>
-                        <div style={{ marginTop: 10, fontSize: 15, fontWeight: 800, letterSpacing: 2, color: '#000', textDecoration: 'underline' }}>APPLICATION FOR DEGREE CERTIFICATE</div>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        {[
-                          { label: 'Full Name *', key: 'applicantName', placeholder: 'As per college records' },
-                          { label: "Mother's Name", key: 'motherName', placeholder: "Mother's full name" },
-                          { label: "Father's Name", key: 'fatherName', placeholder: "Father's full name" },
-                          { label: 'Date of Birth', key: 'dateOfBirth', placeholder: 'DD/MM/YYYY' },
-                          { label: 'Email', key: 'email', placeholder: 'Email address' },
-                          { label: 'Mobile No.', key: 'phone', placeholder: 'Contact number' },
-                          { label: 'Student ID', key: 'studentId', placeholder: 'College Student ID' },
-                          { label: 'PRN Number', key: 'prnNumber', placeholder: 'Permanent Registration No.' },
-                          { label: 'ABC / APAR ID', key: 'aparId', placeholder: 'Academic Bank of Credits ID' },
-                          { label: 'University', key: 'university', placeholder: 'University name' },
-                        ].map(f => (
-                          <div key={f.key}>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>{f.label}</label>
-                            <input type="text" placeholder={f.placeholder} value={form[f.key]}
-                              onChange={e => setForm({...form, [f.key]: e.target.value})}
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                          </div>
-                        ))}
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Course *</label>
-                          <input type="text" value={form.courseType} onChange={e => setForm({...form, courseType: e.target.value})}
-                            placeholder="e.g. Bachelor of Science (B.Sc.)"
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Passing Year *</label>
-                          <select value={form.passingYear} onChange={e => setForm({...form, passingYear: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #1565C0', fontSize: 13 }}>
-                            <option value="">— Select Year —</option>
-                            {[2020,2021,2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Session *</label>
-                          <select value={form.examSession} onChange={e => setForm({...form, examSession: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #1565C0', fontSize: 13 }}>
-                            <option value="">— Select Session —</option>
-                            <option value="mar_apr">March / April</option>
-                            <option value="nov_dec">November / December</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Percentage / CGPA</label>
-                          <input type="text" placeholder="e.g. 72.50%" value={form.percentage} onChange={e => setForm({...form, percentage: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Class / Division</label>
-                          <select value={form.classDivision} onChange={e => setForm({...form, classDivision: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
-                            <option value="">— Select —</option>
-                            <option value="distinction">Distinction</option>
-                            <option value="first">First Class</option>
-                            <option value="second">Second Class</option>
-                            <option value="pass">Pass Class</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 14 }}>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Subjects</label>
-                        <input type="text" placeholder="e.g. Physics, Chemistry, Mathematics" value={form.subjects} onChange={e => setForm({...form, subjects: e.target.value})}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                      </div>
-
-                      <div style={{ marginTop: 14 }}>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Address</label>
-                        <input type="text" value={form.address} onChange={e => setForm({...form, address: e.target.value})}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                      </div>
-
-                      <div style={{ marginTop: 14 }}>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Purpose / Reason</label>
-                        <input type="text" placeholder="e.g. For job application / Higher studies" value={form.purpose} onChange={e => setForm({...form, purpose: e.target.value})}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                      </div>
-
-                      <div style={{ marginTop: 20, background: '#e3f2fd', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#1565C0' }}>
-                        📋 Workflow: You → Student Section → Admin → Principal → Issued
-                      </div>
-
-                      <button onClick={handleSubmit} disabled={submitting}
-                        style={{ marginTop: 18, background: submitting?'#aaa':'#1565C0', color: '#fff', border: 'none', borderRadius: 9, padding: '12px 32px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
-                        {submitting ? '⏳ Submitting...' : '📤 Submit Degree Form'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            };
-            return <DegreeFormTab />;
-          })()}
-
-          {/* ============ MIGRATION FORM TAB ============ */}
-          {activeTab === 'migration_form' && (() => {
-            const MigrationFormTab = () => {
-              const [form, setForm] = React.useState({
-                applicantName: myAdmission?.applicantName || '',
-                motherName: myAdmission?.motherName || '',
-                fatherName: myAdmission?.fatherName || '',
-                dateOfBirth: myAdmission?.dateOfBirth ? new Date(myAdmission.dateOfBirth).toLocaleDateString('en-IN') : '',
-                email: myAdmission?.email || user?.email || '',
-                phone: myAdmission?.phone || '',
-                studentId: myAdmission?.studentId || '',
-                prnNumber: myAdmission?.prnNumber || '',
-                courseType: myAdmission?.courseType || '',
-                admissionYear: myAdmission?.admissionYear || '',
-                passingYear: '',
-                examSession: '',
-                percentage: '',
-                lastCollege: "Late Kalpana Chawla Women's Senior College, Gangakhed",
-                migrateTo: '',
-                migrateFor: '',
-                newUniversity: '',
-                address: [myAdmission?.houseNumber, myAdmission?.streetArea, myAdmission?.cityTownVillage, myAdmission?.district].filter(Boolean).join(', '),
-              });
-              const [submitted, setSubmitted] = React.useState(false);
-              const [submitting, setSubmitting] = React.useState(false);
-              const [msg, setMsg] = React.useState('');
-
-              const handleSubmit = async () => {
-                if (!form.migrateTo) { setMsg('❌ Please fill the college/university you are migrating to.'); return; }
-                setSubmitting(true);
-                try {
-                  await API.post('/document-requests', {
-                    documentType: 'MIGRATION',
-                    reason: form.migrateFor || 'Migration Certificate Application',
-                    urgency: 'normal',
-                    provYear: form.passingYear,
-                    provSession: form.examSession,
-                    provCourse: form.courseType,
-                    lastExamYear: form.passingYear,
-                    lastExamPercent: form.percentage,
-                    lastExamCollege: form.lastCollege,
-                    migrateTo: form.migrateTo,
-                    migrateFor: form.migrateFor,
-                  });
-                  setSubmitted(true);
-                  setMsg('✅ Migration Certificate form submitted successfully!');
-                } catch(e) { setMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-                finally { setSubmitting(false); }
-              };
-
-              const alreadyApplied = myRequests.some(r => r.documentType === 'MIGRATION');
-              const isIssued = myRequests.some(r => r.documentType === 'MIGRATION' && r.status === 'completed');
-
-              return (
-                <div>
-                  <h3 style={{ color: '#E65100', marginBottom: 4 }}>📜 Migration Certificate Form</h3>
-                  <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Application for Migration Certificate — required when joining another university or institution.</p>
-
-                  {isIssued && <div style={{ background: '#e8f5e9', border: '2px solid #2E7D32', borderRadius: 12, padding: 16, marginBottom: 20, fontWeight: 700, color: '#2E7D32', fontSize: 14 }}>✅ Your Migration Certificate has been issued.</div>}
-                  {alreadyApplied && !isIssued && <div style={{ background: '#fff3e0', border: '1px solid #FFB74D', borderRadius: 12, padding: 16, marginBottom: 20, fontSize: 13, color: '#E65100', fontWeight: 600 }}>⏳ Your Migration Certificate application is already submitted and is being processed.</div>}
-                  {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: 13, background: msg.startsWith('✅')?'#e8f5e9':'#ffebee', color: msg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight: 600 }}>{msg}</div>}
-
-                  {!alreadyApplied && !submitted && (
-                    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 24, boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
-
-                      {/* College header */}
-                      <div style={{ textAlign: 'center', borderBottom: '2px solid #E65100', paddingBottom: 16, marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, color: '#555' }}>Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-                        <div style={{ fontSize: 16, fontWeight: 900, color: '#E65100', margin: '4px 0' }}>Late Kalpana Chawla Women's Senior College</div>
-                        <div style={{ fontSize: 12, color: '#555' }}>Affiliated to S.N.D.T. Women's University, Mumbai | Gangakhed, Dist. Parbhani</div>
-                        <div style={{ marginTop: 10, fontSize: 15, fontWeight: 800, letterSpacing: 2, color: '#000', textDecoration: 'underline' }}>APPLICATION FOR MIGRATION CERTIFICATE</div>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        {[
-                          { label: 'Full Name *', key: 'applicantName', placeholder: 'As per college records' },
-                          { label: "Mother's Name", key: 'motherName', placeholder: "Mother's full name" },
-                          { label: "Father's Name", key: 'fatherName', placeholder: "Father's full name" },
-                          { label: 'Date of Birth', key: 'dateOfBirth', placeholder: 'DD/MM/YYYY' },
-                          { label: 'Email', key: 'email', placeholder: 'Email address' },
-                          { label: 'Mobile No.', key: 'phone', placeholder: 'Contact number' },
-                          { label: 'Student ID', key: 'studentId', placeholder: 'College Student ID' },
-                          { label: 'PRN Number', key: 'prnNumber', placeholder: 'Permanent Registration No.' },
-                          { label: 'Course', key: 'courseType', placeholder: 'e.g. B.Sc. / B.A.' },
-                          { label: 'Current Year', key: 'admissionYear', placeholder: 'e.g. 3rd Year' },
-                        ].map(f => (
-                          <div key={f.key}>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>{f.label}</label>
-                            <input type="text" placeholder={f.placeholder} value={form[f.key]}
-                              onChange={e => setForm({...form, [f.key]: e.target.value})}
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                          </div>
-                        ))}
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Passing Year</label>
-                          <select value={form.passingYear} onChange={e => setForm({...form, passingYear: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
-                            <option value="">— Select Year —</option>
-                            {[2020,2021,2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Exam Session</label>
-                          <select value={form.examSession} onChange={e => setForm({...form, examSession: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
-                            <option value="">— Select —</option>
-                            <option value="mar_apr">March / April</option>
-                            <option value="nov_dec">November / December</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Percentage / CGPA</label>
-                          <input type="text" placeholder="e.g. 68.75%" value={form.percentage} onChange={e => setForm({...form, percentage: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#E65100', marginBottom: 5 }}>Migrating To (College/University) *</label>
-                          <input type="text" placeholder="e.g. Mumbai University / Pune University" value={form.migrateTo}
-                            onChange={e => setForm({...form, migrateTo: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #E65100', fontSize: 13, boxSizing: 'border-box' }} />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Purpose of Migration</label>
-                          <input type="text" placeholder="e.g. Higher Studies, Job, Personal" value={form.migrateFor}
-                            onChange={e => setForm({...form, migrateFor: e.target.value})}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 14 }}>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#333', marginBottom: 5 }}>Address</label>
-                        <input type="text" value={form.address} onChange={e => setForm({...form, address: e.target.value})}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-                      </div>
-
-                      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        <div style={{ background: '#fff3e0', borderRadius: 10, padding: 14 }}>
-                          <p style={{ fontSize: 12, fontWeight: 700, color: '#E65100', marginBottom: 6 }}>📋 From College</p>
-                          <p style={{ fontSize: 12, color: '#555', margin: 0 }}>{form.lastCollege}</p>
-                        </div>
-                        <div style={{ background: '#e8f5e9', borderRadius: 10, padding: 14 }}>
-                          <p style={{ fontSize: 12, fontWeight: 700, color: '#2E7D32', marginBottom: 6 }}>🏫 To College/University</p>
-                          <p style={{ fontSize: 12, color: '#555', margin: 0 }}>{form.migrateTo || '—'}</p>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 14, background: '#fff3e0', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#E65100' }}>
-                        📋 Workflow: You → Student Section → Admin → Principal → Issued
-                      </div>
-
-                      <button onClick={handleSubmit} disabled={submitting}
-                        style={{ marginTop: 18, background: submitting?'#aaa':'#E65100', color: '#fff', border: 'none', borderRadius: 9, padding: '12px 32px', fontSize: 14, fontWeight: 700, cursor: submitting?'not-allowed':'pointer' }}>
-                        {submitting ? '⏳ Submitting...' : '📤 Submit Migration Form'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            };
-            return <MigrationFormTab />;
-          })()}
 
           {/* ============ NOTICES TAB ============ */}
           {activeTab === 'notices' && (
