@@ -209,28 +209,23 @@ const printTC = (adm) => {
       <div class="row"><span class="rnum">2.</span><span class="rlabel">Mother's Name</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.motherName||''}"/></span></div>
       <div class="row"><span class="rnum">3.</span><span class="rlabel">Caste &amp; Sub-Caste</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${adm.caste||''}"/></span></div>
       <div class="row"><span class="rnum">4.</span><span class="rlabel">Place of Birth</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row">
-        <span class="rnum"></span><span class="rlabel">Nationality</span><span class="rcolon">:</span>
+      <div class="row"><span class="rnum">5.</span><span class="rlabel">Nationality</span><span class="rcolon">:</span>
         <span class="rval"><input type="text" value="Indian" style="min-width:120px"/></span></div>
-      <div class="row">
-        <span class="rnum">5.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
-        <span class="rval">
-          <input type="text" value="${dobStr}" style="min-width:120px"/>
-        </span>
+      <div class="row"><span class="rnum">6.</span><span class="rlabel">Date of Birth</span><span class="rcolon">:</span>
+        <span class="rval"> <input type="text" value="${dobStr}" style="min-width:120px"/> </span>
       </div>
-      <div class="row">
-        <span class="rnum"></span><span class="rlabel">(In Words)</span><span class="rcolon">:</span>
+      <div class="row"> <span class="rnum">7.</span><span class="rlabel">(In Words)</span><span class="rcolon">:</span>
         <span class="rval"><input type="text" value="${dobWords}" style="min-width:280px"/></span>
       </div>
-      <div class="row"><span class="rnum">6.</span><span class="rlabel">Last School / College attended</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">7.</span><span class="rlabel">Date of Admission</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">8.</span><span class="rlabel">Progress</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Satisfactory"/></span></div>
-      <div class="row"><span class="rnum">9.</span><span class="rlabel">Conduct</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Good"/></span></div>
-      <div class="row"><span class="rnum">10.</span><span class="rlabel">Date of Leaving</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${dateStr}"/></span></div>
+      <div class="row"><span class="rnum">8.</span><span class="rlabel">Last School / College attended</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row"><span class="rnum">9.</span><span class="rlabel">Date of Admission</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row"><span class="rnum">10.</span><span class="rlabel">Progress</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Satisfactory"/></span></div>
+      <div class="row"><span class="rnum">11.</span><span class="rlabel">Conduct</span><span class="rcolon">:</span><span class="rval"><input type="text" value="Good"/></span></div>
+      <div class="row"><span class="rnum">12.</span><span class="rlabel">Date of Leaving</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${dateStr}"/></span></div>
       <div class="row"><span class="rnum">11.</span><span class="rlabel">Standard in which studying and since when</span><span class="rcolon">:</span><span class="rval"><input type="text" value="${courseFull + (adm.admissionYear?' ('+adm.admissionYear+')':'')}"/></span></div>
-      <div class="row"><span class="rnum">12.</span><span class="rlabel">Reason of Leaving College</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row"><span class="rnum">13.</span><span class="rlabel">Remarks</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
-      <div class="row" style="border-bottom:none;padding-top:8px"><span class="rnum">14.</span><span style="flex:1;font-weight:bold">Certified that the above information is in accordance with the college record.</span></div>
+      <div class="row"><span class="rnum">13.</span><span class="rlabel">Reason of Leaving College</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row"><span class="rnum">14.</span><span class="rlabel">Remarks</span><span class="rcolon">:</span><span class="rval"><input type="text" value=""/></span></div>
+      <div class="row" style="border-bottom:none;padding-top:8px"><span class="rnum">15.</span><span style="flex:1;font-weight:bold">Certified that the above information is in accordance with the college record.</span></div>
     </div>
 
     <div class="foot">
