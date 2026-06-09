@@ -75,6 +75,23 @@ const documentRequestSchema = new mongoose.Schema({
   rejectedBy:      { type: String, default: '' },
   rejectedAt:      { type: String, default: '' },
 
+  // TC / Degree — Last exam details (filled by student)
+  lastExamYear:     { type: String, default: '' },
+  lastExamSem:      { type: String, default: '' },
+  lastExamSession:  { type: String, default: '' },
+  lastExamResult:   { type: String, default: '' },
+  lastExamPercent:  { type: String, default: '' },
+  lastExamCollege:  { type: String, default: '' },
+
+  // Provisional Degree / Degree extra fields
+  provYear:         { type: String, default: '' },
+  provSession:      { type: String, default: '' },
+  provCourse:       { type: String, default: '' },
+
+  // Migration extra fields
+  migrateTo:        { type: String, default: '' },
+  migrateFor:       { type: String, default: '' },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('DocumentRequest', documentRequestSchema);
