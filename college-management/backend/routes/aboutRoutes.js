@@ -5,9 +5,9 @@ const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../utils/upload');
 
 router.get('/', getAbout);
-router.put('/', protect, authorizeRoles('admin'), updateAbout);
+router.put('/', protect, authorizeRoles('admin', 'staff_principal'), updateAbout);
 
-router.post('/upload-photo', protect, authorizeRoles('admin'),
+router.post('/upload-photo', protect, authorizeRoles('admin', 'staff_principal'),
   upload.single('photo'),
   async (req, res) => {
     try {
