@@ -709,7 +709,7 @@ const AdminDashboard = () => {
   const [visiblePasswords, setVisiblePasswords] = useState({});
 
   const [staffForm, setStaffForm] = useState({
-    name: '', username: '', email: '', password: '', phone: '', role: 'staff_student'
+    name: '', username: '', email: '', password: '', phone: '', role: 'staff_student', photo: ''
   });
   const [showCredentials, setShowCredentials] = useState(null);
 
@@ -806,6 +806,7 @@ const AdminDashboard = () => {
         email: editStaff.email, 
         phone: editStaff.phone,
         role: editStaff.role,
+        photo: editStaff.photo || '',
       });
       showMessage('✅ Staff updated successfully!');
       setEditStaff(null);
@@ -867,7 +868,8 @@ const AdminDashboard = () => {
     { id: 'delete_requests', label: '🗑️ Delete Requests' },
     { id: 'reports',   label: '📊 Reports' },
     { id: 'receipts',  label: '🧾 Payment Receipts' },
-    { id: 'doc_requests', label: '📋 Document Requests' },
+    { id: 'doc_requests',  label: '📋 Document Requests' },
+    { id: 'fee_approval',  label: '💼 Fee Structure Approval' },
     { id: 'achievements', label: '🏆 Achievements' },
   ];
 
@@ -1200,6 +1202,19 @@ const AdminDashboard = () => {
                         onChange={e => { const v = e.target.value; if (/^\d{0,10}$/.test(v)) setStaffForm({...staffForm, phone: v}); }} />
                     </div>
                     <div className="form-group">
+                      <label>📷 Photo URL (optional)</label>
+                      <input type="text" placeholder="https://... or Cloudinary URL"
+                        value={staffForm.photo || ''}
+                        onChange={e => setStaffForm({...staffForm, photo: e.target.value})}
+                        style={{width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #ddd', fontSize:'14px', boxSizing:'border-box'}} />
+                      {staffForm.photo && (
+                        <div style={{marginTop:8,display:'flex',alignItems:'center',gap:10}}>
+                          <img src={staffForm.photo} alt="preview" style={{width:44,height:44,borderRadius:'50%',objectFit:'cover',border:'2px solid #1565C0'}} onError={e=>e.target.style.display='none'} />
+                          <span style={{fontSize:12,color:'#2E7D32'}}>✅ Photo preview</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="form-group">
                       <label>Staff Section Role *</label>
                       <select value={staffForm.role} onChange={e => setStaffForm({...staffForm, role: e.target.value})} required>
                         <option value="staff_principal">👨‍🏫 Principal</option>
@@ -1226,11 +1241,16 @@ const AdminDashboard = () => {
                 <div className="table-container">
                   <table className="data-table">
                     <thead>
-                      <tr><th>Name</th><th>Username</th><th>Email & Password</th><th>Phone</th><th>Role</th><th>Created</th><th>Action</th></tr>
+                      <tr><th>Photo</th><th>Name</th><th>Username</th><th>Email & Password</th><th>Phone</th><th>Role</th><th>Created</th><th>Action</th></tr>
                     </thead>
                     <tbody>
                       {staff.map(s => (
                         <tr key={s._id}>
+                          <td style={{textAlign:'center'}}>
+                            <div style={{width:40,height:40,borderRadius:'50%',overflow:'hidden',background:'#f0f4f8',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',fontSize:20}}>
+                              {s.photo ? <img src={s.photo} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/> : '🧑‍💼'}
+                            </div>
+                          </td>
                           <td>{s.name}</td>
                           <td><code style={{background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px',fontSize:'13px'}}>{s.username || '-'}</code></td>
                           <td>
@@ -1457,6 +1477,9 @@ const AdminDashboard = () => {
           {/* Document Requests */}
           {activeTab === 'doc_requests' && <AdminDocRequestsTab showMessage={showMessage} />}
 
+          {/* Fee Structure Approval */}
+          {activeTab === 'fee_approval' && <AdminFeeApprovalTab showMessage={showMessage} />}
+
           {/* Achievements */}
           {activeTab === 'achievements' && <AdminAchievementsTab showMessage={showMessage} />}
 
@@ -1623,6 +1646,180 @@ const AdminDocRequestsTab = ({ showMessage }) => {
                       {saving === req._id ? '⏳...' : '✅ Approve → Principal'}
                     </button>
                     <button onClick={() => { setRejectModal(req); setRejectNote(''); }}
+                      style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      ❌ Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// ─── Admin Fee Structure Approval Tab ────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
+const DETAILED_FEES_ADMIN = {
+  'B.Sc.': ['bsc_s1','bsc_s2','bsc_s3','bsc_s4','bsc_s5','bsc_s6','bsc_s7','bsc_s8','bsc_s9','bsc_s10','bsc_s11','bsc_s12','bsc_s13','bsc_s14','bsc_s15','bsc_s16','bsc_s17','bsc_s18','bsc_c1','bsc_c2','bsc_c3','bsc_c4','bsc_c5','bsc_c6','bsc_c7','bsc_c8','bsc_c9','bsc_c10','bsc_c11','bsc_c12','bsc_c13','bsc_c14','bsc_c15','bsc_c16','bsc_c17','bsc_c18','bsc_c19'],
+  'B.A.': ['ba_s1','ba_s2','ba_s3','ba_s4','ba_s5','ba_s6','ba_s7','ba_s8','ba_s9','ba_s10','ba_s11','ba_s12','ba_s13','ba_s14','ba_s15','ba_s16','ba_s17','ba_s18','ba_c1','ba_c2','ba_c3','ba_c4','ba_c5','ba_c6','ba_c7','ba_c8','ba_c9','ba_c10','ba_c11','ba_c12','ba_c13','ba_c14','ba_c15','ba_c16','ba_c17','ba_c18','ba_c19'],
+};
+
+const AdminFeeApprovalTab = ({ showMessage }) => {
+  const [pendingEdits, setPendingEdits] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('lkcwsc_fee_pending') || '{}'); } catch { return {}; }
+  });
+  const [filter, setFilter] = React.useState('all'); // 'all' | 'pending' | 'approved' | 'rejected'
+
+  const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
+
+  const allEdits = [];
+  Object.entries(pendingEdits).forEach(([courseKey, items]) => {
+    Object.entries(items).forEach(([itemId, edit]) => {
+      allEdits.push({ courseKey, itemId, ...edit });
+    });
+  });
+
+  const filtered = filter === 'all' ? allEdits
+    : allEdits.filter(e => e.status === filter);
+
+  const pendingCount = allEdits.filter(e => e.status === 'pending').length;
+
+  const handleApprove = (courseKey, itemId) => {
+    const updated = {
+      ...pendingEdits,
+      [courseKey]: {
+        ...pendingEdits[courseKey],
+        [itemId]: { ...pendingEdits[courseKey][itemId], status: 'approved', approvedAt: new Date().toISOString() }
+      }
+    };
+    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(updated));
+    setPendingEdits(updated);
+    showMessage('✅ Fee edit approved!');
+  };
+
+  const handleReject = (courseKey, itemId) => {
+    const updated = {
+      ...pendingEdits,
+      [courseKey]: {
+        ...pendingEdits[courseKey],
+        [itemId]: { ...pendingEdits[courseKey][itemId], status: 'rejected', rejectedAt: new Date().toISOString() }
+      }
+    };
+    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(updated));
+    setPendingEdits(updated);
+    showMessage('❌ Fee edit rejected.');
+  };
+
+  const handleApproveAll = () => {
+    if (!window.confirm(`Approve all ${pendingCount} pending fee edits?`)) return;
+    const updated = { ...pendingEdits };
+    Object.keys(updated).forEach(ck => {
+      Object.keys(updated[ck]).forEach(id => {
+        if (updated[ck][id].status === 'pending') {
+          updated[ck][id] = { ...updated[ck][id], status: 'approved', approvedAt: new Date().toISOString() };
+        }
+      });
+    });
+    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(updated));
+    setPendingEdits(updated);
+    showMessage(`✅ All ${pendingCount} edits approved!`);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h2 style={{ color: '#1565C0', marginBottom: 4 }}>💼 Fee Structure Approval</h2>
+          <p style={{ color: '#666', fontSize: 14 }}>Review and approve fee structure edits submitted by Accounts Section.</p>
+        </div>
+        {pendingCount > 0 && (
+          <button onClick={handleApproveAll}
+            style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            ✅ Approve All ({pendingCount})
+          </button>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Total', count: allEdits.length, color: '#1565C0', bg: '#e3f2fd' },
+          { label: 'Pending', count: pendingCount, color: '#E65100', bg: '#fff3e0' },
+          { label: 'Approved', count: allEdits.filter(e=>e.status==='approved').length, color: '#2E7D32', bg: '#e8f5e9' },
+          { label: 'Rejected', count: allEdits.filter(e=>e.status==='rejected').length, color: '#C62828', bg: '#ffebee' },
+        ].map((p, i) => (
+          <div key={i} onClick={() => setFilter(p.label.toLowerCase())}
+            style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '5px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              border: filter === p.label.toLowerCase() ? `2px solid ${p.color}` : '2px solid transparent' }}>
+            {p.label}: {p.count}
+          </div>
+        ))}
+        <div onClick={() => setFilter('all')}
+          style={{ background: '#f5f5f5', color: '#555', borderRadius: 20, padding: '5px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            border: filter === 'all' ? '2px solid #555' : '2px solid transparent' }}>
+          Show All
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 50, color: '#888', background: '#f8faff', borderRadius: 14 }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>💼</div>
+          <h3>No fee edits {filter !== 'all' ? filter : 'found'}</h3>
+          <p style={{ fontSize: 14 }}>Accounts Section fee edits will appear here for approval.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map((edit, idx) => {
+            const isPending = edit.status === 'pending';
+            const statusStyle = {
+              pending:  { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Approval' },
+              approved: { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Approved' },
+              rejected: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected' },
+            }[edit.status] || { bg: '#f5f5f5', color: '#888', label: edit.status };
+
+            return (
+              <div key={idx} style={{ background: '#fff', borderRadius: 12, border: `1px solid ${isPending ? '#fbbf24' : '#e0e7ef'}`, padding: 18, borderLeft: `5px solid ${isPending ? '#E65100' : edit.status === 'approved' ? '#2E7D32' : '#C62828'}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                  <div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1565C0', background: '#e3f2fd', padding: '2px 10px', borderRadius: 10 }}>{edit.courseKey}</span>
+                      <span style={{ fontSize: 12, color: '#888', fontFamily: 'monospace' }}>ID: {edit.itemId}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#aaa' }}>
+                      Submitted: {edit.submittedAt ? new Date(edit.submittedAt).toLocaleString('en-IN') : '—'}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 12px', borderRadius: 20, background: statusStyle.bg, color: statusStyle.color }}>
+                    {statusStyle.label}
+                  </span>
+                </div>
+
+                {/* Sem-wise amounts */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
+                  {semLabels.map((sl, si) => {
+                    const amt = edit.amounts?.[si] || 0;
+                    return (
+                      <div key={sl} style={{ background: amt > 0 ? '#e3f2fd' : '#f5f5f5', borderRadius: 8, padding: '6px 10px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, color: '#888' }}>{sl}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: amt > 0 ? '#1565C0' : '#ccc' }}>
+                          {amt > 0 ? `₹${amt}` : '—'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {isPending && (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => handleApprove(edit.courseKey, edit.itemId)}
+                      style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      ✅ Approve
+                    </button>
+                    <button onClick={() => handleReject(edit.courseKey, edit.itemId)}
                       style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                       ❌ Reject
                     </button>
