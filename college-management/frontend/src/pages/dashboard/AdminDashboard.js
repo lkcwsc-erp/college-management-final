@@ -868,6 +868,7 @@ const AdminDashboard = () => {
     { id: 'delete_requests', label: '🗑️ Delete Requests' },
     { id: 'reports',   label: '📊 Reports' },
     { id: 'receipts',  label: '🧾 Payment Receipts' },
+    { id: 'tc_requests',   label: '🎓 TC Requests' },
     { id: 'doc_requests',  label: '📋 Document Requests' },
     { id: 'fee_approval',  label: '💼 Fee Structure Approval' },
     { id: 'achievements', label: '🏆 Achievements' },
@@ -1474,6 +1475,9 @@ const AdminDashboard = () => {
           {/* Delete Requests */}
           {activeTab === 'delete_requests' && <AdminDeleteRequestsTab />}
 
+          {/* TC Requests */}
+          {activeTab === 'tc_requests' && <AdminTCRequestsTab showMessage={showMessage} />}
+
           {/* Document Requests */}
           {activeTab === 'doc_requests' && <AdminDocRequestsTab showMessage={showMessage} />}
 
@@ -1825,6 +1829,96 @@ const AdminFeeApprovalTab = ({ showMessage }) => {
                     </button>
                   </div>
                 )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// ─── Admin TC Requests Tab ────────────────────────────────────────────────────
+const AdminTCRequestsTab = ({ showMessage }) => {
+  const [requests, setRequests] = React.useState([]);
+  const [loading, setLoading]   = React.useState(false);
+  const [filter, setFilter]     = React.useState('all');
+
+  const fetchRequests = React.useCallback(() => {
+    setLoading(true);
+    API.get('/document-requests/principal/all')
+      .then(res => setRequests((res.data.requests || []).filter(r => r.documentType === 'TC')))
+      .catch(() => showMessage('❌ Failed to load'))
+      .finally(() => setLoading(false));
+  }, [showMessage]);
+
+  React.useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  const statusStyle = (s) => ({
+    pending_accounts:      { bg: '#fff3e0', color: '#E65100', label: '⏳ At Accounts' },
+    pending_exam:          { bg: '#e3f2fd', color: '#1565C0', label: '🔍 At Exam Section' },
+    pending_principal:     { bg: '#f3e5f5', color: '#7B1FA2', label: '🔄 At Principal' },
+    rejected_by_principal: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected' },
+    pending_generation:    { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Ready to Issue' },
+    completed:             { bg: '#e3f2fd', color: '#1565C0', label: '🏁 Issued' },
+  }[s] || { bg: '#f5f5f5', color: '#888', label: s });
+
+  const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
+  const pending = requests.filter(r => r.status === 'pending_principal').length;
+
+  return (
+    <div>
+      <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🎓 TC Requests</h2>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>All Transfer Certificate requests — track status from student to issuance.</p>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Total', count: requests.length, color: '#1565C0', bg: '#e3f2fd' },
+          { label: 'At Principal', count: pending, color: '#7B1FA2', bg: '#f3e5f5' },
+          { label: 'Issued', count: requests.filter(r=>r.status==='completed').length, color: '#2E7D32', bg: '#e8f5e9' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600 }}>
+            {p.label}: {p.count}
+          </div>
+        ))}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {['all', 'pending_principal', 'completed'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ padding: '5px 14px', borderRadius: 20, border: `2px solid ${filter===f?'#1565C0':'#ddd'}`, background: filter===f?'#1565C0':'#fff', color: filter===f?'#fff':'#555', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+              {f==='all'?'All':f==='pending_principal'?'At Principal':'Issued'}
+            </button>
+          ))}
+          <button onClick={fetchRequests} style={{ padding: '5px 12px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🔄</button>
+        </div>
+      </div>
+
+      {loading ? <div style={{ textAlign: 'center', padding: 40, fontSize: '2rem' }}>⏳</div>
+      : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#888', background: '#f8faff', borderRadius: 12 }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🎓</div>
+          <p>No TC requests found.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map(req => {
+            const ss = statusStyle(req.status);
+            return (
+              <div key={req._id} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: 18, borderLeft: '5px solid #1565C0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <h4 style={{ color: '#1565C0', fontSize: 15, margin: 0 }}>🎓 Transfer Certificate</h4>
+                    <p style={{ fontSize: 11, color: '#888', margin: '3px 0 0' }}>{new Date(req.createdAt).toLocaleString('en-IN')}</p>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 12px', borderRadius: 20, background: ss.bg, color: ss.color }}>{ss.label}</span>
+                </div>
+                <div style={{ fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <span><strong>Student:</strong> {req.studentName}</span>
+                  <span><strong>Email:</strong> {req.studentEmail}</span>
+                  <span><strong>Branch:</strong> {req.branch || '—'}</span>
+                  <span><strong>Year:</strong> {req.admissionYear || '—'}</span>
+                  {req.reason && <span style={{ gridColumn: '1/-1' }}><strong>Reason:</strong> {req.reason}</span>}
+                </div>
               </div>
             );
           })}
