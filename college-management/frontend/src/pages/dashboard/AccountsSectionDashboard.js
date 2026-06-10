@@ -585,48 +585,179 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
       {/* Document Fees */}
       {feeView==='doc' && (
+        <DocFeesManager docFees={docFees} setDocFees={setDocFees} saveDocFees={saveDocFees} showToast={showToast} />
+      )}
+    </div>
+  );
+};
+
+/* ── Document Fees Manager — add/edit/delete types + approval ── */
+const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
+  const [editMode,    setEditMode]    = useState(false);
+  const [edits,       setEdits]       = useState({});
+  const [showAdd,     setShowAdd]     = useState(false);
+  const [newType,     setNewType]     = useState({ key:'', label:'', price:'' });
+  const [pendingApproval, setPendingApproval] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lkcwsc_docfee_pending') || '[]'); } catch { return []; }
+  });
+
+  const inp = { padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
+
+  const submitForApproval = (changes) => {
+    const entry = {
+      id: Date.now(),
+      type: 'doc_fee_edit',
+      changes,
+      submittedAt: new Date().toISOString(),
+      status: 'pending',
+    };
+    const updated = [entry, ...pendingApproval].slice(0, 50);
+    setPendingApproval(updated);
+    localStorage.setItem('lkcwsc_docfee_pending', JSON.stringify(updated));
+    showToast('✅ Changes submitted for Principal/Admin approval!');
+  };
+
+  const handleSaveEdit = () => {
+    const changes = [];
+    Object.entries(edits).forEach(([k, v]) => {
+      if (docFees[k] && Number(v) !== docFees[k].price) {
+        changes.push({ key: k, label: docFees[k].label, oldPrice: docFees[k].price, newPrice: Number(v) });
+      }
+    });
+    if (changes.length === 0) { setEditMode(false); return; }
+    submitForApproval(changes);
+    setEditMode(false);
+  };
+
+  const handleAddType = () => {
+    if (!newType.key.trim() || !newType.label.trim()) { showToast('Key aur Label dono required hain', 'error'); return; }
+    const key = newType.key.trim().toUpperCase().replace(/\s+/g, '_');
+    if (docFees[key]) { showToast('Ye type already exist karta hai', 'error'); return; }
+    const updated = { ...docFees, [key]: { label: newType.label.trim(), price: Number(newType.price) || 0 } };
+    setDocFees(updated);
+    saveDocFees(updated);
+    submitForApproval([{ key, label: newType.label, oldPrice: null, newPrice: Number(newType.price) || 0, isNew: true }]);
+    setNewType({ key:'', label:'', price:'' });
+    setShowAdd(false);
+  };
+
+  const handleDelete = (key) => {
+    if (!window.confirm(`"${docFees[key]?.label}" delete karna chahte ho?`)) return;
+    const updated = { ...docFees };
+    delete updated[key];
+    setDocFees(updated);
+    saveDocFees(updated);
+    submitForApproval([{ key, label: docFees[key]?.label, deleted: true }]);
+  };
+
+  const hasPending = pendingApproval.filter(p => p.status === 'pending').length > 0;
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <div>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <p style={{ color:'#666', fontSize:14 }}>Set the fee charged for each document type.</p>
-            {!editDocFees2 ? (
-              <button onClick={()=>{ setDocFeeEdits2(Object.fromEntries(Object.entries(docFees).map(([k,v])=>[k,v.price]))); setEditDocFees2(true); }}
-                style={{ background:'#1565C0', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:600, fontSize:14, cursor:'pointer' }}>✏️ Edit Fees</button>
-            ) : (
-              <div style={{ display:'flex', gap:10 }}>
-                <button onClick={()=>{
-                  const updated = {...docFees};
-                  Object.entries(docFeeEdits2).forEach(([k,v])=>{ updated[k]={...updated[k],price:Number(v)||0}; });
-                  setDocFees(updated); saveDocFees(updated); setEditDocFees2(false); showToast('Document fees saved!');
-                }} style={{ background:'#2E7D32', color:'#fff', padding:'10px 22px', borderRadius:8, border:'none', fontWeight:700, fontSize:14, cursor:'pointer' }}>💾 Save</button>
-                <button onClick={()=>setEditDocFees2(false)} style={{ background:'#eee', color:'#333', padding:'10px 18px', borderRadius:8, border:'none', fontSize:14, cursor:'pointer' }}>Cancel</button>
-              </div>
-            )}
-          </div>
-          <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 160px', background:'#1565C0', padding:'14px 20px' }}>
-              <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
-              <span style={{ color:'#fff', fontWeight:700, textAlign:'right' }}>Fee (₹)</span>
+          <p style={{ color:'#666', fontSize:14, margin:0 }}>Document fee amounts manage karo. Changes Principal/Admin approval ke baad apply honge.</p>
+          {hasPending && (
+            <p style={{ fontSize:12, color:'#E65100', fontWeight:600, margin:'4px 0 0' }}>
+              ⏳ {pendingApproval.filter(p=>p.status==='pending').length} change(s) approval pending hain
+            </p>
+          )}
+        </div>
+        <div style={{ display:'flex', gap:10 }}>
+          {!editMode ? (
+            <>
+              <button onClick={()=>{ setEdits(Object.fromEntries(Object.entries(docFees).map(([k,v])=>[k,v.price]))); setEditMode(true); }}
+                style={{ background:'#1565C0', color:'#fff', padding:'9px 18px', borderRadius:8, border:'none', fontWeight:600, fontSize:13, cursor:'pointer' }}>✏️ Edit Fees</button>
+              <button onClick={()=>setShowAdd(v=>!v)}
+                style={{ background:'#2E7D32', color:'#fff', padding:'9px 18px', borderRadius:8, border:'none', fontWeight:600, fontSize:13, cursor:'pointer' }}>
+                {showAdd ? '✕ Cancel' : '➕ Add Type'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={handleSaveEdit}
+                style={{ background:'#2E7D32', color:'#fff', padding:'9px 18px', borderRadius:8, border:'none', fontWeight:700, fontSize:13, cursor:'pointer' }}>📤 Submit for Approval</button>
+              <button onClick={()=>setEditMode(false)}
+                style={{ background:'#eee', color:'#333', padding:'9px 14px', borderRadius:8, border:'none', fontSize:13, cursor:'pointer' }}>Cancel</button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Add new type form */}
+      {showAdd && (
+        <div style={{ background:'#f8faff', border:'2px dashed #2E7D32', borderRadius:12, padding:16, marginBottom:16 }}>
+          <h4 style={{ color:'#2E7D32', margin:'0 0 12px', fontSize:14 }}>➕ Add New Document Fee Type</h4>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr 1fr', gap:12, marginBottom:12 }}>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:4 }}>Key (unique) *</label>
+              <input style={{ ...inp, width:'100%' }} placeholder="e.g. TRANSCRIPT" value={newType.key}
+                onChange={e=>setNewType(p=>({...p,key:e.target.value.toUpperCase()}))} />
             </div>
-            {Object.entries(docFees).map(([key,val],idx)=>(
-              <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 160px', padding:'16px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
-                <span style={{ fontSize:15, color:'#222', fontWeight:500 }}>{val.label}</span>
-                {editDocFees2 ? (
-                  <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:6 }}>
-                    <span style={{ color:'#555', fontWeight:600 }}>₹</span>
-                    <input type="number" min="0" value={docFeeEdits2[key]??val.price} onChange={e=>setDocFeeEdits2(prev=>({...prev,[key]:e.target.value}))}
-                      style={{ width:90, padding:'7px 10px', borderRadius:7, border:'2px solid #1565C0', fontSize:15, fontWeight:600, textAlign:'right', outline:'none' }} />
-                  </div>
-                ) : (
-                  <span style={{ textAlign:'right', fontWeight:700, fontSize:16, color:val.price>0?'#1565C0':'#aaa' }}>{val.price>0?`₹ ${val.price}`:'—'}</span>
-                )}
-              </div>
-            ))}
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:4 }}>Document Name *</label>
+              <input style={{ ...inp, width:'100%' }} placeholder="e.g. 📜 Transcript Certificate" value={newType.label}
+                onChange={e=>setNewType(p=>({...p,label:e.target.value}))} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:4 }}>Fee (₹)</label>
+              <input type="number" min="0" style={{ ...inp, width:'100%', textAlign:'right' }} placeholder="0"
+                value={newType.price} onChange={e=>setNewType(p=>({...p,price:e.target.value}))} />
+            </div>
           </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={handleAddType}
+              style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'8px 20px', fontWeight:700, fontSize:13, cursor:'pointer' }}>✅ Add & Submit for Approval</button>
+            <button onClick={()=>setShowAdd(false)}
+              style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'8px 14px', fontSize:13, cursor:'pointer' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Fee table */}
+      <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 120px 80px', background:'#1565C0', padding:'12px 20px', gap:8 }}>
+          <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
+          <span style={{ color:'#fff', fontWeight:700, textAlign:'right' }}>Fee (₹)</span>
+          <span style={{ color:'#fff', fontWeight:700, textAlign:'center' }}>Action</span>
+        </div>
+        {Object.entries(docFees).map(([key, val], idx) => (
+          <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 120px 80px', padding:'14px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+            <span style={{ fontSize:14, color:'#222', fontWeight:500 }}>{val.label}</span>
+            {editMode ? (
+              <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:4 }}>
+                <span style={{ color:'#555', fontWeight:600 }}>₹</span>
+                <input type="number" min="0" value={edits[key]??val.price}
+                  onChange={e=>setEdits(p=>({...p,[key]:e.target.value}))}
+                  style={{ width:80, padding:'6px 8px', borderRadius:7, border:'2px solid #1565C0', fontSize:14, fontWeight:600, textAlign:'right' }} />
+              </div>
+            ) : (
+              <span style={{ textAlign:'right', fontWeight:700, fontSize:15, color:val.price>0?'#1565C0':'#aaa' }}>
+                {val.price > 0 ? `₹ ${val.price}` : '—'}
+              </span>
+            )}
+            <div style={{ display:'flex', justifyContent:'center' }}>
+              {!editMode && (
+                <button onClick={()=>handleDelete(key)}
+                  style={{ background:'#ffebee', color:'#C62828', border:'none', borderRadius:6, padding:'5px 10px', fontSize:12, cursor:'pointer', fontWeight:600 }}>
+                  🗑️
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {editMode && (
+        <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'10px 14px', marginTop:12, fontSize:12, color:'#E65100', fontWeight:600 }}>
+          ⚠️ Changes save karne ke baad Principal → Admin approval required hai. Approve hone tak purani fees applicable rahegi.
         </div>
       )}
     </div>
   );
 };
+
+
 
 
 const AccountsStudentFeeView = ({ themeColor }) => {
@@ -1617,6 +1748,30 @@ const AccountsSectionDashboard = () => {
               </div>
               <p style={{ color:'#666', fontSize:13, marginBottom:16 }}>{selectedAdm.applicantName} — {selectedAdm.courseType} · {admYear} · ID: {selectedAdm.studentId||'—'}</p>
 
+              {/* ── DOCUMENT FEES TAB ── */}
+              {admCollectDocMode && (
+                <div>
+                  <p style={{ fontSize:13, color:'#666', marginBottom:14 }}>Select document type and collect fee:</p>
+                  <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+                    {Object.entries(docFees).map(([key, val]) => (
+                      <div key={key} onClick={() => { setAdmFeeType(key); setAdmFeeAmt(String(val.price || 0)); }}
+                        style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', borderRadius:10, border:`2px solid ${admFeeType===key?'#1565C0':'#e0e7ef'}`, background:admFeeType===key?'#e3f2fd':'#fff', cursor:'pointer' }}>
+                        <span style={{ fontSize:14, fontWeight:admFeeType===key?700:500, color:admFeeType===key?'#1565C0':'#333' }}>{val.label}</span>
+                        <span style={{ fontSize:14, fontWeight:800, color:admFeeType===key?'#1565C0':'#888' }}>₹{val.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {admFeeType && docFees[admFeeType] && (
+                    <div style={{ background:'#e3f2fd', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Selected: {docFees[admFeeType]?.label}</span>
+                      <span style={{ fontSize:18, fontWeight:800, color:'#1565C0' }}>₹{docFees[admFeeType]?.price}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── ANNUAL FEES TAB ── */}
+              {!admCollectDocMode && (<>
               {/* Year total info */}
               <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Annual Fee ({admYear})</span>
@@ -1745,6 +1900,9 @@ const AccountsSectionDashboard = () => {
               )}
 
               {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
+
+              {/* Step 2 — Amount */}
+              {!admCollectDocMode && </>}
 
               <button onClick={handleAdmFeeCollect} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
                 style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
