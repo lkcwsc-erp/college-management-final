@@ -263,54 +263,13 @@ const StudentSectionDashboard = () => {
     catch (err) { alert('Failed to delete enquiry.'); }
   };
 
-  const handleCreateStudent = async (e) => {
+const handleCreateStudent = async (e) => {
     e.preventDefault(); setCredLoading(true); setCredMsg('');
     try {
-      // Verify Aadhar against admissions
-      const admRes = await API.get('/admissions/staff-view/all');
-      const allAdm = admRes.data.admissions || [];
-      const matchedAdm = allAdm.find(a =>
-        a.aadharNumber && a.aadharNumber.replace(/\s/g,'') === credForm.aadharNumber.replace(/\s/g,'')
-      );
-      if (!matchedAdm) {
-        setCredMsg('❌ Aadhar number kisi bhi admission form mein nahi mila. Aadhar number dobara check karein.');
-        setCredLoading(false);
-        return;
-      }
-      // Admission approved hai ya nahi check
-      const approvedStatuses = ['approved', 'principal_approved', 'approved_by_principal', 'credentials_issued'];
-      if (!approvedStatuses.includes(matchedAdm.status)) {
-        setCredMsg(`❌ Is student ki admission abhi "${matchedAdm.status}" status mein hai. Credential banane ke liye pehle admission approve honi chahiye.`);
-        setCredLoading(false);
-        return;
-      }
-      // Auto-fill from admission
-      const nameParts = (matchedAdm.applicantName || '').trim().split(' ');
-      const enrichedForm = {
-        ...credForm,
-        email: credForm.email || matchedAdm.email || '',
-        firstName: credForm.firstName || nameParts[0] || '',
-        middleName: credForm.middleName || (nameParts.length === 3 ? nameParts[1] : '') || '',
-        lastName: credForm.lastName || (nameParts.length >= 2 ? nameParts[nameParts.length - 1] : '') || '',
-        dateOfBirth: credForm.dateOfBirth || (matchedAdm.dateOfBirth ? matchedAdm.dateOfBirth.split('T')[0] : ''),
-        phone: credForm.phone || matchedAdm.phone || '',
-      };
-
-      if (!enrichedForm.email) {
-        setCredMsg('❌ Student ka email address admission form mein nahi hai. Upar Email field mein manually enter karein.');
-        setCredLoading(false);
-        return;
-      }
-      if (!enrichedForm.dateOfBirth) {
-        setCredMsg('❌ Date of Birth required hai — admission form mein nahi mila, upar manually enter karein.');
-        setCredLoading(false);
-        return;
-      }
-
-      const res = await API.post('/auth/register-student', enrichedForm);
+      const res = await API.post('/auth/register-student', credForm);
       if (res.data.success) {
         setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
-        setCredMsg('✅ Student account successfully create ho gaya — ' + matchedAdm.applicantName + '!');
+        setCredMsg('✅ Student account successfully create ho gaya!');
         setCredForm({ firstName: '', middleName: '', lastName: '', aadharNumber: '', email: '', phone: '', dateOfBirth: '' });
       }
     } catch (err) {
@@ -325,7 +284,8 @@ const StudentSectionDashboard = () => {
     }
     finally { setCredLoading(false); }
   };
-
+      }
+     
   const getStatusStyle = (status) => {
     const styles = {
       pending:            { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' },
