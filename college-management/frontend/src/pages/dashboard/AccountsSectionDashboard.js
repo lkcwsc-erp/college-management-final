@@ -1911,11 +1911,12 @@ const AccountsSectionDashboard = () => {
                 style={{ width:'100%', background:'#f3f4f6', color:'#555', padding:12, borderRadius:10, border:'none', fontSize:14, cursor:'pointer' }}>
                 Cancel
               </button>
-            </>}
+            </div>
           </div>
         </div>
-        );
-      })()}
+      </div>
+    );
+  })()}
 /* ═══════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════
    WALK-IN / OLD STUDENT FEE MODAL
