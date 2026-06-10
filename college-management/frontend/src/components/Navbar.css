@@ -23,10 +23,10 @@
 .brand-logo-img {
   width: 90px;
   height: 90px;
-  border-radius: 50%;
-  background: white;
-  padding: 3px;
-  object-fit: cover;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
