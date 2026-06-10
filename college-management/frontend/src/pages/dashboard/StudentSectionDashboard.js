@@ -266,30 +266,41 @@ const StudentSectionDashboard = () => {
   const handleCreateStudent = async (e) => {
     e.preventDefault(); setCredLoading(true); setCredMsg('');
     try {
-      // Verify Aadhar against pending admissions
-      const admRes = await API.get('/admissions/staff-view/all');
-      const allAdm = admRes.data.admissions || [];
-      const matchedAdm = allAdm.find(a =>
-        a.aadharNumber && a.aadharNumber.replace(/\s/g,'') === credForm.aadharNumber.replace(/\s/g,'')
-      );
-      if (!matchedAdm) {
-        setCredMsg('❌ Aadhar number not found in any approved admission. Please verify the Aadhar number matches the admission form.');
+      if (!credForm.firstName || !credForm.aadharNumber || !credForm.email || !credForm.dateOfBirth) {
+        setCredMsg('❌ First name, Aadhar number, email and date of birth are required.');
         setCredLoading(false);
         return;
       }
-      // Aadhar matched — auto-fill email and name from admission if empty
-      const enrichedForm = {
-        ...credForm,
-        email: credForm.email || matchedAdm.email,
-        firstName: credForm.firstName || (matchedAdm.applicantName||'').split(' ')[0],
-        dateOfBirth: credForm.dateOfBirth || (matchedAdm.dateOfBirth ? matchedAdm.dateOfBirth.split('T')[0] : ''),
-      };
-      setCredMsg('✅ Aadhar verified — matched with ' + matchedAdm.applicantName);
+      if (!/^\d{12}$/.test(credForm.aadharNumber.replace(/\s/g,''))) {
+        setCredMsg('❌ Aadhar number must be exactly 12 digits.');
+        setCredLoading(false);
+        return;
+      }
+
+      let enrichedForm = { ...credForm, aadharNumber: credForm.aadharNumber.replace(/\s/g,'') };
+
+      // Optional: Try to match with admission for auto-fill (not mandatory)
+      try {
+        const admRes = await API.get('/admissions/staff-view/all');
+        const allAdm = admRes.data.admissions || [];
+        const matchedAdm = allAdm.find(a =>
+          a.aadharNumber && a.aadharNumber.replace(/\s/g,'') === enrichedForm.aadharNumber
+        );
+        if (matchedAdm) {
+          enrichedForm = {
+            ...enrichedForm,
+            email:       enrichedForm.email       || matchedAdm.email,
+            firstName:   enrichedForm.firstName   || (matchedAdm.applicantName||'').split(' ')[0],
+            dateOfBirth: enrichedForm.dateOfBirth || (matchedAdm.dateOfBirth ? matchedAdm.dateOfBirth.split('T')[0] : ''),
+          };
+          setCredMsg('✅ Aadhar matched with: ' + matchedAdm.applicantName);
+        }
+      } catch { /* admission check optional — proceed anyway */ }
 
       const res = await API.post('/auth/register-student', enrichedForm);
       if (res.data.success) {
         setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
-        setCredMsg('✅ Aadhar verified ✅ Student account created for ' + matchedAdm.applicantName + '!');
+        setCredMsg('✅ Student account created for ' + res.data.user.name + '!');
         setCredForm({ firstName: '', middleName: '', lastName: '', aadharNumber: '', email: '', phone: '', dateOfBirth: '' });
       }
     } catch (err) { setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account')); }
