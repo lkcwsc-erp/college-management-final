@@ -760,11 +760,11 @@ const printTC = (adm) => {
     }
 
     /* ── Header ── */
-    .hdr{display:flex;align-items:center;gap:8px;border-bottom:2px solid #000;padding:6px 12px}
-    .hlogo{width:65px;height:65px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;gap:6px;border-bottom:2px solid #000;padding:5px 10px}
+    .hlogo{width:72px;height:72px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:10px;color:#444;font-style:italic;margin-bottom:2px}
-    .hname{font-size:17px;font-weight:900;color:#000;line-height:1.3;margin:3px 0;letter-spacing:0.3px}
+    .hname{font-size:18px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.3px}
     .huniv{font-size:9.5px;color:#333;margin-top:2px}
     .haddr{font-size:9.5px;color:#333;margin-top:2px;line-height:1.5}
     .hcontact{font-size:9px;color:#555;margin-top:3px}
@@ -921,7 +921,7 @@ const printBonafide = (adm) => {
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
     .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
-    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0;border-radius:50%;border:2px solid #1a237e;padding:3px;background:#fff}
+    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:10px;color:#444;font-style:italic}
     .h3{font-size:21px;font-weight:900;color:#000;margin:3px 0 2px}
@@ -1087,7 +1087,22 @@ const printIDCard = (adm) => {
       <div class="faddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
     </div>
   </div>
-  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
+  <scri${'pt'}>
+  window.onload = () => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = () => {
+      html2canvas(document.querySelector('.card'), {scale:3, useCORS:true, allowTaint:true, backgroundColor:'#ffffff'}).then(canvas => {
+        const a = document.createElement('a');
+        a.download = 'IDCard_${(adm.applicantName||"student").replace(/\s+/g,"_")}.jpg';
+        a.href = canvas.toDataURL('image/jpeg', 0.96);
+        a.click();
+        setTimeout(()=>window.close(), 1000);
+      });
+    };
+    document.head.appendChild(s);
+  };
+</scri${'pt'}></body></html>`;
 
   const w = window.open('','_blank','width=260,height=420');
   w.document.write(html); w.document.close();
