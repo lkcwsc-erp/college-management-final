@@ -250,9 +250,52 @@ exports.autoCalculateScholarship = async (req, res) => {
     }
 
     if (!master) {
+      // ── Hardcoded fallback from official MahaDBT Excel 2025-26 ──────────
+      const RESERVED_AMOUNTS = {
+        'B.Sc.': { FY: 26140, SY: 25340, TY: 25340 },
+        'B.A.':  { FY: 10390, SY:  9590, TY:  9390 },
+      };
+      const OPEN_AMOUNTS = {
+        'B.Sc.': { FY: 16500, SY: 16500, TY: 16500 },
+        'B.A.':  { FY:  5500, SY:  5500, TY:  5500 },
+      };
+
+      const isReservedFallback = RESERVED_CATEGORIES.some(
+        r => r.toLowerCase() === (normalizedCategory || '').toLowerCase()
+      );
+
+      const courseAmounts = isReservedFallback
+        ? RESERVED_AMOUNTS[normalizedCourse]
+        : OPEN_AMOUNTS[normalizedCourse];
+
+      const fallbackAmt = courseAmounts?.[normalizedYear] || 0;
+
+      if (fallbackAmt > 0) {
+        admission.scholarshipEligibleAmount = fallbackAmt;
+        admission.scholarshipAmount         = fallbackAmt;
+        admission.scholarshipPendingAmount  = fallbackAmt - (admission.scholarshipReceivedAmount || 0);
+        const netPayable = (admission.totalFees || 0) - fallbackAmt;
+        const balance    = netPayable - (admission.feesPaid || 0);
+        await admission.save();
+        return res.status(200).json({
+          success: true,
+          message: `Auto-calculated from 2025-26 Excel data (no master record found)`,
+          data: {
+            scholarshipEligibleAmount: fallbackAmt,
+            scholarshipAmount:         fallbackAmt,
+            scholarshipPendingAmount:  admission.scholarshipPendingAmount,
+            totalFees:                 admission.totalFees,
+            netPayable,
+            balance,
+            categoryType: isReservedFallback ? 'reserved' : 'open',
+            usedFallback: true,
+          },
+        });
+      }
+
       return res.status(404).json({
         success: false,
-        message: `No scholarship master found for ${normalizedCategory} + ${normalizedCourse} + ${normalizedYear}. Please add a record in MahaDBT Master tab.`,
+        message: `No scholarship data found for ${normalizedCategory} + ${normalizedCourse} + ${normalizedYear}. Please add a record in MahaDBT Master tab.`,
       });
     }
 
