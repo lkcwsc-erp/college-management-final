@@ -299,7 +299,6 @@ const ExamDocTab = ({ type, title, desc, color }) => {
                 ['Email', selected.studentEmail],
                 ['Course', selected.branch || '—'],
                 ['Admission Year', selected.admissionYear || '—'],
-                ['Roll No', selected.rollNumber || '—'],
                 ['Academic Year', selected.academicYear || '—'],
                 ...(type === 'MARKSHEET' ? [
                   ['Semester', selected.marksheetSemester || '—'],
