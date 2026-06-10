@@ -1738,7 +1738,7 @@ const AccountsSectionDashboard = () => {
                       <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e', letterSpacing:0.5 }}>UNIVERSITY FEES (A)</div>
                       {uItems.map((item,idx) => (
                         <div key={item.id} onClick={() => toggleItem(item.id)}
-                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'idx%2===0?#fafbff:#fff', userSelect:'none' }}>
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':idx%2===0?'#fafbff':'#fff', userSelect:'none' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                             <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
                             <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
