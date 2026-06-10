@@ -1907,18 +1907,15 @@ const AccountsSectionDashboard = () => {
                 style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
                 {admLoading2 ? '⏳ Processing...' : '🖨️ Collect & Print Receipt'}
               </button>
-              <button onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType(''); }}
+            <button onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType(''); }}
                 style={{ width:'100%', background:'#f3f4f6', color:'#555', padding:12, borderRadius:10, border:'none', fontSize:14, cursor:'pointer' }}>
                 Cancel
               </button>
+            </>}
             </div>
           </div>
         );
       })()}
-    </div>
-  );
-};
-
 /* ═══════════════════════════════════════════════════════════
    WALK-IN / OLD STUDENT FEE MODAL
    Collect fees from old/SY/TY students without admission record
