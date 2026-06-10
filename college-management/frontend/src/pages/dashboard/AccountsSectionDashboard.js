@@ -1912,10 +1912,11 @@ const AccountsSectionDashboard = () => {
                 Cancel
               </button>
             </>}
-            </div>
           </div>
+        </div>
         );
       })()}
+/* ═══════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════
    WALK-IN / OLD STUDENT FEE MODAL
    Collect fees from old/SY/TY students without admission record
