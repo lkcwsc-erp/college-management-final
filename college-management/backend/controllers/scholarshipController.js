@@ -203,32 +203,61 @@ exports.autoCalculateScholarship = async (req, res) => {
       });
     }
 
-    // Find master — academicYear optional, matches latest if not set
-    const masterQuery = {
-      categories: { $elemMatch: { $regex: new RegExp(`^${category}$`, 'i') } },
-      courseType,
-      admissionYear,
-      isActive: true,
+    // ── Normalize category: GENERAL/general → OPEN ──────────────────────────
+    const GENERAL_ALIASES = ['general', 'gen', 'unreserved'];
+    const normalizedCategory = GENERAL_ALIASES.includes((category || '').toLowerCase().trim())
+      ? 'OPEN'
+      : category;
+
+    // ── Normalize admissionYear: "1st Year"→"FY", "2nd Year"→"SY", "3rd Year"→"TY" ──
+    const YEAR_MAP = {
+      '1st year': 'FY', 'first year': 'FY', 'fy': 'FY',
+      '2nd year': 'SY', 'second year': 'SY', 'sy': 'SY',
+      '3rd year': 'TY', 'third year': 'TY', 'ty': 'TY',
     };
-    // If academicYear is set, try exact match first
+    const normalizedYear = YEAR_MAP[(admissionYear || '').toLowerCase().trim()] || admissionYear;
+
+    // ── Normalize courseType: "BA"→"B.A.", "BSC"→"B.Sc." etc ────────────────
+    const normalizeCourse = (ct) => {
+      const s = (ct || '').toLowerCase().replace(/[\s.]/g, '');
+      if (s.includes('bsc') || s.includes('science')) return 'B.Sc.';
+      if (s.includes('ba') || s.includes('arts'))     return 'B.A.';
+      return ct;
+    };
+    const normalizedCourse = normalizeCourse(courseType);
+
+    // ── Build query — try normalized values, fall back to originals ──────────
+    const buildQuery = (cat, yr, ct) => ({
+      categories: { $elemMatch: { $regex: new RegExp(`^${cat}$`, 'i') } },
+      courseType: { $regex: new RegExp(ct.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+      admissionYear: yr,
+      isActive: true,
+    });
+
     let master = null;
+
+    // Try 1: normalized category + year + course + exact academicYear
     if (academicYear) {
-      master = await ScholarshipMaster.findOne({ ...masterQuery, academicYear });
+      master = await ScholarshipMaster.findOne({ ...buildQuery(normalizedCategory, normalizedYear, normalizedCourse), academicYear });
     }
-    // Fallback: any academic year
+    // Try 2: normalized — any academic year
     if (!master) {
-      master = await ScholarshipMaster.findOne(masterQuery).sort({ academicYear: -1 });
+      master = await ScholarshipMaster.findOne(buildQuery(normalizedCategory, normalizedYear, normalizedCourse)).sort({ academicYear: -1 });
+    }
+    // Try 3: original values — any academic year (in case master stored originals)
+    if (!master) {
+      master = await ScholarshipMaster.findOne(buildQuery(category, admissionYear, courseType)).sort({ academicYear: -1 });
     }
 
     if (!master) {
       return res.status(404).json({
         success: false,
-        message: `No active scholarship master found for ${category} + ${courseType} + ${admissionYear} (${academicYear || 'any year'})`,
+        message: `No scholarship master found for ${normalizedCategory} + ${normalizedCourse} + ${normalizedYear}. Please add a record in MahaDBT Master tab.`,
       });
     }
 
     const isReserved = RESERVED_CATEGORIES.some(
-      r => r.toLowerCase() === (category || '').toLowerCase()
+      r => r.toLowerCase() === (normalizedCategory || '').toLowerCase()
     );
 
     let eligibleAmount;
