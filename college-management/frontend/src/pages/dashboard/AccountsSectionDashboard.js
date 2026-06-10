@@ -1899,27 +1899,29 @@ const AccountsSectionDashboard = () => {
                 </div>
               )}
 
-             {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
+              {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
 
-              </>}
-
-              
-              
+              {/* Step 2 — Amount */}
+              {!admCollectDocMode && </>}
 
               <button onClick={handleAdmFeeCollect} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
                 style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
                 {admLoading2 ? '⏳ Processing...' : '🖨️ Collect & Print Receipt'}
               </button>
-            <button onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType(''); }}
+              <button onClick={() => { setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem(''); setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType(''); }}
                 style={{ width:'100%', background:'#f3f4f6', color:'#555', padding:12, borderRadius:10, border:'none', fontSize:14, cursor:'pointer' }}>
                 Cancel
               </button>
-           </div>
+            </div>
           </div>
         );
       })()}
+    </div>
+  );
+};
+
 /* ═══════════════════════════════════════════════════════════
-   WALK-IN
+   WALK-IN / OLD STUDENT FEE MODAL
    Collect fees from old/SY/TY students without admission record
 ═══════════════════════════════════════════════════════════ */
 const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
