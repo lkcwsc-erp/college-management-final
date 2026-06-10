@@ -367,18 +367,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
 
                 {/* Identity + Address */}
                 <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                    <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>🪪 Identity</h4>
-                    {[
-                      ['Category',    selected.category?(selected.category).toUpperCase():'—'],
-                      ['Caste',       selected.caste],
-                      ['Sub-Caste',   selected.subCaste],
-                      ['Aadhar No.',  selected.aadharNumber],
-                      ['Family Income', selected.familyIncome?`₹${selected.familyIncome}`:'—'],
-                      ['Caste Cert No.', selected.casteCertificateNo],
-                      ['Issuing Auth',   selected.casteCertificateAuthority],
-                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                  </div>
+
                   <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
                     <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>🏠 Address</h4>
                     {[
