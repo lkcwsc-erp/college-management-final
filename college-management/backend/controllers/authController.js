@@ -484,6 +484,7 @@ exports.createStaff = async (req, res) => {
       password,
       plainPassword: password,
       phone: phone || '',
+      photo: req.body.photo || '',
       role
     });
  
@@ -576,6 +577,7 @@ exports.updateStaff = async (req, res) => {
         email:    email    || staff.email,
         phone:    phone    || staff.phone,
         role:     req.body.role || staff.role,
+        ...(req.body.photo !== undefined && { photo: req.body.photo }),
       },
       { new: true }
     ).select('-password');
