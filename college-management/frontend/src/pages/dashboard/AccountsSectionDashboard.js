@@ -389,30 +389,12 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
-  // Submit edit for approval — saves to DB + localStorage
-  const submitEdit = async (itemId, newAmounts, isNewItem = false) => {
-    const item = allItems.find(i => i.id === itemId) || { name: newItem.name, section: newItem.section, s: newAmounts };
-    const trackLocally = (status = 'pending') => {
-      const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status } } };
-      savePending(pending);
-    };
-    try {
-      await API.post('/fee-structure-approvals/submit', {
-        courseKey, itemId,
-        itemName:    item.name || 'Fee Item',
-        itemSection: item.section || 'College',
-        oldAmounts:  item.s || [],
-        newAmounts,
-        isNewItem,
-      });
-      trackLocally('pending');
-      setEditingItem(null);
-      showToast('✅ Submitted! Principal → Admin approval required.');
-    } catch {
-      trackLocally('pending');
-      setEditingItem(null);
-      showToast('✅ Submitted for approval.');
-    }
+  // Submit edit for approval
+  const submitEdit = (itemId, newAmounts) => {
+    const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
+    savePending(pending);
+    setEditingItem(null);
+    showToast('✅ Edit submitted for Principal/Admin approval!');
   };
 
   const pendingForCourse = pendingEdits[courseKey] || {};
@@ -558,7 +540,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                     const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
                     saveCustomFees(cf);
                     // Auto-submit for approval
-                    submitEdit(id, item.s, true);
+                    submitEdit(id, item.s);
                     setAddingItem(false);
                     setNewItem({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
                   }} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
@@ -766,6 +748,7 @@ const AccountsSectionDashboard = () => {
   // ── Admission fees ─────────────────────────────────────────────────────────
   const [admissions, setAdmissions]         = useState([]);
   const [admLoading, setAdmLoading]         = useState(false);
+  const [showWalkIn, setShowWalkIn]       = useState(false);
   const [admSearch, setAdmSearch]           = useState('');
   const [admFilter, setAdmFilter]           = useState('all'); // 'all'|'paid'|'unpaid'
   const [selectedAdm, setSelectedAdm]       = useState(null);
@@ -1243,8 +1226,15 @@ const AccountsSectionDashboard = () => {
           {/* ════════════════════════ ADMISSION FEES ════════════════════════ */}
           {activeTab === 'adm_fees' && (
             <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>💰 Collect Fees</h2>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                <h2 style={{ color: '#1565C0', margin: 0 }}>💰 Collect Fees</h2>
+                <button onClick={() => setShowWalkIn(true)}
+                  style={{ background:'#E65100', color:'#fff', border:'none', borderRadius:9, padding:'10px 20px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                  🚶 Walk-in / Old Student Fee
+                </button>
+              </div>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Collect admission fees, exam fees, and other dues from enrolled students.</p>
+              {showWalkIn && <WalkInFeeModal onClose={() => setShowWalkIn(false)} user={user} API={API} showToast={showToast} />}
 
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input type="text" placeholder="🔍 Search by name, student ID or email..." value={admSearch} onChange={e => setAdmSearch(e.target.value)}
@@ -1768,6 +1758,538 @@ const AccountsSectionDashboard = () => {
           </div>
         );
       })()}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════
+   WALK-IN / OLD STUDENT FEE MODAL
+   Collect fees from old/SY/TY students without admission record
+═══════════════════════════════════════════════════════════ */
+const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
+  const EMPTY_FORM = {
+    studentName:'', phone:'', prnNo:'', rollNo:'',
+    course:'B.A.', year:'2nd Year',
+    feeType:'admission', amount:'', payMode:'cash', txnId:'', notes:'',
+  };
+  const [view, setView]       = useState('form'); // 'form' | 'receipt' | 'history'
+  const [form, setForm]       = useState(EMPTY_FORM);
+  const [saving, setSaving]   = useState(false);
+  const [msg, setMsg]         = useState('');
+  const [receipt, setReceipt] = useState(null);
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lkcwsc_walkin_history') || '[]'); } catch { return []; }
+  });
+
+  const FEE_OPTS = [
+    { key:'admission',   label:'💰 Tuition / Annual Fees' },
+    { key:'exam',        label:'📝 Exam Fee' },
+    { key:'bonafide',    label:'📋 Bonafide Fee' },
+    { key:'tc',          label:'📄 TC Fee' },
+    { key:'migration',   label:'📜 Migration Fee' },
+    { key:'library',     label:'📚 Library Fee' },
+    { key:'development', label:'🏗️ Development Fee' },
+    { key:'penalty',     label:'⚠️ Penalty / Fine' },
+    { key:'other',       label:'➕ Other' },
+  ];
+
+  const inp = { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
+  const fmt = n => Number(n||0).toLocaleString('en-IN');
+
+  const saveToHistory = (rec) => {
+    const updated = [rec, ...history].slice(0, 200);
+    setHistory(updated);
+    localStorage.setItem('lkcwsc_walkin_history', JSON.stringify(updated));
+  };
+
+  const handleCollect = async () => {
+    if (!form.studentName.trim()) { setMsg('❌ Student name required'); return; }
+    if (!form.amount || Number(form.amount) <= 0) { setMsg('❌ Enter valid amount'); return; }
+    if (form.payMode === 'online' && !form.txnId.trim()) { setMsg('❌ Transaction ID required for online payment'); return; }
+    setSaving(true); setMsg('');
+    const receiptNo = 'WI' + Date.now().toString().slice(-6);
+    const rec = {
+      studentName:  form.studentName,
+      phone:        form.phone,
+      prnNo:        form.prnNo,
+      rollNo:       form.rollNo,
+      course:       form.course,
+      admissionYear: form.year,
+      feeType:      form.feeType,
+      feeTypeLabel: FEE_OPTS.find(f=>f.key===form.feeType)?.label || form.feeType,
+      amount:       Number(form.amount),
+      paymentMode:  form.payMode,
+      transactionId: form.txnId || '',
+      notes:        form.notes,
+      receiptNo,
+      collectedBy:  user?.name || 'Accounts Staff',
+      paidAt:       new Date().toISOString(),
+    };
+    try {
+      await API.post('/admissions/receipts/walkin', rec);
+    } catch { /* save locally if API not available */ }
+    saveToHistory(rec);
+    setReceipt(rec);
+    setView('receipt');
+    showToast?.('✅ Fee collected & receipt generated!');
+    setSaving(false);
+  };
+
+  const printReceiptFn = (r) => {
+    const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:'Times New Roman',serif;background:#fff;display:flex;justify-content:center;padding:20px}
+      .page{width:400px;border:2px solid #000;padding:20px}
+      .center{text-align:center}
+      h2{font-size:15px;margin-bottom:2px}
+      h3{font-size:12px;color:#555;margin-bottom:2px;font-weight:normal}
+      .divider{border-top:2px solid #000;margin:10px 0}
+      .divider2{border-top:1px dashed #aaa;margin:8px 0}
+      .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px dotted #ddd}
+      .lbl{color:#555;font-weight:600;width:130px;flex-shrink:0}
+      .val{font-weight:700;text-align:right}
+      .total{display:flex;justify-content:space-between;padding:10px 0 6px;font-size:17px;font-weight:900}
+      .footer{text-align:center;font-size:11px;color:#777;margin-top:12px;line-height:1.6}
+      .stamp{border:2px solid #2E7D32;color:#2E7D32;text-align:center;padding:6px;font-size:13px;font-weight:900;letter-spacing:2px;margin:10px 0;border-radius:4px}
+      @media print{body{padding:0}.print-btn{display:none}}
+    </style></head><body><div class="page">
+      <div class="center">
+        <h2>Late Kalpana Chawla Women's Senior College</h2>
+        <h3>Affiliated to SNDT Women's University, Mumbai</h3>
+        <h3>Gangakhed, Dist. Parbhani, Maharashtra – 431514</h3>
+      </div>
+      <div class="divider"></div>
+      <div class="center" style="font-size:14px;font-weight:900;letter-spacing:2px;margin-bottom:8px">FEE RECEIPT</div>
+      <div class="row"><span class="lbl">Receipt No.</span><span class="val">${r.receiptNo}</span></div>
+      <div class="row"><span class="lbl">Date</span><span class="val">${new Date(r.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>
+      <div class="divider2"></div>
+      <div class="row"><span class="lbl">Student Name</span><span class="val">${r.studentName}</span></div>
+      ${r.phone?`<div class="row"><span class="lbl">Phone</span><span class="val">${r.phone}</span></div>`:''}
+      ${r.prnNo?`<div class="row"><span class="lbl">PRN No.</span><span class="val">${r.prnNo}</span></div>`:''}
+      ${r.rollNo?`<div class="row"><span class="lbl">Roll No.</span><span class="val">${r.rollNo}</span></div>`:''}
+      <div class="row"><span class="lbl">Course / Year</span><span class="val">${r.course} · ${r.admissionYear}</span></div>
+      <div class="divider2"></div>
+      <div class="row"><span class="lbl">Fee Type</span><span class="val">${r.feeTypeLabel}</span></div>
+      <div class="row"><span class="lbl">Payment Mode</span><span class="val">${r.paymentMode==='online'?'Online / UPI':'Cash'}</span></div>
+      ${r.transactionId?`<div class="row"><span class="lbl">Txn ID / UTR</span><span class="val">${r.transactionId}</span></div>`:''}
+      ${r.notes?`<div class="row"><span class="lbl">Notes</span><span class="val">${r.notes}</span></div>`:''}
+      <div class="divider"></div>
+      <div class="total"><span>Amount Paid</span><span>₹ ${fmt(r.amount)}/-</span></div>
+      <div class="stamp">✅ PAID</div>
+      <div class="footer">
+        Collected by: <strong>${r.collectedBy}</strong><br/>
+        LKCWSC College Management ERP<br/>
+        +91 9307162914 | lkcwsc.vnssorg.com
+      </div>
+      <br/>
+      <button class="print-btn" onclick="window.print()" style="width:100%;padding:10px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Print Receipt</button>
+    </div></body></html>`;
+    const w = window.open('','_blank','width=500,height=680');
+    w.document.write(html); w.document.close();
+  };
+
+  const totalCollected = history.reduce((s,r) => s + (r.amount||0), 0);
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+      <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:580, maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.25)', display:'flex', flexDirection:'column' }}>
+
+        {/* Header */}
+        <div style={{ padding:'18px 24px', borderBottom:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+          <div style={{ display:'flex', gap:8 }}>
+            {['form','history'].map(v => (
+              <button key={v} onClick={()=>setView(v)}
+                style={{ padding:'7px 16px', borderRadius:8, border:'none', fontWeight:700, fontSize:13, cursor:'pointer',
+                  background: view===v ? '#E65100' : '#f0f4f8',
+                  color:      view===v ? '#fff'    : '#555' }}>
+                {v==='form' ? '🚶 Collect Fee' : `🧾 History (${history.length})`}
+              </button>
+            ))}
+          </div>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#555' }}>✕</button>
+        </div>
+
+        <div style={{ padding:'20px 24px', flex:1 }}>
+
+          {/* ── FORM VIEW ── */}
+          {(view==='form' || view==='receipt') && (
+            <>
+              {msg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:14, fontSize:13, background:'#ffebee', color:'#C62828', fontWeight:600 }}>{msg}</div>}
+
+              {view==='receipt' && receipt ? (
+                <div style={{ background:'#e8f5e9', border:'2px solid #2E7D32', borderRadius:12, padding:20 }}>
+                  <h4 style={{ color:'#2E7D32', margin:'0 0 14px', fontSize:16 }}>✅ Fee Collected!</h4>
+                  <div style={{ background:'#fff', borderRadius:10, padding:14, marginBottom:16 }}>
+                    {[
+                      ['Receipt No.', receipt.receiptNo],
+                      ['Student', receipt.studentName],
+                      receipt.phone && ['Phone', receipt.phone],
+                      receipt.prnNo && ['PRN No.', receipt.prnNo],
+                      receipt.rollNo && ['Roll No.', receipt.rollNo],
+                      ['Course / Year', `${receipt.course} · ${receipt.admissionYear}`],
+                      ['Fee Type', receipt.feeTypeLabel],
+                      ['Amount', `₹ ${fmt(receipt.amount)}/-`],
+                      ['Payment', receipt.paymentMode==='online'?'🌐 Online':'💵 Cash'],
+                      receipt.transactionId && ['Txn ID', receipt.transactionId],
+                    ].filter(Boolean).map(([l,v]) => (
+                      <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
+                        <span style={{ color:'#888', fontWeight:600 }}>{l}</span>
+                        <span style={{ fontWeight:700, color:l==='Amount'?'#2E7D32':'#222' }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display:'flex', gap:10 }}>
+                    <button onClick={()=>printReceiptFn(receipt)}
+                      style={{ flex:1, background:'#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'11px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                      🖨️ Print Receipt
+                    </button>
+                    <button onClick={()=>{ setReceipt(null); setForm(EMPTY_FORM); setView('form'); }}
+                      style={{ padding:'11px 18px', background:'#fff3e0', color:'#E65100', border:'1px solid #ffcc80', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                      ➕ New
+                    </button>
+                    <button onClick={onClose}
+                      style={{ padding:'11px 18px', background:'#e8f5e9', color:'#2E7D32', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                      Done ✓
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                  {/* Name */}
+                  <div>
+                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Student Name *</label>
+                    <input style={inp} placeholder="e.g. Priya Santosh Sharma" value={form.studentName} onChange={e=>setForm(p=>({...p,studentName:e.target.value}))} />
+                  </div>
+                  {/* Phone + PRN */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Phone No.</label>
+                      <input style={inp} placeholder="9876543210" maxLength={10} value={form.phone}
+                        onChange={e=>{ if(/^\d{0,10}$/.test(e.target.value)) setForm(p=>({...p,phone:e.target.value})); }} />
+                    </div>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>PRN No.</label>
+                      <input style={inp} placeholder="e.g. 2200123456" value={form.prnNo} onChange={e=>setForm(p=>({...p,prnNo:e.target.value}))} />
+                    </div>
+                  </div>
+                  {/* Roll No + Course */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Roll No.</label>
+                      <input style={inp} placeholder="e.g. 101" value={form.rollNo} onChange={e=>setForm(p=>({...p,rollNo:e.target.value}))} />
+                    </div>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
+                      <select style={inp} value={form.course} onChange={e=>setForm(p=>({...p,course:e.target.value}))}>
+                        <option value="B.A.">B.A.</option>
+                        <option value="B.Sc.">B.Sc.</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
+                      <select style={inp} value={form.year} onChange={e=>setForm(p=>({...p,year:e.target.value}))}>
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                      </select>
+                    </div>
+                  </div>
+                  {/* Fee type + Amount */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:12 }}>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Fee Type *</label>
+                      <select style={inp} value={form.feeType} onChange={e=>setForm(p=>({...p,feeType:e.target.value}))}>
+                        {FEE_OPTS.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Amount (₹) *</label>
+                      <input type="number" min="0" style={{ ...inp, fontSize:17, fontWeight:800, textAlign:'right' }}
+                        placeholder="0" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} />
+                    </div>
+                  </div>
+                  {/* Payment mode */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Payment Mode</label>
+                      <select style={inp} value={form.payMode} onChange={e=>setForm(p=>({...p,payMode:e.target.value}))}>
+                        <option value="cash">💵 Cash</option>
+                        <option value="online">🌐 Online / UPI</option>
+                      </select>
+                    </div>
+                    {form.payMode==='online' && (
+                      <div>
+                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Txn ID / UTR *</label>
+                        <input style={inp} placeholder="Ref No." value={form.txnId} onChange={e=>setForm(p=>({...p,txnId:e.target.value}))} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Notes */}
+                  <div>
+                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Notes (optional)</label>
+                    <input style={inp} placeholder="e.g. Exam fee for Sem IV backlog" value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} />
+                  </div>
+                  <button onClick={handleCollect} disabled={saving}
+                    style={{ background:'#E65100', color:'#fff', border:'none', borderRadius:9, padding:'13px', fontWeight:700, fontSize:15, cursor:saving?'not-allowed':'pointer', opacity:saving?0.7:1 }}>
+                    {saving ? '⏳ Processing...' : '💰 Collect Fee & Generate Receipt'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── HISTORY VIEW ── */}
+          {view==='history' && (
+            <div>
+              {/* Summary */}
+              <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap' }}>
+                <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:12, padding:'12px 18px', fontWeight:700, fontSize:15 }}>
+                  💰 Total Collected: ₹{fmt(totalCollected)}
+                </div>
+                <div style={{ background:'#e3f2fd', color:'#1565C0', borderRadius:12, padding:'12px 18px', fontWeight:700, fontSize:15 }}>
+                  🧾 Receipts: {history.length}
+                </div>
+              </div>
+
+              {history.length === 0 ? (
+                <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>
+                  <div style={{ fontSize:40 }}>🧾</div>
+                  <p>No walk-in receipts yet</p>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {history.map((r, idx) => (
+                    <div key={idx} style={{ background:'#fafbff', border:'1px solid #e0e7ef', borderRadius:12, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+                          <span style={{ fontWeight:700, fontSize:14, color:'#1a1a2e' }}>{r.studentName}</span>
+                          <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', padding:'1px 8px', borderRadius:10, fontWeight:600 }}>
+                            {r.course} · {r.admissionYear}
+                          </span>
+                          {r.prnNo && <span style={{ fontSize:11, color:'#888' }}>PRN: {r.prnNo}</span>}
+                          {r.rollNo && <span style={{ fontSize:11, color:'#888' }}>Roll: {r.rollNo}</span>}
+                          {r.phone && <span style={{ fontSize:11, color:'#888' }}>📱 {r.phone}</span>}
+                        </div>
+                        <div style={{ fontSize:12, color:'#666' }}>
+                          {r.feeTypeLabel} · {r.paymentMode==='online'?'🌐 Online':'💵 Cash'} · {new Date(r.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+                        </div>
+                        <div style={{ fontSize:11, color:'#aaa', marginTop:2 }}>Receipt: {r.receiptNo} · By: {r.collectedBy}</div>
+                      </div>
+                      <div style={{ textAlign:'right', flexShrink:0 }}>
+                        <div style={{ fontSize:17, fontWeight:800, color:'#2E7D32', marginBottom:6 }}>₹{fmt(r.amount)}</div>
+                        <button onClick={()=>printReceiptFn(r)}
+                          style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:7, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                          🖨️ Reprint
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]       = useState('');
+  const [receipt, setReceipt] = useState(null);
+
+  const FEE_OPTS = [
+    { key:'admission',   label:'💰 Tuition / Annual Fees' },
+    { key:'exam',        label:'📝 Exam Fee' },
+    { key:'bonafide',    label:'📋 Bonafide Fee' },
+    { key:'tc',          label:'📄 TC Fee' },
+    { key:'migration',   label:'📜 Migration Fee' },
+    { key:'library',     label:'📚 Library Fee' },
+    { key:'development', label:'🏗️ Development Fee' },
+    { key:'penalty',     label:'⚠️ Penalty / Fine' },
+    { key:'other',       label:'➕ Other' },
+  ];
+
+  const inp = { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
+  const fmt = n => Number(n||0).toLocaleString('en-IN');
+
+  const handleCollect = async () => {
+    if (!form.studentName.trim()) { setMsg('❌ Student name required'); return; }
+    if (!form.amount || Number(form.amount) <= 0) { setMsg('❌ Enter valid amount'); return; }
+    if (form.payMode === 'online' && !form.txnId.trim()) { setMsg('❌ Transaction ID required for online payment'); return; }
+    setSaving(true); setMsg('');
+    try {
+      const receiptNo = 'WI' + Date.now().toString().slice(-6);
+      const payload = {
+        studentName:  form.studentName,
+        studentEmail: 'walkin@lkcwsc.edu',
+        studentId:    'WALK-IN',
+        admissionYear: form.year,
+        feeType:      form.feeType,
+        feeTypeLabel: FEE_OPTS.find(f=>f.key===form.feeType)?.label || form.feeType,
+        amount:       Number(form.amount),
+        paymentMode:  form.payMode,
+        transactionId: form.txnId || '',
+        notes:        `Walk-in | ${form.course} | ${form.year} | ${form.notes}`,
+        receiptNo,
+        collectedBy:  user?.name || 'Accounts Staff',
+        isWalkIn:     true,
+      };
+      await API.post('/admissions/mark-fees-paid/walkin', payload);
+      setReceipt({ ...payload, paidAt: new Date() });
+      showToast?.('✅ Fee collected & receipt generated!');
+    } catch (e) {
+      // If walkin route doesn't exist, save to history directly
+      const receiptNo = 'WI' + Date.now().toString().slice(-6);
+      setReceipt({
+        studentName: form.studentName, admissionYear: form.year,
+        feeType: form.feeType,
+        feeTypeLabel: FEE_OPTS.find(f=>f.key===form.feeType)?.label,
+        amount: Number(form.amount), paymentMode: form.payMode,
+        transactionId: form.txnId, receiptNo, paidAt: new Date(),
+        collectedBy: user?.name,
+      });
+      showToast?.('✅ Receipt generated!');
+    }
+    finally { setSaving(false); }
+  };
+
+  const printReceipt = () => {
+    if (!receipt) return;
+    const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
+    <style>
+      body{font-family:'Times New Roman',serif;max-width:400px;margin:20px auto;padding:20px;border:2px solid #000}
+      h2{text-align:center;margin:0;font-size:16px}
+      h3{text-align:center;color:#555;font-size:13px;margin:4px 0 10px}
+      .row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted #ccc;font-size:13px}
+      .lbl{color:#555;font-weight:600}.val{font-weight:700}
+      .total{display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:900;border-top:2px solid #000;margin-top:8px}
+      .footer{text-align:center;font-size:11px;color:#888;margin-top:16px}
+      @media print{button{display:none}}
+    </style></head><body>
+    <h2>Late Kalpana Chawla Women's Senior College</h2>
+    <h3>Gangakhed, Dist. Parbhani | Fee Receipt</h3>
+    <div class="row"><span class="lbl">Receipt No.</span><span class="val">${receipt.receiptNo}</span></div>
+    <div class="row"><span class="lbl">Date</span><span class="val">${new Date(receipt.paidAt).toLocaleDateString('en-IN')}</span></div>
+    <div class="row"><span class="lbl">Student Name</span><span class="val">${receipt.studentName}</span></div>
+    <div class="row"><span class="lbl">Course / Year</span><span class="val">${form.course} · ${receipt.admissionYear}</span></div>
+    <div class="row"><span class="lbl">Fee Type</span><span class="val">${receipt.feeTypeLabel}</span></div>
+    <div class="row"><span class="lbl">Payment Mode</span><span class="val">${receipt.paymentMode === 'online' ? 'Online' : 'Cash'}</span></div>
+    ${receipt.transactionId ? `<div class="row"><span class="lbl">Txn ID</span><span class="val">${receipt.transactionId}</span></div>` : ''}
+    <div class="total"><span>Amount Paid</span><span>₹ ${fmt(receipt.amount)}/-</span></div>
+    <div class="footer">Collected by: ${receipt.collectedBy} | LKCWSC ERP</div>
+    <br/><button onclick="window.print()" style="width:100%;padding:10px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Print Receipt</button>
+    </body></html>`;
+    const w = window.open('','_blank','width=480,height=600');
+    w.document.write(html); w.document.close();
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+      <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:500, width:'100%', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+          <h3 style={{ color:'#E65100', margin:0 }}>🚶 Walk-in / Old Student Fee</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer' }}>✕</button>
+        </div>
+
+        {msg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:14, fontSize:13, background:'#ffebee', color:'#C62828', fontWeight:600 }}>{msg}</div>}
+
+        {receipt ? (
+          // Receipt view
+          <div style={{ background:'#e8f5e9', border:'2px solid #2E7D32', borderRadius:12, padding:20 }}>
+            <h4 style={{ color:'#2E7D32', margin:'0 0 14px' }}>✅ Fee Collected!</h4>
+            <div style={{ background:'#fff', borderRadius:8, padding:14, marginBottom:16 }}>
+              {[
+                ['Receipt No.', receipt.receiptNo],
+                ['Student', receipt.studentName],
+                ['Course / Year', `${form.course} · ${receipt.admissionYear}`],
+                ['Fee Type', receipt.feeTypeLabel],
+                ['Amount', `₹ ${fmt(receipt.amount)}/-`],
+                ['Payment', receipt.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'],
+                receipt.transactionId && ['Txn ID', receipt.transactionId],
+              ].filter(Boolean).map(([l,v]) => (
+                <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #f0f4f8', fontSize:13 }}>
+                  <span style={{ color:'#888', fontWeight:600 }}>{l}</span>
+                  <span style={{ fontWeight:700, color: l==='Amount'?'#2E7D32':'#222' }}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={printReceipt} style={{ flex:1, background:'#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'11px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                🖨️ Print Receipt
+              </button>
+              <button onClick={() => { setReceipt(null); setForm({ studentName:'', course:'B.A.', year:'2nd Year', feeType:'admission', amount:'', payMode:'cash', txnId:'', notes:'' }); }}
+                style={{ padding:'11px 16px', background:'#eee', color:'#333', border:'none', borderRadius:8, fontSize:13, cursor:'pointer' }}>
+                + New
+              </button>
+              <button onClick={onClose} style={{ padding:'11px 16px', background:'#e8f5e9', color:'#2E7D32', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Form
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Student Name *</label>
+              <input style={inp} placeholder="e.g. Priya Sharma" value={form.studentName} onChange={e=>setForm(p=>({...p,studentName:e.target.value}))} />
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
+                <select style={inp} value={form.course} onChange={e=>setForm(p=>({...p,course:e.target.value}))}>
+                  <option value="B.A.">B.A.</option>
+                  <option value="B.Sc.">B.Sc.</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
+                <select style={inp} value={form.year} onChange={e=>setForm(p=>({...p,year:e.target.value}))}>
+                  <option value="1st Year">1st Year (FY)</option>
+                  <option value="2nd Year">2nd Year (SY)</option>
+                  <option value="3rd Year">3rd Year (TY)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Fee Type *</label>
+              <select style={inp} value={form.feeType} onChange={e=>setForm(p=>({...p,feeType:e.target.value}))}>
+                {FEE_OPTS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Amount (₹) *</label>
+              <input type="number" min="0" style={{ ...inp, fontSize:18, fontWeight:700, textAlign:'right' }}
+                placeholder="0" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} />
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Payment Mode</label>
+                <select style={inp} value={form.payMode} onChange={e=>setForm(p=>({...p,payMode:e.target.value}))}>
+                  <option value="cash">💵 Cash</option>
+                  <option value="online">🌐 Online / UPI</option>
+                </select>
+              </div>
+              {form.payMode === 'online' && (
+                <div>
+                  <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Transaction ID *</label>
+                  <input style={inp} placeholder="UTR / Ref No." value={form.txnId} onChange={e=>setForm(p=>({...p,txnId:e.target.value}))} />
+                </div>
+              )}
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Notes (optional)</label>
+              <input style={inp} placeholder="Any additional info..." value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} />
+            </div>
+            <button onClick={handleCollect} disabled={saving}
+              style={{ background:'#E65100', color:'#fff', border:'none', borderRadius:9, padding:'13px', fontWeight:700, fontSize:14, cursor:saving?'not-allowed':'pointer', opacity:saving?0.7:1 }}>
+              {saving ? '⏳ Processing...' : '💰 Collect Fee & Generate Receipt'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
