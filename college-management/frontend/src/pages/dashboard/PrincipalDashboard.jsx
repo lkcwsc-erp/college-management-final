@@ -351,7 +351,8 @@ const PrincipalDashboard = () => {
     { id: 'staff',        label: '👥 Staff Overview' },
     { id: 'notices',      label: '📢 Important Notices' },
     { id: 'all_students', label: '👩‍🎓 All Students' },
-    { id: 'doc_fees',     label: '💰 Doc Fee Approvals' },
+    { id: 'doc_fees',      label: '💰 Doc Fee Approvals' },
+    { id: 'fee_struct',   label: '🏛️ Fee Structure Approvals' },
   ];
 
   return (
@@ -633,6 +634,10 @@ const PrincipalDashboard = () => {
           {activeTab === 'notices' && <PrincipalNoticesTab />}
 
           {/* ── ALL STUDENTS ── */}
+          {activeTab === 'fee_struct' && (
+            <FeeStructApprovalTab role="principal" />
+          )}
+
           {activeTab === 'all_students' && (
             <div>
               <h2 style={{ color: '#C62828', marginBottom: 4 }}>👩‍🎓 All Students</h2>
@@ -1734,5 +1739,151 @@ const PrincipalResourcesTab = () => {
   );
 };
 
+
+/* ═══════════════════════════════════════════════════════════
+   FeeStructApprovalTab — used by both Principal and Admin
+   role: 'principal' | 'admin'
+═══════════════════════════════════════════════════════════ */
+const FeeStructApprovalTab = ({ role }) => {
+  const [approvals, setApprovals] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [msg, setMsg]             = useState('');
+
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 3500); };
+
+  const fetchApprovals = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/fee-structure-approvals');
+      setApprovals(res.data.approvals || []);
+    } catch { flash('❌ Failed to load'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchApprovals(); }, []);
+
+  const handleAction = async (id, action, note = '') => {
+    try {
+      const endpoint = role === 'principal'
+        ? (action === 'approve' ? `/fee-structure-approvals/${id}/principal-approve` : `/fee-structure-approvals/${id}/principal-reject`)
+        : (action === 'approve' ? `/fee-structure-approvals/${id}/admin-approve`     : `/fee-structure-approvals/${id}/admin-reject`);
+      await API.put(endpoint, { note, reason: note });
+      flash(`✅ ${action === 'approve' ? 'Approved' : 'Rejected'} successfully`);
+      fetchApprovals();
+    } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Action failed')); }
+  };
+
+  const pending = approvals.filter(a =>
+    role === 'principal' ? a.status === 'pending_principal' : a.status === 'pending_admin'
+  );
+  const done = approvals.filter(a =>
+    role === 'principal'
+      ? ['approved', 'rejected_by_principal', 'rejected_by_admin', 'pending_admin'].includes(a.status)
+      : ['approved', 'rejected_by_admin'].includes(a.status)
+  );
+
+  const statusBadge = (s) => {
+    const map = {
+      pending_principal: { bg:'#fff3e0', color:'#E65100', label:'⏳ Pending Principal' },
+      pending_admin:     { bg:'#e3f2fd', color:'#1565C0', label:'⏳ Pending Admin' },
+      approved:          { bg:'#e8f5e9', color:'#2E7D32', label:'✅ Approved' },
+      rejected_by_principal: { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Principal' },
+      rejected_by_admin:     { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Admin' },
+    };
+    const c = map[s] || { bg:'#f5f5f5', color:'#555', label: s };
+    return <span style={{ fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:10, background:c.bg, color:c.color }}>{c.label}</span>;
+  };
+
+  const SEM_LABELS = ['S-I','S-II','S-III','S-IV','S-V','S-VI'];
+
+  return (
+    <div>
+      <h2 style={{ color:'#1565C0', marginBottom:4 }}>🏛️ Fee Structure Approvals</h2>
+      <p style={{ color:'#666', marginBottom:16, fontSize:14 }}>
+        Accounts Section ne fee amounts edit kiye hain — review karo aur approve ya reject karo.
+      </p>
+      {msg && <div style={{ padding:'10px 16px', borderRadius:9, marginBottom:14, fontWeight:600, fontSize:14, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
+
+      {loading ? (
+        <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>⏳ Loading...</div>
+      ) : (
+        <>
+          <h3 style={{ color:'#E65100', marginBottom:12, fontSize:15 }}>
+            ⏳ Pending Your Approval ({pending.length})
+          </h3>
+          {pending.length === 0 ? (
+            <div style={{ background:'#f8faff', borderRadius:12, border:'1px solid #e0e7ef', padding:'30px', textAlign:'center', color:'#aaa', marginBottom:24 }}>
+              ✅ No pending approvals
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:24 }}>
+              {pending.map(a => (
+                <div key={a._id} style={{ background:'#fff', borderRadius:12, border:'2px solid #ffcc80', padding:'16px 20px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
+                    <div>
+                      <span style={{ fontSize:15, fontWeight:700, color:'#333' }}>{a.itemName}</span>
+                      <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{a.courseKey} — {a.itemSection}</span>
+                      {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#e3f2fd', color:'#1565C0', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
+                    </div>
+                    {statusBadge(a.status)}
+                  </div>
+                  {/* Amount comparison */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:14 }}>
+                    <div style={{ background:'#f5f5f5', borderRadius:8, padding:'10px 14px' }}>
+                      <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#888' }}>OLD AMOUNTS</p>
+                      <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                        {SEM_LABELS.map((sl, i) => (
+                          <span key={i} style={{ fontSize:12, color:'#888' }}>{sl}: ₹{(a.oldAmounts?.[i]||0).toLocaleString('en-IN')}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px' }}>
+                      <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#2E7D32' }}>NEW AMOUNTS</p>
+                      <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                        {SEM_LABELS.map((sl, i) => (
+                          <span key={i} style={{ fontSize:12, fontWeight:700, color:'#2E7D32' }}>{sl}: ₹{(a.newAmounts?.[i]||0).toLocaleString('en-IN')}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize:12, color:'#888', marginBottom:12 }}>
+                    Submitted by: <strong>{a.submittedBy}</strong> — {new Date(a.createdAt).toLocaleDateString('en-IN')}
+                  </div>
+                  <div style={{ display:'flex', gap:10 }}>
+                    <button onClick={() => handleAction(a._id, 'approve')}
+                      style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'9px 22px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                      ✅ Approve
+                    </button>
+                    <button onClick={() => handleAction(a._id, 'reject', 'Rejected')}
+                      style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'9px 22px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                      ❌ Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {done.length > 0 && (
+            <>
+              <h3 style={{ color:'#888', marginBottom:12, fontSize:15 }}>📋 Recently Reviewed ({done.length})</h3>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {done.slice(0, 10).map(a => (
+                  <div key={a._id} style={{ background:'#fafbff', borderRadius:10, border:'1px solid #e0e7ef', padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div>
+                      <span style={{ fontSize:13, fontWeight:600, color:'#333' }}>{a.itemName}</span>
+                      <span style={{ fontSize:12, color:'#888', marginLeft:8 }}>{a.courseKey}</span>
+                    </div>
+                    {statusBadge(a.status)}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
 
 export default PrincipalDashboard;
