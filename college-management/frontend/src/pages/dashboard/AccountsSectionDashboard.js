@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
 import './Dashboard.css';
 import StudentViewFull from './StudentViewFull';
+import ExamFeeRequestsTab from './ExamFeeRequestsTab';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1102,6 +1103,19 @@ const AccountsSectionDashboard = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Exam Form Requests (pending fee badge) ─────────────────────────────────
+  const [examFormPendingCount, setExamFormPendingCount] = useState(0);
+  const fetchExamFormBadge = useCallback(() => {
+    API.get('/results/exam-form/all')
+      .then(res => {
+        const all = res.data.requests || [];
+        setExamFormPendingCount(all.filter(r => r.feeStatus === 'pending').length);
+      })
+      .catch(() => {});
+  }, []);
+  useEffect(() => { fetchExamFormBadge(); }, [fetchExamFormBadge, activeTab]);
+
   // Derived numbers
   // ─────────────────────────────────────────────────────────────────────────
   const pendingDocCount  = docRequests.filter(r => r.status === 'pending_accounts').length;
@@ -1129,6 +1143,7 @@ const AccountsSectionDashboard = () => {
   // ─────────────────────────────────────────────────────────────────────────
   const tabs = [
     { id: 'home',       label: '🏠 Dashboard' },
+    { id: 'exam_form_req', label: '📝 Exam Form Requests', badge: examFormPendingCount },
     { id: 'doc_req',    label: '📄 Document Requests', badge: pendingDocCount },
     { id: 'adm_fees',   label: '💰 Collect Fees', badge: unpaidAdmCount },
     { id: 'fee_struct', label: '💼 Fee Structure' },
@@ -1490,6 +1505,13 @@ const AccountsSectionDashboard = () => {
 
 
           {/* ══ ALL STUDENTS ══ */}
+          {activeTab === 'exam_form_req' && (
+            <ExamFeeRequestsTab
+              themeColor="#1565C0"
+              onToast={showToast}
+            />
+          )}
+
           {activeTab === 'all_students' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
@@ -1738,7 +1760,7 @@ const AccountsSectionDashboard = () => {
                       <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e', letterSpacing:0.5 }}>UNIVERSITY FEES (A)</div>
                       {uItems.map((item,idx) => (
                         <div key={item.id} onClick={() => toggleItem(item.id)}
-                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':idx%2===0?'#fafbff':'#fff', userSelect:'none' }}>
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'idx%2===0?#fafbff:#fff', userSelect:'none' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                             <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
                             <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
@@ -1841,6 +1863,8 @@ const AccountsSectionDashboard = () => {
 
               {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
 
+              {/* Step 2 — Amount */}
+              {!admCollectDocMode && </>}
 
               <button onClick={handleAdmFeeCollect} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
                 style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
