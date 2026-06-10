@@ -292,7 +292,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
               {type === 'TC' ? '📄 Verify Result for TC' : '📋 Process Marksheet Request'}
             </h3>
             <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
-              {[
+             {[
                 ['Student', selected.studentName],
                 ['PRN', selected.prnNumber || '—'],
                 ['Student ID', selected.studentId || '—'],
@@ -305,6 +305,14 @@ const ExamDocTab = ({ type, title, desc, color }) => {
                   ['Semester', selected.marksheetSemester || '—'],
                   ['Exam Session', selected.marksheetSession === 'mar_apr' ? 'March / April' : selected.marksheetSession === 'nov_dec' ? 'Nov / December' : (selected.marksheetSession || '—')],
                   ['Exam Year', selected.marksheetYear || '—'],
+                ] : []),
+                ...(type === 'TC' ? [
+                  ['Last Semester', selected.lastExamSem || '—'],
+                  ['Exam Session', selected.lastExamSession === 'mar_apr' ? 'March / April' : selected.lastExamSession === 'nov_dec' ? 'November / December' : (selected.lastExamSession || '—')],
+                  ['Exam Year', selected.lastExamYear || '—'],
+                  ['Result', selected.lastExamResult || '—'],
+                  ...(selected.lastExamPercent ? [['Percentage', selected.lastExamPercent]] : []),
+                  ...(selected.lastExamCollege ? [['Last College', selected.lastExamCollege]] : []),
                 ] : []),
                 ['Urgency', selected.urgency === 'urgent' ? '⚡ Urgent' : 'Normal'],
                 ['Reason', selected.reason || '—'],
