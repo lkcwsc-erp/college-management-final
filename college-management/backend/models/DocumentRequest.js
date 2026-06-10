@@ -27,6 +27,7 @@ const documentRequestSchema = new mongoose.Schema({
   marksheetSemester:    { type: String, default: '' }, // Sem I, Sem II, etc.
   marksheetSession:     { type: String, default: '' }, // 'mar_apr' | 'nov_dec'
   marksheetYear:        { type: String, default: '' }, // e.g. 2025
+  marksheetAcadYear:    { type: String, default: '' }, // e.g. 2025-26
 
   // ─── WORKFLOW STATUS ─────────────────────────────────────────────────────
   // TC:        pending_accounts → pending_exam → pending_principal → pending_generation → completed
