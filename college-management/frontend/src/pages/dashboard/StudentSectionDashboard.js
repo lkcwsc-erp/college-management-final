@@ -282,10 +282,8 @@ const handleCreateStudent = async (e) => {
         setCredMsg('❌ ' + msg);
       }
     }
-    finally { setCredLoading(false); }
+  finally { setCredLoading(false); }
   };
-      }
-     
   const getStatusStyle = (status) => {
     const styles = {
       pending:            { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' },
