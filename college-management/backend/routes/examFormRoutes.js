@@ -122,7 +122,10 @@ router.delete('/exam-form/published/:id', protect, authorizeRoles('staff_exam', 
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/exam-form/available', protect, authorizeRoles('student'), async (req, res) => {
   try {
-    const admission = await Admission.findOne({ email: req.user.email, status: 'approved' });
+   const admission = await Admission.findOne({
+  email: req.user.email,
+  $or: [{ status: 'approved' }, { studentSectionStatus: 'verified' }],
+});
     if (!admission)
       return res.json({ success: true, forms: [] });
 
