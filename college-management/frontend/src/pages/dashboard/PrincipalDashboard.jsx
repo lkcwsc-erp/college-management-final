@@ -1760,7 +1760,7 @@ const FeeStructApprovalTab = ({ role }) => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchApprovals(); }, []);
+  useEffect(() => { fetchApprovals(); }, [fetchApprovals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAction = async (id, action, note = '') => {
     try {
