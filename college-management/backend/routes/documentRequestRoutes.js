@@ -163,8 +163,26 @@ router.get('/exam/all', protect, authorizeRoles('staff_exam', 'admin', 'staff_pr
         { status: 'pending_exam' },
         { examVerifiedBy: { $ne: '' } },
       ]
-    }).sort({ createdAt: -1 });
-    res.status(200).json({ success: true, requests });
+    }).sort({ createdAt: -1 }).lean();
+
+    // Attach PRN / Student Unique ID / Academic Year from the Admission record (matched by email)
+    const emails = [...new Set(requests.map(r => r.studentEmail).filter(Boolean))];
+    const admissions = await Admission.find({ email: { $in: emails } })
+      .select('email prnNumber studentId academicYear').lean();
+    const admMap = {};
+    admissions.forEach(a => { admMap[a.email] = a; });
+
+    const enriched = requests.map(r => {
+      const a = admMap[r.studentEmail] || {};
+      return {
+        ...r,
+        prnNumber:    a.prnNumber || '',
+        studentId:    a.studentId || '',
+        academicYear: r.marksheetAcadYear || a.academicYear || '',
+      };
+    });
+
+    res.status(200).json({ success: true, requests: enriched });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
