@@ -1899,8 +1899,11 @@ const AccountsSectionDashboard = () => {
                 </div>
               )}
 
-              {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
+             {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
 
+              </>}
+
+              
               
 
               <button onClick={handleAdmFeeCollect} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
@@ -1914,12 +1917,12 @@ const AccountsSectionDashboard = () => {
             </div>
           </div>
         </div>
-      </div>
-    );
+     </div>
+  );
   })()}
-/* ═══════════════════════════════════════════════════════
+
 /* ═══════════════════════════════════════════════════════════
-   WALK-IN / OLD STUDENT FEE MODAL
+   WALK-IN
    Collect fees from old/SY/TY students without admission record
 ═══════════════════════════════════════════════════════════ */
 const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
