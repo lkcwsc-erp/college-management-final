@@ -152,6 +152,25 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     finally { setScholSaving(false); }
   };
 
+  // Hardcoded fallback amounts from Excel (2025-26)
+  const FALLBACK_AMOUNTS = {
+    'B.A.':  { FY: 10390, SY: 9590, TY: 9390 },
+    'B.Sc.': { FY: 26140, SY: 25340, TY: 25340 },
+  };
+  const OPEN_AMOUNTS = {
+    'B.A.':  { FY: 5500, SY: 5500, TY: 5500 },
+    'B.Sc.': { FY: 16500, SY: 16500, TY: 16500 },
+  };
+  const YEAR_NORM = { '1st Year':'FY','2nd Year':'SY','3rd Year':'TY','FY':'FY','SY':'SY','TY':'TY' };
+  const COURSE_NORM = (c='') => {
+    const s = c.toLowerCase().replace(/[\s.]/g,'');
+    if (s.includes('bsc')||s.includes('science')) return 'B.Sc.';
+    if (s.includes('ba')||s.includes('arts')) return 'B.A.';
+    return null;
+  };
+  const GENERAL_ALIASES = ['general','gen','unreserved','open'];
+  const RESERVED = ['sc','st','obc','sbc','nt-b','nt-c','nt-d','vj/dt(nt-a)','ews','sebc'];
+
   // Auto-calculate scholarship amount from ScholarshipMaster
   const handleAutoFillAmount = async () => {
     if (!selected?._id) return;
@@ -162,9 +181,23 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
       setScholData(p => ({ ...p, scholarshipAmount: amt }));
       setMsg(`✅ Auto-filled: ₹${Number(amt).toLocaleString('en-IN')} (${res.data.data?.categoryType === 'reserved' ? 'Full MahaDBT' : 'Tuition Fee only — OPEN'})`);
       setTimeout(() => setMsg(''), 4000);
-    } catch (e) {
-      setMsg('❌ ' + (e.response?.data?.message || 'Auto-fill failed — check ScholarshipMaster records'));
-      setTimeout(() => setMsg(''), 4000);
+    } catch {
+      // Master not found — use hardcoded fallback from Excel
+      const cat    = (selected.category || '').toLowerCase().trim();
+      const course = COURSE_NORM(selected.courseType);
+      const yr     = YEAR_NORM[(selected.admissionYear || '').trim()] || 'FY';
+      const isOpen = GENERAL_ALIASES.includes(cat) || !RESERVED.includes(cat);
+
+      if (course && FALLBACK_AMOUNTS[course]) {
+        const amt = isOpen
+          ? (OPEN_AMOUNTS[course]?.[yr] || 0)
+          : (FALLBACK_AMOUNTS[course]?.[yr] || 0);
+        setScholData(p => ({ ...p, scholarshipAmount: amt }));
+        setMsg(`✅ Amount set from 2025-26 Excel data: ₹${amt.toLocaleString('en-IN')} (${isOpen ? 'OPEN — Tuition only' : 'Reserved — Full MahaDBT'}). Add record in MahaDBT Master for future use.`);
+      } else {
+        setMsg('⚠️ No master record found. Please enter amount manually below.');
+      }
+      setTimeout(() => setMsg(''), 6000);
     }
     finally { setScholSaving(false); }
   };
@@ -583,7 +616,17 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                                     const res = await API.post(`/scholarships/calculate/${selected._id}`);
                                     const amt = res.data.data?.scholarshipEligibleAmount || 0;
                                     if (amt > 0) setScholData(p=>({...p, scholarshipAmount: amt}));
-                                  } catch {}
+                                  } catch {
+                                    // Fallback from Excel data
+                                    const cat = (selected.category||'').toLowerCase().trim();
+                                    const course = COURSE_NORM(selected.courseType);
+                                    const yr = YEAR_NORM[(selected.admissionYear||'').trim()]||'FY';
+                                    const isOpen = GENERAL_ALIASES.includes(cat)||!RESERVED.includes(cat);
+                                    if (course) {
+                                      const amt = isOpen ? (OPEN_AMOUNTS[course]?.[yr]||0) : (FALLBACK_AMOUNTS[course]?.[yr]||0);
+                                      if (amt > 0) setScholData(p=>({...p, scholarshipAmount: amt}));
+                                    }
+                                  }
                                 }
                               }}
                                 style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #ce93d8', fontSize:13, boxSizing:'border-box' }}>
