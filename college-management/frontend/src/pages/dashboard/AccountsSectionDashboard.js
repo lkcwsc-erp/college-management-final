@@ -18,6 +18,7 @@ const DETAILED_FEES = {
   'B.Sc.': {
     label: 'B.Sc. (Un-aided)',
     items: [
+      // Sr, Name, Section, Sem1, Sem2, Sem3, Sem4, Sem5, Sem6
       { id:'bsc_s1',  name:'Sports Fee',                        section:'University', s:[250,0,250,0,250,0] },
       { id:'bsc_s2',  name:'Students Development Fee',          section:'University', s:[225,0,225,0,225,0] },
       { id:'bsc_s3',  name:'Students Diary Fee',                section:'University', s:[50,0,50,0,50,0] },
@@ -101,6 +102,7 @@ const DETAILED_FEES = {
   },
 };
 
+// Helper: get fee items for a student's course + semester
 // eslint-disable-next-line no-unused-vars
 const getDetailedFeeItems = (courseType, semIndex) => {
   const ct = (courseType||'').toLowerCase();
@@ -110,12 +112,14 @@ const getDetailedFeeItems = (courseType, semIndex) => {
   return DETAILED_FEES[courseKey].items.filter(item => item.s[semIndex] > 0);
 };
 
+// Helper: semester index from year+sem
 // eslint-disable-next-line no-unused-vars
 const getSemIndex = (admYear, semNum) => {
   const yearOffset = admYear === '1st Year' ? 0 : admYear === '2nd Year' ? 2 : 4;
   return yearOffset + (semNum === 2 ? 1 : 0);
 };
 
+// Helper: document fees
 // eslint-disable-next-line no-unused-vars
 const DOC_FEES = {
   tc:        { label: '📄 Transfer Certificate (TC)',   amount: 500 },
@@ -146,6 +150,7 @@ const YEARLY_FEES = {
   },
 };
 
+// Helper — detect course type from admission data
 const detectCourse = (adm) => {
   const ct = (adm.courseType || adm.course?.name || '').toLowerCase();
   if (ct.includes('b.sc') || ct.includes('bsc') || ct.includes('science')) return 'B.Sc.';
@@ -153,6 +158,7 @@ const detectCourse = (adm) => {
   return null;
 };
 
+// Map admissionYear to semesters
 // eslint-disable-next-line no-unused-vars
 const getSemesters = (courseKey, year) => {
   const course = YEARLY_FEES[courseKey];
@@ -189,6 +195,7 @@ const FEE_TYPES = [
   { key: 'other',        label: '➕ Other Fee' },
 ];
 
+// ─── localStorage helpers ─────────────────────────────────────────────────────
 const loadDocFees = () => {
   try {
     const s = localStorage.getItem('lkcwsc_doc_fees');
@@ -198,6 +205,7 @@ const loadDocFees = () => {
 };
 const saveDocFees = (fees) => localStorage.setItem('lkcwsc_doc_fees', JSON.stringify(fees));
 
+// ─── Receipt printer (official format per LKCWSC document) ───────────────────
 const printReceipt = (data) => {
   const acadYear = data.academicYear || (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })();
   const dateStr  = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
@@ -206,6 +214,7 @@ const printReceipt = (data) => {
   const txnId    = data.transactionId || '';
   const logo     = window.location.origin + "/college-logo.png";
 
+  // Full course name
   const ct = (data.courseType||data.branch||'').toLowerCase();
   const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science')
     ? 'Bachelor of Science (B.Sc.)'
@@ -214,6 +223,7 @@ const printReceipt = (data) => {
     : (data.courseType||data.branch||'—');
   const classStr = courseFull + (data.admissionYear||data.year ? ' — '+(data.admissionYear||data.year) : '');
 
+  // Amount in words
   const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
   const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
   const inW=(n)=>{if(n===0)return'';if(n<20)return a[n]+' ';if(n<100)return b[Math.floor(n/10)]+' '+(n%10?a[n%10]+' ':'');if(n<1000)return a[Math.floor(n/100)]+'Hundred '+(n%100?inW(n%100):'');return a[Math.floor(n/1000)]+'Thousand '+(n%1000?inW(n%1000):'');};
@@ -320,6 +330,7 @@ const genReceiptNo = () => {
   return `REC${y}-${seq}`;
 };
 
+// ─── Status helpers ───────────────────────────────────────────────────────────
 const docStatusStyle = (status) => {
   const map = {
     pending_accounts:     { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Review' },
@@ -334,6 +345,7 @@ const docStatusStyle = (status) => {
   return map[status] || { bg: '#f5f5f5', color: '#666', label: status };
 };
 
+// ─── Small reusable Field ─────────────────────────────────────────────────────
 const F = ({ label, value }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f0f0f0', fontSize: '13px' }}>
     <span style={{ color: '#888', fontWeight: 600 }}>{label}</span>
@@ -342,12 +354,13 @@ const F = ({ label, value }) => (
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FEE STRUCTURE TAB
+// MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
+// ─── Fee Structure Tab Component ─────────────────────────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [feeView, setFeeView]           = useState('bsc');
-  const [editDocFees2, setEditDocFees2] = useState(false); // eslint-disable-line no-unused-vars
-  const [docFeeEdits2, setDocFeeEdits2] = useState({}); // eslint-disable-line no-unused-vars
+  const [editDocFees2, setEditDocFees2] = useState(false);
+  const [docFeeEdits2, setDocFeeEdits2] = useState({});
   const [customFees, setCustomFees]     = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_custom_fees') || '{}'); } catch { return {}; }
   });
@@ -356,7 +369,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   });
   const [addingItem, setAddingItem]     = useState(false);
   const [newItem, setNewItem]           = useState({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
-  const [editingItem, setEditingItem]   = useState(null);
+  const [editingItem, setEditingItem]   = useState(null); // item being edited
   const [editAmounts, setEditAmounts]   = useState({});
 
   const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
@@ -376,6 +389,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
+  // Submit edit for approval
   const submitEdit = (itemId, newAmounts) => {
     const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
     savePending(pending);
@@ -400,6 +414,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         )}
       </div>
 
+      {/* Tab toggle */}
       <div style={{ display:'flex', gap:0, marginBottom:20, background:'#f0f4f8', borderRadius:10, padding:4, width:'fit-content' }}>
         {[{id:'bsc',label:'📗 B.Sc.'},{id:'ba',label:'📘 B.A.'},{id:'doc',label:'📄 Document Fees'}].map(t => (
           <button key={t.id} onClick={() => setFeeView(t.id)}
@@ -409,8 +424,10 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         ))}
       </div>
 
+      {/* B.Sc / B.A table */}
       {(feeView==='bsc'||feeView==='ba') && (
         <div>
+          {/* Sem totals */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8, marginBottom:16 }}>
             {semLabels.map((sl,si) => {
               const total = allItems.reduce((s,i)=>s+(i.s[si]||0),0);
@@ -426,6 +443,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             })}
           </div>
 
+          {/* Table */}
           <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
             <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', background:'#1565C0', padding:'10px 14px', gap:6 }}>
               {['Fee Item','Section','Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI','Edit'].map(h=>(
@@ -471,6 +489,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
               );
             })}
 
+            {/* Total */}
             <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'10px 14px', gap:6, background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
               <span style={{ fontWeight:800, fontSize:13, color:'#1a237e' }}>TOTAL</span><span></span>
               {semLabels.map((_,si)=><span key={si} style={{ fontWeight:800, fontSize:12, color:'#1a237e', textAlign:'right' }}>₹{allItems.reduce((s,i)=>s+(i.s[si]||0),0).toLocaleString('en-IN')}</span>)}
@@ -478,6 +497,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             </div>
           </div>
 
+          {/* Add item */}
           <div style={{ marginTop:16 }}>
             {!addingItem ? (
               <button onClick={()=>setAddingItem(true)}
@@ -519,6 +539,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                     const item = { id, name:newItem.name.trim(), section:newItem.section, s:[0,1,2,3,4,5].map(i=>newItem[`s${i}`]||0) };
                     const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
                     saveCustomFees(cf);
+                    // Auto-submit for approval
                     submitEdit(id, item.s);
                     setAddingItem(false);
                     setNewItem({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
@@ -531,6 +552,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             )}
           </div>
 
+          {/* Edit modal */}
           {editingItem && (
             <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
               onClick={()=>setEditingItem(null)}>
@@ -561,6 +583,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         </div>
       )}
 
+      {/* Document Fees */}
       {feeView==='doc' && (
         <DocFeesManager docFees={docFees} setDocFees={setDocFees} saveDocFees={saveDocFees} showToast={showToast} />
       )}
@@ -568,6 +591,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   );
 };
 
+/* ── Document Fees Manager — add/edit/delete types + approval ── */
 const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [editMode,    setEditMode]    = useState(false);
   const [edits,       setEdits]       = useState({});
@@ -580,7 +604,13 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const inp = { padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
 
   const submitForApproval = (changes) => {
-    const entry = { id: Date.now(), type: 'doc_fee_edit', changes, submittedAt: new Date().toISOString(), status: 'pending' };
+    const entry = {
+      id: Date.now(),
+      type: 'doc_fee_edit',
+      changes,
+      submittedAt: new Date().toISOString(),
+      status: 'pending',
+    };
     const updated = [entry, ...pendingApproval].slice(0, 50);
     setPendingApproval(updated);
     localStorage.setItem('lkcwsc_docfee_pending', JSON.stringify(updated));
@@ -654,6 +684,7 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         </div>
       </div>
 
+      {/* Add new type form */}
       {showAdd && (
         <div style={{ background:'#f8faff', border:'2px dashed #2E7D32', borderRadius:12, padding:16, marginBottom:16 }}>
           <h4 style={{ color:'#2E7D32', margin:'0 0 12px', fontSize:14 }}>➕ Add New Document Fee Type</h4>
@@ -683,6 +714,7 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         </div>
       )}
 
+      {/* Fee table */}
       <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef' }}>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 120px 80px', background:'#1565C0', padding:'12px 20px', gap:8 }}>
           <span style={{ color:'#fff', fontWeight:700 }}>Document Type</span>
@@ -718,12 +750,14 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
       {editMode && (
         <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'10px 14px', marginTop:12, fontSize:12, color:'#E65100', fontWeight:600 }}>
-          ⚠️ Changes save karne ke baad Principal → Admin approval required hai.
+          ⚠️ Changes save karne ke baad Principal → Admin approval required hai. Approve hone tak purani fees applicable rahegi.
         </div>
       )}
     </div>
   );
 };
+
+
 
 
 const AccountsStudentFeeView = ({ themeColor }) => {
@@ -762,6 +796,7 @@ const AccountsStudentFeeView = ({ themeColor }) => {
 
   return (
     <div>
+      {/* Summary cards */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14, marginBottom:20 }}>
         <div style={{ background:'#e3f2fd', borderRadius:12, padding:'14px 18px' }}>
           <div style={{ fontSize:12, color:'#1565C0', fontWeight:600 }}>Total Annual Fees</div>
@@ -818,60 +853,71 @@ const AccountsSectionDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  // ── Tab state ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('home');
 
-  const [toast, setToast] = useState({ msg: '', type: '' });
+  // ── Global message ─────────────────────────────────────────────────────────
+  const [toast, setToast] = useState({ msg: '', type: '' }); // type: 'success'|'error'
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: '', type: '' }), 4000);
   };
 
+  // ── Document requests ──────────────────────────────────────────────────────
   const [docRequests, setDocRequests]     = useState([]);
   const [docLoading, setDocLoading]       = useState(false);
   const [docSearch, setDocSearch]         = useState('');
   const [docFilter, setDocFilter]         = useState('pending_accounts');
   const [selectedDoc, setSelectedDoc]     = useState(null);
-  const [docAction, setDocAction]         = useState('');
+  const [docAction, setDocAction]         = useState(''); // 'collect' | 'reject'
   const [docNotes, setDocNotes]           = useState('');
   const [docLoading2, setDocLoading2]     = useState(false);
   const [payMode, setPayMode]             = useState('cash');
   const [txnId, setTxnId]                = useState('');
   const [docFees, setDocFees]             = useState(loadDocFees());
 
+  // ── Admission fees ─────────────────────────────────────────────────────────
   const [admissions, setAdmissions]         = useState([]);
   const [admLoading, setAdmLoading]         = useState(false);
-  const [showWalkIn, setShowWalkIn]         = useState(false);
+  const [showWalkIn, setShowWalkIn]       = useState(false);
   const [admSearch, setAdmSearch]           = useState('');
-  const [admFilter, setAdmFilter]           = useState('all');
+  const [admFilter, setAdmFilter]           = useState('all'); // 'all'|'paid'|'unpaid'
   const [selectedAdm, setSelectedAdm]       = useState(null);
   const [admPayMode, setAdmPayMode]         = useState('cash');
   const [admTxnId, setAdmTxnId]             = useState('');
   const [admFeeAmt, setAdmFeeAmt]           = useState('');
   const [admFeeType, setAdmFeeType]         = useState('admission');
   const [admSelectedSem, setAdmSelectedSem] = useState('');
-  const [admMsg, setAdmMsg]                 = useState('');
+  const [admMsg, setAdmMsg] = useState('');
   const [admCollectDocMode, setAdmCollectDocMode] = useState(false);
-  const [admDocType, setAdmDocType]         = useState(''); // eslint-disable-line no-unused-vars
-  const [selectedFeeItems, setSelectedFeeItems] = useState({});
+  const [admDocType, setAdmDocType] = useState(''); // eslint-disable-line no-unused-vars
+  const [selectedFeeItems, setSelectedFeeItems] = useState({}); // {itemId: true/false}
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
   const [admLoading2, setAdmLoading2]       = useState(false);
 
+
+
+  // ── College expenses ───────────────────────────────────────────────────────
   const [expenses, setExpenses]             = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_expenses') || '[]'); } catch { return []; }
   });
   const [expForm, setExpForm]               = useState({ description: '', amount: '', date: '', category: 'other', paidTo: '' });
   const [expMsg, setExpMsg]                 = useState('');
 
+  // ── Payment history (from localStorage) ──────────────────────────────────
   const [payHistory, setPayHistory]         = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_pay_history') || '[]'); } catch { return []; }
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Data fetchers
+  // ─────────────────────────────────────────────────────────────────────────
   const fetchDocRequests = useCallback(async () => {
     setDocLoading(true);
     try {
       const res = await API.get('/document-requests/accounts/all');
       setDocRequests(res.data.requests || []);
-    } catch { }
+    } catch { /* silent */ }
     finally { setDocLoading(false); }
   }, []);
 
@@ -880,7 +926,7 @@ const AccountsSectionDashboard = () => {
     try {
       const res = await API.get('/admissions/accounts-section/all');
       setAdmissions(res.data.admissions || []);
-    } catch { }
+    } catch { /* silent */ }
     finally { setAdmLoading(false); }
   }, []);
 
@@ -891,6 +937,9 @@ const AccountsSectionDashboard = () => {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Document request actions
+  // ─────────────────────────────────────────────────────────────────────────
   const closeDocModal = () => {
     setSelectedDoc(null); setDocAction(''); setDocNotes('');
     setPayMode('cash'); setTxnId('');
@@ -919,6 +968,7 @@ const AccountsSectionDashboard = () => {
       const fee = docFees[selectedDoc.documentType]?.price ?? 0;
       const rNo = genReceiptNo();
 
+      // Save to history
       const entry = {
         id: rNo, date: new Date().toISOString(),
         studentName: selectedDoc.studentName,
@@ -933,7 +983,7 @@ const AccountsSectionDashboard = () => {
       setPayHistory(hist);
       localStorage.setItem('lkcwsc_pay_history', JSON.stringify(hist));
 
-      printReceipt({
+      printReceipt({ 
         ...entry, receiptNo: rNo,
         feeTypeLabel: docFees[selectedDoc.documentType]?.label || selectedDoc.documentTypeLabel || entry.feeLabel || 'Document Fee',
         courseType: selectedDoc.branch || '',
@@ -946,6 +996,9 @@ const AccountsSectionDashboard = () => {
     finally { setDocLoading2(false); }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Admission fee collection
+  // ─────────────────────────────────────────────────────────────────────────
   const handleAdmFeeCollect = async () => {
     if (!admFeeAmt || isNaN(Number(admFeeAmt)) || Number(admFeeAmt) <= 0) {
       showToast('Enter a valid fee amount.', 'error'); return;
@@ -958,7 +1011,7 @@ const AccountsSectionDashboard = () => {
     const feeType = FEE_TYPES.find(f => f.key === admFeeType);
     const courseKey = detectCourse(selectedAdm);
     const course = courseKey ? YEARLY_FEES[courseKey] : null;
-    const selSemAmt = course && admSelectedSem ? course.semesters?.[admSelectedSem] : null;
+    const selSemAmt = course && admSelectedSem ? course.semesters[admSelectedSem] : null;
     try {
       await API.put(`/admissions/mark-fees-paid/${selectedAdm._id}`, {
         fees: Number(admFeeAmt),
@@ -973,6 +1026,7 @@ const AccountsSectionDashboard = () => {
         scholarshipAmount: admScholarshipAmt ? Number(admScholarshipAmt) : undefined,
       });
 
+      // Build itemized breakdown from selected fee items
       const ct = (selectedAdm.courseType||'').toLowerCase();
       const ck = ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
       const course2 = ck ? DETAILED_FEES[ck] : null;
@@ -1009,7 +1063,7 @@ const AccountsSectionDashboard = () => {
       setPayHistory(hist);
       localStorage.setItem('lkcwsc_pay_history', JSON.stringify(hist));
 
-      printReceipt({
+      printReceipt({ 
         ...entry, receiptNo: rNo,
         feeTypeLabel: feeType?.label || entry.feeLabel || 'Fee',
         courseType: selectedAdm.courseType || '',
@@ -1026,6 +1080,9 @@ const AccountsSectionDashboard = () => {
     finally { setAdmLoading2(false); }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Expense tracker
+  // ─────────────────────────────────────────────────────────────────────────
   const saveExpense = () => {
     if (!expForm.description.trim() || !expForm.amount || !expForm.date) {
       setExpMsg('❌ Fill all required fields.'); return;
@@ -1044,6 +1101,9 @@ const AccountsSectionDashboard = () => {
     localStorage.setItem('lkcwsc_expenses', JSON.stringify(updated));
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Derived numbers
+  // ─────────────────────────────────────────────────────────────────────────
   const pendingDocCount  = docRequests.filter(r => r.status === 'pending_accounts').length;
   const paidAdmCount     = admissions.filter(a => a.feesPaid).length;
   const unpaidAdmCount   = admissions.filter(a => !a.feesPaid).length;
@@ -1064,20 +1124,27 @@ const AccountsSectionDashboard = () => {
     return matchFilter && matchSearch;
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Sidebar tabs
+  // ─────────────────────────────────────────────────────────────────────────
   const tabs = [
-    { id: 'home',         label: '🏠 Dashboard' },
-    { id: 'doc_req',      label: '📄 Document Requests', badge: pendingDocCount },
-    { id: 'adm_fees',     label: '💰 Collect Fees', badge: unpaidAdmCount },
-    { id: 'fee_struct',   label: '💼 Fee Structure' },
-    { id: 'expenses',     label: '🏗️ College Expenses' },
-    { id: 'history',      label: '🧾 Payment History' },
+    { id: 'home',       label: '🏠 Dashboard' },
+    { id: 'doc_req',    label: '📄 Document Requests', badge: pendingDocCount },
+    { id: 'adm_fees',   label: '💰 Collect Fees', badge: unpaidAdmCount },
+    { id: 'fee_struct', label: '💼 Fee Structure' },
+    { id: 'expenses',   label: '🏗️ College Expenses' },
+    { id: 'history',    label: '🧾 Payment History' },
     { id: 'finance',      label: '📊 Finance Overview' },
     { id: 'all_students', label: '👩‍🎓 All Students' },
   ];
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="dashboard-layout">
 
+      {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="sidebar-logo">💰</div>
@@ -1099,12 +1166,14 @@ const AccountsSectionDashboard = () => {
         <button className="sidebar-logout" onClick={handleLogout}>🚪 Logout</button>
       </aside>
 
+      {/* ── MAIN ─────────────────────────────────────────────────────────── */}
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <h2>💰 Accounts Section</h2>
           <div className="user-info"><span>👋 {user?.name} (Accounts Staff)</span></div>
         </div>
 
+        {/* Toast */}
         {toast.msg && (
           <div style={{ margin: '12px 24px 0', padding: '12px 18px', borderRadius: 10, fontWeight: 500, fontSize: 14,
             background: toast.type === 'error' ? '#ffebee' : '#e8f5e9',
@@ -1115,7 +1184,7 @@ const AccountsSectionDashboard = () => {
 
         <div className="dashboard-content">
 
-          {/* HOME */}
+          {/* ════════════════════════ HOME ════════════════════════ */}
           {activeTab === 'home' && (
             <div>
               <div style={{ background: 'linear-gradient(135deg,#e8f5e9,#f0fff4)', padding: 20, borderRadius: 12, marginBottom: 20, borderLeft: '5px solid #2E7D32' }}>
@@ -1172,12 +1241,13 @@ const AccountsSectionDashboard = () => {
             </div>
           )}
 
-          {/* DOCUMENT REQUESTS */}
+          {/* ════════════════════════ DOCUMENT REQUESTS ════════════════════════ */}
           {activeTab === 'doc_req' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📄 Document Requests</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Collect fees, generate receipts, approve or reject student requests.</p>
 
+              {/* Filters */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input type="text" placeholder="🔍 Search by name or email..." value={docSearch} onChange={e => setDocSearch(e.target.value)}
                   style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }} />
@@ -1197,6 +1267,7 @@ const AccountsSectionDashboard = () => {
                 </button>
               </div>
 
+              {/* Counts row */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
                 {[
                   { label: 'Total', count: docRequests.length, color: '#1565C0', bg: '#e3f2fd' },
@@ -1274,7 +1345,7 @@ const AccountsSectionDashboard = () => {
             </div>
           )}
 
-          {/* FINANCE OVERVIEW */}
+          {/* ════════════════════════ FINANCE OVERVIEW ════════════════════════ */}
           {activeTab === 'finance' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📊 Finance Overview</h2>
@@ -1283,7 +1354,7 @@ const AccountsSectionDashboard = () => {
             </div>
           )}
 
-          {/* ADMISSION FEES */}
+          {/* ════════════════════════ ADMISSION FEES ════════════════════════ */}
           {activeTab === 'adm_fees' && (
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
@@ -1364,104 +1435,19 @@ const AccountsSectionDashboard = () => {
             </div>
           )}
 
-          {/* FEE STRUCTURE */}
+          {/* ════════════════════════ FEE STRUCTURE ════════════════════════ */}
           {activeTab === 'fee_struct' && (
             <FeeStructTab
               docFees={docFees} setDocFees={setDocFees} saveDocFees={saveDocFees} showToast={showToast}
             />
           )}
 
-          {/* EXPENSES */}
+          {/* ════════════════════════ EXPENSES ════════════════════════ */}
           {activeTab === 'expenses' && (
-            <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🏗️ College Expense Tracker</h2>
-              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Record and monitor college expenditures.</p>
-
-              <div className="form-card" style={{ marginBottom: 28 }}>
-                <h3>➕ Record New Expense</h3>
-                {expMsg && <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, background: expMsg.includes('✅') ? '#e8f5e9' : '#ffebee', color: expMsg.includes('✅') ? '#2E7D32' : '#C62828' }}>{expMsg}</div>}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  <div className="form-group">
-                    <label>Description *</label>
-                    <input type="text" placeholder="e.g. Stationery purchase" value={expForm.description}
-                      onChange={e => setExpForm({ ...expForm, description: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Amount (₹) *</label>
-                    <input type="number" min="0" placeholder="e.g. 500" value={expForm.amount}
-                      onChange={e => setExpForm({ ...expForm, amount: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Date *</label>
-                    <input type="date" value={expForm.date}
-                      onChange={e => setExpForm({ ...expForm, date: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Category</label>
-                    <select value={expForm.category} onChange={e => setExpForm({ ...expForm, category: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}>
-                      <option value="infrastructure">🏗️ Infrastructure</option>
-                      <option value="stationery">📝 Stationery</option>
-                      <option value="electricity">💡 Electricity / Utilities</option>
-                      <option value="salary">👤 Salary / Wages</option>
-                      <option value="events">🎉 Events / Functions</option>
-                      <option value="maintenance">🔧 Maintenance</option>
-                      <option value="other">📦 Other</option>
-                    </select>
-                  </div>
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label>Paid To / Vendor</label>
-                    <input type="text" placeholder="e.g. Sharma Stationery Store" value={expForm.paidTo}
-                      onChange={e => setExpForm({ ...expForm, paidTo: e.target.value })}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }} />
-                  </div>
-                </div>
-                <button onClick={saveExpense}
-                  style={{ marginTop: 16, background: '#1565C0', color: '#fff', padding: '11px 28px', borderRadius: 8, border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                  💾 Save Expense
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-                <div style={{ background: '#e3f2fd', color: '#1565C0', borderRadius: 12, padding: '12px 20px', fontWeight: 700, fontSize: 14 }}>
-                  Total Expenses: ₹{totalExpenses.toLocaleString('en-IN')}
-                </div>
-                <div style={{ background: '#fff3e0', color: '#E65100', borderRadius: 12, padding: '12px 20px', fontWeight: 700, fontSize: 14 }}>
-                  Records: {expenses.length}
-                </div>
-              </div>
-
-              {expenses.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">🏗️</div><h3>No expenses recorded yet</h3></div>
-              ) : (
-                <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e0e7ef', boxShadow: '0 2px 10px rgba(0,0,0,.06)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr 0.8fr 0.5fr', background: '#1565C0', padding: '13px 16px', gap: 8 }}>
-                    {['Description', 'Category', 'Date', 'Paid To', 'Amount', ''].map(h => (
-                      <span key={h} style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>{h}</span>
-                    ))}
-                  </div>
-                  {expenses.map((exp, idx) => (
-                    <div key={exp.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr 0.8fr 0.5fr', padding: '12px 16px', gap: 8, alignItems: 'center', borderBottom: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fafbff' : '#fff' }}>
-                      <span style={{ fontSize: 13, color: '#222', fontWeight: 500 }}>{exp.description}</span>
-                      <span style={{ fontSize: 12, color: '#555' }}>{exp.category}</span>
-                      <span style={{ fontSize: 12, color: '#555' }}>{exp.date}</span>
-                      <span style={{ fontSize: 12, color: '#555' }}>{exp.paidTo || '—'}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#C62828' }}>₹{Number(exp.amount).toLocaleString('en-IN')}</span>
-                      <button onClick={() => deleteExpense(exp.id)}
-                        style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-                        🗑️
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ExpenseTracker user={user} />
           )}
 
-          {/* PAYMENT HISTORY */}
+                    {/* ════════════════════════ PAYMENT HISTORY ════════════════════════ */}
           {activeTab === 'history' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -1478,7 +1464,7 @@ const AccountsSectionDashboard = () => {
                 <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts yet</h3><p>Receipts will appear here once you collect fees.</p></div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {payHistory.map((p) => (
+                  {payHistory.map((p, idx) => (
                     <div key={p.id} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, borderLeft: '4px solid #2E7D32' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
@@ -1502,7 +1488,8 @@ const AccountsSectionDashboard = () => {
             </div>
           )}
 
-          {/* ALL STUDENTS */}
+
+          {/* ══ ALL STUDENTS ══ */}
           {activeTab === 'all_students' && (
             <div>
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>👩‍🎓 All Students</h2>
@@ -1513,7 +1500,7 @@ const AccountsSectionDashboard = () => {
         </div>
       </main>
 
-      {/* COLLECT DOC FEE MODAL */}
+      {/* ════════════ COLLECT DOC FEE MODAL ════════════ */}
       {selectedDoc && docAction === 'collect' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={closeDocModal}>
@@ -1522,6 +1509,7 @@ const AccountsSectionDashboard = () => {
             <h2 style={{ color: '#1565C0', marginBottom: 6 }}>💰 Collect Fee</h2>
             <p style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>Verify payment, then generate an official receipt.</p>
 
+            {/* Summary */}
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: 16, marginBottom: 20, fontSize: 13 }}>
               <F label="Student" value={selectedDoc.studentName} />
               <F label="Document" value={docFees[selectedDoc.documentType]?.label || selectedDoc.documentTypeLabel} />
@@ -1533,6 +1521,7 @@ const AccountsSectionDashboard = () => {
               </div>
             </div>
 
+            {/* Payment mode */}
             <p style={{ fontWeight: 600, color: '#333', marginBottom: 10 }}>Payment Mode</p>
             <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
               {['cash', 'online'].map(m => (
@@ -1572,7 +1561,7 @@ const AccountsSectionDashboard = () => {
         </div>
       )}
 
-      {/* REJECT DOC MODAL */}
+      {/* ════════════ REJECT DOC MODAL ════════════ */}
       {selectedDoc && docAction === 'reject' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={closeDocModal}>
@@ -1601,17 +1590,20 @@ const AccountsSectionDashboard = () => {
         </div>
       )}
 
-      {/* ADMISSION FEE MODAL */}
+      {/* ════════════ ADMISSION FEE MODAL ════════════ */}
+      {/* ════════════════════════ ADMISSION FEE MODAL ════════════════════════ */}
       {selectedAdm && (() => {
         const ct = (selectedAdm.courseType||'').toLowerCase();
         const ck = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.'
           : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
         const course = ck ? DETAILED_FEES[ck] : null;
         const admYear = selectedAdm.admissionYear || '1st Year';
+        // Yearly items — all sems for this year combined (unique items, max amount)
         const yearSemIdx = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
         const semIdxs = yearSemIdx[admYear] || [0,1];
         const schol = Number(admScholarshipAmt||0);
 
+        // Build yearly item list — combine both sems, sum amounts
         const yearItems = course ? course.items.map(item => {
           const amt = (item.s[semIdxs[0]]||0) + (item.s[semIdxs[1]]||0);
           return { ...item, yearAmt: amt };
@@ -1651,7 +1643,9 @@ const AccountsSectionDashboard = () => {
             <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:620, width:'100%', maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}
               onClick={e => e.stopPropagation()}>
 
+              {/* Header */}
               <h2 style={{ color:'#1565C0', marginBottom:8 }}>💰 Fee Collection</h2>
+              {/* Fee collection type toggle */}
               <div style={{ display:'flex', gap:8, marginBottom:16 }}>
                 <button
                   style={{ flex:1, padding:'8px', borderRadius:8, border:`2px solid ${!admCollectDocMode?'#1565C0':'#ddd'}`, background:!admCollectDocMode?'#e3f2fd':'#fff', color:!admCollectDocMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
@@ -1666,159 +1660,189 @@ const AccountsSectionDashboard = () => {
               </div>
               <p style={{ color:'#666', fontSize:13, marginBottom:16 }}>{selectedAdm.applicantName} — {selectedAdm.courseType} · {admYear} · ID: {selectedAdm.studentId||'—'}</p>
 
-              {/* DOCUMENT FEES TAB */}
+              {/* ── DOCUMENT FEES TAB ── */}
               {admCollectDocMode && (
                 <div>
-                  <p style={{ fontSize:13, color:'#666', marginBottom:14 }}>Select document type and collect fee:</p>
-                  <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
-                    {Object.entries(docFees).map(([key, val]) => (
-                      <div key={key} onClick={() => { setAdmFeeType(key); setAdmFeeAmt(String(val.price || 0)); }}
-                        style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', borderRadius:10, border:`2px solid ${admFeeType===key?'#1565C0':'#e0e7ef'}`, background:admFeeType===key?'#e3f2fd':'#fff', cursor:'pointer' }}>
-                        <span style={{ fontSize:14, fontWeight:admFeeType===key?700:500, color:admFeeType===key?'#1565C0':'#333' }}>{val.label}</span>
-                        <span style={{ fontSize:14, fontWeight:800, color:admFeeType===key?'#1565C0':'#888' }}>₹{val.price}</span>
-                      </div>
-                    ))}
+                  <p style={{ fontSize:13, color:'#666', marginBottom:10 }}>Document fees select karo (multiple select ho sakte hain):</p>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14, maxHeight:260, overflowY:'auto', border:'1px solid #e0e7ef', borderRadius:10, padding:10 }}>
+                    {Object.entries(docFees).map(([key, val]) => {
+                      const isSelected = !!selectedFeeItems['doc_'+key];
+                      return (
+                        <div key={key} onClick={() => {
+                          const m = { ...selectedFeeItems, ['doc_'+key]: !selectedFeeItems['doc_'+key] };
+                          setSelectedFeeItems(m);
+                          // Recalculate amount
+                          const docTotal = Object.entries(m).filter(([k,v])=>k.startsWith('doc_')&&v).reduce((s,[k])=>{
+                            const dKey = k.replace('doc_','');
+                            return s + (docFees[dKey]?.price||0);
+                          },0);
+                          const annualTotal = yearItems.reduce((s,i)=>s+(m[i.id]?i.yearAmt:0),0);
+                          setAdmFeeAmt(String(Math.max(0, docTotal + annualTotal - Number(admScholarshipAmt||0))));
+                        }}
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', borderRadius:9, border:`2px solid ${isSelected?'#1565C0':'#e0e7ef'}`, background:isSelected?'#e3f2fd':'#fff', cursor:'pointer' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <input type="checkbox" checked={isSelected} readOnly style={{ width:15, height:15 }}/>
+                            <span style={{ fontSize:13, fontWeight:isSelected?700:500, color:isSelected?'#1565C0':'#333' }}>{val.label}</span>
+                          </div>
+                          <span style={{ fontSize:14, fontWeight:700, color:isSelected?'#1565C0':'#888' }}>₹{val.price}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {admFeeType && docFees[admFeeType] && (
-                    <div style={{ background:'#e3f2fd', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Selected: {docFees[admFeeType]?.label}</span>
-                      <span style={{ fontSize:18, fontWeight:800, color:'#1565C0' }}>₹{docFees[admFeeType]?.price}</span>
+                  {Object.entries(selectedFeeItems).filter(([k,v])=>k.startsWith('doc_')&&v).length > 0 && (
+                    <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 14px', marginBottom:12 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:'#888', marginBottom:6 }}>SELECTED DOCUMENT FEES</div>
+                      {Object.entries(selectedFeeItems).filter(([k,v])=>k.startsWith('doc_')&&v).map(([k])=>{
+                        const dKey = k.replace('doc_','');
+                        return (
+                          <div key={k} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'3px 0' }}>
+                            <span>{docFees[dKey]?.label}</span>
+                            <span style={{ fontWeight:700, color:'#1565C0' }}>₹{docFees[dKey]?.price}</span>
+                          </div>
+                        );
+                      })}
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, fontWeight:800, borderTop:'1px solid #90caf9', paddingTop:6, marginTop:4, color:'#1565C0' }}>
+                        <span>Document Fees Total</span>
+                        <span>₹{Object.entries(selectedFeeItems).filter(([k,v])=>k.startsWith('doc_')&&v).reduce((s,[k])=>s+(docFees[k.replace('doc_','')]?.price||0),0).toLocaleString('en-IN')}</span>
+                      </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ANNUAL FEES TAB */}
-              {!admCollectDocMode && (
-                <>
-                  <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Annual Fee ({admYear})</span>
-                    <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{yearTotal.toLocaleString('en-IN')}</span>
+              {/* ── ANNUAL FEES TAB ── */}
+              {!admCollectDocMode && (<>
+              {/* Year total info */}
+              <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Annual Fee ({admYear})</span>
+                <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{yearTotal.toLocaleString('en-IN')}</span>
+              </div>
+
+              {/* Step 1 — Select fee items */}
+              <div style={{ marginBottom:16 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <label style={{ fontSize:13, fontWeight:700, color:'#1565C0' }}>Select Fee Items</label>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={selectAll}
+                      style={{ padding:'5px 14px', background:'#1565C0', color:'#fff', border:'none', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☑ Select All</button>
+                    <button onClick={clearAll}
+                      style={{ padding:'5px 14px', background:'#f5f5f5', color:'#555', border:'1px solid #ddd', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☐ Clear</button>
                   </div>
+                </div>
 
-                  <div style={{ marginBottom:16 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                      <label style={{ fontSize:13, fontWeight:700, color:'#1565C0' }}>Select Fee Items</label>
-                      <div style={{ display:'flex', gap:8 }}>
-                        <button onClick={selectAll}
-                          style={{ padding:'5px 14px', background:'#1565C0', color:'#fff', border:'none', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☑ Select All</button>
-                        <button onClick={clearAll}
-                          style={{ padding:'5px 14px', background:'#f5f5f5', color:'#555', border:'1px solid #ddd', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☐ Clear</button>
-                      </div>
-                    </div>
-
-                    {!course ? (
-                      <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ Course not detected. Enter amount manually below.</div>
-                    ) : (
-                      <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:260, overflowY:'auto' }}>
-                        {uItems.length > 0 && (
-                          <>
-                            <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e', letterSpacing:0.5 }}>UNIVERSITY FEES (A)</div>
-                            {uItems.map((item) => (
-                              <div key={item.id} onClick={() => toggleItem(item.id)}
-                                style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'#fafbff', userSelect:'none' }}>
-                                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                                  <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
-                                  <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
-                                </div>
-                                <span style={{ fontSize:13, fontWeight:700, color:'#1565C0', flexShrink:0 }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
-                              </div>
-                            ))}
-                          </>
-                        )}
-                        {cItems.length > 0 && (
-                          <>
-                            <div style={{ background:'#e8f5e9', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1b5e20', letterSpacing:0.5 }}>COLLEGE FEES (B)</div>
-                            {cItems.map((item) => (
-                              <div key={item.id} onClick={() => toggleItem(item.id)}
-                                style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#f0fff4':'#fff', userSelect:'none' }}>
-                                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                                  <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
-                                  <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
-                                </div>
-                                <span style={{ fontSize:13, fontWeight:700, color:'#2E7D32', flexShrink:0 }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                    {selGross > 0 && (
-                      <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 16px', marginTop:10 }}>
-                        {yearItems.filter(i => selectedFeeItems[i.id]).length > 0 && (
-                          <div style={{ marginBottom:10 }}>
-                            <div style={{ fontSize:11, fontWeight:700, color:'#888', marginBottom:6, textTransform:'uppercase', letterSpacing:0.5 }}>Selected Items</div>
-                            {yearItems.filter(i => selectedFeeItems[i.id]).map(item => (
-                              <div key={item.id} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'4px 0', borderBottom:'1px solid #f0f4f8' }}>
-                                <span style={{ color:'#444' }}>{item.name}</span>
-                                <span style={{ fontWeight:600, color: item.section === 'University' ? '#1565C0' : '#2E7D32' }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
-                              </div>
-                            ))}
+                {!course ? (
+                  <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ Course not detected. Enter amount manually below.</div>
+                ) : (
+                  <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:260, overflowY:'auto' }}>
+                    {uItems.length > 0 && <>
+                      <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e', letterSpacing:0.5 }}>UNIVERSITY FEES (A)</div>
+                      {uItems.map((item,idx) => (
+                        <div key={item.id} onClick={() => toggleItem(item.id)}
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#e8f4ff':'idx%2===0?#fafbff:#fff', userSelect:'none' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
+                            <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
                           </div>
-                        )}
-                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4, borderTop:'1px solid #e0e7ef', paddingTop:8 }}>
-                          <span style={{ color:'#555' }}>Selected Total</span>
-                          <span style={{ fontWeight:700 }}>₹{selGross.toLocaleString('en-IN')}</span>
+                          <span style={{ fontSize:13, fontWeight:700, color:'#1565C0', flexShrink:0 }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
                         </div>
-                        {schol > 0 && (
-                          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#7B1FA2', marginBottom:4 }}>
-                            <span>Scholarship Deduction</span>
-                            <span style={{ fontWeight:700 }}>− ₹{schol.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'2px solid #e0e7ef', paddingTop:8, marginTop:6 }}>
-                          <span style={{ color:'#1565C0' }}>Net Payable</span>
-                          <span style={{ color:'#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ marginBottom:14 }}>
-                    <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Amount Collected (₹) *</label>
-                    <input type="number" placeholder="Enter amount" value={admFeeAmt}
-                      onChange={e => setAdmFeeAmt(e.target.value)} min="0"
-                      style={{ width:'100%', padding:'13px 16px', borderRadius:10, border:'2px solid #1565C0', fontSize:18, fontWeight:700, textAlign:'center', boxSizing:'border-box', outline:'none' }} />
-                    {admFeeAmt && Number(admFeeAmt) > 0 && (
-                      <div style={{ display:'flex', gap:10, marginTop:10 }}>
-                        <div style={{ flex:1, background:'#e8f5e9', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
-                          <div style={{ fontSize:11, color:'#2E7D32', fontWeight:600, marginBottom:2 }}>AMOUNT PAID</div>
-                          <div style={{ fontSize:16, fontWeight:800, color:'#1b5e20' }}>₹{amtPaid.toLocaleString('en-IN')}</div>
-                        </div>
-                        <div style={{ flex:1, background: balance > 0 ? '#fff3e0' : '#e8f5e9', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
-                          <div style={{ fontSize:11, color: balance > 0 ? '#E65100' : '#2E7D32', fontWeight:600, marginBottom:2 }}>BALANCE DUE</div>
-                          <div style={{ fontSize:16, fontWeight:800, color: balance > 0 ? '#E65100' : '#1b5e20' }}>
-                            {balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : '✅ Fully Paid'}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ marginBottom:16 }}>
-                    <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Payment Mode *</label>
-                    <div style={{ display:'flex', gap:10 }}>
-                      {[{k:'cash',l:'💵 Cash'},{k:'online',l:'🌐 Online / UPI'}].map(m => (
-                        <button key={m.k} onClick={() => setAdmPayMode(m.k)}
-                          style={{ flex:1, padding:'11px', borderRadius:9, border:`2px solid ${admPayMode===m.k?'#1565C0':'#ddd'}`, background:admPayMode===m.k?'#1565C0':'#fff', color:admPayMode===m.k?'#fff':'#555', fontWeight:700, fontSize:14, cursor:'pointer' }}>
-                          {m.l}
-                        </button>
                       ))}
+                    </>}
+                    {cItems.length > 0 && <>
+                      <div style={{ background:'#e8f5e9', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1b5e20', letterSpacing:0.5 }}>COLLEGE FEES (B)</div>
+                      {cItems.map((item,idx) => (
+                        <div key={item.id} onClick={() => toggleItem(item.id)}
+                          style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:selectedFeeItems[item.id]?'#f0fff4':'#fff', userSelect:'none' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <input type="checkbox" checked={!!selectedFeeItems[item.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
+                            <span style={{ fontSize:13, color:'#333' }}>{item.name}</span>
+                          </div>
+                          <span style={{ fontSize:13, fontWeight:700, color:'#2E7D32', flexShrink:0 }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </>}
+                  </div>
+                )}
+
+                {/* Fee summary */}
+                {selGross > 0 && (
+                  <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 16px', marginTop:10 }}>
+                    {/* Selected items list */}
+                    {yearItems.filter(i => selectedFeeItems[i.id]).length > 0 && (
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:'#888', marginBottom:6, textTransform:'uppercase', letterSpacing:0.5 }}>Selected Items</div>
+                        {yearItems.filter(i => selectedFeeItems[i.id]).map(item => (
+                          <div key={item.id} style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'4px 0', borderBottom:'1px solid #f0f4f8' }}>
+                            <span style={{ color:'#444' }}>{item.name}</span>
+                            <span style={{ fontWeight:600, color: item.section === 'University' ? '#1565C0' : '#2E7D32' }}>₹{item.yearAmt.toLocaleString('en-IN')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4, borderTop:'1px solid #e0e7ef', paddingTop:8 }}>
+                      <span style={{ color:'#555' }}>Selected Total</span>
+                      <span style={{ fontWeight:700 }}>₹{selGross.toLocaleString('en-IN')}</span>
+                    </div>
+                    {schol > 0 && (
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#7B1FA2', marginBottom:4 }}>
+                        <span>Scholarship Deduction</span>
+                        <span style={{ fontWeight:700 }}>− ₹{schol.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'2px solid #e0e7ef', paddingTop:8, marginTop:6 }}>
+                      <span style={{ color:'#1565C0' }}>Net Payable</span>
+                      <span style={{ color:'#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  {admPayMode === 'online' && (
-                    <div style={{ marginBottom:14 }}>
-                      <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:6 }}>Transaction ID *</label>
-                      <input type="text" placeholder="UPI / Transaction Reference ID" value={admTxnId} onChange={e => setAdmTxnId(e.target.value)}
-                        style={{ width:'100%', padding:'10px 14px', borderRadius:9, border:'2px solid #1565C0', fontSize:14, boxSizing:'border-box' }} />
+              {/* Step 2 — Amount */}
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Amount Collected (₹) *</label>
+                <input type="number" placeholder="Enter amount" value={admFeeAmt}
+                  onChange={e => setAdmFeeAmt(e.target.value)} min="0"
+                  style={{ width:'100%', padding:'13px 16px', borderRadius:10, border:'2px solid #1565C0', fontSize:18, fontWeight:700, textAlign:'center', boxSizing:'border-box', outline:'none' }} />
+                {admFeeAmt && Number(admFeeAmt) > 0 && (
+                  <div style={{ display:'flex', gap:10, marginTop:10 }}>
+                    <div style={{ flex:1, background:'#e8f5e9', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
+                      <div style={{ fontSize:11, color:'#2E7D32', fontWeight:600, marginBottom:2 }}>AMOUNT PAID</div>
+                      <div style={{ fontSize:16, fontWeight:800, color:'#1b5e20' }}>₹{amtPaid.toLocaleString('en-IN')}</div>
                     </div>
-                  )}
+                    <div style={{ flex:1, background: balance > 0 ? '#fff3e0' : '#e8f5e9', borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
+                      <div style={{ fontSize:11, color: balance > 0 ? '#E65100' : '#2E7D32', fontWeight:600, marginBottom:2 }}>BALANCE DUE</div>
+                      <div style={{ fontSize:16, fontWeight:800, color: balance > 0 ? '#E65100' : '#1b5e20' }}>
+                        {balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : '✅ Fully Paid'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-                  {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
-                </>
+              {/* Step 3 — Payment Mode */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Payment Mode *</label>
+                <div style={{ display:'flex', gap:10 }}>
+                  {[{k:'cash',l:'💵 Cash'},{k:'online',l:'🌐 Online / UPI'}].map(m => (
+                    <button key={m.k} onClick={() => setAdmPayMode(m.k)}
+                      style={{ flex:1, padding:'11px', borderRadius:9, border:`2px solid ${admPayMode===m.k?'#1565C0':'#ddd'}`, background:admPayMode===m.k?'#1565C0':'#fff', color:admPayMode===m.k?'#fff':'#555', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+                      {m.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {admPayMode === 'online' && (
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:6 }}>Transaction ID *</label>
+                  <input type="text" placeholder="UPI / Transaction Reference ID" value={admTxnId} onChange={e => setAdmTxnId(e.target.value)}
+                    style={{ width:'100%', padding:'10px 14px', borderRadius:9, border:'2px solid #1565C0', fontSize:14, boxSizing:'border-box' }} />
+                </div>
               )}
+
+              {admMsg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13, background:admMsg.startsWith('✅')?'#e8f5e9':'#ffebee', color:admMsg.startsWith('✅')?'#2E7D32':'#C62828', fontWeight:500 }}>{admMsg}</div>}
+
+              {/* Step 2 — Amount */}
+              {!admCollectDocMode && </>}
 
               <button onClick={handleAdmFeeCollect} disabled={admLoading2 || !admFeeAmt || Number(admFeeAmt) <= 0}
                 style={{ width:'100%', background:!admFeeAmt||Number(admFeeAmt)<=0?'#b0bec5':'#1565C0', color:'#fff', padding:15, borderRadius:10, border:'none', fontSize:15, fontWeight:700, cursor:!admFeeAmt||Number(admFeeAmt)<=0?'not-allowed':'pointer', marginBottom:10 }}>
@@ -1837,7 +1861,343 @@ const AccountsSectionDashboard = () => {
 };
 
 /* ═══════════════════════════════════════════════════════════
+   EXPENSE TRACKER — Full featured
+═══════════════════════════════════════════════════════════ */
+const EXPENSE_CATEGORIES = [
+  { value:'infrastructure',    label:'🏗️ Infrastructure / Building' },
+  { value:'stationery',        label:'📝 Stationery & Printing' },
+  { value:'electricity',       label:'💡 Electricity & Utilities' },
+  { value:'water_sanitation',  label:'🚿 Water & Sanitation' },
+  { value:'salary',            label:'👤 Salary / Wages' },
+  { value:'events',            label:'🎉 Events & Functions' },
+  { value:'maintenance',       label:'🔧 Maintenance & Repairs' },
+  { value:'academic',          label:'📚 Academic Resources' },
+  { value:'library',           label:'📖 Library Expenses' },
+  { value:'laboratory',        label:'🔬 Laboratory Expenses' },
+  { value:'office_admin',      label:'🏢 Office Administration' },
+  { value:'internet_comm',     label:'📡 Internet & Communication' },
+  { value:'website_erp',       label:'💻 Website & ERP Maintenance' },
+  { value:'faculty_dev',       label:'👩‍🏫 Faculty Development' },
+  { value:'student_activities',label:'🎓 Student Activities' },
+  { value:'scholarships',      label:'🏅 Scholarships & Student Welfare' },
+  { value:'electrical',        label:'⚡ Electrical Maintenance' },
+  { value:'university_fees',   label:'🏛️ University / Government Fees' },
+  { value:'it_software',       label:'🖥️ IT & Software' },
+  { value:'vehicle_travel',    label:'🚗 Vehicle & Travel' },
+  { value:'other',             label:'📦 Other' },
+];
+
+const PAY_MODES = ['Cash','UPI','Bank Transfer','Cheque','Online Payment'];
+const ACAD_YEARS = ['2023-24','2024-25','2025-26','2026-27'];
+const fmt2 = n => Number(n||0).toLocaleString('en-IN');
+
+const EMPTY_EXP = {
+  description:'', amount:'', date: new Date().toISOString().split('T')[0],
+  category:'other', paidTo:'', paymentMode:'Cash',
+  academicYear:'2025-26', remarks:'', billFile:null, billName:'',
+};
+
+const ExpenseTracker = ({ user }) => {
+  const [expenses, setExpenses] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lkcwsc_expenses_v2') || '[]'); } catch { return []; }
+  });
+  const [form, setForm]     = useState({ ...EMPTY_EXP });
+  const [msg, setMsg]       = useState('');
+  const [view, setView]     = useState('form'); // 'form' | 'history'
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState('all');
+  const [ayFilter, setAyFilter]   = useState('all');
+
+  const flash = (m) => { setMsg(m); setTimeout(()=>setMsg(''), 3500); };
+
+  const save = (updated) => {
+    setExpenses(updated);
+    localStorage.setItem('lkcwsc_expenses_v2', JSON.stringify(updated));
+  };
+
+  const handleBillUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 200*1024) { flash('❌ File size must be under 200KB'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setForm(p => ({ ...p, billFile: reader.result, billName: file.name }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = () => {
+    if (!form.description.trim() || !form.amount || !form.date) {
+      flash('❌ Description, Amount aur Date required hain'); return;
+    }
+    const entry = {
+      ...form, id: Date.now(),
+      amount: Number(form.amount),
+      enteredBy: user?.name || 'Accounts Staff',
+      createdAt: new Date().toISOString(),
+    };
+    save([entry, ...expenses]);
+    setForm({ ...EMPTY_EXP });
+    flash('✅ Expense recorded!');
+  };
+
+  const handleDelete = (id) => {
+    if (!window.confirm('Delete this expense?')) return;
+    save(expenses.filter(e => e.id !== id));
+  };
+
+  // Stats
+  const today      = new Date().toISOString().split('T')[0];
+  const thisMonth  = new Date().toISOString().slice(0,7);
+  const thisAY     = '2025-26';
+  const todayAmt   = expenses.filter(e => e.date === today).reduce((s,e)=>s+(e.amount||0),0);
+  const monthAmt   = expenses.filter(e => e.date?.startsWith(thisMonth)).reduce((s,e)=>s+(e.amount||0),0);
+  const yearAmt    = expenses.filter(e => e.academicYear === thisAY).reduce((s,e)=>s+(e.amount||0),0);
+  const totalAmt   = expenses.reduce((s,e)=>s+(e.amount||0),0);
+
+  // Category-wise
+  const catTotals = {};
+  expenses.forEach(e => { catTotals[e.category] = (catTotals[e.category]||0) + (e.amount||0); });
+
+  // Filtered list
+  const filtered = expenses.filter(e => {
+    const q = search.toLowerCase();
+    const mq = !q || e.description?.toLowerCase().includes(q) || e.paidTo?.toLowerCase().includes(q);
+    const mc = catFilter === 'all' || e.category === catFilter;
+    const ma = ayFilter === 'all' || e.academicYear === ayFilter;
+    return mq && mc && ma;
+  });
+
+  // Export Excel (simple CSV)
+  const exportExcel = () => {
+    const rows = [
+      ['Date','Description','Category','Amount','Payment Mode','Paid To','Academic Year','Remarks','Entered By'],
+      ...filtered.map(e => [
+        e.date, e.description,
+        EXPENSE_CATEGORIES.find(c=>c.value===e.category)?.label || e.category,
+        e.amount, e.paymentMode, e.paidTo, e.academicYear, e.remarks, e.enteredBy,
+      ])
+    ];
+    const csv = rows.map(r => r.map(v => `"${v||''}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `expenses_${today}.csv`; a.click();
+  };
+
+  const inp = { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13, boxSizing:'border-box' };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+        <div>
+          <h2 style={{ color:'#1565C0', margin:'0 0 4px' }}>🏗️ College Expense Tracker</h2>
+          <p style={{ color:'#666', fontSize:14, margin:0 }}>Record and monitor all college expenditures.</p>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          {['form','history'].map(v=>(
+            <button key={v} onClick={()=>setView(v)}
+              style={{ padding:'8px 18px', borderRadius:8, border:'none', fontWeight:700, fontSize:13, cursor:'pointer',
+                background:view===v?'#1565C0':'#f0f4f8', color:view===v?'#fff':'#555' }}>
+              {v==='form'?'➕ New Expense':'📋 History ('+expenses.length+')'}
+            </button>
+          ))}
+          <button onClick={exportExcel}
+            style={{ padding:'8px 16px', background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+            📥 Export CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Dashboard Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+        {[
+          { label:'Today',        amt:todayAmt,  color:'#1565C0', bg:'#e3f2fd' },
+          { label:'This Month',   amt:monthAmt,  color:'#7B1FA2', bg:'#f3e5f5' },
+          { label:`AY ${thisAY}`, amt:yearAmt,   color:'#2E7D32', bg:'#e8f5e9' },
+          { label:'All Time',     amt:totalAmt,  color:'#E65100', bg:'#fff3e0' },
+        ].map(s=>(
+          <div key={s.label} style={{ background:s.bg, borderRadius:12, padding:'14px 16px' }}>
+            <div style={{ fontSize:11, color:s.color, fontWeight:700, marginBottom:4 }}>{s.label}</div>
+            <div style={{ fontSize:18, fontWeight:800, color:s.color }}>₹{fmt2(s.amt)}</div>
+          </div>
+        ))}
+      </div>
+
+      {msg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:14, fontSize:13, fontWeight:600, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
+
+      {/* ── NEW EXPENSE FORM ── */}
+      {view==='form' && (
+        <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+          <h3 style={{ color:'#1565C0', margin:'0 0 16px' }}>➕ Record New Expense</h3>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Description *</label>
+              <input style={inp} placeholder="e.g. Stationery purchase for office" value={form.description}
+                onChange={e=>setForm(p=>({...p,description:e.target.value}))} />
+            </div>
+
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Amount (₹) *</label>
+              <input type="number" min="0" style={{ ...inp, fontSize:16, fontWeight:700 }} placeholder="0"
+                value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Date *</label>
+              <input type="date" style={inp} value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))} />
+            </div>
+
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Category</label>
+              <select style={inp} value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))}>
+                {EXPENSE_CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Payment Mode</label>
+              <select style={inp} value={form.paymentMode} onChange={e=>setForm(p=>({...p,paymentMode:e.target.value}))}>
+                {PAY_MODES.map(m=><option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Paid To / Vendor</label>
+              <input style={inp} placeholder="e.g. Sharma Stationery" value={form.paidTo}
+                onChange={e=>setForm(p=>({...p,paidTo:e.target.value}))} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Academic Year</label>
+              <select style={inp} value={form.academicYear} onChange={e=>setForm(p=>({...p,academicYear:e.target.value}))}>
+                {ACAD_YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Remarks</label>
+              <input style={inp} placeholder="Additional notes..." value={form.remarks}
+                onChange={e=>setForm(p=>({...p,remarks:e.target.value}))} />
+            </div>
+
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>
+                📎 Bill / Invoice Upload (PDF/JPG/PNG — max 200KB)
+              </label>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleBillUpload}
+                style={{ ...inp, padding:'6px' }} />
+              {form.billName && (
+                <p style={{ fontSize:12, color:'#2E7D32', margin:'4px 0 0', fontWeight:600 }}>
+                  ✅ {form.billName}
+                  <button onClick={()=>setForm(p=>({...p,billFile:null,billName:''}))}
+                    style={{ marginLeft:8, background:'none', border:'none', color:'#C62828', cursor:'pointer', fontSize:12 }}>✕</button>
+                </p>
+              )}
+            </div>
+
+          </div>
+          <div style={{ marginTop:16, display:'flex', gap:10 }}>
+            <button onClick={handleSave}
+              style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:9, padding:'12px 28px', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+              💾 Save Expense
+            </button>
+            <button onClick={()=>setForm({...EMPTY_EXP})}
+              style={{ background:'#eee', color:'#333', border:'none', borderRadius:9, padding:'12px 18px', fontSize:13, cursor:'pointer' }}>
+              🔄 Clear
+            </button>
+          </div>
+          <p style={{ fontSize:11, color:'#aaa', margin:'10px 0 0' }}>
+            Entered by: <strong>{user?.name}</strong> · {new Date().toLocaleDateString('en-IN')}
+          </p>
+        </div>
+      )}
+
+      {/* ── HISTORY ── */}
+      {view==='history' && (
+        <div>
+          {/* Category summary */}
+          {Object.keys(catTotals).length > 0 && (
+            <div style={{ background:'#fff', borderRadius:12, border:'1px solid #e0e7ef', padding:16, marginBottom:16 }}>
+              <h4 style={{ color:'#555', fontSize:13, margin:'0 0 10px' }}>📊 Category-wise Summary</h4>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                {Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>{
+                  const label = EXPENSE_CATEGORIES.find(c=>c.value===cat)?.label || cat;
+                  return (
+                    <div key={cat} style={{ background:'#f0f4f8', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600, color:'#333' }}>
+                      {label}: ₹{fmt2(amt)}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Filters */}
+          <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
+            <input type="text" placeholder="🔍 Search description / vendor..."
+              value={search} onChange={e=>setSearch(e.target.value)}
+              style={{ flex:1, minWidth:200, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }} />
+            <select value={catFilter} onChange={e=>setCatFilter(e.target.value)}
+              style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
+              <option value="all">All Categories</option>
+              {EXPENSE_CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+            <select value={ayFilter} onChange={e=>setAyFilter(e.target.value)}
+              style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
+              <option value="all">All Years</option>
+              {ACAD_YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>
+              <div style={{ fontSize:40 }}>🏗️</div><p>No expenses found</p>
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {filtered.map(e => {
+                const cat = EXPENSE_CATEGORIES.find(c=>c.value===e.category)?.label || e.category;
+                return (
+                  <div key={e.id} style={{ background:'#fff', border:'1px solid #e0e7ef', borderRadius:12, padding:'14px 18px', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, borderLeft:'4px solid #1565C0' }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+                        <span style={{ fontWeight:700, fontSize:14, color:'#1a1a2e' }}>{e.description}</span>
+                        <span style={{ fontSize:11, background:'#e3f2fd', color:'#1565C0', padding:'1px 8px', borderRadius:10, fontWeight:600 }}>{cat}</span>
+                        <span style={{ fontSize:11, background:'#f3e5f5', color:'#7B1FA2', padding:'1px 8px', borderRadius:10 }}>{e.paymentMode}</span>
+                        {e.academicYear && <span style={{ fontSize:11, color:'#aaa' }}>AY: {e.academicYear}</span>}
+                      </div>
+                      <div style={{ fontSize:12, color:'#666' }}>
+                        {e.paidTo && <span>Paid to: <strong>{e.paidTo}</strong> · </span>}
+                        {e.date} · By: {e.enteredBy}
+                      </div>
+                      {e.remarks && <div style={{ fontSize:12, color:'#888', fontStyle:'italic', marginTop:2 }}>📝 {e.remarks}</div>}
+                      {e.billFile && (
+                        <a href={e.billFile} download={e.billName}
+                          style={{ fontSize:12, color:'#1565C0', textDecoration:'underline', marginTop:2, display:'inline-block' }}>
+                          📎 {e.billName}
+                        </a>
+                      )}
+                    </div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <div style={{ fontSize:18, fontWeight:800, color:'#C62828', marginBottom:6 }}>₹{fmt2(e.amount)}</div>
+                      <button onClick={()=>handleDelete(e.id)}
+                        style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:6, padding:'4px 10px', fontSize:12, cursor:'pointer', fontWeight:600 }}>
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ textAlign:'right', padding:'10px 16px', background:'#f8faff', borderRadius:10, fontSize:14, fontWeight:700, color:'#1565C0' }}>
+                Filtered Total: ₹{fmt2(filtered.reduce((s,e)=>s+(e.amount||0),0))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════
    WALK-IN / OLD STUDENT FEE MODAL
+   Collect fees from old/SY/TY students without admission record
 ═══════════════════════════════════════════════════════════ */
 const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
   const EMPTY_FORM = {
@@ -1845,7 +2205,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
     course:'B.A.', year:'2nd Year',
     feeType:'admission', amount:'', payMode:'cash', txnId:'', notes:'',
   };
-  const [view, setView]       = useState('form');
+  const [view, setView]       = useState('form'); // 'form' | 'receipt' | 'history'
   const [form, setForm]       = useState(EMPTY_FORM);
   const [saving, setSaving]   = useState(false);
   const [msg, setMsg]         = useState('');
@@ -1968,6 +2328,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
       <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:580, maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.25)', display:'flex', flexDirection:'column' }}>
 
+        {/* Header */}
         <div style={{ padding:'18px 24px', borderBottom:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
           <div style={{ display:'flex', gap:8 }}>
             {['form','history'].map(v => (
@@ -1984,6 +2345,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
 
         <div style={{ padding:'20px 24px', flex:1 }}>
 
+          {/* ── FORM VIEW ── */}
           {(view==='form' || view==='receipt') && (
             <>
               {msg && <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:14, fontSize:13, background:'#ffebee', color:'#C62828', fontWeight:600 }}>{msg}</div>}
@@ -2027,10 +2389,12 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                 </div>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                  {/* Name */}
                   <div>
                     <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Student Name *</label>
                     <input style={inp} placeholder="e.g. Priya Santosh Sharma" value={form.studentName} onChange={e=>setForm(p=>({...p,studentName:e.target.value}))} />
                   </div>
+                  {/* Phone + PRN */}
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Phone No.</label>
@@ -2042,6 +2406,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                       <input style={inp} placeholder="e.g. 2200123456" value={form.prnNo} onChange={e=>setForm(p=>({...p,prnNo:e.target.value}))} />
                     </div>
                   </div>
+                  {/* Roll No + Course */}
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Roll No.</label>
@@ -2063,6 +2428,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                       </select>
                     </div>
                   </div>
+                  {/* Fee type + Amount */}
                   <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:12 }}>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Fee Type *</label>
@@ -2076,6 +2442,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                         placeholder="0" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} />
                     </div>
                   </div>
+                  {/* Payment mode */}
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Payment Mode</label>
@@ -2091,6 +2458,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                       </div>
                     )}
                   </div>
+                  {/* Notes */}
                   <div>
                     <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Notes (optional)</label>
                     <input style={inp} placeholder="e.g. Exam fee for Sem IV backlog" value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} />
@@ -2104,8 +2472,10 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
             </>
           )}
 
+          {/* ── HISTORY VIEW ── */}
           {view==='history' && (
             <div>
+              {/* Summary */}
               <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap' }}>
                 <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:12, padding:'12px 18px', fontWeight:700, fontSize:15 }}>
                   💰 Total Collected: ₹{fmt(totalCollected)}
