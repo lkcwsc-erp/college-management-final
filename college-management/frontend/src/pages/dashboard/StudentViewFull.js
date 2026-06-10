@@ -335,34 +335,34 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
 
             {/* ── TAB: Overview ─────────────────────────── */}
             {detailTab === 'overview' && (
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
-                {/* Personal */}
-                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                  <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>👤 Personal Details</h4>
-                  {[
-                    ['Full Name',      selected.applicantName],
-                    ["Father's Name",  selected.fatherName],
-                    ["Mother's Name",  selected.motherName],
-                    ['Guardian',       selected.guardianName],
-                    ['DOB',            selected.dateOfBirth?new Date(selected.dateOfBirth).toLocaleDateString('en-IN'):'—'],
-                    ['Gender',         selected.gender],
-                    ['Blood Group',    selected.bloodGroup],
-                    ['Nationality',    selected.nationality],
-                    ['Religion',       selected.religion],
-                  ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
-                </div>
-
-                {/* Contact Details — NEW */}
-                <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
-                  <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>📞 Contact Details</h4>
-                  {[
-                    ['Mobile No.',       selected.phone],
-                    ['Email',            selected.email],
-                    ['Parent Phone',     selected.parentPhone || selected.fatherPhone || selected.motherPhone],
-                    ['Guardian Phone',   selected.guardianPhone],
-                    ['WhatsApp',         selected.whatsapp],
-                    ['Emergency Contact',selected.emergencyContact],
-                  ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                {/* Left column: Personal + Contact */}
+                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                    <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>👤 Personal Details</h4>
+                    {[
+                      ['Full Name',      selected.applicantName],
+                      ["Father's Name",  selected.fatherName],
+                      ["Mother's Name",  selected.motherName],
+                      ['Guardian',       selected.guardianName],
+                      ['DOB',            selected.dateOfBirth?new Date(selected.dateOfBirth).toLocaleDateString('en-IN'):'—'],
+                      ['Gender',         selected.gender],
+                      ['Blood Group',    selected.bloodGroup],
+                      ['Nationality',    selected.nationality],
+                      ['Religion',       selected.religion],
+                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
+                  </div>
+                  <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
+                    <h4 style={{ color:themeColor, marginBottom:12, fontSize:14 }}>📞 Contact Details</h4>
+                    {[
+                      ['Mobile No.',       selected.phone],
+                      ['Email',            selected.email],
+                      ['Parent Phone',     selected.parentPhone || selected.fatherPhone || selected.motherPhone],
+                      ['Guardian Phone',   selected.guardianPhone],
+                      ['WhatsApp',         selected.whatsapp],
+                      ['Emergency Contact',selected.emergencyContact],
+                    ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
+                  </div>
                 </div>
 
                 {/* Identity + Address */}
