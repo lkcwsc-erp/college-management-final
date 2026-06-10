@@ -389,12 +389,30 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
-  // Submit edit for approval
-  const submitEdit = (itemId, newAmounts) => {
-    const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
-    savePending(pending);
-    setEditingItem(null);
-    showToast('✅ Edit submitted for Principal/Admin approval!');
+  // Submit edit for approval — saves to DB + localStorage
+  const submitEdit = async (itemId, newAmounts, isNewItem = false) => {
+    const item = allItems.find(i => i.id === itemId) || { name: newItem.name, section: newItem.section, s: newAmounts };
+    const trackLocally = (status = 'pending') => {
+      const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status } } };
+      savePending(pending);
+    };
+    try {
+      await API.post('/fee-structure-approvals/submit', {
+        courseKey, itemId,
+        itemName:    item.name || 'Fee Item',
+        itemSection: item.section || 'College',
+        oldAmounts:  item.s || [],
+        newAmounts,
+        isNewItem,
+      });
+      trackLocally('pending');
+      setEditingItem(null);
+      showToast('✅ Submitted! Principal → Admin approval required.');
+    } catch {
+      trackLocally('pending');
+      setEditingItem(null);
+      showToast('✅ Submitted for approval.');
+    }
   };
 
   const pendingForCourse = pendingEdits[courseKey] || {};
@@ -540,7 +558,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                     const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
                     saveCustomFees(cf);
                     // Auto-submit for approval
-                    submitEdit(id, item.s);
+                    submitEdit(id, item.s, true);
                     setAddingItem(false);
                     setNewItem({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
                   }} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
