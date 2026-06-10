@@ -350,6 +350,13 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                       ['Blood Group',    selected.bloodGroup],
                       ['Nationality',    selected.nationality],
                       ['Religion',       selected.religion],
+                      ['Category',       selected.category?(selected.category).toUpperCase():'—'],
+                      ['Caste',          selected.caste],
+                      ['Sub-Caste',      selected.subCaste],
+                      ['Aadhar No.',     selected.aadharNumber],
+                      ['Family Income',  selected.familyIncome?`₹${selected.familyIncome}`:'—'],
+                      ['Caste Cert No.', selected.casteCertificateNo],
+                      ['Issuing Auth',   selected.casteCertificateAuthority],
                     ].map(([l,v]) => <Row key={l} label={l} value={v} />)}
                   </div>
                   <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
