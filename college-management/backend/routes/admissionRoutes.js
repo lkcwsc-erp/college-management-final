@@ -526,7 +526,7 @@ router.put('/update-mahadbt/:id', protect, authorizeRoles('staff_scholarship', '
 router.get('/staff-view/all', protect, authorizeRoles('staff_exam', 'staff_scholarship', 'staff_accounts', 'staff_student', 'staff_principal', 'admin'), async (req, res) => {
   try {
     const User = require('../models/User');
-    const admissions = await Admission.find({ status: 'approved' })
+    const admissions = await Admission.find({ status: { $in: ['approved', 'tc_issued'] } })
       .populate('course', 'name type')
       .sort({ applicantName: 1 });
 
