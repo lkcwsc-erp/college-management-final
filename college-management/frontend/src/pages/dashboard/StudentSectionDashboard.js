@@ -993,92 +993,105 @@ const printIDCard = (adm) => {
   const validYear = new Date().getFullYear();
   const dobStr = adm.dateOfBirth ? new Date(adm.dateOfBirth).toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}) : '--';
   const ct = (adm.courseType||'').toLowerCase();
-  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'Bachelor of Science (B.Sc.)'
-    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'Bachelor of Arts (B.A.)' : adm.courseType||'--';
+  const courseFull = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.'
+    : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : adm.courseType||'--';
 
   const html = `<!DOCTYPE html><html><head><title>ID Card</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:240px;background:#fff;font-family:Arial,sans-serif}
-    .card{width:240px;background:#fff;border:2px solid #1a237e;border-radius:4px;overflow:hidden}
-    .hdr{background:#1a237e;padding:8px 6px 6px;text-align:center}
-    .logo{width:55px;height:55px;object-fit:contain;border-radius:50%;border:2px solid rgba(255,255,255,0.4);margin-bottom:4px}
-    .sanstha{font-size:6.5px;color:rgba(255,255,255,0.8);font-style:italic}
-    .college{font-size:9px;font-weight:700;color:#fff;line-height:1.3;margin:2px 0}
-    .affil{font-size:6px;color:rgba(255,255,255,0.75)}
-    .titlebar{background:#FFD700;padding:4px;text-align:center}
-    .titletext{color:#1a237e;font-size:8.5px;font-weight:900;letter-spacing:2px}
-    .photowrap{background:#f8f9ff;padding:10px 0 8px;text-align:center;border-bottom:1px solid #e8eaf6}
-    .photobox{width:72px;height:85px;border:2px solid #1a237e;margin:0 auto 6px;overflow:hidden;background:#c5cae9;display:flex;align-items:center;justify-content:center;border-radius:2px}
+    html,body{background:#e0e0e0;display:flex;justify-content:center;align-items:flex-start;padding:16px;font-family:Arial,sans-serif}
+    /* CR80 vertical: 54mm × 86mm */
+    .card{
+      width:54mm;
+      background:#fff;
+      border:1px solid #1a237e;
+      border-radius:3mm;
+      overflow:hidden;
+      box-shadow:0 2px 10px rgba(0,0,0,0.25);
+    }
+    /* Header */
+    .hdr{background:#1a237e;padding:6px 6px 5px;display:flex;flex-direction:column;align-items:center;text-align:center}
+    .hlogo{width:28px;height:28px;object-fit:contain;margin-bottom:3px}
+    .htrust{font-size:5px;color:rgba(255,255,255,0.7);line-height:1.3}
+    .hcollege{font-size:7px;font-weight:900;color:#FDD835;line-height:1.3;margin:1px 0}
+    .haffil{font-size:5px;color:rgba(255,255,255,0.65)}
+    /* Banner */
+    .banner{background:#FDD835;padding:2.5px 0;text-align:center;font-size:6px;font-weight:900;color:#1a237e;letter-spacing:2px}
+    /* Photo */
+    .photowrap{background:#f0f4ff;padding:8px 0 5px;display:flex;flex-direction:column;align-items:center}
+    .photobox{width:44px;height:54px;border:1.5px solid #1a237e;overflow:hidden;background:#c5cae9;display:flex;align-items:center;justify-content:center;border-radius:2px;margin-bottom:5px}
     .photobox img{width:100%;height:100%;object-fit:cover}
-    .stuname{font-size:11px;font-weight:700;color:#1a237e;padding:0 4px;line-height:1.2}
-    .body{padding:8px 10px 4px}
-    .row{display:flex;align-items:baseline;padding:3px 0;border-bottom:1px dashed #e8eaf6}
-    .lbl{font-size:8.5px;font-weight:700;color:#555;width:60px;flex-shrink:0}
-    .val{font-size:8.5px;font-weight:700;color:#1a237e;flex:1}
-    .chip{background:#1a237e;color:#FFD700;text-align:center;padding:5px;font-size:10px;font-weight:700;letter-spacing:1px}
-    .sig{display:grid;grid-template-columns:1fr 1fr;padding:6px 10px 4px;gap:6px;border-top:1px solid #e8eaf6}
-    .sigbox{text-align:center}
-    .sigline{border-top:1px solid #333;padding-top:2px;font-size:7px;color:#333;font-weight:700}
-    .foot{background:#1a237e;padding:5px 8px}
-    .footrow{display:flex;justify-content:space-between;font-size:6.5px;color:rgba(255,255,255,0.9)}
-    .footaddr{font-size:6px;color:rgba(255,255,255,0.7);text-align:center;margin-top:2px}
-    @media print{@page{size:240px 420px;margin:0}html,body{width:240px}}
+    .stuname{font-size:8.5px;font-weight:900;color:#1a237e;text-align:center;text-transform:capitalize;padding:0 4px;line-height:1.3}
+    /* Details */
+    .details{padding:5px 7px 4px;background:#fff}
+    .row{display:flex;align-items:baseline;padding:1.5px 0;border-bottom:0.5px dashed #ddd}
+    .row:last-child{border-bottom:none}
+    .lbl{font-size:6.5px;font-weight:700;color:#555;width:52px;flex-shrink:0}
+    .val{font-size:7px;font-weight:700;color:#1a237e;flex:1}
+    /* ID bar */
+    .idbar{background:#1a237e;color:#FDD835;text-align:center;padding:4px 0;font-size:8px;font-weight:900;letter-spacing:1.5px;font-family:'Courier New',monospace}
+    /* Sig strip */
+    .sig{display:flex;justify-content:space-between;padding:5px 8px 4px;background:#fff}
+    .sigbox{text-align:center;width:40%}
+    .sigline{border-top:0.5px solid #333;padding-top:2px;font-size:5.5px;font-weight:700;color:#333;margin-top:12px}
+    /* Footer */
+    .foot{background:#1a237e;padding:3px 7px}
+    .frow{display:flex;justify-content:space-between}
+    .ftext{font-size:5px;color:rgba(255,255,255,0.85)}
+    .faddr{font-size:4.5px;color:rgba(255,255,255,0.7);text-align:center;margin-top:1px}
+    @media print{
+      html,body{background:white;padding:0}
+      .card{box-shadow:none}
+      @page{size:54mm 86mm;margin:0}
+    }
   </style></head><body>
   <div class="card">
+    <!-- Header -->
     <div class="hdr">
-      <img src="${window.location.origin}/college-logo.png" class="logo" onerror="this.style.display='none'"/><br/>
-      <span class="sanstha">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</span><br/>
-      <span class="college">Late Kalpana Chawla Women's<br/>Senior College (LKCWSC)</span><br/>
-      <span class="affil">Affiliated to SNDT Women's University, Mumbai</span>
+      <img src="${window.location.origin}/college-logo.png" class="hlogo" onerror="this.style.display='none'"/>
+      <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+      <div class="hcollege">Late Kalpana Chawla Women's<br/>Senior College (LKCWSC)</div>
+      <div class="haffil">Affiliated to SNDT Women's University, Mumbai</div>
     </div>
-    <div class="titlebar"><span class="titletext">STUDENT IDENTITY CARD</span></div>
+    <!-- Banner -->
+    <div class="banner">STUDENT &nbsp; IDENTITY &nbsp; CARD</div>
+    <!-- Photo + Name -->
     <div class="photowrap">
       <div class="photobox">
-        ${photoSrc ? `<img src="${photoSrc}" alt="photo" crossorigin="anonymous"/>` : '<div style="font-size:32px;text-align:center;padding-top:20px">👩</div>'}
+        ${photoSrc ? `<img src="${photoSrc}" alt="photo"/>` : '<div style="font-size:26px;text-align:center;padding-top:12px">👩</div>'}
       </div>
       <div class="stuname">${adm.applicantName||'--'}</div>
     </div>
-    <div class="body">
+    <!-- Details -->
+    <div class="details">
       <div class="row"><span class="lbl">Course</span><span class="val">${courseFull}</span></div>
       <div class="row"><span class="lbl">Year</span><span class="val">${adm.admissionYear||'--'}</span></div>
       <div class="row"><span class="lbl">Date of Birth</span><span class="val">${dobStr}</span></div>
       <div class="row"><span class="lbl">Mobile No.</span><span class="val">${adm.phone||'--'}</span></div>
       <div class="row"><span class="lbl">Blood Group</span><span class="val">${adm.bloodGroup||'--'}</span></div>
-      <div class="row" style="border:none"><span class="lbl">Valid</span><span class="val">${validYear} – ${validYear+1}</span></div>
+      <div class="row"><span class="lbl">Valid</span><span class="val">${validYear} – ${validYear+1}</span></div>
     </div>
-    <div class="chip">${adm.studentId||'ID PENDING'}</div>
+    <!-- ID bar -->
+    <div class="idbar">${adm.studentId||'ID PENDING'}</div>
+    <!-- Signatures -->
     <div class="sig">
-      <div class="sigbox"><div style="height:18px"></div><div class="sigline">Student Signature</div></div>
-      <div class="sigbox"><div style="height:18px"></div><div class="sigline">Principal</div></div>
+      <div class="sigbox"><div class="sigline">Student</div></div>
+      <div class="sigbox"><div class="sigline">Principal</div></div>
     </div>
+    <!-- Footer -->
     <div class="foot">
-      <div class="footrow"><span>+91 9307162914</span><span>lkcwsc@vnssorg.com</span></div>
-      <div class="footrow" style="margin-top:1px;justify-content:center"><span>lkcwsc.vnssorg.com</span></div>
-      <div class="footaddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
+      <div class="frow">
+        <span class="ftext">+91 9307162914</span>
+        <span class="ftext">lkcwsc.vnssorg.com</span>
+      </div>
+      <div class="faddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
     </div>
   </div>
-  <scri${'pt'}>
-  window.onload = () => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload = () => {
-      html2canvas(document.querySelector('.card'), {scale:3, useCORS:true, allowTaint:true, backgroundColor:'#ffffff'}).then(canvas => {
-        const a = document.createElement('a');
-        a.download = 'IDCard_${(adm.applicantName||"student").replace(/\s+/g,"_")}.jpg';
-        a.href = canvas.toDataURL('image/jpeg', 0.96);
-        a.click();
-        setTimeout(()=>window.close(), 800);
-      });
-    };
-    document.head.appendChild(s);
-  };
-  </scri${'pt'}></body></html>`;
+  <scri${'pt'}>window.onload=()=>{window.print()}</scri${'pt'}></body></html>`;
 
-  const w = window.open('','_blank','width=290,height=480');
+  const w = window.open('','_blank','width=260,height=420');
   w.document.write(html); w.document.close();
 };
-
 
 
 const DOC_CONFIG = {
