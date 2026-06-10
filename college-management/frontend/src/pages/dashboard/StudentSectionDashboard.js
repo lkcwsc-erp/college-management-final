@@ -266,33 +266,63 @@ const StudentSectionDashboard = () => {
   const handleCreateStudent = async (e) => {
     e.preventDefault(); setCredLoading(true); setCredMsg('');
     try {
-      // Verify Aadhar against pending admissions
+      // Verify Aadhar against admissions
       const admRes = await API.get('/admissions/staff-view/all');
       const allAdm = admRes.data.admissions || [];
       const matchedAdm = allAdm.find(a =>
         a.aadharNumber && a.aadharNumber.replace(/\s/g,'') === credForm.aadharNumber.replace(/\s/g,'')
       );
       if (!matchedAdm) {
-        setCredMsg('❌ Aadhar number not found in any approved admission. Please verify the Aadhar number matches the admission form.');
+        setCredMsg('❌ Aadhar number kisi bhi admission form mein nahi mila. Aadhar number dobara check karein.');
         setCredLoading(false);
         return;
       }
-      // Aadhar matched — auto-fill email and name from admission if empty
+      // Admission approved hai ya nahi check
+      const approvedStatuses = ['approved', 'principal_approved', 'approved_by_principal', 'credentials_issued'];
+      if (!approvedStatuses.includes(matchedAdm.status)) {
+        setCredMsg(`❌ Is student ki admission abhi "${matchedAdm.status}" status mein hai. Credential banane ke liye pehle admission approve honi chahiye.`);
+        setCredLoading(false);
+        return;
+      }
+      // Auto-fill from admission
+      const nameParts = (matchedAdm.applicantName || '').trim().split(' ');
       const enrichedForm = {
         ...credForm,
-        email: credForm.email || matchedAdm.email,
-        firstName: credForm.firstName || (matchedAdm.applicantName||'').split(' ')[0],
+        email: credForm.email || matchedAdm.email || '',
+        firstName: credForm.firstName || nameParts[0] || '',
+        middleName: credForm.middleName || (nameParts.length === 3 ? nameParts[1] : '') || '',
+        lastName: credForm.lastName || (nameParts.length >= 2 ? nameParts[nameParts.length - 1] : '') || '',
         dateOfBirth: credForm.dateOfBirth || (matchedAdm.dateOfBirth ? matchedAdm.dateOfBirth.split('T')[0] : ''),
+        phone: credForm.phone || matchedAdm.phone || '',
       };
-      setCredMsg('✅ Aadhar verified — matched with ' + matchedAdm.applicantName);
+
+      if (!enrichedForm.email) {
+        setCredMsg('❌ Student ka email address admission form mein nahi hai. Upar Email field mein manually enter karein.');
+        setCredLoading(false);
+        return;
+      }
+      if (!enrichedForm.dateOfBirth) {
+        setCredMsg('❌ Date of Birth required hai — admission form mein nahi mila, upar manually enter karein.');
+        setCredLoading(false);
+        return;
+      }
 
       const res = await API.post('/auth/register-student', enrichedForm);
       if (res.data.success) {
         setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
-        setCredMsg('✅ Aadhar verified ✅ Student account created for ' + matchedAdm.applicantName + '!');
+        setCredMsg('✅ Student account successfully create ho gaya — ' + matchedAdm.applicantName + '!');
         setCredForm({ firstName: '', middleName: '', lastName: '', aadharNumber: '', email: '', phone: '', dateOfBirth: '' });
       }
-    } catch (err) { setCredMsg('❌ ' + (err.response?.data?.message || 'Failed to create account')); }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Account create karne mein error aaya';
+      if (msg.toLowerCase().includes('aadhar')) {
+        setCredMsg('❌ Is Aadhar number ke liye pehle se account bana hua hai (duplicate).');
+      } else if (msg.toLowerCase().includes('email')) {
+        setCredMsg('❌ Is email se pehle se account bana hua hai. Alag email use karein.');
+      } else {
+        setCredMsg('❌ ' + msg);
+      }
+    }
     finally { setCredLoading(false); }
   };
 
@@ -761,7 +791,7 @@ const printTC = (adm) => {
 
     /* ── Header ── */
     .hdr{display:flex;align-items:center;gap:6px;border-bottom:2px solid #000;padding:5px 10px}
-    .hlogo{width:72px;height:72px;object-fit:contain;flex-shrink:0}
+    .hlogo{width:96px;height:96px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:10px;color:#444;font-style:italic;margin-bottom:2px}
     .hname{font-size:18px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.3px}
@@ -1011,7 +1041,7 @@ const printIDCard = (adm) => {
     }
     /* Header */
     .hdr{background:#1a237e;padding:6px 6px 5px;display:flex;flex-direction:column;align-items:center;text-align:center}
-    .hlogo{width:28px;height:28px;object-fit:contain;margin-bottom:3px}
+    .hlogo{width:44px;height:44px;object-fit:contain;margin-bottom:3px}
     .htrust{font-size:5px;color:rgba(255,255,255,0.7);line-height:1.3}
     .hcollege{font-size:7px;font-weight:900;color:#FDD835;line-height:1.3;margin:1px 0}
     .haffil{font-size:5px;color:rgba(255,255,255,0.65)}
