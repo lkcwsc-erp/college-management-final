@@ -172,11 +172,13 @@ const getSemesters = (courseKey, year) => {
 };
 
 const DEFAULT_DOC_FEES = {
-  BONAFIDE:  { label: '📋 Bonafide Certificate',      price: 30 },
-  ID_CARD:   { label: '🪪 ID Card',                   price: 100 },
-  MARKSHEET: { label: '📄 Marksheet',                 price: 50 },
-  MIGRATION: { label: '📜 Migration Certificate',     price: 200 },
-  TC:        { label: '🎓 Transfer Certificate (TC)', price: 150 },
+  BONAFIDE:           { label: '📋 Bonafide Certificate',           price: 30  },
+  ID_CARD:            { label: '🪪 ID Card',                        price: 100 },
+  MARKSHEET:          { label: '📄 Marksheet',                      price: 50  },
+  MIGRATION:          { label: '📜 Migration Certificate',          price: 200 },
+  TC:                 { label: '🎓 Transfer Certificate (TC)',      price: 150 },
+  PROVISIONAL_DEGREE: { label: '🎓 Provisional Degree Certificate', price: 200 },
+  DEGREE:             { label: '📜 Degree Certificate',             price: 300 },
 };
 
 const FEE_TYPES = [
