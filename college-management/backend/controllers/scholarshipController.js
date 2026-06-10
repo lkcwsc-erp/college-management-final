@@ -203,13 +203,22 @@ exports.autoCalculateScholarship = async (req, res) => {
       });
     }
 
-    // Find master — matches if the student's category is in the categories array
-    const master = await ScholarshipMaster.findOne({
+    // Find master — academicYear optional, matches latest if not set
+    const masterQuery = {
       categories: { $elemMatch: { $regex: new RegExp(`^${category}$`, 'i') } },
       courseType,
       admissionYear,
       isActive: true,
-    });
+    };
+    // If academicYear is set, try exact match first
+    let master = null;
+    if (academicYear) {
+      master = await ScholarshipMaster.findOne({ ...masterQuery, academicYear });
+    }
+    // Fallback: any academic year
+    if (!master) {
+      master = await ScholarshipMaster.findOne(masterQuery).sort({ academicYear: -1 });
+    }
 
     if (!master) {
       return res.status(404).json({
