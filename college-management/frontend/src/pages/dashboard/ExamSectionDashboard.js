@@ -294,9 +294,19 @@ const ExamDocTab = ({ type, title, desc, color }) => {
             <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
               {[
                 ['Student', selected.studentName],
+                ['PRN', selected.prnNumber || '—'],
+                ['Student ID', selected.studentId || '—'],
                 ['Email', selected.studentEmail],
                 ['Course', selected.branch || '—'],
-                ['Year', selected.admissionYear || '—'],
+                ['Admission Year', selected.admissionYear || '—'],
+                ['Roll No', selected.rollNumber || '—'],
+                ['Academic Year', selected.academicYear || '—'],
+                ...(type === 'MARKSHEET' ? [
+                  ['Semester', selected.marksheetSemester || '—'],
+                  ['Exam Session', selected.marksheetSession === 'mar_apr' ? 'March / April' : selected.marksheetSession === 'nov_dec' ? 'Nov / December' : (selected.marksheetSession || '—')],
+                  ['Exam Year', selected.marksheetYear || '—'],
+                ] : []),
+                ['Urgency', selected.urgency === 'urgent' ? '⚡ Urgent' : 'Normal'],
                 ['Reason', selected.reason || '—'],
               ].map(([l, v]) => (
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
