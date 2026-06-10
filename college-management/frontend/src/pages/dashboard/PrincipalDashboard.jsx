@@ -1751,16 +1751,16 @@ const FeeStructApprovalTab = ({ role }) => {
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 3500); };
 
-  const fetchApprovals = async () => {
+  const fetchApprovals = useCallback(async () => {
     setLoading(true);
     try {
       const res = await API.get('/fee-structure-approvals');
       setApprovals(res.data.approvals || []);
     } catch { flash('❌ Failed to load'); }
     finally { setLoading(false); }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { fetchApprovals(); }, [fetchApprovals]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchApprovals(); }, [fetchApprovals]);
 
   const handleAction = async (id, action, note = '') => {
     try {
