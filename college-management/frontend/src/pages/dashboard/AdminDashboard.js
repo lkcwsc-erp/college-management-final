@@ -711,6 +711,7 @@ const AdminDashboard = () => {
   const [staffForm, setStaffForm] = useState({
     name: '', username: '', email: '', password: '', phone: '', role: 'staff_student', photo: ''
   });
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [showCredentials, setShowCredentials] = useState(null);
 
   const [courseForm, setCourseForm] = useState({ name: '', code: '', type: 'BA', duration: '3 Years', fees: '', eligibility: '', description: '' });
@@ -913,7 +914,12 @@ const AdminDashboard = () => {
       <main className="dashboard-main">
         <div className="dashboard-topbar">
           <h2>{tabs.find(t => t.id === activeTab)?.label}</h2>
-          <div className="user-info"><span>👋 {user?.name} (Admin)</span></div>
+          <div className="user-info" style={{display:'flex',alignItems:'center',gap:10}}>
+            {user?.photo
+              ? <img src={user.photo} alt="" style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #e0e7ef'}} />
+              : <div style={{width:36,height:36,borderRadius:'50%',background:'#1565C0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:'#fff'}}>👤</div>}
+            <span>👋 {user?.name} (Admin)</span>
+          </div>
         </div>
 
         {message && <div className="dash-message">{message}</div>}
@@ -1203,17 +1209,33 @@ const AdminDashboard = () => {
                         onChange={e => { const v = e.target.value; if (/^\d{0,10}$/.test(v)) setStaffForm({...staffForm, phone: v}); }} />
                     </div>
                     <div className="form-group">
-                      <label>📷 Photo URL (optional)</label>
-                      <input type="text" placeholder="https://... or Cloudinary URL"
-                        value={staffForm.photo || ''}
-                        onChange={e => setStaffForm({...staffForm, photo: e.target.value})}
-                        style={{width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #ddd', fontSize:'14px', boxSizing:'border-box'}} />
-                      {staffForm.photo && (
-                        <div style={{marginTop:8,display:'flex',alignItems:'center',gap:10}}>
-                          <img src={staffForm.photo} alt="preview" style={{width:44,height:44,borderRadius:'50%',objectFit:'cover',border:'2px solid #1565C0'}} onError={e=>e.target.style.display='none'} />
-                          <span style={{fontSize:12,color:'#2E7D32'}}>✅ Photo preview</span>
+                      <label>📷 Staff Photo (optional)</label>
+                      <div style={{display:'flex',alignItems:'center',gap:12}}>
+                        {/* Photo preview circle */}
+                        <div style={{width:64,height:64,borderRadius:'50%',border:'2px solid #e0e7ef',overflow:'hidden',background:'#f5f5f5',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                          {staffForm.photo
+                            ? <img src={staffForm.photo} alt="preview" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>e.target.style.display='none'} />
+                            : <span style={{fontSize:28}}>🧑‍💼</span>}
                         </div>
-                      )}
+                        <div style={{flex:1}}>
+                          <input type="file" accept="image/*"
+                            onChange={async e => {
+                              const file = e.target.files[0];
+                              if (!file) return;
+                              setPhotoUploading(true);
+                              try {
+                                const fd = new FormData();
+                                fd.append('photo', file);
+                                const res = await API.post('/auth/upload-photo', fd, { headers:{'Content-Type':'multipart/form-data'} });
+                                if (res.data.success) setStaffForm(p => ({...p, photo: res.data.url}));
+                              } catch { alert('Photo upload failed'); }
+                              finally { setPhotoUploading(false); }
+                            }}
+                            style={{width:'100%',padding:'7px',borderRadius:'8px',border:'1px solid #ddd',fontSize:'13px'}} />
+                          {photoUploading && <p style={{fontSize:12,color:'#1565C0',margin:'4px 0 0'}}>⏳ Uploading...</p>}
+                          {staffForm.photo && !photoUploading && <p style={{fontSize:12,color:'#2E7D32',margin:'4px 0 0'}}>✅ Photo uploaded</p>}
+                        </div>
+                      </div>
                     </div>
                     <div className="form-group">
                       <label>Staff Section Role *</label>
