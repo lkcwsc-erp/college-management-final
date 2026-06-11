@@ -791,7 +791,7 @@ const printTC = (adm) => {
 
     /* ── Header ── */
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
-    .hlogo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
+    .hlogo{width:100px;height:100px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:12px;color:#444;font-style:italic;margin-bottom:3px}
     .hname{font-size:22px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.3px}
@@ -951,7 +951,7 @@ const printBonafide = (adm) => {
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
-    .logo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
+    .logo{width:100px;height:100px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:12px;color:#444;font-style:italic}
     .h3{font-size:23px;font-weight:900;color:#000;margin:3px 0 2px}
