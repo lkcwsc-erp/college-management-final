@@ -8,18 +8,15 @@ const FORM_TYPES = [
   { key: 'backlog', label: '📋 Backlog Exam Form Request', color: '#E65100', bg: '#fff8e1' },
 ];
 
-// ─── Exam fee lines from the college fee structure (per-semester amounts) ──────
-// Mirror of the "Examination Fee" + "Practical Exam Fee" lines in DETAILED_FEES
-// (AccountsSectionDashboard). s = [Sem1, Sem2, Sem3, Sem4, Sem5, Sem6].
-// Yahi se student ke course + semester ke hisab se exam fee auto-calculate hoti hai.
+// ─── Exam fee line from the college fee structure (per-semester amounts) ───────
+// Sirf "Examination Fee" line (Practical Exam Fee include NAHI hoti).
+// s = [Sem1, Sem2, Sem3, Sem4, Sem5, Sem6].
 const EXAM_FEE_LINES = {
   BA: [
-    { name: 'Examination Fee',             s: [750, 750, 750, 750, 750, 750] },
-    { name: 'Practical Exam Fee (Geo/Psy)', s: [0, 0, 0, 0, 500, 500] },
+    { name: 'Examination Fee', s: [750, 750, 750, 750, 750, 750] },
   ],
   BSC: [
-    { name: 'Examination Fee',  s: [750, 750, 750, 750, 750, 750] },
-    { name: 'Practical Exam Fee', s: [250, 250, 250, 250, 250, 250] },
+    { name: 'Examination Fee', s: [750, 750, 750, 750, 750, 750] },
   ],
 };
 
@@ -252,15 +249,16 @@ const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
               </div>
             ) : (
               <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 18, fontSize: 12.5, color: '#8a6d00' }}>
-                ⚠️ Is student ke course/semester ke liye fee structure me exam fee nahi mili. Amount manually enter karein.
+                ⚠️ Is student ke course/semester ke liye fee structure me exam fee nahi mili. Collect nahi kar sakte.
               </div>
             )}
 
             <label style={{ fontWeight: 700, fontSize: 13, display: 'block', marginBottom: 6 }}>
-              Exam Fee Amount (₹) * {feeInfo.ok && feeInfo.total > 0 && <span style={{ color: '#2E7D32', fontWeight: 600 }}>— auto-filled, edit if needed</span>}
+              Exam Fee Amount (₹) <span style={{ color: '#888', fontWeight: 600 }}>— 🔒 fixed (fee structure se)</span>
             </label>
-            <input type="number" min="1" placeholder="e.g. 1000" value={amount} onChange={e => setAmount(e.target.value)}
-              style={{ width: '100%', padding: '11px 14px', borderRadius: 9, border: '1.5px solid #ddd', fontSize: 15, marginBottom: 18, boxSizing: 'border-box', outline: 'none' }} />
+            <div style={{ width: '100%', padding: '12px 14px', borderRadius: 9, border: '1.5px solid #c5e1a5', background: '#f7fbf0', fontSize: 17, fontWeight: 800, color: '#1b5e20', marginBottom: 18, boxSizing: 'border-box' }}>
+              ₹{(Number(amount) || 0).toLocaleString('en-IN')}
+            </div>
 
             <p style={{ fontWeight: 600, color: '#333', marginBottom: 10 }}>Payment Mode</p>
             <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
