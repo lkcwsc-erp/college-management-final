@@ -941,7 +941,7 @@ const PublishedFormSubmissionsTab = () => {
   const loadData = () => {
     setLoading(true);
     Promise.all([
-      API.get('/results/exam-form/published'),
+      API.get('/results/exam-form/published?includeInactive=true'),
       API.get('/results/exam-form/all'),
     ]).then(([pRes, rRes]) => {
       setForms(pRes.data.published || []);
@@ -971,7 +971,7 @@ const PublishedFormSubmissionsTab = () => {
     forms.forEach(f => {
       map.set(groupKey(f), {
         formType: f.formType, course: f.course, semester: f.semester,
-        examEvent: f.examEvent, admissionYear: f.admissionYear, published: true,
+        examEvent: f.examEvent, admissionYear: f.admissionYear, published: f.active !== false,
       });
     });
     requests.forEach(r => {
