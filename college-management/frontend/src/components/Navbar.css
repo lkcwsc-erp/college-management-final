@@ -28,6 +28,7 @@
   padding: 0;
   object-fit: contain;
   flex-shrink: 0;
+  mix-blend-mode: lighten;
 }
 
 .brand-text {
