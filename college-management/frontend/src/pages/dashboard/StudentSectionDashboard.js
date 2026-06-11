@@ -790,7 +790,7 @@ const printTC = (adm) => {
     }
 
     /* ── Header ── */
-    .hdr{display:flex;align-items:center;justify-content:center;gap:14px;border-bottom:2px solid #000;padding:8px 14px}
+    .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
     .hlogo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:10px;color:#444;font-style:italic;margin-bottom:2px}
@@ -950,7 +950,7 @@ const printBonafide = (adm) => {
     body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px}
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
-    .hdr{display:flex;align-items:center;justify-content:center;gap:14px;border-bottom:2px solid #000;padding:8px 14px}
+    .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
     .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:10px;color:#444;font-style:italic}
