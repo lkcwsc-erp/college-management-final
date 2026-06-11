@@ -791,7 +791,7 @@ const printTC = (adm) => {
 
     /* ── Header ── */
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
-    .hlogo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
+    .hlogo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:12px;color:#444;font-style:italic;margin-bottom:3px}
     .hname{font-size:22px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.3px}
