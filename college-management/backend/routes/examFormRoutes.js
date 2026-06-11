@@ -100,17 +100,24 @@ router.post('/exam-form/publish', protect, authorizeRoles('staff_exam', 'admin',
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/exam-form/published', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
-    const published = await PublishedExamForm.find({ active: true }).sort({ createdAt: -1 });
+    // includeInactive=true -> unpublished (active:false) forms bhi aate hai
+    // (Exam Form Submissions tab inhe use karta hai taaki record gayab na ho).
+    const filter = req.query.includeInactive === 'true' ? {} : { active: true };
+    const published = await PublishedExamForm.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, published });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/results/exam-form/published/:id  (unpublish)
+// SOFT delete: form ko active:false karta hai (record delete NAHI hota).
+// Students ko form dikhna band ho jata hai, par Exam Form Submissions tab me
+// uska record + paid students ka data wesa hi rehta hai. Permanent delete ke
+// liye alag se "Edit/Delete" (group delete) use hota hai.
 // ─────────────────────────────────────────────────────────────────────────────
 router.delete('/exam-form/published/:id', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
-    await PublishedExamForm.findByIdAndDelete(req.params.id);
+    await PublishedExamForm.findByIdAndUpdate(req.params.id, { $set: { active: false } });
     res.json({ success: true, message: 'Exam form unpublished.' });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
