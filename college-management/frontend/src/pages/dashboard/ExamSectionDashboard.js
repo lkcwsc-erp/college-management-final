@@ -917,6 +917,182 @@ const ExamDataTab = () => {
 };
 
 
+// ─── Exam Form Submissions Tab ────────────────────────────────────────────────
+// Examination Section: jo exam forms publish kiye gaye hai unki list dikhati hai.
+// Kisi form pe click karne par — jis jis student ne wo form fill karke fees pay
+// ki hai — unka data (name, PRN, student ID, course, year, sem, mobile, fee) aata hai.
+const PublishedFormSubmissionsTab = () => {
+  const [forms, setForms]       = useState([]);   // published exam forms
+  const [requests, setRequests] = useState([]);   // saare exam-form requests
+  const [loading, setLoading]   = useState(false);
+  const [selected, setSelected] = useState(null);  // jis form pe click kiya
+  const [search, setSearch]     = useState('');
+
+  // course ko format-tolerant banata hai (BA / B.A. / Bachelor of Arts -> 'ba')
+  const normCourse = (c) => {
+    const s = String(c || '').toLowerCase();
+    if (s.includes('b.sc') || s.includes('bsc') || s.includes('science')) return 'bsc';
+    if (s.includes('b.a')  || s.includes('ba')  || s.includes('arts'))    return 'ba';
+    return s.replace(/[^a-z0-9]/g, '');
+  };
+
+  const loadData = () => {
+    setLoading(true);
+    Promise.all([
+      API.get('/results/exam-form/published'),
+      API.get('/results/exam-form/all'),
+    ]).then(([pRes, rRes]) => {
+      setForms(pRes.data.published || []);
+      setRequests(rRes.data.requests || []);
+    }).catch(() => {}).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ek published form se match karne wale (form fill kiye hue) requests
+  const matchRequests = (f) => requests.filter(r =>
+    r.formType === f.formType &&
+    r.semester === f.semester &&
+    r.examEvent === f.examEvent &&
+    normCourse(r.course) === normCourse(f.course)
+  );
+
+  // sirf wo students jinhone fees pay kar di hai (feeStatus = collected)
+  const paidRequests = (f) => matchRequests(f).filter(r => r.feeStatus === 'collected');
+
+  // ── Detail view: ek form pe click karne ke baad ──────────────────────────────
+  if (selected) {
+    const paidAll = paidRequests(selected);
+    const q = search.trim().toLowerCase();
+    const paid = paidAll.filter(r =>
+      !q ||
+      r.studentName?.toLowerCase().includes(q) ||
+      r.prnNumber?.toLowerCase().includes(q)   ||
+      r.studentId?.toLowerCase().includes(q)   ||
+      r.mobileNo?.toLowerCase().includes(q)
+    );
+    const totalCollected = paidAll.reduce((sum, r) => sum + (Number(r.feeAmount) || 0), 0);
+    const cols = ['#', 'Student Name', 'PRN', 'Student ID', 'Course', 'Year', 'Sem', 'Mobile No', 'Exam Fee', 'Receipt'];
+    const gridCols = '40px 1.6fr 1.1fr 1.1fr 0.7fr 0.9fr 0.6fr 1fr 0.9fr 1.1fr';
+
+    return (
+      <div>
+        <button onClick={() => { setSelected(null); setSearch(''); }}
+          style={{ background:'#fff3e0', color:'#f57c00', border:'1px solid #f57c00', borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer', marginBottom:18 }}>← Back to Forms</button>
+
+        <div style={{ background:'linear-gradient(135deg,#fff3e0,#fffbf5)', border:`2px solid ${selected.formType==='regular'?'#2E7D32':'#E65100'}`, borderRadius:14, padding:'16px 20px', marginBottom:18 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+            <div>
+              <span style={{ fontSize:12, fontWeight:800, padding:'3px 12px', borderRadius:20, color:'#fff', background:selected.formType==='regular'?'#2E7D32':'#E65100' }}>
+                {selected.formType==='regular' ? '📋 REGULAR' : '📋 BACKLOG / KT'}
+              </span>
+              <h3 style={{ color:'#f57c00', margin:'10px 0 2px' }}>{selected.course} · {selected.semester} Semester</h3>
+              <p style={{ fontSize:13, color:'#666', margin:0 }}>{selected.admissionYear || '—'} · {selected.examEvent}</p>
+            </div>
+            <div style={{ display:'flex', gap:24, textAlign:'center' }}>
+              <div>
+                <div style={{ fontSize:24, fontWeight:800, color:'#1565C0' }}>{paidAll.length}</div>
+                <div style={{ fontSize:11, color:'#888', fontWeight:600 }}>PAID STUDENTS</div>
+              </div>
+              <div>
+                <div style={{ fontSize:24, fontWeight:800, color:'#2E7D32' }}>₹{totalCollected.toLocaleString('en-IN')}</div>
+                <div style={{ fontSize:11, color:'#888', fontWeight:600 }}>TOTAL COLLECTED</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <input type="text" placeholder="🔍 Search by name / PRN / ID / mobile..." value={search} onChange={e=>setSearch(e.target.value)}
+          style={{ width:'100%', maxWidth:420, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14, marginBottom:14, boxSizing:'border-box' }} />
+
+        {paidAll.length === 0 ? (
+          <div style={{ background:'#f8faff', borderRadius:12, padding:40, textAlign:'center', color:'#888' }}>
+            🔍 Abhi tak kisi student ne is form ki fees pay nahi ki hai.
+          </div>
+        ) : (
+          <div style={{ overflowX:'auto', borderRadius:14, border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
+            <div style={{ minWidth:980 }}>
+              <div style={{ display:'grid', gridTemplateColumns:gridCols, background:'#f57c00', padding:'11px 14px', gap:8 }}>
+                {cols.map(h => <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>)}
+              </div>
+              {paid.map((r, idx) => (
+                <div key={r._id || idx} style={{ display:'grid', gridTemplateColumns:gridCols, padding:'10px 14px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
+                  <span style={{ fontSize:12, color:'#888' }}>{idx+1}</span>
+                  <div>
+                    <p style={{ fontWeight:600, fontSize:13, margin:0 }}>{r.studentName || '—'}</p>
+                    <p style={{ fontSize:10, color:'#888', margin:0 }}>{r.studentEmail || ''}</p>
+                  </div>
+                  <span style={{ fontSize:12 }}>{r.prnNumber || '—'}</span>
+                  <span style={{ fontSize:12 }}>{r.studentId || '—'}</span>
+                  <span style={{ fontSize:12 }}>{r.course || '—'}</span>
+                  <span style={{ fontSize:12 }}>{r.admissionYear || '—'}</span>
+                  <span style={{ fontSize:12 }}>{r.semester || '—'}</span>
+                  <span style={{ fontSize:12 }}>{r.mobileNo || '—'}</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:'#2E7D32' }}>₹{(Number(r.feeAmount)||0).toLocaleString('en-IN')}</span>
+                  <span style={{ fontSize:11, color:'#666' }}>{r.feeReceiptNo || '—'}</span>
+                </div>
+              ))}
+              {paid.length === 0 && (
+                <div style={{ padding:24, textAlign:'center', color:'#aaa', fontSize:13 }}>No match for "{search}".</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── List view: saare published forms cards ke roop me ────────────────────────
+  return (
+    <div>
+      <h2 style={{ color:'#f57c00', marginBottom:4 }}>📝 Exam Form Submissions</h2>
+      <p style={{ color:'#666', marginBottom:20, fontSize:14 }}>Published exam forms ki list. Kisi form pe click karein — us form ko fill karke fees pay karne wale students ka pura data dikhega.</p>
+
+      {loading ? <div style={{ textAlign:'center', padding:30, fontSize:'2rem' }}>⏳</div>
+      : forms.length === 0 ? (
+        <div style={{ background:'#f8faff', borderRadius:12, padding:40, textAlign:'center', color:'#888' }}>
+          Abhi tak koi exam form publish nahi hua hai. Pehle "📤 Publish Exam Form" se form publish karein.
+        </div>
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(290px,1fr))', gap:16 }}>
+          {forms.map(f => {
+            const filled = matchRequests(f).length;
+            const paid   = paidRequests(f).length;
+            const isReg  = f.formType === 'regular';
+            return (
+              <div key={f._id} onClick={() => { setSelected(f); setSearch(''); }}
+                style={{ cursor:'pointer', background:'#fff', borderRadius:14, border:`2px solid ${isReg?'#2E7D32':'#E65100'}`, padding:18, boxShadow:'0 2px 10px rgba(0,0,0,.05)', transition:'transform .12s' }}
+                onMouseEnter={e=>e.currentTarget.style.transform='translateY(-3px)'}
+                onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <span style={{ fontSize:11, fontWeight:800, padding:'3px 11px', borderRadius:20, color:'#fff', background:isReg?'#2E7D32':'#E65100' }}>
+                    {isReg ? 'REGULAR' : 'BACKLOG / KT'}
+                  </span>
+                  <span style={{ fontSize:22 }}>📋</span>
+                </div>
+                <h3 style={{ color:'#333', margin:'0 0 4px', fontSize:17 }}>{f.course} · {f.semester} Sem</h3>
+                <p style={{ fontSize:12, color:'#888', margin:'0 0 14px' }}>{f.admissionYear || '—'} · {f.examEvent}</p>
+                <div style={{ display:'flex', gap:10 }}>
+                  <div style={{ flex:1, background:'#eef4ff', borderRadius:9, padding:'8px 10px', textAlign:'center' }}>
+                    <div style={{ fontSize:18, fontWeight:800, color:'#1565C0' }}>{filled}</div>
+                    <div style={{ fontSize:10, color:'#666', fontWeight:600 }}>FORM FILLED</div>
+                  </div>
+                  <div style={{ flex:1, background:'#e8f5e9', borderRadius:9, padding:'8px 10px', textAlign:'center' }}>
+                    <div style={{ fontSize:18, fontWeight:800, color:'#2E7D32' }}>{paid}</div>
+                    <div style={{ fontSize:10, color:'#666', fontWeight:600 }}>FEES PAID</div>
+                  </div>
+                </div>
+                <div style={{ marginTop:12, fontSize:12, color:'#f57c00', fontWeight:600, textAlign:'right' }}>View paid students →</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 // Which semesters belong to each academic year (used by Publish Exam Form).
 // Year select karne par sirf us year ke 2 semester hi dikhenge.
 const SEM_BY_YEAR = {
@@ -1000,6 +1176,7 @@ const ExamSectionDashboard = () => {
   const tabs = [
     { id: 'home',          label: '🏠 Dashboard' },
     { id: 'publish',       label: '📤 Publish Exam Form' },
+    { id: 'form_subs',     label: '📝 Exam Form Submissions' },
     { id: 'upload_result', label: '📊 Upload Result' },
     { id: 'tc_verify',     label: '📄 TC Verification' },
     { id: 'marksheet',     label: '📋 Marksheet Requests' },
@@ -1197,6 +1374,7 @@ const ExamSectionDashboard = () => {
           {activeTab === 'tc_verify'     && <ExamDocTab type="TC" title="📄 TC Verification" desc="Verify student result status before TC is sent to Principal." color="#1565C0" />}
           {activeTab === 'marksheet'     && <ExamDocTab type="MARKSHEET" title="📋 Marksheet Requests" desc="Process marksheet requests from students." color="#f57c00" />}
           {activeTab === 'exam_data' && <ExamDataTab />}
+          {activeTab === 'form_subs' && <PublishedFormSubmissionsTab />}
 
           {activeTab === 'students'      && (
             <div>
