@@ -302,4 +302,34 @@ router.get('/exam-form/by-student/:email', protect,
   }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/results/exam-form/group  (exam + admin + principal)
+// body: { formType, course, semester, examEvent }
+// Ek poore exam form ka record delete karta hai — us form ke saare student
+// submissions + (agar abhi published hai to) published entry bhi.
+// NOTE: Unpublish is route ko call NAHI karta — unpublish par submissions safe
+// rehte hai. Records sirf yahan se explicitly delete hote hai.
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/exam-form/group', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
+  try {
+    const { formType, course, semester, examEvent } = req.body || {};
+    if (!formType || !course || !semester || !examEvent)
+      return res.status(400).json({ success: false, message: 'formType, course, semester and examEvent are required.' });
+
+    const want = normCourse(course);
+
+    // matching student submissions delete karo (course ko format-tolerant match karke)
+    const reqs   = await ExamFormRequest.find({ formType, semester, examEvent });
+    const reqIds = reqs.filter(r => normCourse(r.course) === want).map(r => r._id);
+    const delReqs = await ExamFormRequest.deleteMany({ _id: { $in: reqIds } });
+
+    // agar abhi bhi published hai to wo entry bhi delete karo
+    const pubs   = await PublishedExamForm.find({ formType, semester, examEvent });
+    const pubIds = pubs.filter(p => normCourse(p.course) === want).map(p => p._id);
+    await PublishedExamForm.deleteMany({ _id: { $in: pubIds } });
+
+    res.json({ success: true, message: 'Exam form record deleted.', deletedCount: delReqs.deletedCount });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 module.exports = router;
