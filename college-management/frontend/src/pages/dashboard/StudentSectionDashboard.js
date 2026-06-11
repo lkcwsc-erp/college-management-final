@@ -263,13 +263,54 @@ const StudentSectionDashboard = () => {
     catch (err) { alert('Failed to delete enquiry.'); }
   };
 
-const handleCreateStudent = async (e) => {
+  const handleCreateStudent = async (e) => {
     e.preventDefault(); setCredLoading(true); setCredMsg('');
     try {
-      const res = await API.post('/auth/register-student', credForm);
+      // Verify Aadhar against admissions
+      const admRes = await API.get('/admissions/staff-view/all');
+      const allAdm = admRes.data.admissions || [];
+      const matchedAdm = allAdm.find(a =>
+        a.aadharNumber && a.aadharNumber.replace(/\s/g,'') === credForm.aadharNumber.replace(/\s/g,'')
+      );
+      if (!matchedAdm) {
+        setCredMsg('❌ Aadhar number kisi bhi admission form mein nahi mila. Aadhar number dobara check karein.');
+        setCredLoading(false);
+        return;
+      }
+      // Admission approved hai ya nahi check
+      const approvedStatuses = ['approved', 'principal_approved', 'approved_by_principal', 'credentials_issued'];
+      if (!approvedStatuses.includes(matchedAdm.status)) {
+        setCredMsg(`❌ Is student ki admission abhi "${matchedAdm.status}" status mein hai. Credential banane ke liye pehle admission approve honi chahiye.`);
+        setCredLoading(false);
+        return;
+      }
+      // Auto-fill from admission
+      const nameParts = (matchedAdm.applicantName || '').trim().split(' ');
+      const enrichedForm = {
+        ...credForm,
+        email: credForm.email || matchedAdm.email || '',
+        firstName: credForm.firstName || nameParts[0] || '',
+        middleName: credForm.middleName || (nameParts.length === 3 ? nameParts[1] : '') || '',
+        lastName: credForm.lastName || (nameParts.length >= 2 ? nameParts[nameParts.length - 1] : '') || '',
+        dateOfBirth: credForm.dateOfBirth || (matchedAdm.dateOfBirth ? matchedAdm.dateOfBirth.split('T')[0] : ''),
+        phone: credForm.phone || matchedAdm.phone || '',
+      };
+
+      if (!enrichedForm.email) {
+        setCredMsg('❌ Student ka email address admission form mein nahi hai. Upar Email field mein manually enter karein.');
+        setCredLoading(false);
+        return;
+      }
+      if (!enrichedForm.dateOfBirth) {
+        setCredMsg('❌ Date of Birth required hai — admission form mein nahi mila, upar manually enter karein.');
+        setCredLoading(false);
+        return;
+      }
+
+      const res = await API.post('/auth/register-student', enrichedForm);
       if (res.data.success) {
         setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
-        setCredMsg('✅ Student account successfully create ho gaya!');
+        setCredMsg('✅ Student account successfully create ho gaya — ' + matchedAdm.applicantName + '!');
         setCredForm({ firstName: '', middleName: '', lastName: '', aadharNumber: '', email: '', phone: '', dateOfBirth: '' });
       }
     } catch (err) {
@@ -282,8 +323,9 @@ const handleCreateStudent = async (e) => {
         setCredMsg('❌ ' + msg);
       }
     }
-  finally { setCredLoading(false); }
+    finally { setCredLoading(false); }
   };
+
   const getStatusStyle = (status) => {
     const styles = {
       pending:            { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' },
@@ -748,11 +790,11 @@ const printTC = (adm) => {
     }
 
     /* ── Header ── */
-    .hdr{display:flex;align-items:center;gap:6px;border-bottom:2px solid #000;padding:5px 10px}
-    .hlogo{width:96px;height:96px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;justify-content:center;gap:14px;border-bottom:2px solid #000;padding:8px 14px}
+    .hlogo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:10px;color:#444;font-style:italic;margin-bottom:2px}
-    .hname{font-size:18px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.3px}
+    .hname{font-size:16px;font-weight:900;color:#000;line-height:1.3;margin:1px 0;letter-spacing:0.3px}
     .huniv{font-size:9.5px;color:#333;margin-top:2px}
     .haddr{font-size:9.5px;color:#333;margin-top:2px;line-height:1.5}
     .hcontact{font-size:9px;color:#555;margin-top:3px}
@@ -908,11 +950,11 @@ const printBonafide = (adm) => {
     body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px}
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
-    .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
-    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;justify-content:center;gap:14px;border-bottom:2px solid #000;padding:8px 14px}
+    .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:10px;color:#444;font-style:italic}
-    .h3{font-size:21px;font-weight:900;color:#000;margin:3px 0 2px}
+    .h3{font-size:18px;font-weight:900;color:#000;margin:2px 0 1px}
     .h2{font-size:10.5px;color:#333;margin-bottom:2px}
     .h4{font-size:11px;color:#000;margin-bottom:1px}
     .h5{font-size:10px;color:#555}
