@@ -768,7 +768,10 @@ const ExamDataTab = () => {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  const getStudentResults = (email) => results.filter(r => r.studentEmail === email);
+  const getStudentResults = (email) => {
+    const e = (email || '').toLowerCase();
+    return results.filter(r => (r.studentEmail || '').toLowerCase() === e);
+  };
 
   const statusColor = (res) => ({
     DISTINCTION: '#1b5e20', PASS: '#2E7D32', ATKT: '#E65100', FAIL: '#C62828'
@@ -852,7 +855,7 @@ const ExamDataTab = () => {
                   const rRes = await API.get('/results/all-results');
                   const allR = rRes.data.results || [];
                   setResults(allR);
-                  setSelResults(allR.filter(r => r.studentEmail === selected.email));
+                  setSelResults(allR.filter(r => (r.studentEmail || '').toLowerCase() === (selected.email || '').toLowerCase()));
                   setTimeout(() => setMsg(''), 3000);
                 } catch (e) { setMsg('❌ ' + (e.response?.data?.message||'Failed')); }
                 finally { setSaving(false); }
