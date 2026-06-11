@@ -39,9 +39,16 @@ const ResultUploadTab = () => {
         else { setFoundAdm(found); setStep(2); }
       } else {
         // Filter by course + year
+        const normYear = (y) => {
+          const v = (y || '').toLowerCase();
+          if (v.includes('1st') || v.includes('first')) return '1';
+          if (v.includes('2nd') || v.includes('second')) return '2';
+          if (v.includes('3rd') || v.includes('third')) return '3';
+          return v;
+        };
         const filtered = all.filter(a => {
-          const mc = !courseFilter || (a.courseType||'').toLowerCase().includes(courseFilter.toLowerCase());
-          const my = !yearFilter2 || a.admissionYear === yearFilter2;
+          const mc = !courseFilter || (a.courseType || '').toLowerCase() === courseFilter.toLowerCase();
+          const my = !yearFilter2 || normYear(a.admissionYear) === normYear(yearFilter2);
           return mc && my;
         });
         if (filtered.length === 0) { setSearchErr('No students found.'); }
@@ -95,8 +102,8 @@ const ResultUploadTab = () => {
           <select value={courseFilter} onChange={e => { setCourseFilter(e.target.value); setIdSearch(''); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
             <option value="">All Courses</option>
-            <option value="B.A.">B.A.</option>
-            <option value="B.Sc.">B.Sc.</option>
+            <option value="BA">B.A.</option>
+            <option value="BSc">B.Sc.</option>
           </select>
           <select value={yearFilter2} onChange={e => { setYearFilter2(e.target.value); setIdSearch(''); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
