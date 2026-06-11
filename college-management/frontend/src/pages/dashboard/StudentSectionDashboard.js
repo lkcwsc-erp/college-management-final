@@ -793,11 +793,11 @@ const printTC = (adm) => {
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
     .hlogo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .htrust{font-size:10px;color:#444;font-style:italic;margin-bottom:2px}
-    .hname{font-size:16px;font-weight:900;color:#000;line-height:1.3;margin:1px 0;letter-spacing:0.3px}
-    .huniv{font-size:9.5px;color:#333;margin-top:2px}
-    .haddr{font-size:9.5px;color:#333;margin-top:2px;line-height:1.5}
-    .hcontact{font-size:9px;color:#555;margin-top:3px}
+    .htrust{font-size:12px;color:#444;font-style:italic;margin-bottom:3px}
+    .hname{font-size:22px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.3px}
+    .huniv{font-size:11px;color:#333;margin-top:3px}
+    .haddr{font-size:11px;color:#333;margin-top:3px;line-height:1.5}
+    .hcontact{font-size:10.5px;color:#555;margin-top:4px}
 
     /* ── Title ── */
     .titlesec{text-align:center;padding:7px 0 3px;border-bottom:1.5px solid #000}
@@ -953,11 +953,11 @@ const printBonafide = (adm) => {
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
     .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .h1{font-size:10px;color:#444;font-style:italic}
-    .h3{font-size:18px;font-weight:900;color:#000;margin:2px 0 1px}
-    .h2{font-size:10.5px;color:#333;margin-bottom:2px}
-    .h4{font-size:11px;color:#000;margin-bottom:1px}
-    .h5{font-size:10px;color:#555}
+    .h1{font-size:12px;color:#444;font-style:italic}
+    .h3{font-size:23px;font-weight:900;color:#000;margin:3px 0 2px}
+    .h2{font-size:12px;color:#333;margin-bottom:3px}
+    .h4{font-size:12.5px;color:#000;margin-bottom:2px}
+    .h5{font-size:11.5px;color:#555}
     /* Title */
     .titlebar{text-align:center;padding:8px 0;border-bottom:1px solid #000}
     .titletxt{font-size:17px;font-weight:900;letter-spacing:5px;text-decoration:underline;text-underline-offset:4px}
