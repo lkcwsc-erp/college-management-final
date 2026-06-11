@@ -8,7 +8,7 @@ import StudentViewFull from './StudentViewFull';
 // ─── Result Upload Tab ────────────────────────────────────────────────────────
 const ResultUploadTab = () => {
   const [step, setStep]             = useState(1); // 1=find student, 2=enter marks
-  const [emailSearch, setEmailSearch] = useState('');
+  const [idSearch, setIdSearch] = useState('');
   const [foundAdm, setFoundAdm]     = useState(null);
   const [searching, setSearching]   = useState(false);
   const [searchErr, setSearchErr]   = useState('');
@@ -24,14 +24,18 @@ const ResultUploadTab = () => {
   const [showList, setShowList] = useState(false);
 
   const findStudent = async () => {
-    if (!emailSearch.trim() && !courseFilter && !yearFilter2) return;
+    if (!idSearch.trim() && !courseFilter && !yearFilter2) return;
     setSearching(true); setSearchErr(''); setFoundAdm(null); setShowList(false);
     try {
       const res = await API.get('/admissions/staff-view/all');
       const all = res.data.admissions || [];
-      if (emailSearch.trim()) {
-        const found = all.find(a => a.email?.toLowerCase() === emailSearch.toLowerCase().trim());
-        if (!found) { setSearchErr('No student found with this email.'); }
+      if (idSearch.trim()) {
+        const q = idSearch.toLowerCase().trim();
+        const found = all.find(a =>
+          (a.prnNumber && a.prnNumber.toLowerCase() === q) ||
+          (a.studentId && a.studentId.toLowerCase() === q)
+        );
+        if (!found) { setSearchErr('No student found with this PRN / Student ID.'); }
         else { setFoundAdm(found); setStep(2); }
       } else {
         // Filter by course + year
@@ -65,7 +69,7 @@ const ResultUploadTab = () => {
         subjects: subjects.map(s => ({ name: s.name.trim(), maxMarks: Number(s.maxMarks), obtainedMarks: Number(s.obtainedMarks) })),
       });
       setMsg('✅ Result uploaded successfully!');
-      setStep(1); setEmailSearch(''); setFoundAdm(null); setSemester(''); setYear(new Date().getFullYear().toString());
+      setStep(1); setIdSearch(''); setFoundAdm(null); setSemester(''); setYear(new Date().getFullYear().toString());
       setSubjects([{ name: '', maxMarks: 100, obtainedMarks: '' }]);
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Upload failed')); }
     finally { setUploading(false); }
@@ -74,27 +78,27 @@ const ResultUploadTab = () => {
   return (
     <div>
       <h2 style={{ color: '#f57c00', marginBottom: 4 }}>📊 Upload / Update Result</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Enter student email to find them, then enter subject-wise marks.</p>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Enter student PRN or Student ID to find them, then enter subject-wise marks. Or filter by course & year to see all students.</p>
 
       {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
 
       {/* Step 1 — find student */}
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20, marginBottom: 20 }}>
-        <h4 style={{ color: '#f57c00', marginBottom: 14 }}>Step 1 — Find Student by Email</h4>
+        <h4 style={{ color: '#f57c00', marginBottom: 14 }}>Step 1 — Find Student by PRN / Student ID</h4>
         <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-          <input type="email" placeholder="Search by email..." value={emailSearch} onChange={e => { setEmailSearch(e.target.value); if(e.target.value) { setCourseFilter(''); setYearFilter2(''); } }}
+          <input type="text" placeholder="Search by PRN or Student ID..." value={idSearch} onChange={e => { setIdSearch(e.target.value); if(e.target.value) { setCourseFilter(''); setYearFilter2(''); } }}
             onKeyDown={e => e.key === 'Enter' && findStudent()}
             style={{ flex: 1, padding: '10px 14px', borderRadius: 9, border: '2px solid #f57c00', fontSize: 14, outline: 'none' }} />
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
           <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>OR filter by:</span>
-          <select value={courseFilter} onChange={e => { setCourseFilter(e.target.value); setEmailSearch(''); }}
+          <select value={courseFilter} onChange={e => { setCourseFilter(e.target.value); setIdSearch(''); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
             <option value="">All Courses</option>
             <option value="B.A.">B.A.</option>
             <option value="B.Sc.">B.Sc.</option>
           </select>
-          <select value={yearFilter2} onChange={e => { setYearFilter2(e.target.value); setEmailSearch(''); }}
+          <select value={yearFilter2} onChange={e => { setYearFilter2(e.target.value); setIdSearch(''); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
             <option value="">All Years</option>
             <option value="1st Year">1st Year</option>
@@ -113,7 +117,7 @@ const ResultUploadTab = () => {
               <div key={a._id} onClick={() => { setFoundAdm(a); setStep(2); setShowList(false); }}
                 style={{ padding: '10px 14px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', fontSize: 13, background: '#fff' }}
                 onMouseEnter={e => e.target.style.background='#fff3e0'} onMouseLeave={e => e.target.style.background='#fff'}>
-                <strong>{a.applicantName}</strong> — {a.courseType} · {a.admissionYear} · {a.email}
+                <strong>{a.applicantName}</strong> — {a.courseType} · {a.admissionYear} · PRN: {a.prnNumber || '—'} · ID: {a.studentId || '—'}
               </div>
             ))}
           </div>
@@ -121,7 +125,7 @@ const ResultUploadTab = () => {
         {searchErr && <p style={{ color: '#C62828', fontSize: 13, marginTop: 8 }}>{searchErr}</p>}
         {foundAdm && (
           <div style={{ background: '#e8f5e9', borderRadius: 10, padding: '12px 16px', marginTop: 12, fontSize: 13 }}>
-            ✅ Found: <strong>{foundAdm.applicantName}</strong> — {foundAdm.courseType} · {foundAdm.admissionYear} · ID: {foundAdm.studentId || '—'}
+            ✅ Found: <strong>{foundAdm.applicantName}</strong> — {foundAdm.courseType} · {foundAdm.admissionYear} · PRN: {foundAdm.prnNumber || '—'} · ID: {foundAdm.studentId || '—'}
           </div>
         )}
       </div>
@@ -765,7 +769,7 @@ const ExamDataTab = () => {
 
   const filtered = admissions.filter(s => {
     const q = search.toLowerCase();
-    const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q);
+    const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.prnNumber?.toLowerCase().includes(q);
     const my = yearF === 'all' || s.admissionYear === yearF;
     return mq && my;
   });
@@ -887,7 +891,7 @@ const ExamDataTab = () => {
               <div key={s._id} style={{ display:'grid', gridTemplateColumns:'2fr 1.5fr 1fr 1fr 0.6fr', padding:'10px 14px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
                 <div>
                   <p style={{ fontWeight:600, fontSize:13, margin:0 }}>{s.applicantName}</p>
-                  <p style={{ fontSize:10, color:'#888', margin:0 }}>{s.email}</p>
+                  <p style={{ fontSize:10, color:'#888', margin:0 }}>PRN: {s.prnNumber || '—'} · ID: {s.studentId || '—'}</p>
                 </div>
                 <span style={{ fontSize:12 }}>{s.courseType} · {s.admissionYear}</span>
                 <span style={{ fontSize:13, fontWeight:700, color: sResults.length>0?'#1565C0':'#aaa' }}>{sResults.length} exam{sResults.length!==1?'s':''}</span>
