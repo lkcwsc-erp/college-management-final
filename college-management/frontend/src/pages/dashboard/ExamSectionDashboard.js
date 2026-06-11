@@ -927,6 +927,8 @@ const PublishedFormSubmissionsTab = () => {
   const [loading, setLoading]   = useState(false);
   const [selected, setSelected] = useState(null);  // jis form pe click kiya
   const [search, setSearch]     = useState('');
+  const [manageMode, setManageMode] = useState(false); // edit/delete mode
+  const [deleting, setDeleting]     = useState(false);
 
   // course ko format-tolerant banata hai (BA / B.A. / Bachelor of Arts -> 'ba')
   const normCourse = (c) => {
@@ -959,6 +961,50 @@ const PublishedFormSubmissionsTab = () => {
 
   // sirf wo students jinhone fees pay kar di hai (feeStatus = collected)
   const paidRequests = (f) => matchRequests(f).filter(r => r.feeStatus === 'collected');
+
+  // ── Form groups: published forms + submissions dono se bante hai ─────────────
+  // Isse unpublish karne ke baad bhi (jab tak submissions hai) form list me rehta
+  // hai — koi record gayab nahi hota.
+  const groupKey = (f) => `${f.formType}||${normCourse(f.course)}||${f.semester}||${f.examEvent}`;
+  const buildGroups = () => {
+    const map = new Map();
+    forms.forEach(f => {
+      map.set(groupKey(f), {
+        formType: f.formType, course: f.course, semester: f.semester,
+        examEvent: f.examEvent, admissionYear: f.admissionYear, published: true,
+      });
+    });
+    requests.forEach(r => {
+      const k = groupKey(r);
+      if (!map.has(k)) {
+        map.set(k, {
+          formType: r.formType, course: r.course, semester: r.semester,
+          examEvent: r.examEvent, admissionYear: r.admissionYear, published: false,
+        });
+      }
+    });
+    return Array.from(map.values());
+  };
+  const formGroups = buildGroups();
+
+  // ek poore form ka record (submissions + published entry) delete karta hai
+  const deleteForm = async (g) => {
+    const total = matchRequests(g).length;
+    const paid  = paidRequests(g).length;
+    if (!window.confirm(
+      `⚠️ Delete this exam form record?\n\n${g.course} · ${g.semester} Sem · ${g.formType === 'regular' ? 'Regular' : 'Backlog'}\n${g.examEvent}\n\n${total} submission(s) (${paid} paid) PERMANENTLY delete ho jayenge. Ye wapas nahi aayega.\n\nContinue?`
+    )) return;
+    setDeleting(true);
+    try {
+      await API.delete('/results/exam-form/group', {
+        data: { formType: g.formType, course: g.course, semester: g.semester, examEvent: g.examEvent },
+      });
+      if (selected && groupKey(selected) === groupKey(g)) setSelected(null);
+      loadData();
+    } catch (e) {
+      alert('❌ ' + (e.response?.data?.message || 'Delete failed.'));
+    } finally { setDeleting(false); }
+  };
 
   // ── Detail view: ek form pe click karne ke baad ──────────────────────────────
   if (selected) {
@@ -1042,33 +1088,50 @@ const PublishedFormSubmissionsTab = () => {
     );
   }
 
-  // ── List view: saare published forms cards ke roop me ────────────────────────
+  // ── List view: saare forms (published + submissions) cards ke roop me ────────
   return (
     <div>
-      <h2 style={{ color:'#f57c00', marginBottom:4 }}>📝 Exam Form Submissions</h2>
-      <p style={{ color:'#666', marginBottom:20, fontSize:14 }}>Published exam forms ki list. Kisi form pe click karein — us form ko fill karke fees pay karne wale students ka pura data dikhega.</p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12, marginBottom:6 }}>
+        <div>
+          <h2 style={{ color:'#f57c00', marginBottom:4 }}>📝 Exam Form Submissions</h2>
+          <p style={{ color:'#666', margin:0, fontSize:14 }}>Exam forms ki list. Kisi form pe click karein — us form ko fill karke fees pay karne wale students ka pura data dikhega.</p>
+        </div>
+        {formGroups.length > 0 && (
+          <button onClick={() => setManageMode(m => !m)}
+            style={{ background: manageMode ? '#C62828' : '#fff3e0', color: manageMode ? '#fff' : '#f57c00', border:`1px solid ${manageMode ? '#C62828' : '#f57c00'}`, borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+            {manageMode ? '✓ Done' : '✏️ Edit / Delete'}
+          </button>
+        )}
+      </div>
+      {manageMode && (
+        <div style={{ background:'#fff8e1', border:'1px solid #ffe082', borderRadius:9, padding:'10px 14px', margin:'14px 0', fontSize:13, color:'#8a6d00' }}>
+          🗑️ Edit mode ON — jis form ko delete karna hai uske card pe "Delete" dabaayein. Records permanently delete honge.
+        </div>
+      )}
 
-      {loading ? <div style={{ textAlign:'center', padding:30, fontSize:'2rem' }}>⏳</div>
-      : forms.length === 0 ? (
-        <div style={{ background:'#f8faff', borderRadius:12, padding:40, textAlign:'center', color:'#888' }}>
+      {loading ? <div style={{ textAlign:'center', padding:30, fontSize:'2rem', marginTop:20 }}>⏳</div>
+      : formGroups.length === 0 ? (
+        <div style={{ background:'#f8faff', borderRadius:12, padding:40, textAlign:'center', color:'#888', marginTop:20 }}>
           Abhi tak koi exam form publish nahi hua hai. Pehle "📤 Publish Exam Form" se form publish karein.
         </div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(290px,1fr))', gap:16 }}>
-          {forms.map(f => {
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(290px,1fr))', gap:16, marginTop:20 }}>
+          {formGroups.map(f => {
             const filled = matchRequests(f).length;
             const paid   = paidRequests(f).length;
             const isReg  = f.formType === 'regular';
             return (
-              <div key={f._id} onClick={() => { setSelected(f); setSearch(''); }}
-                style={{ cursor:'pointer', background:'#fff', borderRadius:14, border:`2px solid ${isReg?'#2E7D32':'#E65100'}`, padding:18, boxShadow:'0 2px 10px rgba(0,0,0,.05)', transition:'transform .12s' }}
-                onMouseEnter={e=>e.currentTarget.style.transform='translateY(-3px)'}
+              <div key={groupKey(f)} onClick={() => { if (!manageMode) { setSelected(f); setSearch(''); } }}
+                style={{ cursor: manageMode ? 'default' : 'pointer', background:'#fff', borderRadius:14, border:`2px solid ${isReg?'#2E7D32':'#E65100'}`, padding:18, boxShadow:'0 2px 10px rgba(0,0,0,.05)', transition:'transform .12s' }}
+                onMouseEnter={e=>{ if(!manageMode) e.currentTarget.style.transform='translateY(-3px)'; }}
                 onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
                   <span style={{ fontSize:11, fontWeight:800, padding:'3px 11px', borderRadius:20, color:'#fff', background:isReg?'#2E7D32':'#E65100' }}>
                     {isReg ? 'REGULAR' : 'BACKLOG / KT'}
                   </span>
-                  <span style={{ fontSize:22 }}>📋</span>
+                  {f.published
+                    ? <span style={{ fontSize:22 }}>📋</span>
+                    : <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:20, background:'#eee', color:'#888' }}>UNPUBLISHED</span>}
                 </div>
                 <h3 style={{ color:'#333', margin:'0 0 4px', fontSize:17 }}>{f.course} · {f.semester} Sem</h3>
                 <p style={{ fontSize:12, color:'#888', margin:'0 0 14px' }}>{f.admissionYear || '—'} · {f.examEvent}</p>
@@ -1082,7 +1145,14 @@ const PublishedFormSubmissionsTab = () => {
                     <div style={{ fontSize:10, color:'#666', fontWeight:600 }}>FEES PAID</div>
                   </div>
                 </div>
-                <div style={{ marginTop:12, fontSize:12, color:'#f57c00', fontWeight:600, textAlign:'right' }}>View paid students →</div>
+                {manageMode ? (
+                  <button onClick={(e) => { e.stopPropagation(); deleteForm(f); }} disabled={deleting}
+                    style={{ marginTop:12, width:'100%', background:'#C62828', color:'#fff', border:'none', borderRadius:8, padding:'9px 0', fontSize:13, fontWeight:700, cursor: deleting ? 'not-allowed' : 'pointer' }}>
+                    {deleting ? '⏳ Deleting...' : '🗑️ Delete this form'}
+                  </button>
+                ) : (
+                  <div style={{ marginTop:12, fontSize:12, color:'#f57c00', fontWeight:600, textAlign:'right' }}>View paid students →</div>
+                )}
               </div>
             );
           })}
