@@ -137,6 +137,7 @@ router.post(
       } else {
         savedResult = await Result.create({
           admissionId: admission._id,
+          student: admission._id,        // safety: agar purane schema me student required ho
           studentEmail: studentEmail.toLowerCase(),
           studentName: admission.applicantName,
           courseType: courseType || admission.courseType,
