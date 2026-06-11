@@ -8,6 +8,49 @@ const FORM_TYPES = [
   { key: 'backlog', label: '📋 Backlog Exam Form Request', color: '#E65100', bg: '#fff8e1' },
 ];
 
+// ─── Exam fee lines from the college fee structure (per-semester amounts) ──────
+// Mirror of the "Examination Fee" + "Practical Exam Fee" lines in DETAILED_FEES
+// (AccountsSectionDashboard). s = [Sem1, Sem2, Sem3, Sem4, Sem5, Sem6].
+// Yahi se student ke course + semester ke hisab se exam fee auto-calculate hoti hai.
+const EXAM_FEE_LINES = {
+  BA: [
+    { name: 'Examination Fee',             s: [750, 750, 750, 750, 750, 750] },
+    { name: 'Practical Exam Fee (Geo/Psy)', s: [0, 0, 0, 0, 500, 500] },
+  ],
+  BSC: [
+    { name: 'Examination Fee',  s: [750, 750, 750, 750, 750, 750] },
+    { name: 'Practical Exam Fee', s: [250, 250, 250, 250, 250, 250] },
+  ],
+};
+
+// course string ('BA' / 'B.A.' / 'BSc' / 'B.Sc.' / 'Bachelor of Science') -> 'BA' | 'BSC'
+const courseKeyFor = (c) => {
+  const s = String(c || '').toLowerCase();
+  if (s.includes('b.sc') || s.includes('bsc') || s.includes('science')) return 'BSC';
+  if (s.includes('b.a')  || s.includes('ba')  || s.includes('arts'))    return 'BA';
+  return null;
+};
+
+// semester string ('4th' / '4' / 'Sem 4') -> 0-based index (3). Returns -1 if invalid.
+const semIndexFor = (sem) => {
+  const n = parseInt(String(sem).replace(/\D/g, ''), 10);
+  return (n >= 1 && n <= 6) ? n - 1 : -1;
+};
+
+// Student ke course + semester ke hisab se exam fee ka breakdown + total nikalta hai
+const computeExamFee = (req) => {
+  const key = courseKeyFor(req?.course);
+  const idx = semIndexFor(req?.semester);
+  if (!key || idx < 0 || !EXAM_FEE_LINES[key]) {
+    return { lines: [], total: 0, ok: false };
+  }
+  const lines = EXAM_FEE_LINES[key]
+    .map(l => ({ name: l.name, amount: Number(l.s[idx]) || 0 }))
+    .filter(l => l.amount > 0);
+  const total = lines.reduce((sum, l) => sum + l.amount, 0);
+  return { lines, total, ok: true };
+};
+
 // ─── Student Exam Form Requests (Accounts Section) ──────────────────────────────
 // Shows all exam-form requests submitted by students, grouped by Course (BA / BSc)
 // and then by type (Regular / Backlog). Accounts staff collect the exam fee here.
@@ -20,6 +63,7 @@ const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
   // collect-fee modal
   const [selected, setSelected] = useState(null);
   const [amount, setAmount]     = useState('');
+  const [feeInfo, setFeeInfo]   = useState({ lines: [], total: 0, ok: false });
   const [payMode, setPayMode]   = useState('cash');
   const [txnId, setTxnId]       = useState('');
   const [saving, setSaving]     = useState(false);
@@ -38,11 +82,13 @@ const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
 
   const openCollect = (req) => {
     setSelected(req);
-    setAmount('');
+    const info = computeExamFee(req);        // fee structure se auto-calculate
+    setFeeInfo(info);
+    setAmount(info.ok && info.total > 0 ? String(info.total) : '');
     setPayMode('cash');
     setTxnId('');
   };
-  const closeModal = () => { setSelected(null); setSaving(false); };
+  const closeModal = () => { setSelected(null); setFeeInfo({ lines: [], total: 0, ok: false }); setSaving(false); };
 
   const handleCollect = async () => {
     if (!amount || Number(amount) <= 0) { toast('Enter a valid amount.', 'error'); return; }
@@ -189,7 +235,30 @@ const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
               <div><strong>Form:</strong> {selected.formType === 'regular' ? 'Regular' : 'Backlog'} · {selected.semester} Sem · {selected.examEvent}</div>
             </div>
 
-            <label style={{ fontWeight: 700, fontSize: 13, display: 'block', marginBottom: 6 }}>Exam Fee Amount (₹) *</label>
+            {/* Auto-calculated exam fee (from college fee structure, by course + semester) */}
+            {feeInfo.ok && feeInfo.total > 0 ? (
+              <div style={{ background: '#f1f8e9', border: '1px solid #c5e1a5', borderRadius: 10, padding: 14, marginBottom: 18 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#2E7D32', marginBottom: 8 }}>
+                  ⚡ Auto-calculated from Fee Structure ({courseKeyFor(selected.course) === 'BSC' ? 'BSc' : 'BA'} · {selected.semester} Sem)
+                </div>
+                {feeInfo.lines.map((l, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#444', padding: '2px 0' }}>
+                    <span>{l.name}</span><span>₹{l.amount.toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 800, color: '#1b5e20', borderTop: '1px dashed #aed581', marginTop: 6, paddingTop: 6 }}>
+                  <span>Total Exam Fee</span><span>₹{feeInfo.total.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 18, fontSize: 12.5, color: '#8a6d00' }}>
+                ⚠️ Is student ke course/semester ke liye fee structure me exam fee nahi mili. Amount manually enter karein.
+              </div>
+            )}
+
+            <label style={{ fontWeight: 700, fontSize: 13, display: 'block', marginBottom: 6 }}>
+              Exam Fee Amount (₹) * {feeInfo.ok && feeInfo.total > 0 && <span style={{ color: '#2E7D32', fontWeight: 600 }}>— auto-filled, edit if needed</span>}
+            </label>
             <input type="number" min="1" placeholder="e.g. 1000" value={amount} onChange={e => setAmount(e.target.value)}
               style={{ width: '100%', padding: '11px 14px', borderRadius: 9, border: '1.5px solid #ddd', fontSize: 15, marginBottom: 18, boxSizing: 'border-box', outline: 'none' }} />
 
