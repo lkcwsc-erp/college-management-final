@@ -46,8 +46,76 @@ router.post(
       const Result = require('../models/Result');
       const Admission = require('../models/Admission');
 
-      const { studentEmail, semester, year, subjects, courseType } = req.body;
+      const { studentEmail, semester, year, subjects, courseType,
+              academicYear, status } = req.body;
+      const annualPercentage = req.body.percentage;
 
+      // ── NEW: simplified annual result (year + status + percentage, no subjects) ──
+      // Upload Result tab ab sirf: academic year + result status + percentage bhejta hai.
+      if (!subjects || !subjects.length) {
+        if (!studentEmail || !academicYear || !status ||
+            annualPercentage === undefined || annualPercentage === null || annualPercentage === '') {
+          return res.status(400).json({
+            success: false,
+            message: 'studentEmail, academicYear, status and percentage are required'
+          });
+        }
+
+        const adm = await Admission.findOne({
+          email: studentEmail.toLowerCase(),
+          status: 'approved'
+        });
+        if (!adm) {
+          return res.status(404).json({
+            success: false,
+            message: 'No approved admission found for this email'
+          });
+        }
+
+        const yearNum   = Number(academicYear) || 0;             // 1 / 2 / 3
+        const calYear   = new Date().getFullYear();
+        const yearLabel = yearNum === 1 ? '1st Year'
+                        : yearNum === 2 ? '2nd Year'
+                        : yearNum === 3 ? '3rd Year'
+                        : String(academicYear);
+        const pct = Math.round((Number(annualPercentage) || 0) * 10) / 10;
+
+        // ek academic year ka ek hi annual result — re-upload pe update ho jaata hai
+        const existingAnnual = await Result.findOne({
+          admissionId: adm._id,
+          semester: yearNum,
+          subjects: { $size: 0 }
+        });
+
+        const annualPayload = {
+          admissionId: adm._id,
+          student: adm._id,
+          studentEmail: studentEmail.toLowerCase(),
+          studentName: adm.applicantName,
+          courseType: courseType || adm.courseType,
+          semester: yearNum,            // academic year number (robust fallback)
+          year: calYear,
+          academicYear: yearLabel,      // clean label
+          subjects: [],
+          totalMarks: 0,
+          obtainedMarks: 0,
+          percentage: pct,
+          result: status,              // pass / fail / atkt / rr
+          uploadedBy: req.user._id
+        };
+
+        const savedAnnual = existingAnnual
+          ? await Result.findByIdAndUpdate(existingAnnual._id, annualPayload, { new: true })
+          : await Result.create(annualPayload);
+
+        return res.status(201).json({
+          success: true,
+          message: existingAnnual ? 'Result updated' : 'Result uploaded',
+          result: savedAnnual
+        });
+      }
+
+      // ── OLD: subject-wise flow (backward compatible) ────────────────────────────
       if (!studentEmail || !semester || !year || !subjects?.length) {
         return res.status(400).json({
           success: false,
