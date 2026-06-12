@@ -196,7 +196,7 @@ const ResultUploadTab = () => {
 
           {existingForYear && (
             <div style={{ background:'#fff3e0', border:'1px solid #ffcc80', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#E65100' }}>
-              ⚠️ This student's <strong>{yearLabel}</strong> result is already uploaded. You can only <strong>edit</strong> it — no duplicate will be created.
+              ⚠️ Is student ka <strong>{yearLabel}</strong> result pehle se uploaded hai. Aap ise sirf <strong>edit</strong> kar sakte hain — naya duplicate nahi banega.
             </div>
           )}
 
@@ -777,6 +777,7 @@ const ExamDataTab = () => {
   const [loading, setLoading]       = useState(false);
   const [search, setSearch]         = useState('');
   const [yearF, setYearF]           = useState('all');
+  const [courseF, setCourseF]       = useState('all');
   const [selected, setSelected]     = useState(null);
   const [selResults, setSelResults] = useState([]);
   const [editResult, setEditResult] = useState(null);
@@ -814,7 +815,8 @@ const ExamDataTab = () => {
     const q = search.toLowerCase();
     const mq = !q || s.applicantName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.prnNumber?.toLowerCase().includes(q);
     const my = yearF === 'all' || s.admissionYear === yearF;
-    return mq && my;
+    const mc = courseF === 'all' || (s.courseType || '').toLowerCase() === courseF.toLowerCase();
+    return mq && my && mc;
   });
 
   if (selected) {
@@ -958,6 +960,12 @@ const ExamDataTab = () => {
       <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
         <input type="text" placeholder="🔍 Search student..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{ flex:1, minWidth:200, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14 }} />
+        <select value={courseF} onChange={e=>setCourseF(e.target.value)}
+          style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
+          <option value="all">All Courses</option>
+          <option value="BA">B.A.</option>
+          <option value="BSc">B.Sc.</option>
+        </select>
         <select value={yearF} onChange={e=>setYearF(e.target.value)}
           style={{ padding:'9px 12px', borderRadius:9, border:'1px solid #ddd', fontSize:13 }}>
           <option value="all">All Years</option>
@@ -1214,7 +1222,7 @@ const PublishedFormSubmissionsTab = () => {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12, marginBottom:6 }}>
         <div>
           <h2 style={{ color:'#f57c00', marginBottom:4 }}>📝 Exam Form Submissions</h2>
-        <p style={{ color:'#666', margin:0, fontSize:14 }}>List of exam forms. Click on any form to see the full data of students who filled it and paid the fees.</p>
+          <p style={{ color:'#666', margin:0, fontSize:14 }}>Exam forms ki list. Kisi form pe click karein — us form ko fill karke fees pay karne wale students ka pura data dikhega.</p>
         </div>
         {formGroups.length > 0 && (
           <button onClick={() => setManageMode(m => !m)}
