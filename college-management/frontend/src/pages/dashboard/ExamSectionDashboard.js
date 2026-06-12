@@ -23,6 +23,46 @@ const ResultUploadTab = () => {
   const [allAdmissions, setAllAdmissions] = useState([]);
   const [showList, setShowList] = useState(false);
 
+  const [existingResults, setExistingResults] = useState([]); // selected student ke purane results
+
+  // student select hone par uske saare results la lo
+  const loadExisting = async (email) => {
+    try {
+      const r = await API.get(`/results/by-email/${encodeURIComponent(email)}`);
+      setExistingResults(r.data.results || []);
+    } catch { setExistingResults([]); }
+  };
+
+  // diye gaye academic year (1/2/3) ka pehle se uploaded annual result (agar ho)
+  const findExistingForYear = (yr) => {
+    if (!yr) return null;
+    const n = Number(yr);
+    const label = n === 1 ? '1st Year' : n === 2 ? '2nd Year' : n === 3 ? '3rd Year' : '';
+    return existingResults.find(r =>
+      (!r.subjects || r.subjects.length === 0) &&
+      (Number(r.semester) === n || (r.academicYear && r.academicYear === label))
+    ) || null;
+  };
+
+  // student select hone par form reset + existing results load
+  const pickStudent = (a) => {
+    setFoundAdm(a); setStep(2); setShowList(false);
+    setAcademicYear(''); setStatus(''); setPercentage(''); setMsg('');
+    loadExisting(a.email);
+  };
+
+  // year select karte waqt: agar us year ka result pehle se hai to edit mode (pre-fill)
+  const onYearChange = (yr) => {
+    setAcademicYear(yr); setMsg('');
+    const ex = findExistingForYear(yr);
+    if (ex) {
+      setStatus(ex.result || '');
+      setPercentage(ex.percentage != null ? String(ex.percentage) : '');
+    } else {
+      setStatus(''); setPercentage('');
+    }
+  };
+
   const findStudent = async () => {
     if (!idSearch.trim() && !courseFilter && !yearFilter2) return;
     setSearching(true); setSearchErr(''); setFoundAdm(null); setShowList(false);
@@ -36,7 +76,7 @@ const ResultUploadTab = () => {
           (a.studentId && a.studentId.toLowerCase() === q)
         );
         if (!found) { setSearchErr('No student found with this PRN / Student ID.'); }
-        else { setFoundAdm(found); setStep(2); }
+        else { pickStudent(found); }
       } else {
         // Filter by course + year
         const normYear = (y) => {
@@ -64,6 +104,7 @@ const ResultUploadTab = () => {
     if (percentage === '' || isNaN(Number(percentage)) || Number(percentage) < 0 || Number(percentage) > 100) {
       setMsg('❌ Valid percentage (0–100) daalein.'); return;
     }
+    const wasUpdate = !!findExistingForYear(academicYear);
     setUploading(true);
     try {
       await API.post('/results/upload-by-email', {
@@ -73,8 +114,9 @@ const ResultUploadTab = () => {
         percentage: Number(percentage),
         courseType: foundAdm.courseType,
       });
-      setMsg('✅ Result uploaded successfully!');
-      setStep(1); setIdSearch(''); setFoundAdm(null);
+      setMsg(wasUpdate ? '✅ Result updated successfully!' : '✅ Result uploaded successfully!');
+      // student loaded rakhe, existing results refresh karo, year selection clear
+      await loadExisting(foundAdm.email);
       setAcademicYear(''); setStatus(''); setPercentage('');
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Upload failed')); }
     finally { setUploading(false); }
@@ -119,7 +161,7 @@ const ResultUploadTab = () => {
         {showList && allAdmissions.length > 0 && (
           <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #ffe0b2', borderRadius: 8, marginTop: 8 }}>
             {allAdmissions.map(a => (
-              <div key={a._id} onClick={() => { setFoundAdm(a); setStep(2); setShowList(false); }}
+              <div key={a._id} onClick={() => pickStudent(a)}
                 style={{ padding: '10px 14px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', fontSize: 13, background: '#fff' }}
                 onMouseEnter={e => e.target.style.background='#fff3e0'} onMouseLeave={e => e.target.style.background='#fff'}>
                 <strong>{a.applicantName}</strong> — {a.courseType} · {a.admissionYear} · PRN: {a.prnNumber || '—'} · ID: {a.studentId || '—'}
@@ -136,19 +178,38 @@ const ResultUploadTab = () => {
       </div>
 
       {/* Step 2 — upload result */}
-      {step === 2 && foundAdm && (
+      {step === 2 && foundAdm && (() => {
+        const existingForYear = findExistingForYear(academicYear);
+        const uploadedYears = existingResults
+          .filter(r => !r.subjects || r.subjects.length === 0)
+          .map(r => r.academicYear || (Number(r.semester) === 1 ? '1st Year' : Number(r.semester) === 2 ? '2nd Year' : Number(r.semester) === 3 ? '3rd Year' : ''))
+          .filter(Boolean);
+        const yearLabel = academicYear === '1' ? '1st Year' : academicYear === '2' ? '2nd Year' : academicYear === '3' ? '3rd Year' : '';
+        return (
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
-          <h4 style={{ color: '#f57c00', marginBottom: 14 }}>Step 2 — Upload Result</h4>
+          <h4 style={{ color: '#f57c00', marginBottom: 6 }}>Step 2 — {existingForYear ? 'Edit Result' : 'Upload Result'}</h4>
+          {uploadedYears.length > 0 && (
+            <p style={{ fontSize: 12, color: '#888', margin: '0 0 14px' }}>
+              Already uploaded: <strong style={{ color:'#2E7D32' }}>{uploadedYears.join(', ')}</strong>
+            </p>
+          )}
+
+          {existingForYear && (
+            <div style={{ background:'#fff3e0', border:'1px solid #ffcc80', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#E65100' }}>
+              ⚠️ Is student ka <strong>{yearLabel}</strong> result pehle se uploaded hai. Aap ise sirf <strong>edit</strong> kar sakte hain — naya duplicate nahi banega.
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
             {/* Year */}
             <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
               <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#f57c00', marginBottom: 5 }}>Year *</label>
-              <select value={academicYear} onChange={e => setAcademicYear(e.target.value)}
+              <select value={academicYear} onChange={e => onYearChange(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #f57c00', fontSize: 14, boxSizing: 'border-box' }}>
                 <option value="">Select Year</option>
-                <option value="1">1st Year</option>
-                <option value="2">2nd Year</option>
-                <option value="3">3rd Year</option>
+                <option value="1">1st Year{uploadedYears.includes('1st Year') ? ' ✓ uploaded' : ''}</option>
+                <option value="2">2nd Year{uploadedYears.includes('2nd Year') ? ' ✓ uploaded' : ''}</option>
+                <option value="3">3rd Year{uploadedYears.includes('3rd Year') ? ' ✓ uploaded' : ''}</option>
               </select>
             </div>
             {/* Result status */}
@@ -173,15 +234,16 @@ const ResultUploadTab = () => {
           </div>
 
           <button onClick={handleUpload} disabled={uploading}
-            style={{ background: uploading ? '#aaa' : '#f57c00', color: '#fff', border: 'none', borderRadius: 9, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
-            {uploading ? '⏳ Uploading...' : '📤 Upload Result'}
+            style={{ background: uploading ? '#aaa' : (existingForYear ? '#2E7D32' : '#f57c00'), color: '#fff', border: 'none', borderRadius: 9, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
+            {uploading ? '⏳ Saving...' : (existingForYear ? '💾 Update Result' : '📤 Upload Result')}
           </button>
-          <button onClick={() => { setStep(1); setFoundAdm(null); setMsg(''); }}
+          <button onClick={() => { setStep(1); setFoundAdm(null); setMsg(''); setExistingResults([]); }}
             style={{ marginLeft: 10, background: '#eee', color: '#333', border: 'none', borderRadius: 9, padding: '12px 20px', fontSize: 14, cursor: 'pointer' }}>
             Cancel
           </button>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
