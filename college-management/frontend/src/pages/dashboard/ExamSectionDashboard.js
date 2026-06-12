@@ -196,7 +196,7 @@ const ResultUploadTab = () => {
 
           {existingForYear && (
             <div style={{ background:'#fff3e0', border:'1px solid #ffcc80', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#E65100' }}>
-              ⚠️ Is student ka <strong>{yearLabel}</strong> result pehle se uploaded hai. Aap ise sirf <strong>edit</strong> kar sakte hain — naya duplicate nahi banega.
+              ⚠️ This student's <strong>{yearLabel}</strong> result is already uploaded. You can only <strong>edit</strong> it — no duplicate will be created.
             </div>
           )}
 
