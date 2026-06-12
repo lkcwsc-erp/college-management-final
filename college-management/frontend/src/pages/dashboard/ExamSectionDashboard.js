@@ -12,9 +12,9 @@ const ResultUploadTab = () => {
   const [foundAdm, setFoundAdm]     = useState(null);
   const [searching, setSearching]   = useState(false);
   const [searchErr, setSearchErr]   = useState('');
-  const [semester, setSemester]     = useState('');
-  const [year, setYear]             = useState(new Date().getFullYear().toString());
-  const [subjects, setSubjects]     = useState([{ name: '', maxMarks: 100, obtainedMarks: '' }]);
+  const [academicYear, setAcademicYear] = useState('');  // 1 / 2 / 3
+  const [status, setStatus]             = useState('');  // pass / fail / atkt / rr
+  const [percentage, setPercentage]     = useState('');
   const [uploading, setUploading]   = useState(false);
   const [msg, setMsg]               = useState('');
 
@@ -58,26 +58,24 @@ const ResultUploadTab = () => {
     finally { setSearching(false); }
   };
 
-  const addSubject = () => setSubjects(prev => [...prev, { name: '', maxMarks: 100, obtainedMarks: '' }]);
-  const removeSubject = (i) => setSubjects(prev => prev.filter((_, idx) => idx !== i));
-  const updateSubject = (i, field, val) => setSubjects(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
-
   const handleUpload = async () => {
-    if (!semester || !year) { setMsg('❌ Select semester and year.'); return; }
-    const invalid = subjects.some(s => !s.name.trim() || s.obtainedMarks === '' || isNaN(Number(s.obtainedMarks)));
-    if (invalid) { setMsg('❌ Fill all subject names and marks.'); return; }
+    if (!academicYear) { setMsg('❌ Year select karein.'); return; }
+    if (!status)       { setMsg('❌ Result (Pass / Fail / AT-KT / RR) select karein.'); return; }
+    if (percentage === '' || isNaN(Number(percentage)) || Number(percentage) < 0 || Number(percentage) > 100) {
+      setMsg('❌ Valid percentage (0–100) daalein.'); return;
+    }
     setUploading(true);
     try {
       await API.post('/results/upload-by-email', {
         studentEmail: foundAdm.email,
-        semester: Number(semester),
-        year: Number(year),
+        academicYear,                  // '1' | '2' | '3'
+        status,                        // 'pass' | 'fail' | 'atkt' | 'rr'
+        percentage: Number(percentage),
         courseType: foundAdm.courseType,
-        subjects: subjects.map(s => ({ name: s.name.trim(), maxMarks: Number(s.maxMarks), obtainedMarks: Number(s.obtainedMarks) })),
       });
       setMsg('✅ Result uploaded successfully!');
-      setStep(1); setIdSearch(''); setFoundAdm(null); setSemester(''); setYear(new Date().getFullYear().toString());
-      setSubjects([{ name: '', maxMarks: 100, obtainedMarks: '' }]);
+      setStep(1); setIdSearch(''); setFoundAdm(null);
+      setAcademicYear(''); setStatus(''); setPercentage('');
     } catch (e) { setMsg('❌ ' + (e.response?.data?.message || 'Upload failed')); }
     finally { setUploading(false); }
   };
@@ -85,7 +83,7 @@ const ResultUploadTab = () => {
   return (
     <div>
       <h2 style={{ color: '#f57c00', marginBottom: 4 }}>📊 Upload / Update Result</h2>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Enter student PRN or Student ID to find them, then enter subject-wise marks. Or filter by course & year to see all students.</p>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Enter student PRN or Student ID to find them, then select year, result status and percentage. Or filter by course & year to see all students.</p>
 
       {msg && <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontWeight: 500, fontSize: 14, background: msg.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msg.startsWith('✅') ? '#2E7D32' : '#C62828' }}>{msg}</div>}
 
@@ -137,76 +135,42 @@ const ResultUploadTab = () => {
         )}
       </div>
 
-      {/* Step 2 — enter marks */}
+      {/* Step 2 — upload result */}
       {step === 2 && foundAdm && (
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', padding: 20 }}>
-          <h4 style={{ color: '#f57c00', marginBottom: 14 }}>Step 2 — Enter Marks</h4>
+          <h4 style={{ color: '#f57c00', marginBottom: 14 }}>Step 2 — Upload Result</h4>
           <div style={{ display: 'flex', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-            <div className="form-group" style={{ flex: 1, minWidth: 140 }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#f57c00', marginBottom: 5 }}>Semester *</label>
-              <select value={semester} onChange={e => setSemester(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #f57c00', fontSize: 14 }}>
-                <option value="">Select</option>
-                {[1,2,3,4,5,6].map(s => <option key={s} value={s}>Semester {s}</option>)}
+            {/* Year */}
+            <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#f57c00', marginBottom: 5 }}>Year *</label>
+              <select value={academicYear} onChange={e => setAcademicYear(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #f57c00', fontSize: 14, boxSizing: 'border-box' }}>
+                <option value="">Select Year</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
               </select>
             </div>
-            <div className="form-group" style={{ flex: 1, minWidth: 120 }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#f57c00', marginBottom: 5 }}>Year *</label>
-              <input type="number" value={year} onChange={e => setYear(e.target.value)} min="2020" max="2030"
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '2px solid #f57c00', fontSize: 14, boxSizing: 'border-box' }} />
+            {/* Result status */}
+            <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#f57c00', marginBottom: 5 }}>Result *</label>
+              <select value={status} onChange={e => setStatus(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #f57c00', fontSize: 14, boxSizing: 'border-box' }}>
+                <option value="">Select Result</option>
+                <option value="pass">✅ Pass</option>
+                <option value="fail">❌ Fail</option>
+                <option value="atkt">⚠️ AT-KT</option>
+                <option value="rr">🔁 RR</option>
+              </select>
+            </div>
+            {/* Percentage */}
+            <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: 12, color: '#f57c00', marginBottom: 5 }}>Percentage (%) *</label>
+              <input type="number" value={percentage} onChange={e => setPercentage(e.target.value)}
+                min="0" max="100" step="0.01" placeholder="e.g. 72.5"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '2px solid #f57c00', fontSize: 14, boxSizing: 'border-box' }} />
             </div>
           </div>
-
-          <h4 style={{ color: '#333', marginBottom: 12, fontSize: 14 }}>📚 Subject-wise Marks</h4>
-          <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 0.4fr', gap: 8, marginBottom: 8 }}>
-              {['Subject Name', 'Max Marks', 'Obtained', ''].map(h => (
-                <span key={h} style={{ fontSize: 12, fontWeight: 700, color: '#555' }}>{h}</span>
-              ))}
-            </div>
-            {subjects.map((sub, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 0.4fr', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <input type="text" placeholder={`Subject ${i+1} name`} value={sub.name} onChange={e => updateSubject(i, 'name', e.target.value)}
-                  style={{ padding: '8px 10px', borderRadius: 7, border: '1px solid #ddd', fontSize: 13 }} />
-                <input type="number" value={sub.maxMarks} onChange={e => updateSubject(i, 'maxMarks', e.target.value)} min="1"
-                  style={{ padding: '8px 10px', borderRadius: 7, border: '1px solid #ddd', fontSize: 13 }} />
-                <input type="number" value={sub.obtainedMarks} onChange={e => updateSubject(i, 'obtainedMarks', e.target.value)} min="0" max={sub.maxMarks}
-                  style={{ padding: '8px 10px', borderRadius: 7, border: `2px solid ${Number(sub.obtainedMarks) < sub.maxMarks * 0.35 && sub.obtainedMarks !== '' ? '#C62828' : '#ddd'}`, fontSize: 13, fontWeight: 700 }} />
-                <button onClick={() => removeSubject(i)} disabled={subjects.length === 1}
-                  style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: subjects.length === 1 ? 'not-allowed' : 'pointer', opacity: subjects.length === 1 ? 0.4 : 1, fontSize: 14 }}>
-                  🗑️
-                </button>
-              </div>
-            ))}
-            <button onClick={addSubject}
-              style={{ marginTop: 6, background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 7, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              ➕ Add Subject
-            </button>
-          </div>
-
-          {/* Live calculation */}
-          {subjects.some(s => s.obtainedMarks !== '') && (
-            <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '12px 16px', marginBottom: 14, fontSize: 13 }}>
-              {(() => {
-                const total = subjects.reduce((s, sub) => s + (Number(sub.maxMarks) || 0), 0);
-                const obtained = subjects.reduce((s, sub) => s + (Number(sub.obtainedMarks) || 0), 0);
-                const pct = total > 0 ? Math.round((obtained / total) * 100 * 10) / 10 : 0;
-                const atkt = subjects.filter(s => s.obtainedMarks !== '' && Number(s.obtainedMarks) < Number(s.maxMarks) * 0.35);
-                const status = atkt.length === subjects.length ? 'FAIL' : atkt.length > 0 ? 'ATKT' : pct >= 75 ? 'DISTINCTION' : 'PASS';
-                const statusColor = { FAIL: '#C62828', ATKT: '#E65100', DISTINCTION: '#1b5e20', PASS: '#2E7D32' }[status];
-                return (
-                  <>
-                    <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                      <span>Total: <strong>{obtained}/{total}</strong></span>
-                      <span>Percentage: <strong>{pct}%</strong></span>
-                      <span style={{ fontWeight: 800, color: statusColor }}>Result: {status}</span>
-                    </div>
-                    {atkt.length > 0 && <div style={{ marginTop: 6, color: '#C62828', fontSize: 12 }}>ATKT/Fail: {atkt.map(s => s.name || 'Subject').join(', ')}</div>}
-                  </>
-                );
-              })()}
-            </div>
-          )}
 
           <button onClick={handleUpload} disabled={uploading}
             style={{ background: uploading ? '#aaa' : '#f57c00', color: '#fff', border: 'none', borderRadius: 9, padding: '12px 32px', fontSize: 15, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }}>
@@ -774,8 +738,15 @@ const ExamDataTab = () => {
   };
 
   const statusColor = (res) => ({
-    DISTINCTION: '#1b5e20', PASS: '#2E7D32', ATKT: '#E65100', FAIL: '#C62828'
-  }[res] || '#888');
+    DISTINCTION: '#1b5e20', PASS: '#2E7D32', ATKT: '#E65100', FAIL: '#C62828', RR: '#6A1B9A'
+  }[String(res || '').toUpperCase()] || '#888');
+
+  // subject-wise (purana) -> "Semester X"; annual (naya) -> "1st/2nd/3rd Year"
+  const periodLabel = (r) => {
+    if (r.subjects && r.subjects.length) return `Semester ${r.semester}`;
+    if (r.academicYear) return r.academicYear;
+    return r.semester === 1 ? '1st Year' : r.semester === 2 ? '2nd Year' : r.semester === 3 ? '3rd Year' : `Year ${r.semester}`;
+  };
 
   const filtered = admissions.filter(s => {
     const q = search.toLowerCase();
@@ -801,16 +772,17 @@ const ExamDataTab = () => {
               <div key={r._id||i} style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:18 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
                   <div>
-                    <span style={{ fontWeight:700, fontSize:14, color:'#f57c00' }}>Semester {r.semester}</span>
+                    <span style={{ fontWeight:700, fontSize:14, color:'#f57c00' }}>{periodLabel(r)}</span>
                     <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{r.year} · {r.courseType}</span>
                   </div>
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                    <span style={{ fontSize:13, fontWeight:800, padding:'3px 12px', borderRadius:20, background:`${statusColor(r.result)}22`, color:statusColor(r.result) }}>{r.result}</span>
+                    <span style={{ fontSize:13, fontWeight:800, padding:'3px 12px', borderRadius:20, background:`${statusColor(r.result)}22`, color:statusColor(r.result) }}>{String(r.result || '').toUpperCase()}</span>
                     <span style={{ fontSize:13, fontWeight:700 }}>{r.percentage}%</span>
                     <button onClick={() => setEditResult(r)}
                       style={{ background:'#fff3e0', color:'#f57c00', border:'1px solid #f57c00', borderRadius:8, padding:'4px 12px', fontSize:12, fontWeight:600, cursor:'pointer' }}>✏️ Update</button>
                   </div>
                 </div>
+                {r.subjects && r.subjects.length > 0 && (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:8 }}>
                   {(r.subjects||[]).map((s,j) => {
                     const pct = s.maxMarks > 0 ? Math.round((s.obtainedMarks/s.maxMarks)*100) : 0;
@@ -824,6 +796,7 @@ const ExamDataTab = () => {
                     );
                   })}
                 </div>
+                )}
               </div>
             ))}
           </div>
@@ -834,35 +807,79 @@ const ExamDataTab = () => {
           <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
             onClick={() => setEditResult(null)}>
             <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:500, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,.2)' }} onClick={e=>e.stopPropagation()}>
-              <h3 style={{ color:'#f57c00', marginBottom:16 }}>✏️ Update Result — Semester {editResult.semester}</h3>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:16 }}>
-                {(editResult.subjects||[]).map((s,j) => (
-                  <div key={j} style={{ background:'#f8faff', borderRadius:8, padding:'10px 12px' }}>
-                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:4 }}>{s.name} (max: {s.maxMarks})</label>
-                    <input type="number" min="0" max={s.maxMarks}
-                      defaultValue={s.obtainedMarks}
-                      onChange={e => { s.obtainedMarks = Number(e.target.value); }}
-                      style={{ width:'100%', padding:'7px 10px', borderRadius:7, border:'2px solid #f57c00', fontSize:14, boxSizing:'border-box' }} />
+              <h3 style={{ color:'#f57c00', marginBottom:16 }}>✏️ Update Result — {periodLabel(editResult)}</h3>
+              {editResult.subjects && editResult.subjects.length > 0 ? (
+                <>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:16 }}>
+                    {(editResult.subjects||[]).map((s,j) => (
+                      <div key={j} style={{ background:'#f8faff', borderRadius:8, padding:'10px 12px' }}>
+                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:4 }}>{s.name} (max: {s.maxMarks})</label>
+                        <input type="number" min="0" max={s.maxMarks}
+                          defaultValue={s.obtainedMarks}
+                          onChange={e => { s.obtainedMarks = Number(e.target.value); }}
+                          style={{ width:'100%', padding:'7px 10px', borderRadius:7, border:'2px solid #f57c00', fontSize:14, boxSizing:'border-box' }} />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <button onClick={async () => {
-                setSaving(true);
-                try {
-                  await API.put(`/results/${editResult._id}`, { subjects: editResult.subjects });
-                  setMsg('✅ Result updated!');
-                  setEditResult(null);
-                  const rRes = await API.get('/results/all-results');
-                  const allR = rRes.data.results || [];
-                  setResults(allR);
-                  setSelResults(allR.filter(r => (r.studentEmail || '').toLowerCase() === (selected.email || '').toLowerCase()));
-                  setTimeout(() => setMsg(''), 3000);
-                } catch (e) { setMsg('❌ ' + (e.response?.data?.message||'Failed')); }
-                finally { setSaving(false); }
-              }} disabled={saving}
-                style={{ background:'#f57c00', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
-                {saving?'⏳ Saving...':'💾 Save Changes'}
-              </button>
+                  <button onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await API.put(`/results/${editResult._id}`, { subjects: editResult.subjects });
+                      setMsg('✅ Result updated!');
+                      setEditResult(null);
+                      const rRes = await API.get('/results/all-results');
+                      const allR = rRes.data.results || [];
+                      setResults(allR);
+                      setSelResults(allR.filter(r => (r.studentEmail || '').toLowerCase() === (selected.email || '').toLowerCase()));
+                      setTimeout(() => setMsg(''), 3000);
+                    } catch (e) { setMsg('❌ ' + (e.response?.data?.message||'Failed')); }
+                    finally { setSaving(false); }
+                  }} disabled={saving}
+                    style={{ background:'#f57c00', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+                    {saving?'⏳ Saving...':'💾 Save Changes'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{ display:'flex', gap:14, marginBottom:18, flexWrap:'wrap' }}>
+                    <div style={{ flex:1, minWidth:160 }}>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Result *</label>
+                      <select defaultValue={editResult.result} onChange={e => { editResult.result = e.target.value; }}
+                        style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #f57c00', fontSize:14, boxSizing:'border-box' }}>
+                        <option value="pass">✅ Pass</option>
+                        <option value="fail">❌ Fail</option>
+                        <option value="atkt">⚠️ AT-KT</option>
+                        <option value="rr">🔁 RR</option>
+                      </select>
+                    </div>
+                    <div style={{ flex:1, minWidth:160 }}>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Percentage (%) *</label>
+                      <input type="number" min="0" max="100" step="0.01" defaultValue={editResult.percentage}
+                        onChange={e => { editResult.percentage = e.target.value; }}
+                        style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'2px solid #f57c00', fontSize:14, boxSizing:'border-box' }} />
+                    </div>
+                  </div>
+                  <button onClick={async () => {
+                    const pctNum = Number(editResult.percentage);
+                    if (isNaN(pctNum) || pctNum < 0 || pctNum > 100) { setMsg('❌ Valid percentage (0–100) daalein.'); return; }
+                    setSaving(true);
+                    try {
+                      await API.put(`/results/${editResult._id}`, { result: editResult.result, percentage: pctNum });
+                      setMsg('✅ Result updated!');
+                      setEditResult(null);
+                      const rRes = await API.get('/results/all-results');
+                      const allR = rRes.data.results || [];
+                      setResults(allR);
+                      setSelResults(allR.filter(r => (r.studentEmail || '').toLowerCase() === (selected.email || '').toLowerCase()));
+                      setTimeout(() => setMsg(''), 3000);
+                    } catch (e) { setMsg('❌ ' + (e.response?.data?.message||'Failed')); }
+                    finally { setSaving(false); }
+                  }} disabled={saving}
+                    style={{ background:'#f57c00', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+                    {saving?'⏳ Saving...':'💾 Save Changes'}
+                  </button>
+                </>
+              )}
               <button onClick={()=>setEditResult(null)} style={{ marginLeft:10, background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:14, cursor:'pointer' }}>Cancel</button>
             </div>
           </div>
@@ -906,7 +923,7 @@ const ExamDataTab = () => {
                 <span style={{ fontSize:12 }}>{s.courseType} · {s.admissionYear}</span>
                 <span style={{ fontSize:13, fontWeight:700, color: sResults.length>0?'#1565C0':'#aaa' }}>{sResults.length} exam{sResults.length!==1?'s':''}</span>
                 <span style={{ fontSize:12, fontWeight:700, color: last?statusColor(last.result):'#aaa' }}>
-                  {last ? `Sem ${last.semester} — ${last.result}` : '—'}
+                  {last ? `${periodLabel(last)} — ${String(last.result || '').toUpperCase()}` : '—'}
                 </span>
                 <button onClick={() => { setSelected(s); setSelResults(getStudentResults(s.email)); }}
                   style={{ background:'#fff3e0', color:'#f57c00', border:'1px solid #f57c00', borderRadius:7, padding:'5px 10px', fontSize:12, fontWeight:600, cursor:'pointer' }}>👁️</button>
