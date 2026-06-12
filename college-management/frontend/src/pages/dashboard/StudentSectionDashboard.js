@@ -266,57 +266,50 @@ const StudentSectionDashboard = () => {
   const handleCreateStudent = async (e) => {
     e.preventDefault(); setCredLoading(true); setCredMsg('');
     try {
-      // Verify Aadhar against admissions
-      const admRes = await API.get('/admissions/staff-view/all');
-      const allAdm = admRes.data.admissions || [];
-      const matchedAdm = allAdm.find(a =>
-        a.aadharNumber && a.aadharNumber.replace(/\s/g,'') === credForm.aadharNumber.replace(/\s/g,'')
-      );
-      if (!matchedAdm) {
-        setCredMsg('❌ Aadhar number kisi bhi admission form mein nahi mila. Aadhar number dobara check karein.');
-        setCredLoading(false);
-        return;
-      }
-      // Admission approved hai ya nahi check
-      const approvedStatuses = ['approved', 'principal_approved', 'approved_by_principal', 'credentials_issued'];
-      if (!approvedStatuses.includes(matchedAdm.status)) {
-        setCredMsg(`❌ Is student ki admission abhi "${matchedAdm.status}" status mein hai. Credential banane ke liye pehle admission approve honi chahiye.`);
-        setCredLoading(false);
-        return;
-      }
-      // Auto-fill from admission
-      const nameParts = (matchedAdm.applicantName || '').trim().split(' ');
-      const enrichedForm = {
-        ...credForm,
-        email: credForm.email || matchedAdm.email || '',
-        firstName: credForm.firstName || nameParts[0] || '',
-        middleName: credForm.middleName || (nameParts.length === 3 ? nameParts[1] : '') || '',
-        lastName: credForm.lastName || (nameParts.length >= 2 ? nameParts[nameParts.length - 1] : '') || '',
-        dateOfBirth: credForm.dateOfBirth || (matchedAdm.dateOfBirth ? matchedAdm.dateOfBirth.split('T')[0] : ''),
-        phone: credForm.phone || matchedAdm.phone || '',
-      };
+      if (!credForm.firstName.trim()) { setCredMsg('❌ First Name required hai.'); setCredLoading(false); return; }
+      if (!credForm.email.trim())     { setCredMsg('❌ Email required hai.');      setCredLoading(false); return; }
+      if (!credForm.dateOfBirth)      { setCredMsg('❌ Date of Birth required hai.'); setCredLoading(false); return; }
 
-      if (!enrichedForm.email) {
-        setCredMsg('❌ Student ka email address admission form mein nahi hai. Upar Email field mein manually enter karein.');
-        setCredLoading(false);
-        return;
-      }
-      if (!enrichedForm.dateOfBirth) {
-        setCredMsg('❌ Date of Birth required hai — admission form mein nahi mila, upar manually enter karein.');
-        setCredLoading(false);
-        return;
-      }
+      // Check existing students for duplicate Aadhar or Email
+      try {
+        const existRes = await API.get('/admissions/staff-view/all');
+        const allAdm = existRes.data.admissions || [];
 
-      const res = await API.post('/auth/register-student', enrichedForm);
+        // Check duplicate Aadhar
+        if (credForm.aadharNumber && credForm.aadharNumber.length === 12) {
+          const aadharMatch = allAdm.find(a =>
+            a.studentId && a.aadharNumber &&
+            a.aadharNumber.replace(/\s/g, '') === credForm.aadharNumber.replace(/\s/g, '')
+          );
+          if (aadharMatch) {
+            setCredMsg('❌ Is Aadhar number ke liye pehle se account bana hua hai — ' + aadharMatch.applicantName + ' (' + (aadharMatch.studentId || aadharMatch.email) + ')');
+            setCredLoading(false);
+            return;
+          }
+        }
+
+        // Check duplicate Email
+        const emailMatch = allAdm.find(a =>
+          a.studentId && a.email &&
+          a.email.toLowerCase().trim() === credForm.email.toLowerCase().trim()
+        );
+        if (emailMatch) {
+          setCredMsg('❌ Is email se pehle se account bana hua hai — ' + emailMatch.applicantName + '. Alag email use karein.');
+          setCredLoading(false);
+          return;
+        }
+      } catch { /* ignore check errors, proceed */ }
+
+      const res = await API.post('/auth/register-student', credForm);
       if (res.data.success) {
         setGeneratedCreds({ name: res.data.user.name, email: res.data.user.email, password: res.data.generatedPassword });
-        setCredMsg('✅ Student account successfully create ho gaya — ' + matchedAdm.applicantName + '!');
+        setCredMsg('✅ Student account successfully create ho gaya — ' + res.data.user.name + '!');
         setCredForm({ firstName: '', middleName: '', lastName: '', aadharNumber: '', email: '', phone: '', dateOfBirth: '' });
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Account create karne mein error aaya';
-      if (msg.toLowerCase().includes('aadhar')) {
-        setCredMsg('❌ Is Aadhar number ke liye pehle se account bana hua hai (duplicate).');
+      if (msg.toLowerCase().includes('aadhar') || msg.toLowerCase().includes('duplicate')) {
+        setCredMsg('❌ Is Aadhar number ke liye pehle se account bana hua hai.');
       } else if (msg.toLowerCase().includes('email')) {
         setCredMsg('❌ Is email se pehle se account bana hua hai. Alag email use karein.');
       } else {
@@ -951,7 +944,7 @@ const printBonafide = (adm) => {
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:14px 30px}
-    .logo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
+    .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:12px;color:#444;}
     .h3{font-size:23px;font-weight:900;color:#000;margin:3px 0 2px}
