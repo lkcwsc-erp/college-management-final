@@ -236,8 +236,8 @@ const printReceipt = (data) => {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;background:#fff;padding:10px;font-size:12px}
     .receipt{width:160mm;border:1px solid #999;margin:0 auto}
-    .hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1.5px solid #000}
-    .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;gap:10px;padding:12px 24px;border-bottom:1.5px solid #000}
+    .hlogo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:8.5px;color:#333;font-weight:700}
     .hname{font-size:13px;font-weight:900;color:#000;line-height:1.3;margin:2px 0}
