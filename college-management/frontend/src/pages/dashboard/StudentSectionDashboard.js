@@ -790,14 +790,14 @@ const printTC = (adm) => {
     }
 
     /* ── Header ── */
-    .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
-    .hlogo{width:100px;height:100px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:14px 30px}
+    .hlogo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .htrust{font-size:12px;color:#444;font-style:italic;margin-bottom:3px}
-    .hname{font-size:22px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.3px}
+    .htrust{font-size:13px;color:#222;font-weight:600;margin-bottom:3px}
+    .hname{font-size:20px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.5px;text-transform:uppercase}
     .huniv{font-size:11px;color:#333;margin-top:3px}
     .haddr{font-size:11px;color:#333;margin-top:3px;line-height:1.5}
-    .hcontact{font-size:10.5px;color:#555;margin-top:4px}
+    .hcontact{font-size:10px;color:#555;margin-top:3px}
 
     /* ── Title ── */
     .titlesec{text-align:center;padding:7px 0 3px;border-bottom:1.5px solid #000}
@@ -847,7 +847,7 @@ const printTC = (adm) => {
       <img src="${window.location.origin}/college-logo.png" class="hlogo" alt="Logo" onerror="this.style.display='none'"/>
       <div class="htxt">
         <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-        <div class="hname">Late Kalpana Chawla Women's Senior College</div>
+        <div class="hname">Late Kalpana Chawala Arts &amp; Science Mahila Senior College Gangakhed,</div>
         <div class="huniv">Affiliated to S.N.D.T. Women's University, Mumbai</div>
         <div class="haddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
         <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
@@ -950,8 +950,8 @@ const printBonafide = (adm) => {
     body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px}
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
-    .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:10px 20px}
-    .logo{width:100px;height:100px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:14px 30px}
+    .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:12px;color:#444;font-style:italic}
     .h3{font-size:23px;font-weight:900;color:#000;margin:3px 0 2px}
