@@ -951,9 +951,9 @@ const printBonafide = (adm) => {
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:14px 30px}
-    .logo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
+    .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .h1{font-size:12px;color:#444;font-style:italic}
+    .h1{font-size:12px;color:#444;}
     .h3{font-size:23px;font-weight:900;color:#000;margin:3px 0 2px}
     .h2{font-size:12px;color:#333;margin-bottom:3px}
     .h4{font-size:12.5px;color:#000;margin-bottom:2px}
@@ -984,7 +984,7 @@ const printBonafide = (adm) => {
     <div class="hdr">
       <img src="${window.location.origin}/college-logo.png" class="logo" onerror="this.style.display='none'"/>
       <div class="htxt">
-        <div class="h1">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="h1">Vidya Niketan Sevabhavi Sanstha, Gangakhed (She.)</div>
         <div class="h3">Late Kalpana Chawla Women's Senior College</div>
         <div class="h2">Affiliated to S.N.D.T. Women's University, Mumbai</div>
         <div class="h4">Lecture Colony, Gangakhed, Tq. Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
