@@ -1191,7 +1191,6 @@ const printIDCard = (admission) => {
   const bloodGrp  = admission.bloodGroup || '\u2014\u2014';
   const studentId = admission.studentId  || '\u2014';
   const validPeriod = _getValidPeriod();
-  const name = (admission.applicantName || '').toLowerCase();
 
   const html = `<!DOCTYPE html>
 <html>
@@ -2978,7 +2977,6 @@ const StudentDashboard = () => {
                     </div>
                   )}
                 </div>
-              }
             </div>
           )}
 
