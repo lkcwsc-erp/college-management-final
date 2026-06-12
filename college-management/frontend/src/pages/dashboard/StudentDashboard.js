@@ -23,12 +23,13 @@ const printStudentReceipt = (p, adm) => {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;background:#fff;padding:10px;font-size:12px}
     .receipt{width:160mm;border:1px solid #999;margin:0 auto}
-    .hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1.5px solid #000}
-    .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1.5px solid #000}
+    .hlogo{width:78px;height:78px;object-fit:contain;flex-shrink:0;margin-left:6px}
     .htxt{flex:1;text-align:center}
-    .htrust{font-size:8.5px;color:#555}
+    .htrust{font-size:9px;color:#222;font-weight:700}
     .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3;margin:2px 0}
-    .haddr{font-size:8.5px;color:#444;margin-top:1px}
+    .haddr{font-size:9px;color:#333;margin-top:1px}
+    .hcontact{font-size:9.5px;color:#000;font-weight:800;margin-top:2px}
     .titlebar{text-align:center;padding:5px;border-bottom:1px solid #999;font-size:13px;font-weight:900;letter-spacing:2px;background:#f5f5f5}
     .copyline{padding:4px 12px;font-size:10px;border-bottom:1px dashed #aaa}
     .metarow{display:flex;justify-content:space-between;padding:4px 12px;font-size:11px;border-bottom:1px dashed #aaa}
@@ -62,7 +63,8 @@ const printStudentReceipt = (p, adm) => {
         <div class="htrust" style="font-weight:700">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
         <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
-        <div class="haddr">Gangakhed, Dist. Parbhani, Maharashtra – 431514 &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
+        <div class="haddr">Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
+        <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; ✉️ lkcwscgkd@gmail.com &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
       </div>
     </div>
     <div class="titlebar">FEE RECEIPT</div>
@@ -141,12 +143,17 @@ const printTC = (adm) => {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Times New Roman',serif;background:#f0f0f0;display:flex;justify-content:center;padding:20px;font-size:13px}
     .page{background:white;width:720px;border:1.5px solid #000;padding:0;box-shadow:0 4px 20px rgba(0,0,0,.15)}
-    .hdr{display:flex;align-items:center;gap:10px;border-bottom:1.5px solid #000;padding:8px 12px}
-    .hlogo{width:52px;height:52px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #000;padding:10px 16px}
+    .logo,.hlogo{width:72px;height:72px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .htrust{font-size:8.5px;color:#555}
+    .htrust{font-size:9px;color:#333;font-weight:700}
     .hname{font-size:13px;font-weight:800;color:#000;line-height:1.3;margin:2px 0}
-    .haddr{font-size:8.5px;color:#444;margin-top:1px}
+    .haddr{font-size:9px;color:#222;margin-top:1px}
+    /* Header lines (h1-h4) — made bold & dark so they print sharp */
+    .h1{font-size:11px;font-weight:700;color:#222;margin-bottom:1px}
+    .h2{font-size:14px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:.3px}
+    .h3{font-size:11px;font-weight:700;color:#222;margin-top:2px}
+    .h4{font-size:11px;font-weight:700;color:#000;margin-top:2px}
     .titlesec{text-align:center;padding:6px 0 2px;border-bottom:1px solid #000}
     .title{font-size:15px;font-weight:bold;letter-spacing:2px;text-decoration:underline;text-underline-offset:3px}
     .subtitle{font-size:11px;font-style:italic;margin-top:1px}
@@ -172,8 +179,9 @@ const printTC = (adm) => {
     /* Print button */
     .print-btn{display:block;margin:10px auto;padding:8px 28px;background:#1a237e;color:white;border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer}
     @media print{
+      @page{size:A4 portrait;margin:10mm}
       body{background:white;padding:0}
-      .page{box-shadow:none}
+      .page{box-shadow:none;width:100%;border:1.5px solid #000}
       .print-btn{display:none}
       input[type=text]{border-bottom:1px dotted #555}
     }
@@ -184,7 +192,7 @@ const printTC = (adm) => {
       <img src="${window.location.origin}/college-logo.png" class="logo"/>
       <div class="htxt">
         <div class="h1">Vidya Niketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-        <div class="h2">Late Kalpana Chawala Arts &amp; Science Mahila Senior College Gangakhed,</div>
+        <div class="h2">Late Kalpana Chawla Arts &amp; Science Women's Senior College, Gangakhed</div>
         <div class="h3">Lecturer Colony Gangakhed, Dist Parbhani - 431514</div>
         <div class="h4">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
       </div>
@@ -292,11 +300,11 @@ const printBonafide = (adm) => {
     .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
     .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .h1{font-size:11px;color:#333}
-    .h2{font-size:11px;color:#333}
+    .h1{font-size:11px;color:#222;font-weight:700}
+    .h2{font-size:11px;color:#111;font-weight:700}
     .h3{font-size:21px;font-weight:900;color:#000;margin:3px 0 2px}
-    .h4{font-size:11px;color:#000;margin-bottom:1px}
-    .h5{font-size:10px;color:#555}
+    .h4{font-size:11px;color:#000;font-weight:600;margin-bottom:1px}
+    .h5{font-size:10.5px;color:#000;font-weight:700;margin-top:1px}
     /* Title */
     .titlebar{text-align:center;padding:8px 0;border-bottom:1px solid #000}
     .titletxt{font-size:17px;font-weight:900;letter-spacing:5px;text-decoration:underline;text-underline-offset:4px}
@@ -318,7 +326,7 @@ const printBonafide = (adm) => {
     /* ERP */
     .erp{border-top:1px dashed #aaa;padding:5px 18px;font-size:9.5px;color:#666;display:flex;justify-content:space-between}
     .sysgen{padding:3px 18px 5px;font-size:9px;color:#888;text-align:center}
-    @media print{body{background:white;padding:0}.page{box-shadow:none}}
+    @media print{@page{size:A4 portrait;margin:12mm}body{background:white;padding:0}.page{box-shadow:none;width:100%}}
   </style></head><body><div class="page">
     <div class="hdr">
       <img src="${logo}" class="logo"/>
@@ -360,6 +368,7 @@ const DOC_CONFIG = {
   ID_CARD:   { label: 'ID Card',               icon: '🪪', color: '#2E7D32', bg: '#e8f5e9' },
   MARKSHEET: { label: 'Marksheet',             icon: '📋', color: '#E65100', bg: '#fff3e0' },
   MIGRATION: { label: 'Migration Certificate', icon: '📜', color: '#795548', bg: '#efebe9' },
+  DEGREE_FORM: { label: 'Degree Form',         icon: '📝', color: '#00695C', bg: '#e0f2f1' },
 };
 
 const AllDocumentsTab = ({ user }) => { // eslint-disable-line no-unused-vars
@@ -1191,206 +1200,56 @@ const printIDCard = (admission) => {
   <title>ID Card – ${admission.applicantName || 'Student'}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      background: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 20px;
-    }
+    body { font-family: Arial, Helvetica, sans-serif; background:#fff; display:flex; justify-content:center; align-items:flex-start; padding:20px; }
+
+    /* ── Horizontal (landscape) ID card ── */
     .card {
-      width: 85mm;
-      border: 1px solid #ccc;
-      background: #fff;
-      font-size: 11px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      width: 340px; height: 214px;
+      border: 1.5px solid #1a237e; border-radius: 6px;
+      overflow: hidden; background:#fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      display:flex; flex-direction:column;
     }
 
-    /* ── College Header ── */
-    .header {
-      background: #fff;
-      padding: 12px 14px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      border-bottom: 1px solid #ddd;
-    }
-    .logo-circle {
-      width: 62px;
-      height: 62px;
-      border-radius: 50%;
-      border: 2px solid #1a237e;
-      overflow: hidden;
-      margin-bottom: 6px;
-      flex-shrink: 0;
-    }
-    .logo-circle img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .trust-name {
-      font-size: 8px;
-      color: #555;
-      font-style: italic;
-      margin-bottom: 2px;
-    }
-    .college-name {
-      font-size: 12.5px;
-      font-weight: 900;
-      color: #1a237e;
-      line-height: 1.3;
-      margin-bottom: 2px;
-    }
-    .college-addr {
-      font-size: 8px;
-      color: #444;
-      line-height: 1.4;
-    }
-    .affiliation {
-      font-size: 7.5px;
-      color: #666;
-      margin-top: 1px;
-    }
+    /* Header */
+    .header { display:flex; align-items:center; gap:8px; padding:5px 8px; border-bottom:2px solid #1a237e; background:#fff; }
+    .logo-circle { width:42px; height:42px; border-radius:50%; border:1.5px solid #1a237e; overflow:hidden; flex-shrink:0; background:#fff; }
+    .logo-circle img { width:100%; height:100%; object-fit:cover; }
+    .header-text { flex:1; text-align:center; line-height:1.18; }
+    .trust-name { font-size:5.5px; color:#555; font-style:italic; }
+    .college-name { font-size:10px; font-weight:900; color:#1a237e; }
+    .affiliation { font-size:5.5px; color:#666; }
+    .college-addr { font-size:5.5px; color:#444; }
 
-    /* ── Blue Banner ── */
-    .banner {
-      background: #1a237e;
-      color: #FDD835;
-      text-align: center;
-      padding: 7px 0;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 3px;
-    }
+    /* Banner */
+    .banner { background:#1a237e; color:#FDD835; text-align:center; padding:2px 0; font-size:7px; font-weight:700; letter-spacing:3px; }
 
-    /* ── Body ── */
-    .body {
-      background: #f0f4ff;
-      padding: 14px 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .photo-frame {
-      width: 70px;
-      height: 80px;
-      border: 2px solid #1a237e;
-      border-radius: 4px;
-      overflow: hidden;
-      background: #c5cae9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 10px;
-    }
-    .photo-frame img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .photo-placeholder {
-      font-size: 32px;
-      color: #555;
-    }
-    .student-name {
-      font-size: 14px;
-      font-weight: 900;
-      color: #1a237e;
-      text-align: center;
-      margin-bottom: 10px;
-      text-transform: lowercase;
-    }
-    /* Details table */
-    .details {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .details tr {
-      border-bottom: 1px dashed #bbb;
-    }
-    .details tr:last-child {
-      border-bottom: none;
-    }
-    .details td {
-      padding: 4px 2px;
-      vertical-align: middle;
-    }
-    .details .lbl {
-      font-weight: 600;
-      color: #333;
-      width: 70px;
-      font-size: 10px;
-    }
-    .details .sep {
-      width: 12px;
-      color: #333;
-      font-size: 10px;
-    }
-    .details .val {
-      font-weight: 700;
-      color: #1a237e;
-      font-size: 10.5px;
-    }
+    /* Main row (photo | details) */
+    .body { flex:1; display:flex; gap:9px; padding:6px 9px; background:#f5f7ff; }
+    .body-left { width:72px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; }
+    .photo-frame { width:64px; height:76px; border:1.5px solid #1a237e; border-radius:3px; overflow:hidden; background:#c5cae9; display:flex; align-items:center; justify-content:center; }
+    .photo-frame img { width:100%; height:100%; object-fit:cover; }
+    .photo-placeholder { font-size:30px; color:#5c6bc0; }
+    .student-name { font-size:9px; font-weight:800; color:#1a237e; text-align:center; margin-top:3px; text-transform:capitalize; line-height:1.15; }
+    .body-right { flex:1; display:flex; flex-direction:column; }
+    .details { width:100%; border-collapse:collapse; }
+    .details td { padding:1.5px 1px; font-size:8px; vertical-align:top; }
+    .details .lbl { font-weight:700; color:#444; width:64px; }
+    .details .sep { width:6px; }
+    .details .val { font-weight:700; color:#1a237e; }
+    .id-bar { background:#1a237e; color:#FDD835; text-align:center; font-size:10px; font-weight:800; letter-spacing:1px; padding:2px 0; margin-top:4px; border-radius:3px; }
 
-    /* ── Student ID bar ── */
-    .id-bar {
-      background: #1a237e;
-      color: #FDD835;
-      text-align: center;
-      padding: 7px 0;
-      font-size: 14px;
-      font-weight: 900;
-      letter-spacing: 2px;
-      font-family: 'Courier New', monospace;
-    }
-
-    /* ── Signature strip ── */
-    .sig-strip {
-      background: #fff;
-      padding: 14px 20px 6px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .sig-block {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 34%;
-    }
-    .sig-line {
-      border-top: 1px solid #333;
-      width: 100%;
-      margin-bottom: 3px;
-    }
-    .sig-label {
-      font-size: 8px;
-      font-weight: 700;
-      color: #333;
-    }
-
-    /* ── Footer ── */
-    .footer {
-      background: #1a237e;
-      color: #fff;
-      padding: 8px 10px;
-      font-size: 7.5px;
-      line-height: 1.7;
-    }
-    .footer-row {
-      display: flex;
-      justify-content: space-between;
-    }
-    .footer-center {
-      text-align: center;
-      margin-top: 2px;
-    }
+    /* Signatures + footer */
+    .sig-strip { display:flex; justify-content:space-between; padding:3px 12px 2px; background:#fff; }
+    .sig-block { text-align:center; }
+    .sig-line { width:62px; border-top:1px solid #333; margin-bottom:1px; }
+    .sig-label { font-size:6px; color:#333; }
+    .footer { background:#1a237e; color:#fff; text-align:center; font-size:6px; font-weight:700; padding:2.5px 6px; line-height:1.4; }
 
     @media print {
-      body { padding: 0; }
-      .card { box-shadow: none; border: none; }
+      @page { size: 92mm 58mm landscape; margin:0; }
+      body { padding:0; }
+      .card { box-shadow:none; border-radius:0; width:92mm; height:58mm; }
     }
   </style>
 </head>
@@ -1402,90 +1261,48 @@ const printIDCard = (admission) => {
       <div class="logo-circle">
         <img src="/college-logo.png" onerror="this.style.display='none'" alt="Logo"/>
       </div>
-      <div class="trust-name">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-      <div class="college-name">Late Kalpana Chawla Women's Senior College</div>
-      <div class="affiliation">Affiliated to S.N.D.T. Women's University, Mumbai</div>
-      <div class="college-addr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
+      <div class="header-text">
+        <div class="trust-name">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="college-name">Late Kalpana Chawla Women's Senior College</div>
+        <div class="affiliation">Affiliated to S.N.D.T. Women's University, Mumbai</div>
+        <div class="college-addr">Lecture Colony, Gangakhed, Dist. Parbhani &ndash; 431514</div>
+      </div>
     </div>
 
     <!-- Banner -->
     <div class="banner">S T U D E N T &nbsp; I D E N T I T Y &nbsp; C A R D</div>
 
-    <!-- Body -->
+    <!-- Body: photo (left) + details (right) -->
     <div class="body">
-      <!-- Photo -->
-      <div class="photo-frame">
-        ${photoSrc
-          ? `<img src="${photoSrc}" alt="Student Photo" />`
-          : `<span class="photo-placeholder">&#128105;</span>`}
+      <div class="body-left">
+        <div class="photo-frame">
+          ${photoSrc
+            ? `<img src="${photoSrc}" alt="Student Photo" />`
+            : `<span class="photo-placeholder">&#128105;</span>`}
+        </div>
+        <div class="student-name">${admission.applicantName || ''}</div>
       </div>
-
-      <!-- Name -->
-      <div class="student-name">${name}</div>
-
-      <!-- Details -->
-      <table class="details">
-        <tr>
-          <td class="lbl">Course</td>
-          <td class="sep"></td>
-          <td class="val">${course}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Year</td>
-          <td class="sep"></td>
-          <td class="val">${year}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Date of Birth</td>
-          <td class="sep"></td>
-          <td class="val">${dob}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Mobile No.</td>
-          <td class="sep"></td>
-          <td class="val">${mobile}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Blood Group</td>
-          <td class="sep"></td>
-          <td class="val">${bloodGrp}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Valid</td>
-          <td class="sep"></td>
-          <td class="val">${validPeriod}</td>
-        </tr>
-      </table>
+      <div class="body-right">
+        <table class="details">
+          <tr><td class="lbl">Course</td><td class="sep">:</td><td class="val">${course}</td></tr>
+          <tr><td class="lbl">Year</td><td class="sep">:</td><td class="val">${year}</td></tr>
+          <tr><td class="lbl">Date of Birth</td><td class="sep">:</td><td class="val">${dob}</td></tr>
+          <tr><td class="lbl">Mobile No.</td><td class="sep">:</td><td class="val">${mobile}</td></tr>
+          <tr><td class="lbl">Blood Group</td><td class="sep">:</td><td class="val">${bloodGrp}</td></tr>
+          <tr><td class="lbl">Valid</td><td class="sep">:</td><td class="val">${validPeriod}</td></tr>
+        </table>
+        <div class="id-bar">${studentId}</div>
+      </div>
     </div>
 
-    <!-- Student ID bar -->
-    <div class="id-bar">${studentId}</div>
-
-    <!-- Signature strip -->
+    <!-- Signatures -->
     <div class="sig-strip">
-      <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-label">Student Signature</div>
-      </div>
-      <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-label">Principal</div>
-      </div>
+      <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Student Signature</div></div>
+      <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Principal</div></div>
     </div>
 
     <!-- Footer -->
-    <div class="footer">
-      <div class="footer-row">
-        <span>+91 9307162914</span>
-        <span>lkcwsc@vnssorg.com</span>
-      </div>
-      <div class="footer-row">
-        <span>lkcwsc.vnssorg.com</span>
-      </div>
-      <div class="footer-center">
-        Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514
-      </div>
-    </div>
+    <div class="footer">📞 +91 9307162914 &nbsp;|&nbsp; ✉️ lkcwscgkd@gmail.com &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
 
   </div>
 
@@ -1495,7 +1312,7 @@ const printIDCard = (admission) => {
 </body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=420,height=700');
+  const win = window.open('', '_blank', 'width=640,height=520');
   if (win) {
     win.document.write(html);
     win.document.close();
@@ -1766,6 +1583,7 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
             <option value="MARKSHEET">📄 Marksheet</option>
             <option value="PROVISIONAL_DEGREE">📜 Provisional Degree Certificate</option>
             <option value="DEGREE">🎓 Degree Certificate</option>
+            <option value="DEGREE_FORM">📝 Degree Form</option>
             <option value="MIGRATION">📜 Migration Certificate</option>
           </select>
         </div>
@@ -1789,7 +1607,6 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
           <option value="">Use my admission year ({myAdmission?.admissionYear || '—'})</option>
           <option value="1st Year">1st Year (FY)</option>
           <option value="2nd Year">2nd Year (SY)</option>
-          <option value="3rd Year">3rd Year (TY)</option>
         </select>
         <p style={{ fontSize: 11, color: '#888', margin: '4px 0 0' }}>
           SY/TY students — select your current year so Bonafide & other documents print correctly.
@@ -1978,7 +1795,8 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
     {docType==='MARKSHEET' && '📋 Workflow: You → Exam Section (process & issue)'}
     {docType==='PROVISIONAL_DEGREE' && '📋 Workflow: You → Student Section → Admin → Principal → Issued'}
     {docType==='DEGREE' && '📋 Workflow: You → Student Section → Admin → Principal → Issued'}
-    {docType==='MIGRATION' && '📋 Workflow: You → Student Section → Admin → Principal → Issued'}
+    {docType==='DEGREE_FORM' && '📋 Workflow: You → Student Section (process & issue)'}
+    {docType==='MIGRATION' && '📋 Workflow: You → Accounts Section → Exam Section'}
   </div>
 )}
 
@@ -2312,7 +2130,7 @@ const LastDegreeTab = ({ myAdmission, user }) => {
             <input type="text" placeholder="e.g. Admission in PG course, job transfer, family relocation..." value={migForm.reason} onChange={e => setMigForm(f => ({...f, reason: e.target.value}))} style={inputStyle} />
           </div>
           <div style={{ background: '#fff3e0', borderRadius: 9, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#E65100' }}>
-            📋 Workflow: You → Student Section → Admin → Principal → Approved → Issued
+            📋 Workflow: You → Accounts Section → Exam Section
           </div>
           <button onClick={() => handleDocSubmit('MIGRATION', { reason: migForm.reason || 'Migration Certificate', migForm })} disabled={submitting || !migForm.reason}
             style={{ background: submitting || !migForm.reason ? '#aaa' : '#E65100', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 28px', fontSize: 14, fontWeight: 700, cursor: submitting || !migForm.reason ? 'not-allowed' : 'pointer' }}>
@@ -2383,13 +2201,11 @@ const StudentDashboard = () => {
     { id: 'home',          label: '🏠 Dashboard' },
     { id: 'application',   label: '📋 My Application' },
     { id: 'profile',       label: '👤 My Profile' },
-    { id: 'fees',          label: '💰 My Fees' },
     { id: 'documents',     label: '📄 Request Documents' },
     { id: 'results',       label: '🎓 Results' },
     { id: 'examform',      label: '📝 Exam Form' },
     { id: 'scholarship',   label: '🏅 Scholarship' },
     { id: 'attendance',    label: '📊 Attendance' },
-    { id: 'last_degree',   label: '🎓 Last Degree / TC' },
     { id: 'academic_year', label: '📅 Academic Year' },
     { id: 'notices',       label: '📢 Notices' },
   ];
@@ -2783,6 +2599,7 @@ const StudentDashboard = () => {
 
           {/* ── PERSONAL ── */}
           {profileTab === 'personal' && (
+            <>
             <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
               <h4 style={{ color:'#1565C0', marginBottom:16, fontSize:15, borderBottom:'2px solid #e3f2fd', paddingBottom:8 }}>👤 Personal Details</h4>
               <FieldRow label="Full Name"       value={myAdmission.applicantName} />
@@ -2795,14 +2612,20 @@ const StudentDashboard = () => {
               <FieldRow label="Category"        value={myAdmission.category?.toUpperCase()} />
               <FieldRow label="Caste"           value={myAdmission.caste} />
               <FieldRow label="Marital Status"  value={myAdmission.isMarried ? 'Married' : 'Unmarried'} />
+              <FieldRow label="Aadhar No."      value={myAdmission.aadharNumber} mono />
+              <FieldRow label="Family Income"   value={myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'} />
+            </div>
+
+            {/* Contact details kept separate from personal details */}
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20, marginTop:16 }}>
+              <h4 style={{ color:'#1565C0', marginBottom:16, fontSize:15, borderBottom:'2px solid #e3f2fd', paddingBottom:8 }}>📞 Contact Details</h4>
               <FieldRow label="Mobile"          value={myAdmission.phone} />
               <FieldRow label="Parent Phone"    value={myAdmission.parentPhone || myAdmission.fatherPhone || myAdmission.motherPhone} />
               <FieldRow label="Email"           value={myAdmission.email} />
-              <FieldRow label="Aadhar No."      value={myAdmission.aadharNumber} mono />
-              <FieldRow label="Family Income"   value={myAdmission.familyIncome ? `₹${myAdmission.familyIncome}` : '—'} />
               <FieldRow label="Guardian Name"   value={myAdmission.guardianName} />
               <FieldRow label="Guardian Phone"  value={myAdmission.guardianPhone} />
             </div>
+            </>
           )}
 
           {/* ── CURRENT ACADEMIC ── */}
