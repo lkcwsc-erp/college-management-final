@@ -1009,6 +1009,38 @@ const PublishedFormSubmissionsTab = () => {
     } finally { setDeleting(false); }
   };
 
+  // ── selected form ke paid students ka record Excel (.xlsx) me download karta hai ─
+  const exportXLSX = async (f) => {
+    const rows = paidRequests(f);
+    if (!rows.length) { alert('Is form me abhi koi paid student record nahi hai.'); return; }
+    const data = rows.map((r, i) => ({
+      'Sr No'       : i + 1,
+      'Student Name': r.studentName || '',
+      'Email'       : r.studentEmail || '',
+      'PRN'         : r.prnNumber || '',
+      'Student ID'  : r.studentId || '',
+      'Course'      : r.course || '',
+      'Year'        : r.admissionYear || '',
+      'Semester'    : r.semester || '',
+      'Form Type'   : r.formType === 'regular' ? 'Regular' : 'Backlog/KT',
+      'Exam Event'  : r.examEvent || '',
+      'Mobile No'   : r.mobileNo || '',
+      'Exam Fee'    : Number(r.feeAmount) || 0,
+      'Receipt No'  : r.feeReceiptNo || '',
+    }));
+    const XLSX = await import('xlsx');
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [
+      { wch:6 }, { wch:24 }, { wch:26 }, { wch:16 }, { wch:14 }, { wch:10 },
+      { wch:8 }, { wch:9 }, { wch:12 }, { wch:22 }, { wch:14 }, { wch:10 }, { wch:16 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
+    const safe = (s) => String(s || '').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '');
+    const fname = `ExamForm_${safe(f.course)}_Sem${safe(f.semester)}_${safe(f.formType)}_${safe(f.examEvent)}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  };
+
   // ── Detail view: ek form pe click karne ke baad ──────────────────────────────
   if (selected) {
     const paidAll = paidRequests(selected);
@@ -1038,15 +1070,21 @@ const PublishedFormSubmissionsTab = () => {
               <h3 style={{ color:'#f57c00', margin:'10px 0 2px' }}>{selected.course} · {selected.semester} Semester</h3>
               <p style={{ fontSize:13, color:'#666', margin:0 }}>{selected.admissionYear || '—'} · {selected.examEvent}</p>
             </div>
-            <div style={{ display:'flex', gap:24, textAlign:'center' }}>
-              <div>
-                <div style={{ fontSize:24, fontWeight:800, color:'#1565C0' }}>{paidAll.length}</div>
-                <div style={{ fontSize:11, color:'#888', fontWeight:600 }}>PAID STUDENTS</div>
+            <div style={{ display:'flex', gap:20, alignItems:'center', flexWrap:'wrap' }}>
+              <div style={{ display:'flex', gap:24, textAlign:'center' }}>
+                <div>
+                  <div style={{ fontSize:24, fontWeight:800, color:'#1565C0' }}>{paidAll.length}</div>
+                  <div style={{ fontSize:11, color:'#888', fontWeight:600 }}>PAID STUDENTS</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:24, fontWeight:800, color:'#2E7D32' }}>₹{totalCollected.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize:11, color:'#888', fontWeight:600 }}>TOTAL COLLECTED</div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontSize:24, fontWeight:800, color:'#2E7D32' }}>₹{totalCollected.toLocaleString('en-IN')}</div>
-                <div style={{ fontSize:11, color:'#888', fontWeight:600 }}>TOTAL COLLECTED</div>
-              </div>
+              <button onClick={() => exportXLSX(selected)} disabled={paidAll.length === 0} title="Download student records as Excel"
+                style={{ display:'flex', alignItems:'center', gap:8, background: paidAll.length === 0 ? '#c8e6c9' : 'linear-gradient(135deg,#2E7D32,#43A047)', color:'#fff', border:'none', borderRadius:9, padding:'10px 18px', fontSize:13, fontWeight:700, cursor: paidAll.length === 0 ? 'not-allowed' : 'pointer', boxShadow:'0 2px 8px rgba(46,125,50,.25)', whiteSpace:'nowrap' }}>
+                ⬇️ Download Excel
+              </button>
             </div>
           </div>
         </div>
