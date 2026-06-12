@@ -794,7 +794,7 @@ const printTC = (adm) => {
     .hlogo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .htrust{font-size:13px;color:#222;font-weight:600;margin-bottom:3px}
-    .hname{font-size:20px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.5px;text-transform:uppercase}
+    .hname{font-size:16px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.5px;text-transform:uppercase}
     .huniv{font-size:11px;color:#333;margin-top:3px}
     .haddr{font-size:11px;color:#333;margin-top:3px;line-height:1.5}
     .hcontact{font-size:10px;color:#555;margin-top:3px}
