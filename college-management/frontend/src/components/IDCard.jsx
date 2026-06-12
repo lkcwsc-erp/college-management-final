@@ -14,65 +14,68 @@ export const printIDCard = (admission) => {
   const html = `<!DOCTYPE html><html><head><title>ID Card</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:240px;background:#fff;font-family:Arial,sans-serif}
-    .card{width:240px;background:#fff;border:2px solid #1a237e;border-radius:4px;overflow:hidden}
-    .hdr{background:#1a237e;padding:8px 6px 6px;text-align:center}
-    .logo{width:55px;height:55px;object-fit:contain;border-radius:50%;border:2px solid rgba(255,255,255,0.4);margin-bottom:4px}
-    .sanstha{font-size:6.5px;color:rgba(255,255,255,0.8);font-style:italic}
-    .college{font-size:9px;font-weight:700;color:#fff;line-height:1.3;margin:2px 0}
-    .affil{font-size:6px;color:rgba(255,255,255,0.75)}
-    .addr{font-size:6px;color:rgba(255,255,255,0.65);margin-top:1px}
-    .titlebar{background:#FFD700;padding:4px;text-align:center}
-    .titletext{color:#1a237e;font-size:8.5px;font-weight:900;letter-spacing:2px}
-    .photowrap{background:#f8f9ff;padding:10px 0 8px;text-align:center;border-bottom:1px solid #e8eaf6}
-    .photobox{width:72px;height:85px;border:2px solid #1a237e;margin:0 auto 6px;overflow:hidden;background:#c5cae9;display:flex;align-items:center;justify-content:center;border-radius:2px}
+    html,body{background:#fff;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:flex-start;padding:10px}
+    /* Horizontal (landscape) ID card */
+    .card{width:340px;height:214px;background:#fff;border:1.5px solid #1a237e;border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+    .hdr{display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:2px solid #1a237e;background:#fff}
+    .logo{width:42px;height:42px;object-fit:contain;border-radius:50%;border:1.5px solid #1a237e;flex-shrink:0}
+    .htxt{flex:1;text-align:center;line-height:1.18}
+    .sanstha{font-size:5.5px;color:#555;font-style:italic}
+    .college{font-size:10px;font-weight:900;color:#1a237e}
+    .affil{font-size:5.5px;color:#666}
+    .addr{font-size:5.5px;color:#444}
+    .titlebar{background:#1a237e;color:#FDD835;padding:2px 0;text-align:center}
+    .titletext{font-size:7px;font-weight:700;letter-spacing:3px}
+    .body{flex:1;display:flex;gap:9px;padding:6px 9px;background:#f5f7ff}
+    .photowrap{width:72px;flex-shrink:0;display:flex;flex-direction:column;align-items:center}
+    .photobox{width:64px;height:76px;border:1.5px solid #1a237e;overflow:hidden;background:#c5cae9;display:flex;align-items:center;justify-content:center;border-radius:3px}
     .photobox img{width:100%;height:100%;object-fit:cover}
-    .stuname{font-size:11px;font-weight:700;color:#1a237e;padding:0 4px;line-height:1.2}
-    .body{padding:8px 10px 4px}
-    .row{display:flex;align-items:baseline;padding:3px 0;border-bottom:1px dashed #e8eaf6}
-    .lbl{font-size:8.5px;font-weight:700;color:#555;width:60px;flex-shrink:0}
-    .val{font-size:8.5px;font-weight:700;color:#1a237e;flex:1}
-    .chip{background:#1a237e;color:#FFD700;text-align:center;padding:5px;font-size:10px;font-weight:700;letter-spacing:1px}
-    .sig{display:grid;grid-template-columns:1fr 1fr;padding:6px 10px 4px;gap:6px;border-top:1px solid #e8eaf6}
+    .stuname{font-size:9px;font-weight:800;color:#1a237e;text-align:center;margin-top:3px;line-height:1.15;text-transform:capitalize}
+    .bodyright{flex:1;display:flex;flex-direction:column}
+    .row{display:flex;align-items:baseline;padding:1.5px 0}
+    .lbl{font-size:8px;font-weight:700;color:#444;width:64px;flex-shrink:0}
+    .val{font-size:8px;font-weight:700;color:#1a237e;flex:1}
+    .chip{background:#1a237e;color:#FDD835;text-align:center;padding:2px 0;font-size:10px;font-weight:800;letter-spacing:1px;margin-top:4px;border-radius:3px}
+    .sig{display:flex;justify-content:space-between;padding:3px 12px 2px;background:#fff}
     .sigbox{text-align:center}
-    .sigline{border-top:1px solid #333;padding-top:2px;font-size:7px;color:#333;font-weight:700}
-    .foot{background:#1a237e;padding:5px 8px}
-    .footrow{display:flex;justify-content:space-between;font-size:6.5px;color:rgba(255,255,255,0.9)}
-    .footaddr{font-size:6px;color:rgba(255,255,255,0.7);text-align:center;margin-top:2px}
-    @media print{@page{size:240px 420px;margin:0}html,body{width:240px}}
+    .sigline{width:62px;border-top:1px solid #333;margin-bottom:1px}
+    .siglabel{font-size:6px;color:#333}
+    .foot{background:#1a237e;color:#fff;text-align:center;font-size:6px;font-weight:700;padding:2.5px 6px;line-height:1.4}
+    @media print{@page{size:92mm 58mm landscape;margin:0}.card{border-radius:0;width:92mm;height:58mm}}
   </style></head><body>
   <div class="card">
     <div class="hdr">
-      <img src="${logo}" class="logo"/><br/>
-      <span class="sanstha">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</span><br/>
-      <span class="college">Late Kalpana Chawla Women's<br/>Senior College (LKCWSC)</span><br/>
-      <span class="affil">Affiliated to SNDT Women's University, Mumbai</span>
-    </div>
-    <div class="titlebar"><span class="titletext">STUDENT IDENTITY CARD</span></div>
-    <div class="photowrap">
-      <div class="photobox">
-        ${admission.studentPhoto ? `<img src="${docUrl(admission.studentPhoto)}" alt="photo"/>` : '<div style="font-size:32px;text-align:center;padding-top:20px">👩</div>'}
+      <img src="${logo}" class="logo"/>
+      <div class="htxt">
+        <div class="sanstha">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="college">Late Kalpana Chawla Women's Senior College</div>
+        <div class="affil">Affiliated to SNDT Women's University, Mumbai</div>
+        <div class="addr">Lecture Colony, Gangakhed, Dist. Parbhani – 431514</div>
       </div>
-      <div class="stuname">${admission.applicantName||'--'}</div>
     </div>
+    <div class="titlebar"><span class="titletext">S T U D E N T &nbsp; I D E N T I T Y &nbsp; C A R D</span></div>
     <div class="body">
-      <div class="row"><span class="lbl">Course</span><span class="val">${courseFull}</span></div>
-      <div class="row"><span class="lbl">Year</span><span class="val">${admission.admissionYear||'--'}</span></div>
-      <div class="row"><span class="lbl">Date of Birth</span><span class="val">${dobStr}</span></div>
-      <div class="row"><span class="lbl">Mobile No.</span><span class="val">${admission.phone||'--'}</span></div>
-      <div class="row"><span class="lbl">Blood Group</span><span class="val">${admission.bloodGroup||'--'}</span></div>
-      <div class="row" style="border:none"><span class="lbl">Valid</span><span class="val">${validYear} – ${validYear+1}</span></div>
+      <div class="photowrap">
+        <div class="photobox">
+          ${admission.studentPhoto ? `<img src="${docUrl(admission.studentPhoto)}" alt="photo"/>` : '<div style="font-size:30px">👩</div>'}
+        </div>
+        <div class="stuname">${admission.applicantName||'--'}</div>
+      </div>
+      <div class="bodyright">
+        <div class="row"><span class="lbl">Course</span><span class="val">${courseFull}</span></div>
+        <div class="row"><span class="lbl">Year</span><span class="val">${admission.admissionYear||'--'}</span></div>
+        <div class="row"><span class="lbl">Date of Birth</span><span class="val">${dobStr}</span></div>
+        <div class="row"><span class="lbl">Mobile No.</span><span class="val">${admission.phone||'--'}</span></div>
+        <div class="row"><span class="lbl">Blood Group</span><span class="val">${admission.bloodGroup||'--'}</span></div>
+        <div class="row"><span class="lbl">Valid</span><span class="val">${validYear} – ${validYear+1}</span></div>
+        <div class="chip">${admission.studentId||'ID PENDING'}</div>
+      </div>
     </div>
-    <div class="chip">${admission.studentId||'ID PENDING'}</div>
     <div class="sig">
-      <div class="sigbox"><div style="height:18px"></div><div class="sigline">Student Signature</div></div>
-      <div class="sigbox"><div style="height:18px"></div><div class="sigline">Principal</div></div>
+      <div class="sigbox"><div class="sigline"></div><div class="siglabel">Student Signature</div></div>
+      <div class="sigbox"><div class="sigline"></div><div class="siglabel">Principal</div></div>
     </div>
-    <div class="foot">
-      <div class="footrow"><span>+91 9307162914</span><span>lkcwsc@vnssorg.com</span></div>
-      <div class="footrow" style="margin-top:1px;justify-content:center"><span>lkcwsc.vnssorg.com</span></div>
-      <div class="footaddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
-    </div>
+    <div class="foot">📞 +91 9307162914 &nbsp;|&nbsp; ✉️ lkcwscgkd@gmail.com &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
   </div>
   <scri${'pt'}>
   window.onload = () => {
@@ -91,7 +94,7 @@ export const printIDCard = (admission) => {
   };
   </scri${'pt'}></body></html>`;
 
-  const w = window.open('','_blank','width=290,height=480');
+  const w = window.open('','_blank','width=420,height=320');
   w.document.write(html); w.document.close();
 };
 
