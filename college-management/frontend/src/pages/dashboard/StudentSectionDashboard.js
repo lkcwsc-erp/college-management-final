@@ -788,9 +788,9 @@ const printTC = (adm) => {
     .htxt{flex:1;text-align:center}
     .htrust{font-size:13px;color:#222;font-weight:600;margin-bottom:3px}
     .hname{font-size:13px;font-weight:900;color:#000;line-height:1.3;margin:2px 0;letter-spacing:0.5px;text-transform:uppercase}
-    .huniv{font-size:11px;color:#333;margin-top:3px}
-    .haddr{font-size:11px;color:#333;margin-top:3px;line-height:1.5}
-    .hcontact{font-size:10px;color:#555;margin-top:3px}
+    .huniv{font-size:11px;color:#111;font-weight:700;margin-top:3px}
+    .haddr{font-size:11px;color:#111;font-weight:600;margin-top:3px;line-height:1.5}
+    .hcontact{font-size:10.5px;color:#000;font-weight:700;margin-top:3px}
 
     /* ── Title ── */
     .titlesec{text-align:center;padding:7px 0 3px;border-bottom:1.5px solid #000}
@@ -827,8 +827,9 @@ const printTC = (adm) => {
     .print-btn{display:block;margin:10px auto;padding:8px 28px;background:#1a237e;color:white;border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer}
 
     @media print{
+      @page{size:A4 portrait;margin:10mm}
       body{background:white;padding:0}
-      .page{box-shadow:none}
+      .page{box-shadow:none;width:100%}
       .print-btn{display:none}
       input[type=text]{border-bottom:1px dotted #555}
     }
@@ -840,7 +841,7 @@ const printTC = (adm) => {
       <img src="${window.location.origin}/college-logo.png" class="hlogo" alt="Logo" onerror="this.style.display='none'"/>
       <div class="htxt">
         <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-        <div class="hname">Late Kalpana Chawala Arts &amp; Science Mahila Senior College Gangakhed,</div>
+        <div class="hname">Late Kalpana Chawla Arts &amp; Science Women's Senior College, Gangakhed</div>
         <div class="huniv">Affiliated to S.N.D.T. Women's University, Mumbai</div>
         <div class="haddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra &ndash; 431514</div>
         <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com &nbsp;|&nbsp; ✉️ lkcwsc@vnssorg.com</div>
@@ -946,11 +947,11 @@ const printBonafide = (adm) => {
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:14px 30px}
     .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
-    .h1{font-size:12px;color:#444;}
+    .h1{font-size:12px;color:#222;font-weight:700;}
     .h3{font-size:23px;font-weight:900;color:#000;margin:3px 0 2px}
-    .h2{font-size:12px;color:#333;margin-bottom:3px}
-    .h4{font-size:12.5px;color:#000;margin-bottom:2px}
-    .h5{font-size:11.5px;color:#555}
+    .h2{font-size:12px;color:#111;font-weight:700;margin-bottom:3px}
+    .h4{font-size:12.5px;color:#000;font-weight:600;margin-bottom:2px}
+    .h5{font-size:11.5px;color:#000;font-weight:700}
     /* Title */
     .titlebar{text-align:center;padding:8px 0;border-bottom:1px solid #000}
     .titletxt{font-size:17px;font-weight:900;letter-spacing:5px;text-decoration:underline;text-underline-offset:4px}
@@ -972,7 +973,7 @@ const printBonafide = (adm) => {
     /* ERP */
     .erp{border-top:1px dashed #aaa;padding:5px 18px;font-size:9.5px;color:#666;display:flex;justify-content:space-between}
     .sysgen{padding:3px 18px 5px;font-size:9px;color:#888;text-align:center}
-    @media print{body{background:white;padding:0}.page{box-shadow:none}}
+    @media print{@page{size:A4 portrait;margin:12mm}body{background:white;padding:0}.page{box-shadow:none;width:100%}}
   </style></head><body><div class="page">
     <div class="hdr">
       <img src="${window.location.origin}/college-logo.png" class="logo" onerror="this.style.display='none'"/>
@@ -1023,76 +1024,81 @@ const printIDCard = (adm) => {
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{background:#e0e0e0;display:flex;justify-content:center;align-items:flex-start;padding:16px;font-family:Arial,sans-serif}
-    /* CR80 vertical: 54mm × 86mm */
+    /* CR80 horizontal: 86mm × 54mm */
     .card{
-      width:54mm;
+      width:86mm;
       background:#fff;
       border:1px solid #1a237e;
       border-radius:3mm;
       overflow:hidden;
       box-shadow:0 2px 10px rgba(0,0,0,0.25);
     }
-    /* Header */
-    .hdr{background:#1a237e;padding:6px 6px 5px;display:flex;flex-direction:column;align-items:center;text-align:center}
-    .hlogo{width:44px;height:44px;object-fit:contain;margin-bottom:3px}
+    /* Header (logo left, text right) */
+    .hdr{background:#1a237e;padding:5px 8px;display:flex;align-items:center;gap:7px;text-align:center}
+    .hlogo{width:40px;height:40px;object-fit:contain;flex-shrink:0}
+    .htext{flex:1}
     .htrust{font-size:5px;color:rgba(255,255,255,0.7);line-height:1.3}
-    .hcollege{font-size:7px;font-weight:900;color:#FDD835;line-height:1.3;margin:1px 0}
+    .hcollege{font-size:8px;font-weight:900;color:#FDD835;line-height:1.25;margin:1px 0}
     .haffil{font-size:5px;color:rgba(255,255,255,0.65)}
     /* Banner */
-    .banner{background:#FDD835;padding:2.5px 0;text-align:center;font-size:6px;font-weight:900;color:#1a237e;letter-spacing:2px}
-    /* Photo */
-    .photowrap{background:#f0f4ff;padding:8px 0 5px;display:flex;flex-direction:column;align-items:center}
-    .photobox{width:44px;height:54px;border:1.5px solid #1a237e;overflow:hidden;background:#c5cae9;display:flex;align-items:center;justify-content:center;border-radius:2px;margin-bottom:5px}
+    .banner{background:#FDD835;padding:2px 0;text-align:center;font-size:6px;font-weight:900;color:#1a237e;letter-spacing:2px}
+    /* Body: photo left + details right */
+    .body{background:#f0f4ff;padding:6px 8px;display:flex;align-items:flex-start;gap:8px}
+    .photowrap{display:flex;flex-direction:column;align-items:center;width:50px;flex-shrink:0}
+    .photobox{width:44px;height:54px;border:1.5px solid #1a237e;overflow:hidden;background:#c5cae9;display:flex;align-items:center;justify-content:center;border-radius:2px}
     .photobox img{width:100%;height:100%;object-fit:cover}
-    .stuname{font-size:8.5px;font-weight:900;color:#1a237e;text-align:center;text-transform:capitalize;padding:0 4px;line-height:1.3}
+    .stuname{font-size:7px;font-weight:900;color:#1a237e;text-align:center;text-transform:capitalize;margin-top:3px;line-height:1.2}
     /* Details */
-    .details{padding:5px 7px 4px;background:#fff}
-    .row{display:flex;align-items:baseline;padding:1.5px 0;border-bottom:0.5px dashed #ddd}
+    .details{flex:1}
+    .row{display:flex;align-items:baseline;padding:1px 0;border-bottom:0.5px dashed #ccc}
     .row:last-child{border-bottom:none}
-    .lbl{font-size:6.5px;font-weight:700;color:#555;width:52px;flex-shrink:0}
-    .val{font-size:7px;font-weight:700;color:#1a237e;flex:1}
+    .lbl{font-size:6px;font-weight:700;color:#555;width:48px;flex-shrink:0}
+    .val{font-size:6.5px;font-weight:700;color:#1a237e;flex:1}
     /* ID bar */
-    .idbar{background:#1a237e;color:#FDD835;text-align:center;padding:4px 0;font-size:8px;font-weight:900;letter-spacing:1.5px;font-family:'Courier New',monospace}
+    .idbar{background:#1a237e;color:#FDD835;text-align:center;padding:3px 0;font-size:8px;font-weight:900;letter-spacing:1.5px;font-family:'Courier New',monospace}
     /* Sig strip */
-    .sig{display:flex;justify-content:space-between;padding:5px 8px 4px;background:#fff}
-    .sigbox{text-align:center;width:40%}
-    .sigline{border-top:0.5px solid #333;padding-top:2px;font-size:5.5px;font-weight:700;color:#333;margin-top:12px}
+    .sig{display:flex;justify-content:space-between;padding:5px 12px 3px;background:#fff}
+    .sigbox{text-align:center;width:38%}
+    .sigline{border-top:0.5px solid #333;padding-top:2px;font-size:5.5px;font-weight:700;color:#333;margin-top:10px}
     /* Footer */
-    .foot{background:#1a237e;padding:3px 7px}
+    .foot{background:#1a237e;padding:3px 8px}
     .frow{display:flex;justify-content:space-between}
     .ftext{font-size:5px;color:rgba(255,255,255,0.85)}
     .faddr{font-size:4.5px;color:rgba(255,255,255,0.7);text-align:center;margin-top:1px}
     @media print{
       html,body{background:white;padding:0}
       .card{box-shadow:none}
-      @page{size:54mm 86mm;margin:0}
+      @page{size:86mm 54mm landscape;margin:0}
     }
   </style></head><body>
   <div class="card">
     <!-- Header -->
     <div class="hdr">
       <img src="${window.location.origin}/college-logo.png" class="hlogo" onerror="this.style.display='none'"/>
-      <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
-      <div class="hcollege">Late Kalpana Chawla Women's<br/>Senior College (LKCWSC)</div>
-      <div class="haffil">Affiliated to SNDT Women's University, Mumbai</div>
+      <div class="htext">
+        <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="hcollege">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+        <div class="haffil">Affiliated to SNDT Women's University, Mumbai</div>
+      </div>
     </div>
     <!-- Banner -->
     <div class="banner">STUDENT &nbsp; IDENTITY &nbsp; CARD</div>
-    <!-- Photo + Name -->
-    <div class="photowrap">
-      <div class="photobox">
-        ${photoSrc ? `<img src="${photoSrc}" alt="photo"/>` : '<div style="font-size:26px;text-align:center;padding-top:12px">👩</div>'}
+    <!-- Body: photo left, details right -->
+    <div class="body">
+      <div class="photowrap">
+        <div class="photobox">
+          ${photoSrc ? `<img src="${photoSrc}" alt="photo"/>` : '<div style="font-size:24px;text-align:center;padding-top:12px">👩</div>'}
+        </div>
+        <div class="stuname">${adm.applicantName||'--'}</div>
       </div>
-      <div class="stuname">${adm.applicantName||'--'}</div>
-    </div>
-    <!-- Details -->
-    <div class="details">
-      <div class="row"><span class="lbl">Course</span><span class="val">${courseFull}</span></div>
-      <div class="row"><span class="lbl">Year</span><span class="val">${adm.admissionYear||'--'}</span></div>
-      <div class="row"><span class="lbl">Date of Birth</span><span class="val">${dobStr}</span></div>
-      <div class="row"><span class="lbl">Mobile No.</span><span class="val">${adm.phone||'--'}</span></div>
-      <div class="row"><span class="lbl">Blood Group</span><span class="val">${adm.bloodGroup||'--'}</span></div>
-      <div class="row"><span class="lbl">Valid</span><span class="val">${validYear} – ${validYear+1}</span></div>
+      <div class="details">
+        <div class="row"><span class="lbl">Course</span><span class="val">${courseFull}</span></div>
+        <div class="row"><span class="lbl">Year</span><span class="val">${adm.admissionYear||'--'}</span></div>
+        <div class="row"><span class="lbl">Date of Birth</span><span class="val">${dobStr}</span></div>
+        <div class="row"><span class="lbl">Mobile No.</span><span class="val">${adm.phone||'--'}</span></div>
+        <div class="row"><span class="lbl">Blood Group</span><span class="val">${adm.bloodGroup||'--'}</span></div>
+        <div class="row"><span class="lbl">Valid</span><span class="val">${validYear} – ${validYear+1}</span></div>
+      </div>
     </div>
     <!-- ID bar -->
     <div class="idbar">${adm.studentId||'ID PENDING'}</div>
@@ -1105,7 +1111,7 @@ const printIDCard = (adm) => {
     <div class="foot">
       <div class="frow">
         <span class="ftext">+91 9307162914</span>
-        <span class="ftext">lkcwsc.vnssorg.com</span>
+        <span class="ftext">lkcwscgkd@gmail.com</span>
       </div>
       <div class="faddr">Lecture Colony, Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
     </div>
@@ -1127,7 +1133,7 @@ const printIDCard = (adm) => {
   };
 </scri${'pt'}></body></html>`;
 
-  const w = window.open('','_blank','width=260,height=420');
+  const w = window.open('','_blank','width=520,height=380');
   w.document.write(html); w.document.close();
 };
 
@@ -1140,6 +1146,7 @@ const DOC_CONFIG = {
   MIGRATION:          { label: 'Migration Certificate',          icon: '📜', color: '#795548', bg: '#efebe9', fee: 200 },
   PROVISIONAL_DEGREE: { label: 'Provisional Degree Certificate', icon: '📜', color: '#0277BD', bg: '#e1f5fe', fee: 100 },
   DEGREE:             { label: 'Degree Certificate',             icon: '🎓', color: '#1B5E20', bg: '#E8F5E9', fee: 100 },
+  DEGREE_FORM:        { label: 'Degree Form',                    icon: '📝', color: '#00695C', bg: '#e0f2f1', fee: 100 },
 };
 
 const AllDocumentsTab = ({ user }) => {
