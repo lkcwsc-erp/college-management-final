@@ -41,7 +41,7 @@ const Footer = () => {
           <p>📍 Gangakhed, Marathwada</p>
           <p>Maharashtra - 431514</p>
           <p>📞 +919307162914</p>
-          <p>✉️ info@lkcwsc.edu.in</p>
+          <p>✉️ lkcwscgkd@gmail.com</p>
           <p>🕐 Mon - Sat: 9:00 AM - 5:00 PM</p>
         </div>
 
