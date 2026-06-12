@@ -1214,7 +1214,7 @@ const PublishedFormSubmissionsTab = () => {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12, marginBottom:6 }}>
         <div>
           <h2 style={{ color:'#f57c00', marginBottom:4 }}>📝 Exam Form Submissions</h2>
-          <p style={{ color:'#666', margin:0, fontSize:14 }}>Exam forms ki list. Kisi form pe click karein — us form ko fill karke fees pay karne wale students ka pura data dikhega.</p>
+        <p style={{ color:'#666', margin:0, fontSize:14 }}>List of exam forms. Click on any form to see the full data of students who filled it and paid the fees.</p>
         </div>
         {formGroups.length > 0 && (
           <button onClick={() => setManageMode(m => !m)}
