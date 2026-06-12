@@ -179,6 +179,7 @@ const DEFAULT_DOC_FEES = {
   TC:                 { label: '🎓 Transfer Certificate (TC)',      price: 150 },
   PROVISIONAL_DEGREE: { label: '🎓 Provisional Degree Certificate', price: 200 },
   DEGREE:             { label: '📜 Degree Certificate',             price: 300 },
+  DEGREE_FORM:        { label: '📝 Degree Form',                   price: 100 },
 };
 
 const FEE_TYPES = [
@@ -236,12 +237,13 @@ const printReceipt = (data) => {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;background:#fff;padding:10px;font-size:12px}
     .receipt{width:160mm;border:1px solid #999;margin:0 auto}
-    .hdr{display:flex;align-items:center;gap:10px;padding:12px 24px;border-bottom:1.5px solid #000}
-    .hlogo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
+    .hdr{display:flex;align-items:center;gap:14px;padding:14px 28px;border-bottom:1.5px solid #000}
+    .hlogo{width:84px;height:84px;object-fit:contain;flex-shrink:0;margin-left:6px}
     .htxt{flex:1;text-align:center}
-    .htrust{font-size:8.5px;color:#333;font-weight:700}
+    .htrust{font-size:9px;color:#222;font-weight:700}
     .hname{font-size:13px;font-weight:900;color:#000;line-height:1.3;margin:2px 0}
-    .haddr{font-size:8.5px;color:#444;margin-top:1px}
+    .haddr{font-size:9px;color:#333;margin-top:1px}
+    .hcontact{font-size:9.5px;color:#000;font-weight:800;margin-top:2px}
     .titlebar{text-align:center;padding:5px;border-bottom:1px solid #999;font-size:13px;font-weight:900;letter-spacing:2px;background:#f5f5f5}
     .copyline{padding:4px 12px;font-size:10px;border-bottom:1px dashed #aaa}
     .metarow{display:flex;justify-content:space-between;padding:4px 12px;font-size:11px;border-bottom:1px dashed #aaa}
@@ -274,7 +276,8 @@ const printReceipt = (data) => {
         <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
         <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
         <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
-        <div class="haddr">Gangakhed, Dist. Parbhani, Maharashtra – 431514 &nbsp;|&nbsp; +91 9307162914 &nbsp;|&nbsp; lkcwsc.vnssorg.com</div>
+        <div class="haddr">Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
+        <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; ✉️ lkcwscgkd@gmail.com &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
       </div>
     </div>
     <div class="titlebar">FEE RECEIPT</div>
