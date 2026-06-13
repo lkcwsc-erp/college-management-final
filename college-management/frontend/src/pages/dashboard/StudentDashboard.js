@@ -1596,22 +1596,6 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
         </div>
       </div>
 
-      {/* Year override for SY/TY students */}
-      <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#F57F17', marginBottom: 6 }}>
-          📅 Current Year (for document) — leave blank to use your admission year
-        </label>
-        <select value={reqYear} onChange={e => setReqYear(e.target.value)}
-          style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ffe082', fontSize: 14 }}>
-          <option value="">Use my admission year ({myAdmission?.admissionYear || '—'})</option>
-          <option value="1st Year">1st Year (FY)</option>
-          <option value="2nd Year">2nd Year (SY)</option>
-        </select>
-        <p style={{ fontSize: 11, color: '#888', margin: '4px 0 0' }}>
-          SY/TY students — select your current year so Bonafide & other documents print correctly.
-        </p>
-      </div>
-
       {/* Marksheet extra fields */}
       {docType === 'MARKSHEET' && (
         <div style={{ background: '#e3f2fd', borderRadius: 10, padding: 14, marginBottom: 14 }}>
@@ -2200,6 +2184,7 @@ const StudentDashboard = () => {
     { id: 'home',          label: '🏠 Dashboard' },
     { id: 'application',   label: '📋 My Application' },
     { id: 'profile',       label: '👤 My Profile' },
+    { id: 'fees',          label: '💰 My Fees' },
     { id: 'documents',     label: '📄 Request Documents' },
     { id: 'results',       label: '🎓 Results' },
     { id: 'examform',      label: '📝 Exam Form' },
