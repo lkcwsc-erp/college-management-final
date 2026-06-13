@@ -182,6 +182,23 @@ const DEFAULT_DOC_FEES = {
   DEGREE_FORM:        { label: '📝 Degree Form',                   price: 100 },
 };
 
+// Auto-calculate walk-in fee amount based on course + year + fee type
+const calcWalkinAmount = (course, year, feeType) => {
+  if (feeType === 'admission') {
+    // Tuition / annual fee depends on course + year; none once the course is completed
+    if (year === 'Course completed') return '';
+    return YEARLY_FEES[course]?.years?.[year]?.total ?? '';
+  }
+  // Fixed certificate / document fees (independent of course)
+  const FIXED = {
+    bonafide:  DEFAULT_DOC_FEES.BONAFIDE.price,
+    tc:        DEFAULT_DOC_FEES.TC.price,
+    migration: DEFAULT_DOC_FEES.MIGRATION.price,
+  };
+  // exam / library / development / penalty / other → no fixed structure, enter manually
+  return FIXED[feeType] ?? '';
+};
+
 const FEE_TYPES = [
   { key: 'admission',    label: '💰 Collect Fees' },
   { key: 'exam',         label: '📝 Exam Fee' },
@@ -647,7 +664,7 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <div>
-          <p style={{ color:'#666', fontSize:14, margin:0 }}>Manage document fee amounts. Changes will be applied after Principal/Admin approval..</p>
+          <p style={{ color:'#666', fontSize:14, margin:0 }}>Document fee amounts manage karo. Changes Principal/Admin approval ke baad apply honge.</p>
           {hasPending && (
             <p style={{ fontSize:12, color:'#E65100', fontWeight:600, margin:'4px 0 0' }}>
               ⏳ {pendingApproval.filter(p=>p.status==='pending').length} change(s) approval pending hain
@@ -2137,7 +2154,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
   const EMPTY_FORM = {
     studentName:'', phone:'', prnNo:'', rollNo:'',
     course:'B.A.', year:'2nd Year',
-    feeType:'admission', amount:'', payMode:'cash', txnId:'', notes:'',
+    feeType:'admission', amount: calcWalkinAmount('B.A.', '2nd Year', 'admission'), payMode:'cash', txnId:'', notes:'',
   };
   const [view, setView]       = useState('form');
   const [form, setForm]       = useState(EMPTY_FORM);
@@ -2343,24 +2360,25 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                     </div>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
-                      <select style={inp} value={form.course} onChange={e=>setForm(p=>({...p,course:e.target.value}))}>
+                      <select style={inp} value={form.course} onChange={e=>setForm(p=>({...p, course:e.target.value, amount: calcWalkinAmount(e.target.value, p.year, p.feeType)}))}>
                         <option value="B.A.">B.A.</option>
                         <option value="B.Sc.">B.Sc.</option>
                       </select>
                     </div>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
-                      <select style={inp} value={form.year} onChange={e=>setForm(p=>({...p,year:e.target.value}))}>
+                      <select style={inp} value={form.year} onChange={e=>setForm(p=>({...p, year:e.target.value, amount: calcWalkinAmount(p.course, e.target.value, p.feeType)}))}>
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
                         <option value="3rd Year">3rd Year</option>
+                        <option value="Course completed">Course completed</option>
                       </select>
                     </div>
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:12 }}>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Fee Type *</label>
-                      <select style={inp} value={form.feeType} onChange={e=>setForm(p=>({...p,feeType:e.target.value}))}>
+                      <select style={inp} value={form.feeType} onChange={e=>setForm(p=>({...p, feeType:e.target.value, amount: calcWalkinAmount(p.course, p.year, e.target.value)}))}>
                         {FEE_OPTS.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
                       </select>
                     </div>
@@ -2368,6 +2386,9 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Amount (₹) *</label>
                       <input type="number" min="0" style={{ ...inp, fontSize:17, fontWeight:800, textAlign:'right' }}
                         placeholder="0" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} />
+                      {form.feeType==='admission' && form.year!=='Course completed' && (
+                        <div style={{ fontSize:11, color:'#E65100', marginTop:4 }}>💡 Auto-filled from {form.course} · {form.year} fee structure (editable)</div>
+                      )}
                     </div>
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
