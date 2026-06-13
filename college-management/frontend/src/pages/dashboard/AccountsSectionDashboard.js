@@ -407,11 +407,29 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
-  const submitEdit = (itemId, newAmounts) => {
-    const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
-    savePending(pending);
-    setEditingItem(null);
-    showToast('✅ Edit submitted for Principal/Admin approval!');
+  const submitEdit = async (itemId, newAmounts, newItemMeta = null) => {
+    const isNewItem = !!newItemMeta;
+    const item = newItemMeta || allItems.find(i => i.id === itemId) || editingItem || {};
+    const oldAmounts = isNewItem ? [] : (item.s || []);
+    try {
+      // Send to backend so it goes to Principal → then Admin for approval
+      await API.post('/fee-structure-approvals/submit', {
+        courseKey,
+        itemId,
+        itemName:    item.name || itemId,
+        itemSection: item.section || 'College',
+        oldAmounts,
+        newAmounts,
+        isNewItem,
+      });
+      // Keep a local marker so this row shows "⏳ pending" immediately for the accountant
+      const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
+      savePending(pending);
+      setEditingItem(null);
+      showToast('✅ Edit submitted — sent to Principal for approval!');
+    } catch (e) {
+      showToast('❌ ' + (e.response?.data?.message || 'Failed to submit for approval'));
+    }
   };
 
   const pendingForCourse = pendingEdits[courseKey] || {};
@@ -550,7 +568,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                     const item = { id, name:newItem.name.trim(), section:newItem.section, s:[0,1,2,3,4,5].map(i=>newItem[`s${i}`]||0) };
                     const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
                     saveCustomFees(cf);
-                    submitEdit(id, item.s);
+                    submitEdit(id, item.s, item);
                     setAddingItem(false);
                     setNewItem({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
                   }} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
