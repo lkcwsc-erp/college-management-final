@@ -1,24 +1,39 @@
-// routes/feeStructureApprovalRoutes.js
-const express = require('express');
-const router  = express.Router();
-const { protect, authorizeRoles } = require('../middleware/authMiddleware');
-const ctrl = require('../controllers/feeStructureApprovalController');
+const mongoose = require('mongoose');
 
-// ── Accounts Section: submit a fee-structure edit for approval ──────────────
-router.post('/submit', protect, authorizeRoles('staff_accounts', 'admin'), ctrl.submitApproval);
+const feeStructureApprovalSchema = new mongoose.Schema({
+  courseKey:    { type: String },
+  itemId:       { type: String },
+  itemName:     { type: String },
+  itemSection:  { type: String },          // 'University' | 'College'
+  oldAmounts:   [Number],                  // 6 semester amounts before edit
+  newAmounts:   [Number],                  // 6 semester amounts after edit
+  isNewItem:    { type: Boolean, default: false },
 
-// ── List approvals (Accounts see own via ?myOnly=true; Principal/Admin see all)
-router.get('/', protect, authorizeRoles('staff_accounts', 'staff_principal', 'admin'), ctrl.getAll);
+  submittedBy:      { type: String },
+  submittedByEmail: { type: String },
 
-// ── Pending counts for dashboard badges ─────────────────────────────────────
-router.get('/pending-counts', protect, authorizeRoles('staff_principal', 'admin'), ctrl.getPendingCounts);
+  // Two-step approval workflow: Accounts → Principal → Admin → applied
+  status: {
+    type: String,
+    enum: [
+      'pending_principal',
+      'approved_by_principal',
+      'pending_admin',
+      'approved',
+      'rejected_by_principal',
+      'rejected_by_admin',
+    ],
+    default: 'pending_principal',
+  },
 
-// ── Principal: approve / reject (step 1) ────────────────────────────────────
-router.put('/:id/principal-approve', protect, authorizeRoles('staff_principal', 'admin'), ctrl.principalApprove);
-router.put('/:id/principal-reject',  protect, authorizeRoles('staff_principal', 'admin'), ctrl.principalReject);
+  principalNote:       { type: String, default: '' },
+  principalApprovedAt: { type: Date },
+  adminNote:           { type: String, default: '' },
+  adminApprovedAt:     { type: Date },
 
-// ── Admin: approve / reject (step 2 — final) ────────────────────────────────
-router.put('/:id/admin-approve', protect, authorizeRoles('admin'), ctrl.adminApprove);
-router.put('/:id/admin-reject',  protect, authorizeRoles('admin'), ctrl.adminReject);
+  // legacy fields (kept for backward compatibility)
+  reviewedBy: { type: String },
+  reviewedAt: { type: Date },
+}, { timestamps: true });
 
-module.exports = router;
+module.exports = mongoose.model('FeeStructureApproval', feeStructureApprovalSchema);
