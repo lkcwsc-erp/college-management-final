@@ -298,7 +298,7 @@ const printBonafide = (adm) => {
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
     .hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #000;padding:10px 14px}
-    .logo{width:82px;height:82px;object-fit:contain;flex-shrink:0}
+    .logo{width:119px;height:110px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:11px;color:#222;font-weight:700}
     .h2{font-size:11px;color:#111;font-weight:700}
