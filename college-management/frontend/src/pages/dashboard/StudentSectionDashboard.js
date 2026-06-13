@@ -350,7 +350,6 @@ const StudentSectionDashboard = () => {
     { id: 'prn',          label: '🔢 Update PRN/ABC ID' },
     { id: 'students',     label: '👩‍🎓 All Students' },
     { id: 'messages',     label: '📬 Messages' },
-    { id: 'receipts',     label: '🧾 Payment Receipts' },
   ];
 
   return (
@@ -945,7 +944,7 @@ const printBonafide = (adm) => {
     .page{background:white;width:730px;border:2px solid #000}
     /* Header */
     .hdr{display:flex;align-items:center;gap:16px;border-bottom:2px solid #000;padding:14px 30px}
-    .logo{width:110px;height:110px;object-fit:contain;flex-shrink:0}
+    .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
     .htxt{flex:1;text-align:center}
     .h1{font-size:12px;color:#222;font-weight:700;}
     .h3{font-size:23px;font-weight:900;color:#000;margin:3px 0 2px}
