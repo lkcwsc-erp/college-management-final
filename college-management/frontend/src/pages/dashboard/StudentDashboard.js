@@ -1538,12 +1538,12 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
         marksheetYear:     docType === 'MARKSHEET' ? msYear : '',
         marksheetAcadYear: docType === 'MARKSHEET' ? msAcadYear : '',
         // TC / Degree last exam fields
-        lastExamYear:    ['TC','DEGREE','PROVISIONAL_DEGREE'].includes(docType) ? lastExamYear : '',
-        lastExamSem:     ['TC','DEGREE','PROVISIONAL_DEGREE'].includes(docType) ? lastExamSem : '',
-        lastExamSession: ['TC','DEGREE','PROVISIONAL_DEGREE'].includes(docType) ? lastExamSession : '',
-        lastExamResult:  ['TC','DEGREE','PROVISIONAL_DEGREE'].includes(docType) ? lastExamResult : '',
-        lastExamPercent: ['TC','DEGREE','PROVISIONAL_DEGREE'].includes(docType) ? lastExamPercent : '',
-        lastExamCollege: ['TC','DEGREE','PROVISIONAL_DEGREE'].includes(docType) ? lastExamCollege : '',
+        lastExamYear:    ['TC','DEGREE','PROVISIONAL_DEGREE','DEGREE_FORM'].includes(docType) ? lastExamYear : '',
+        lastExamSem:     ['TC','DEGREE','PROVISIONAL_DEGREE','DEGREE_FORM'].includes(docType) ? lastExamSem : '',
+        lastExamSession: ['TC','DEGREE','PROVISIONAL_DEGREE','DEGREE_FORM'].includes(docType) ? lastExamSession : '',
+        lastExamResult:  ['TC','DEGREE','PROVISIONAL_DEGREE','DEGREE_FORM'].includes(docType) ? lastExamResult : '',
+        lastExamPercent: ['TC','DEGREE','PROVISIONAL_DEGREE','DEGREE_FORM'].includes(docType) ? lastExamPercent : '',
+        lastExamCollege: ['TC','DEGREE','PROVISIONAL_DEGREE','DEGREE_FORM'].includes(docType) ? lastExamCollege : '',
         // Provisional/Degree fields
         provYear, provSession, provCourse,
         // Migration fields
@@ -1644,7 +1644,7 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
       </div>
 
       {/* TC / Degree — Last Examination Result */}
-      {(docType === 'TC' || docType === 'DEGREE' || docType === 'PROVISIONAL_DEGREE') && (
+      {(docType === 'TC' || docType === 'DEGREE' || docType === 'PROVISIONAL_DEGREE' || docType === 'DEGREE_FORM') && (
         <div style={{ background: '#e8eaf6', borderRadius: 10, padding: 16, marginBottom: 14, border: '1px solid #9fa8da' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#1a237e', marginBottom: 12 }}>
             📊 Last Examination Details <span style={{ fontSize: 11, fontWeight: 400, color: '#555' }}>(Fill as per marksheet)</span>
@@ -1720,7 +1720,7 @@ const DocRequestForm = ({ myAdmission, onSubmitted }) => {
       )}
 
       {/* Degree extra fields */}
-      {docType === 'DEGREE' && (
+      {(docType === 'DEGREE' || docType === 'DEGREE_FORM') && (
         <div style={{ background: '#e3f2fd', borderRadius: 10, padding: 14, marginBottom: 14 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: '#1565C0', marginBottom: 10 }}>🎓 Degree Certificate Details</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
