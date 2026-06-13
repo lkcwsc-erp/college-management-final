@@ -1728,7 +1728,6 @@ const AdminFeeApprovalTab = ({ showMessage }) => {
 
   // Admin only acts on items the Principal already approved (pending_admin)
   const pending = approvals.filter(a => a.status === 'pending_admin');
-  const done    = approvals.filter(a => ['approved','rejected_by_admin','rejected_by_principal','pending_principal'].includes(a.status));
   const shown   = filter === 'pending' ? pending : approvals;
 
   const statusBadge = (s) => {
