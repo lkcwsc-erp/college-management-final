@@ -809,6 +809,7 @@ const [activeTab, setActiveTab] = useState('process');
                           <option value="sc">SC</option>
                           <option value="st">ST</option>
                           <option value="obc">OBC</option>
+                          <option value="nt">NT</option>
                           <option value="vjnt">VJNT</option>
                         </select>
                       </div>
@@ -1629,20 +1630,6 @@ const [activeTab, setActiveTab] = useState('process');
                         <span>ℹ️</span>
                         <p>You belong to reserved category. Please provide caste certificate details.</p>
                       </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Caste Certificate Number</label>
-                          <input type="text" name="casteCertificateNo"
-                            placeholder="Certificate number"
-                            value={formData.casteCertificateNo} onChange={handleChange} />
-                        </div>
-                        <div className="form-group">
-                          <label>Issuing Authority</label>
-                          <input type="text" name="casteCertificateAuthority"
-                            placeholder="e.g. Tehsildar, Gangakhed"
-                            value={formData.casteCertificateAuthority} onChange={handleChange} />
-                        </div>
-                      </div>
                       <FileUploadBox fieldName="casteCertificate" label="📋 Caste Certificate"
                         accept="image/*,.pdf" required={true} 
                         uploadedFiles={uploadedFiles}
@@ -1661,19 +1648,6 @@ const [activeTab, setActiveTab] = useState('process');
 
                       {formData.hasCasteValidity && (
                         <div className="conditional-block">
-                          <div className="form-row">
-                            <div className="form-group">
-                              <label>Validity Certificate Number</label>
-                              <input type="text" name="casteValidity"
-                                placeholder="Validity certificate number"
-                                value={formData.casteValidity} onChange={handleChange} />
-                            </div>
-                            <div className="form-group">
-                              <label>Valid Until</label>
-                              <input type="date" name="casteValidityDate"
-                                value={formData.casteValidityDate} onChange={handleChange} />
-                            </div>
-                          </div>
                           <FileUploadBox fieldName="casteValidityCertificate"
                             label="✅ Caste Validity Certificate" accept="image/*,.pdf" 
                         uploadedFiles={uploadedFiles}
