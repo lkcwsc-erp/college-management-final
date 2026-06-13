@@ -647,7 +647,7 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <div>
-          <p style={{ color:'#666', fontSize:14, margin:0 }}>Document fee amounts manage karo. Changes Principal/Admin approval ke baad apply honge.</p>
+          <p style={{ color:'#666', fontSize:14, margin:0 }}>Manage document fee amounts. Changes will be applied after Principal/Admin approval..</p>
           {hasPending && (
             <p style={{ fontSize:12, color:'#E65100', fontWeight:600, margin:'4px 0 0' }}>
               ⏳ {pendingApproval.filter(p=>p.status==='pending').length} change(s) approval pending hain
