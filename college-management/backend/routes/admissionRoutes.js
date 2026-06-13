@@ -658,7 +658,12 @@ router.get('/results-by-email/:email', protect, authorizeRoles('staff_student', 
 // ========== DELETE ==========
 router.delete('/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
-    await Admission.findByIdAndDelete(req.params.id);
+    const User = require('../models/User');
+    const admission = await Admission.findByIdAndDelete(req.params.id);
+    // Also remove the student's login account so a deleted student can no longer log in
+    if (admission?.email) {
+      await User.deleteOne({ email: admission.email.toLowerCase(), role: 'student' });
+    }
     res.json({ success: true, message: 'Application deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -699,7 +704,12 @@ router.post('/request-delete', protect, authorizeRoles('staff_student', 'admin',
 // ── Admin approves delete ──────────────────────────────────────────────────
 router.delete('/admin-delete/:id', protect, authorizeRoles('admin', 'staff_principal'), async (req, res) => {
   try {
-    await Admission.findByIdAndDelete(req.params.id);
+    const User = require('../models/User');
+    const admission = await Admission.findByIdAndDelete(req.params.id);
+    // Also remove the student's login account so a deleted student can no longer log in
+    if (admission?.email) {
+      await User.deleteOne({ email: admission.email.toLowerCase(), role: 'student' });
+    }
     res.json({ success: true, message: 'Student record deleted by Admin.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
