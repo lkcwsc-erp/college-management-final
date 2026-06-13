@@ -2738,6 +2738,14 @@ const StudentDashboard = () => {
 
               {!myAdmission ? (
                 <div className="empty-state"><div className="empty-icon">💰</div><h3>No Fee Information</h3></div>
+              ) : myAdmission.status !== 'approved' ? (
+                <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 14, padding: '30px 24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 42, marginBottom: 10 }}>🔒</div>
+                  <h3 style={{ color: '#E65100', marginBottom: 8 }}>Fee Structure Not Available Yet</h3>
+                  <p style={{ color: '#7c5e00', fontSize: 14, margin: 0 }}>
+                    Your fee structure will be available here once your admission application is approved by the Student Section.
+                  </p>
+                </div>
               ) : (() => {
                 const ct = (myAdmission.courseType || '').toLowerCase();
                 const courseKey = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
@@ -2874,10 +2882,20 @@ const StudentDashboard = () => {
               <h3 style={{ marginBottom: 4, color: '#1565C0' }}>📄 Request Documents</h3>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Apply for Transfer Certificate, Bonafide, ID Card or Marksheet.</p>
 
-              {/* Apply form */}
-              <DocRequestForm myAdmission={myAdmission} onSubmitted={() => {
-                API.get('/document-requests/my').then(r => setMyRequests(r.data.requests || [])).catch(() => {});
-              }} />
+              {/* Apply form — only available after admission is approved */}
+              {myAdmission?.status === 'approved' ? (
+                <DocRequestForm myAdmission={myAdmission} onSubmitted={() => {
+                  API.get('/document-requests/my').then(r => setMyRequests(r.data.requests || [])).catch(() => {});
+                }} />
+              ) : (
+                <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 14, padding: '30px 24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 42, marginBottom: 10 }}>🔒</div>
+                  <h3 style={{ color: '#E65100', marginBottom: 8 }}>Document Requests Not Available Yet</h3>
+                  <p style={{ color: '#7c5e00', fontSize: 14, margin: 0 }}>
+                    You can request documents here once your admission application is approved by the Student Section.
+                  </p>
+                </div>
+              )}
 
               {/* My Requests */}
               <div style={{ marginTop: 24 }}>
