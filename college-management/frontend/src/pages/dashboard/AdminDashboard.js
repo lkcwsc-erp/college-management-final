@@ -1695,165 +1695,142 @@ const DETAILED_FEES_ADMIN = {
 };
 
 const AdminFeeApprovalTab = ({ showMessage }) => {
-  const [pendingEdits, setPendingEdits] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('lkcwsc_fee_pending') || '{}'); } catch { return {}; }
-  });
-  const [filter, setFilter] = React.useState('all'); // 'all' | 'pending' | 'approved' | 'rejected'
+  const [approvals, setApprovals] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [filter, setFilter]       = useState('pending'); // 'pending' | 'all'
 
-  const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
+  const SEM_LABELS = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
-  const allEdits = [];
-  Object.entries(pendingEdits).forEach(([courseKey, items]) => {
-    Object.entries(items).forEach(([itemId, edit]) => {
-      allEdits.push({ courseKey, itemId, ...edit });
-    });
-  });
+  const fetchApprovals = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/fee-structure-approvals');
+      setApprovals(res.data.approvals || []);
+    } catch {
+      showMessage?.('❌ Failed to load fee approvals');
+    } finally { setLoading(false); }
+  }, [showMessage]);
 
-  const filtered = filter === 'all' ? allEdits
-    : allEdits.filter(e => e.status === filter);
+  useEffect(() => { fetchApprovals(); }, [fetchApprovals]);
 
-  const pendingCount = allEdits.filter(e => e.status === 'pending').length;
-
-  const handleApprove = (courseKey, itemId) => {
-    const updated = {
-      ...pendingEdits,
-      [courseKey]: {
-        ...pendingEdits[courseKey],
-        [itemId]: { ...pendingEdits[courseKey][itemId], status: 'approved', approvedAt: new Date().toISOString() }
-      }
-    };
-    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(updated));
-    setPendingEdits(updated);
-    showMessage('✅ Fee edit approved!');
+  const handleAction = async (id, action) => {
+    try {
+      const endpoint = action === 'approve'
+        ? `/fee-structure-approvals/${id}/admin-approve`
+        : `/fee-structure-approvals/${id}/admin-reject`;
+      await API.put(endpoint, { note: action === 'approve' ? 'Approved by Admin' : '', reason: action === 'reject' ? 'Rejected by Admin' : '' });
+      showMessage?.(action === 'approve' ? '✅ Fee edit approved & applied!' : '❌ Fee edit rejected.');
+      fetchApprovals();
+    } catch (e) {
+      showMessage?.('❌ ' + (e.response?.data?.message || 'Action failed'));
+    }
   };
 
-  const handleReject = (courseKey, itemId) => {
-    const updated = {
-      ...pendingEdits,
-      [courseKey]: {
-        ...pendingEdits[courseKey],
-        [itemId]: { ...pendingEdits[courseKey][itemId], status: 'rejected', rejectedAt: new Date().toISOString() }
-      }
+  // Admin only acts on items the Principal already approved (pending_admin)
+  const pending = approvals.filter(a => a.status === 'pending_admin');
+  const done    = approvals.filter(a => ['approved','rejected_by_admin','rejected_by_principal','pending_principal'].includes(a.status));
+  const shown   = filter === 'pending' ? pending : approvals;
+
+  const statusBadge = (s) => {
+    const map = {
+      pending_principal: { bg:'#fff3e0', color:'#E65100', label:'⏳ Waiting on Principal' },
+      pending_admin:     { bg:'#e3f2fd', color:'#1565C0', label:'⏳ Pending Your Approval' },
+      approved:          { bg:'#e8f5e9', color:'#2E7D32', label:'✅ Approved (Applied)' },
+      rejected_by_principal: { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Principal' },
+      rejected_by_admin:     { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Admin' },
     };
-    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(updated));
-    setPendingEdits(updated);
-    showMessage('❌ Fee edit rejected.');
+    const c = map[s] || { bg:'#f5f5f5', color:'#555', label: s };
+    return <span style={{ fontSize:11, fontWeight:700, padding:'3px 12px', borderRadius:20, background:c.bg, color:c.color }}>{c.label}</span>;
   };
 
-  const handleApproveAll = () => {
-    if (!window.confirm(`Approve all ${pendingCount} pending fee edits?`)) return;
-    const updated = { ...pendingEdits };
-    Object.keys(updated).forEach(ck => {
-      Object.keys(updated[ck]).forEach(id => {
-        if (updated[ck][id].status === 'pending') {
-          updated[ck][id] = { ...updated[ck][id], status: 'approved', approvedAt: new Date().toISOString() };
-        }
-      });
-    });
-    localStorage.setItem('lkcwsc_fee_pending', JSON.stringify(updated));
-    setPendingEdits(updated);
-    showMessage(`✅ All ${pendingCount} edits approved!`);
+  const renderCard = (a) => {
+    const isPending = a.status === 'pending_admin';
+    return (
+      <div key={a._id} style={{ background:'#fff', borderRadius:12, border:`1px solid ${isPending ? '#90caf9' : '#e0e7ef'}`, padding:18, borderLeft:`5px solid ${isPending ? '#1565C0' : a.status==='approved' ? '#2E7D32' : '#C62828'}` }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:10, marginBottom:12 }}>
+          <div>
+            <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:4, flexWrap:'wrap' }}>
+              <span style={{ fontSize:14, fontWeight:700, color:'#333' }}>{a.itemName}</span>
+              <span style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'2px 10px', borderRadius:10 }}>{a.courseKey}</span>
+              {a.itemSection && <span style={{ fontSize:11, color:'#888' }}>{a.itemSection}</span>}
+              {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, background:'#e8f5e9', color:'#2E7D32', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
+            </div>
+            <div style={{ fontSize:11, color:'#aaa' }}>
+              Submitted by {a.submittedBy || '—'} · {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN') : '—'}
+              {a.principalApprovedAt && <> · Principal approved {new Date(a.principalApprovedAt).toLocaleDateString('en-IN')}</>}
+            </div>
+          </div>
+          {statusBadge(a.status)}
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:14 }}>
+          <div style={{ background:'#f5f5f5', borderRadius:8, padding:'10px 14px' }}>
+            <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#888' }}>OLD AMOUNTS</p>
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+              {SEM_LABELS.map((sl, i) => (
+                <span key={i} style={{ fontSize:12, color:'#888' }}>{sl}: ₹{(a.oldAmounts?.[i]||0).toLocaleString('en-IN')}</span>
+              ))}
+            </div>
+          </div>
+          <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px' }}>
+            <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#2E7D32' }}>NEW AMOUNTS</p>
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+              {SEM_LABELS.map((sl, i) => (
+                <span key={i} style={{ fontSize:12, fontWeight:700, color:'#2E7D32' }}>{sl}: ₹{(a.newAmounts?.[i]||0).toLocaleString('en-IN')}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {isPending && (
+          <div style={{ display:'flex', gap:10 }}>
+            <button onClick={() => handleAction(a._id, 'approve')}
+              style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'8px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              ✅ Approve (Final)
+            </button>
+            <button onClick={() => handleAction(a._id, 'reject')}
+              style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+              ❌ Reject
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h2 style={{ color: '#1565C0', marginBottom: 4 }}>💼 Fee Structure Approval</h2>
-          <p style={{ color: '#666', fontSize: 14 }}>Review and approve fee structure edits submitted by Accounts Section.</p>
+          <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure Approval</h2>
+          <p style={{ color:'#666', fontSize:14, margin:0 }}>Final approval for fee edits already approved by the Principal. Approving applies the new amounts.</p>
         </div>
-        {pendingCount > 0 && (
-          <button onClick={handleApproveAll}
-            style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            ✅ Approve All ({pendingCount})
-          </button>
-        )}
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display:'flex', gap:10, margin:'14px 0 20px', flexWrap:'wrap' }}>
         {[
-          { label: 'Total', count: allEdits.length, color: '#1565C0', bg: '#e3f2fd' },
-          { label: 'Pending', count: pendingCount, color: '#E65100', bg: '#fff3e0' },
-          { label: 'Approved', count: allEdits.filter(e=>e.status==='approved').length, color: '#2E7D32', bg: '#e8f5e9' },
-          { label: 'Rejected', count: allEdits.filter(e=>e.status==='rejected').length, color: '#C62828', bg: '#ffebee' },
-        ].map((p, i) => (
-          <div key={i} onClick={() => setFilter(p.label.toLowerCase())}
-            style={{ background: p.bg, color: p.color, borderRadius: 20, padding: '5px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              border: filter === p.label.toLowerCase() ? `2px solid ${p.color}` : '2px solid transparent' }}>
-            {p.label}: {p.count}
+          { key:'pending', label:`⏳ Pending Your Approval (${pending.length})`, color:'#1565C0', bg:'#e3f2fd' },
+          { key:'all',     label:`📋 All (${approvals.length})`,                  color:'#555',    bg:'#f5f5f5' },
+        ].map(t => (
+          <div key={t.key} onClick={() => setFilter(t.key)}
+            style={{ background:t.bg, color:t.color, borderRadius:20, padding:'6px 16px', fontSize:13, fontWeight:600, cursor:'pointer',
+              border: filter===t.key ? `2px solid ${t.color}` : '2px solid transparent' }}>
+            {t.label}
           </div>
         ))}
-        <div onClick={() => setFilter('all')}
-          style={{ background: '#f5f5f5', color: '#555', borderRadius: 20, padding: '5px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            border: filter === 'all' ? '2px solid #555' : '2px solid transparent' }}>
-          Show All
-        </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 50, color: '#888', background: '#f8faff', borderRadius: 14 }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>💼</div>
-          <h3>No fee edits {filter !== 'all' ? filter : 'found'}</h3>
-          <p style={{ fontSize: 14 }}>Accounts Section fee edits will appear here for approval.</p>
+      {loading ? (
+        <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>⏳ Loading...</div>
+      ) : shown.length === 0 ? (
+        <div style={{ textAlign:'center', padding:50, color:'#888', background:'#f8faff', borderRadius:14 }}>
+          <div style={{ fontSize:'2.5rem', marginBottom:10 }}>💼</div>
+          <h3>No fee edits {filter === 'pending' ? 'pending your approval' : 'found'}</h3>
+          <p style={{ fontSize:14 }}>Edits approved by the Principal will appear here for final approval.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filtered.map((edit, idx) => {
-            const isPending = edit.status === 'pending';
-            const statusStyle = {
-              pending:  { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending Approval' },
-              approved: { bg: '#e8f5e9', color: '#2E7D32', label: '✅ Approved' },
-              rejected: { bg: '#ffebee', color: '#C62828', label: '❌ Rejected' },
-            }[edit.status] || { bg: '#f5f5f5', color: '#888', label: edit.status };
-
-            return (
-              <div key={idx} style={{ background: '#fff', borderRadius: 12, border: `1px solid ${isPending ? '#fbbf24' : '#e0e7ef'}`, padding: 18, borderLeft: `5px solid ${isPending ? '#E65100' : edit.status === 'approved' ? '#2E7D32' : '#C62828'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-                  <div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1565C0', background: '#e3f2fd', padding: '2px 10px', borderRadius: 10 }}>{edit.courseKey}</span>
-                      <span style={{ fontSize: 12, color: '#888', fontFamily: 'monospace' }}>ID: {edit.itemId}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: '#aaa' }}>
-                      Submitted: {edit.submittedAt ? new Date(edit.submittedAt).toLocaleString('en-IN') : '—'}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 12px', borderRadius: 20, background: statusStyle.bg, color: statusStyle.color }}>
-                    {statusStyle.label}
-                  </span>
-                </div>
-
-                {/* Sem-wise amounts */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
-                  {semLabels.map((sl, si) => {
-                    const amt = edit.amounts?.[si] || 0;
-                    return (
-                      <div key={sl} style={{ background: amt > 0 ? '#e3f2fd' : '#f5f5f5', borderRadius: 8, padding: '6px 10px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 10, color: '#888' }}>{sl}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: amt > 0 ? '#1565C0' : '#ccc' }}>
-                          {amt > 0 ? `₹${amt}` : '—'}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {isPending && (
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={() => handleApprove(edit.courseKey, edit.itemId)}
-                      style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                      ✅ Approve
-                    </button>
-                    <button onClick={() => handleReject(edit.courseKey, edit.itemId)}
-                      style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                      ❌ Reject
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {shown.map(renderCard)}
         </div>
       )}
     </div>
