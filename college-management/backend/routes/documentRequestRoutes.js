@@ -12,6 +12,7 @@ const DOC_LABELS = {
   BONAFIDE:          '📋 Bonafide Certificate',
   PROVISIONAL_DEGREE:'📜 Provisional Degree Certificate',
   DEGREE:            '🎓 Degree Certificate',
+  DEGREE_FORM:       '📝 Degree Form',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,10 +28,10 @@ router.post('/', protect, async (req, res) => {
 
     const admission = await Admission.findOne({ email: req.user.email });
 
-    // Marksheet goes directly to Exam Section (no accounts fee needed)
-    const newDocTypes = ['PROVISIONAL_DEGREE', 'DEGREE', 'MIGRATION', 'BONAFIDE'];
+    // Marksheet → Exam Section. Migration → Accounts first (then Exam Section).
+    const newDocTypes = ['PROVISIONAL_DEGREE', 'DEGREE', 'BONAFIDE', 'DEGREE_FORM'];
     const initialStatus = documentType === 'MARKSHEET' ? 'pending_exam'
-      : newDocTypes.includes(documentType) ? 'pending_student_section'
+      : newDocTypes.includes(documentType) ? 'pending_generation'
       : 'pending_accounts';
 
     const data = {
@@ -114,8 +115,11 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
       return res.status(400).json({ success: false, message: 'Not pending in Accounts' });
 
     const isTC = request.documentType === 'TC';
-    // TC: Accounts → Principal → Exam Section → Student Section
-    request.status            = isTC ? 'pending_principal' : 'pending_generation';
+    const isMigration = request.documentType === 'MIGRATION';
+    // TC: Accounts → Principal → Exam → Student Section
+    // Migration: Accounts → Exam Section
+    // Others: Accounts → Student Section (generation)
+    request.status            = isTC ? 'pending_principal' : isMigration ? 'pending_exam' : 'pending_generation';
     request.accountsApprovedBy   = req.user.name || req.user.email;
     request.accountsApprovedDate = new Date();
     request.accountsNotes        = notes || '';
@@ -125,6 +129,8 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
       success: true,
       message: isTC
         ? '✅ TC fees verified! Forwarded to Examination Section for result check.'
+        : isMigration
+        ? '✅ Fees verified! Migration forwarded to Examination Section.'
         : '✅ Fees verified! Forwarded to Student Section.',
       request
     });
@@ -201,13 +207,14 @@ router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin', '
 
     const isTC       = request.documentType === 'TC';
     const isMarksheet = request.documentType === 'MARKSHEET';
-    // TC → Principal, Marksheet → completed directly, others → pending_generation
-    request.status           = isTC ? 'pending_principal' : isMarksheet ? 'completed' : 'pending_generation';
+    const isMigration = request.documentType === 'MIGRATION';
+    // TC → Principal, Marksheet/Migration → completed (issued) here, others → pending_generation
+    request.status           = isTC ? 'pending_principal' : (isMarksheet || isMigration) ? 'completed' : 'pending_generation';
     request.examVerifiedBy   = req.user.name || req.user.email;
     request.examVerifiedDate = new Date();
     request.examNotes        = notes || '';
     request.examResultStatus = resultStatus || '';
-    if (isMarksheet) {
+    if (isMarksheet || isMigration) {
       request.generatedBy   = req.user.name || req.user.email;
       request.generatedDate = new Date();
     }
@@ -217,6 +224,8 @@ router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin', '
       success: true,
       message: isTC
         ? '✅ Result verified! TC forwarded to Principal for approval.'
+        : isMigration
+        ? '✅ Migration Certificate processed and issued by Examination Section.'
         : '✅ Marksheet approved! Forwarded to Student Section.',
       request
     });
