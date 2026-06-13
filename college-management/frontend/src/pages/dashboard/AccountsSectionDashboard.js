@@ -2238,56 +2238,109 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
   };
 
   const printReceiptFn = (r) => {
+    const logo    = window.location.origin + "/college-logo.png";
+    const amt     = r.amount || 0;
+    const dateStr = new Date(r.paidAt || Date.now()).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+    const payMode = r.paymentMode === 'online' ? 'Online / UPI' : 'Cash';
+    const courseFull = (r.course||'').toLowerCase().includes('sc') ? 'Bachelor of Science (B.Sc.)'
+      : (r.course||'').toLowerCase().includes('a') ? 'Bachelor of Arts (B.A.)' : (r.course||'—');
+    const classStr = courseFull + (r.admissionYear ? ' — ' + r.admissionYear : '');
+
+    // amount in words
+    const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+    const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    const inW=(n)=>{if(n===0)return'';if(n<20)return a[n]+' ';if(n<100)return b[Math.floor(n/10)]+' '+(n%10?a[n%10]+' ':'');if(n<1000)return a[Math.floor(n/100)]+'Hundred '+(n%100?inW(n%100):'');if(n<100000)return inW(Math.floor(n/1000))+'Thousand '+(n%1000?inW(n%1000):'');return inW(Math.floor(n/100000))+'Lakh '+(n%100000?inW(n%100000):'');};
+    const amtWords = (inW(amt).trim() || 'Zero') + ' Only';
+
     const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:'Times New Roman',serif;background:#fff;display:flex;justify-content:center;padding:20px}
-      .page{width:400px;border:2px solid #000;padding:20px}
-      .center{text-align:center}
-      h2{font-size:15px;margin-bottom:2px}
-      h3{font-size:12px;color:#555;margin-bottom:2px;font-weight:normal}
-      .divider{border-top:2px solid #000;margin:10px 0}
-      .divider2{border-top:1px dashed #aaa;margin:8px 0}
-      .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px dotted #ddd}
-      .lbl{color:#555;font-weight:600;width:130px;flex-shrink:0}
-      .val{font-weight:700;text-align:right}
-      .total{display:flex;justify-content:space-between;padding:10px 0 6px;font-size:17px;font-weight:900}
-      .footer{text-align:center;font-size:11px;color:#777;margin-top:12px;line-height:1.6}
-      .stamp{border:2px solid #2E7D32;color:#2E7D32;text-align:center;padding:6px;font-size:13px;font-weight:900;letter-spacing:2px;margin:10px 0;border-radius:4px}
-      @media print{body{padding:0}.print-btn{display:none}}
-    </style></head><body><div class="page">
-      <div class="center">
-        <h2>Late Kalpana Chawla Women's Senior College</h2>
-        <h3>Affiliated to SNDT Women's University, Mumbai</h3>
-        <h3>Gangakhed, Dist. Parbhani, Maharashtra – 431514</h3>
+      body{font-family:Arial,sans-serif;background:#fff;padding:10px;font-size:12px}
+      .receipt{width:160mm;border:1px solid #999;margin:0 auto}
+      .hdr{display:flex;align-items:center;gap:14px;padding:14px 28px;border-bottom:1.5px solid #000}
+      .hlogo{width:84px;height:84px;object-fit:contain;flex-shrink:0;margin-left:6px}
+      .htxt{flex:1;text-align:center}
+      .htrust{font-size:9px;color:#222;font-weight:700}
+      .hname{font-size:13px;font-weight:900;color:#000;line-height:1.3;margin:2px 0}
+      .haddr{font-size:9px;color:#333;margin-top:1px}
+      .hcontact{font-size:9.5px;color:#000;font-weight:800;margin-top:2px}
+      .titlebar{text-align:center;padding:5px;border-bottom:1px solid #999;font-size:13px;font-weight:900;letter-spacing:2px;background:#f5f5f5}
+      .copyline{padding:4px 12px;font-size:10px;border-bottom:1px dashed #aaa}
+      .metarow{display:flex;justify-content:space-between;padding:4px 12px;font-size:11px;border-bottom:1px dashed #aaa}
+      .infobox{padding:4px 12px;border-bottom:1px dashed #aaa}
+      table.info{width:100%;border-collapse:collapse;font-size:11px}
+      table.info td{padding:2px 4px}
+      .lbl{font-weight:700;color:#444;width:95px}
+      .val{font-weight:600;color:#000}
+      table.fees{width:100%;border-collapse:collapse;margin-top:4px}
+      table.fees thead tr{background:#ddd}
+      table.fees th{padding:5px 8px;font-size:11px;font-weight:700;text-align:left;border:1px solid #aaa}
+      table.fees th:last-child{text-align:right}
+      table.fees td{padding:5px 8px;font-size:11px;border:1px solid #ccc}
+      table.fees td:first-child{text-align:center;width:32px}
+      table.fees td:last-child{text-align:right}
+      .totrow td{font-weight:800;font-size:12px;background:#f0f0f0;border-top:2px solid #555}
+      .amtline{padding:5px 12px;font-size:11px;border-top:1px dashed #aaa}
+      .payline{padding:4px 12px;font-size:11px}
+      .narrline{padding:4px 12px 6px;font-size:11px;border-top:1px dashed #aaa}
+      .sigrow{display:flex;justify-content:space-between;align-items:flex-end;padding:6px 12px 8px;border-top:1px dashed #aaa}
+      .sigsys{font-size:9px;color:#666;font-style:italic}
+      .sigbox{text-align:center;font-size:10px}
+      .sigline{border-top:1px solid #444;margin-top:22px;padding-top:3px;font-weight:700}
+      @media print{body{padding:0}.receipt{width:100%}@page{size:A5;margin:5mm}}
+    </style></head><body>
+    <div class="receipt">
+      <div class="hdr">
+        <img src="${logo}" class="hlogo"/>
+        <div class="htxt">
+          <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+          <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+          <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
+          <div class="haddr">Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
+          <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; ✉️ lkcwscgkd@gmail.com &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
+        </div>
       </div>
-      <div class="divider"></div>
-      <div class="center" style="font-size:14px;font-weight:900;letter-spacing:2px;margin-bottom:8px">FEE RECEIPT</div>
-      <div class="row"><span class="lbl">Receipt No.</span><span class="val">${r.receiptNo}</span></div>
-      <div class="row"><span class="lbl">Date</span><span class="val">${new Date(r.paidAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span></div>
-      <div class="divider2"></div>
-      <div class="row"><span class="lbl">Student Name</span><span class="val">${r.studentName}</span></div>
-      ${r.phone?`<div class="row"><span class="lbl">Phone</span><span class="val">${r.phone}</span></div>`:''}
-      ${r.prnNo?`<div class="row"><span class="lbl">PRN No.</span><span class="val">${r.prnNo}</span></div>`:''}
-      ${r.rollNo?`<div class="row"><span class="lbl">Roll No.</span><span class="val">${r.rollNo}</span></div>`:''}
-      <div class="row"><span class="lbl">Course / Year</span><span class="val">${r.course} · ${r.admissionYear}</span></div>
-      <div class="divider2"></div>
-      <div class="row"><span class="lbl">Fee Type</span><span class="val">${r.feeTypeLabel}</span></div>
-      <div class="row"><span class="lbl">Payment Mode</span><span class="val">${r.paymentMode==='online'?'Online / UPI':'Cash'}</span></div>
-      ${r.transactionId?`<div class="row"><span class="lbl">Txn ID / UTR</span><span class="val">${r.transactionId}</span></div>`:''}
-      ${r.notes?`<div class="row"><span class="lbl">Notes</span><span class="val">${r.notes}</span></div>`:''}
-      <div class="divider"></div>
-      <div class="total"><span>Amount Paid</span><span>₹ ${fmt(r.amount)}/-</span></div>
-      <div class="stamp">✅ PAID</div>
-      <div class="footer">
-        Collected by: <strong>${r.collectedBy}</strong><br/>
-        LKCWSC College Management ERP<br/>
-        +91 9307162914 | lkcwsc.vnssorg.com
+      <div class="titlebar">FEE RECEIPT</div>
+      <div class="copyline">Fee Receipt (Student Copy)</div>
+      <div class="metarow">
+        <span><b>Receipt No. :</b> ${r.receiptNo}</span>
+        <span><b>Date :</b> ${dateStr}</span>
       </div>
-      <br/>
-      <button class="print-btn" onclick="window.print()" style="width:100%;padding:10px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Print Receipt</button>
-    </div></body></html>`;
-    const w = window.open('','_blank','width=500,height=680');
+      <div class="infobox">
+        <table class="info">
+          <tr>
+            <td class="lbl">Student Name</td><td class="val">: ${r.studentName||'—'}</td>
+            <td class="lbl" style="padding-left:16px">PRN No.</td><td class="val">: ${r.prnNo||'—'}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Class</td><td class="val">: ${classStr}</td>
+            <td class="lbl" style="padding-left:16px">Roll No.</td><td class="val">: ${r.rollNo||'—'}</td>
+          </tr>
+          ${r.phone?`<tr><td class="lbl">Phone</td><td class="val">: ${r.phone}</td><td></td><td></td></tr>`:''}
+        </table>
+      </div>
+      <table class="fees">
+        <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>${r.feeTypeLabel||r.feeType||'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+          <tr class="totrow"><td colspan="2" style="text-align:right;padding-right:10px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+        </tbody>
+      </table>
+      <div class="amtline">Amt. in words (Rs.) : <b>${amtWords}</b></div>
+      <div class="payline">
+        Paid by : <b>${payMode}</b> &nbsp;&nbsp;
+        Rs. <b>${amt.toLocaleString('en-IN')}.00</b>
+        ${r.transactionId ? ` &nbsp;&nbsp; Transaction ID : <b>${r.transactionId}</b>` : ''}
+        &nbsp;&nbsp; Date : <b>${dateStr}</b>
+      </div>
+      <div class="narrline">Narration : ${r.notes || ''}</div>
+      <div class="sigrow">
+        <div class="sigsys">This is system generated receipt and does not require seal/stamp.<br/>Collected by: ${r.collectedBy||'Accounts Section'}</div>
+        <div class="sigbox"><div class="sigline">Accounts Section<br/>LKCWSC</div></div>
+      </div>
+    </div>
+    <scr${'ipt'}>window.onload=()=>{window.print()}</scr${'ipt'}></body></html>`;
+    const w = window.open('','_blank','width=680,height=680');
     w.document.write(html); w.document.close();
   };
 
