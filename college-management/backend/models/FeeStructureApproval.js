@@ -1,14 +1,24 @@
-const mongoose = require('mongoose');
+// routes/feeStructureApprovalRoutes.js
+const express = require('express');
+const router  = express.Router();
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const ctrl = require('../controllers/feeStructureApprovalController');
 
-const feeStructureApprovalSchema = new mongoose.Schema({
-  courseKey:    { type: String },
-  itemId:       { type: String },
-  itemName:     { type: String },
-  newAmounts:   [Number],
-  submittedBy:  { type: String },
-  status:       { type: String, enum: ['pending','approved','rejected'], default: 'pending' },
-  reviewedBy:   { type: String },
-  reviewedAt:   { type: Date },
-}, { timestamps: true });
+// ── Accounts Section: submit a fee-structure edit for approval ──────────────
+router.post('/submit', protect, authorizeRoles('staff_accounts', 'admin'), ctrl.submitApproval);
 
-module.exports = mongoose.model('FeeStructureApproval', feeStructureApprovalSchema);
+// ── List approvals (Accounts see own via ?myOnly=true; Principal/Admin see all)
+router.get('/', protect, authorizeRoles('staff_accounts', 'staff_principal', 'admin'), ctrl.getAll);
+
+// ── Pending counts for dashboard badges ─────────────────────────────────────
+router.get('/pending-counts', protect, authorizeRoles('staff_principal', 'admin'), ctrl.getPendingCounts);
+
+// ── Principal: approve / reject (step 1) ────────────────────────────────────
+router.put('/:id/principal-approve', protect, authorizeRoles('staff_principal', 'admin'), ctrl.principalApprove);
+router.put('/:id/principal-reject',  protect, authorizeRoles('staff_principal', 'admin'), ctrl.principalReject);
+
+// ── Admin: approve / reject (step 2 — final) ────────────────────────────────
+router.put('/:id/admin-approve', protect, authorizeRoles('admin'), ctrl.adminApprove);
+router.put('/:id/admin-reject',  protect, authorizeRoles('admin'), ctrl.adminReject);
+
+module.exports = router;
