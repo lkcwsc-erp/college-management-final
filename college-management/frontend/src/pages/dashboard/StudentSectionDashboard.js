@@ -215,6 +215,11 @@ const StudentSectionDashboard = () => {
   const [credLoading, setCredLoading] = useState(false);
   const [credMsg, setCredMsg] = useState('');
   const [generatedCreds, setGeneratedCreds] = useState(null);
+  // View created-but-not-approved credentials
+  const [showPendingCreds, setShowPendingCreds]       = useState(false);
+  const [pendingCreds, setPendingCreds]               = useState([]);
+  const [pendingCredsLoading, setPendingCredsLoading] = useState(false);
+  const [pendingCredsSearch, setPendingCredsSearch]   = useState('');
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -317,6 +322,31 @@ const StudentSectionDashboard = () => {
       }
     }
     finally { setCredLoading(false); }
+  };
+
+  // Fetch all created student logins whose application form is NOT approved
+  const fetchPendingCreds = async () => {
+    setPendingCredsLoading(true);
+    try {
+      const [studentsRes, admRes] = await Promise.all([
+        API.get('/auth/students'),            // all student logins (incl. plainPassword)
+        API.get('/admissions/staff-view/all'), // returns ONLY approved + tc_issued
+      ]);
+      const students     = studentsRes.data.students || [];
+      const approvedAdm  = admRes.data.admissions || [];
+      const approvedEmails = new Set(
+        approvedAdm.map(a => (a.email || '').toLowerCase().trim()).filter(Boolean)
+      );
+      // Not approved = student logins whose email is NOT in the approved set
+      const notApproved = students.filter(
+        s => !approvedEmails.has((s.email || '').toLowerCase().trim())
+      );
+      setPendingCreds(notApproved);
+    } catch (e) {
+      alert('❌ Failed to load credentials: ' + (e.response?.data?.message || 'Error'));
+    } finally {
+      setPendingCredsLoading(false);
+    }
   };
 
   const getStatusStyle = (status) => {
@@ -684,11 +714,83 @@ const StudentSectionDashboard = () => {
                     <input type="date" value={credForm.dateOfBirth} onChange={e => setCredForm({ ...credForm, dateOfBirth: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
                     <small style={{ color: '#666', display: 'block', marginTop: '6px' }}>💡 Password will be auto-generated: first 4 letters of name + @ + DD + YY</small>
                   </div>
-                  <button type="submit" disabled={credLoading} style={{ background: '#1565C0', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '8px', cursor: credLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: credLoading ? 0.6 : 1 }}>
-                    {credLoading ? '⏳ Creating...' : '➕ Create Student Account'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button type="submit" disabled={credLoading} style={{ background: '#1565C0', color: 'white', border: 'none', padding: '12px 32px', borderRadius: '8px', cursor: credLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: credLoading ? 0.6 : 1 }}>
+                      {credLoading ? '⏳ Creating...' : '➕ Create Student Account'}
+                    </button>
+                    <button type="button" onClick={() => { const next = !showPendingCreds; setShowPendingCreds(next); if (next) fetchPendingCreds(); }} style={{ background: '#fff', color: '#1565C0', border: '2px solid #1565C0', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                      {showPendingCreds ? '🔼 Hide Created Credentials' : '👁️ View Created (Not Approved)'}
+                    </button>
+                  </div>
                 </form>
               </div>
+
+              {/* ── Created-but-NOT-Approved credentials list ── */}
+              {showPendingCreds && (
+                <div style={{ background: '#fff', border: '2px solid #1565C0', borderRadius: '12px', padding: '20px', marginTop: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                    <h3 style={{ color: '#1565C0', margin: 0 }}>🔑 Created Credentials — Not Approved ({pendingCreds.length})</h3>
+                    <button type="button" onClick={fetchPendingCreds} style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>🔄 Refresh</button>
+                  </div>
+                  <p style={{ color: '#666', fontSize: 13, marginBottom: 14 }}>Ye wo students hain jinke login credentials ban chuke hain lekin application form abhi <strong>approve nahi</strong> hua. (Approved students yahan nahi dikhenge.)</p>
+
+                  {!pendingCredsLoading && pendingCreds.length > 0 && (
+                    <input type="text" placeholder="🔍 Search by name or email..." value={pendingCredsSearch} onChange={e => setPendingCredsSearch(e.target.value)}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', marginBottom: '14px' }} />
+                  )}
+
+                  {pendingCredsLoading ? (
+                    <p style={{ color: '#666' }}>⏳ Loading...</p>
+                  ) : pendingCreds.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px', color: '#2E7D32', fontWeight: 600 }}>✅ Koi pending credential nahi — sabhi created students approved hain.</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                        <thead>
+                          <tr style={{ background: '#f5f7fa', textAlign: 'left' }}>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #e0e0e0' }}>#</th>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #e0e0e0' }}>👤 Name</th>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #e0e0e0' }}>📧 Email</th>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #e0e0e0' }}>🔑 Password</th>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #e0e0e0' }}>📱 Phone</th>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #e0e0e0' }}>📅 Created</th>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #e0e0e0' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pendingCreds
+                            .filter(s => {
+                              const q = pendingCredsSearch.toLowerCase().trim();
+                              if (!q) return true;
+                              return (s.name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q);
+                            })
+                            .map((s, i) => (
+                            <tr key={s._id || i} style={{ borderBottom: '1px solid #eee' }}>
+                              <td style={{ padding: '10px' }}>{i + 1}</td>
+                              <td style={{ padding: '10px', fontWeight: 600 }}>{s.name || '—'}</td>
+                              <td style={{ padding: '10px' }}>{s.email || '—'}</td>
+                              <td style={{ padding: '10px' }}>
+                                {s.plainPassword
+                                  ? <code style={{ background: '#fff3e0', padding: '3px 10px', borderRadius: 6, fontFamily: 'monospace', color: '#E65100', fontWeight: 700 }}>{s.plainPassword}</code>
+                                  : <span style={{ color: '#999', fontStyle: 'italic' }}>N/A</span>}
+                              </td>
+                              <td style={{ padding: '10px' }}>{s.phone || '—'}</td>
+                              <td style={{ padding: '10px', color: '#666' }}>{s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-IN') : '—'}</td>
+                              <td style={{ padding: '10px' }}>
+                                <button type="button" onClick={() => {
+                                  const txt = `Name: ${s.name}\nEmail: ${s.email}\nPassword: ${s.plainPassword || 'N/A'}`;
+                                  if (navigator.clipboard) navigator.clipboard.writeText(txt);
+                                  alert('✅ Copied!');
+                                }} style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>📋 Copy</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
