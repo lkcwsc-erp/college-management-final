@@ -2431,6 +2431,17 @@ const StudentDashboard = () => {
                       <strong>❌ Rejection Reason:</strong> {myAdmission.rejectionReason}
                     </div>
                   )}
+                  {myAdmission.status === 'rejected' && (
+                    <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                      <p style={{ fontSize: '13px', color: '#555', marginBottom: '8px' }}>
+                        Aap apna admission form dobara bhar kar submit kar sakte hain.
+                      </p>
+                      <button onClick={() => navigate('/admissions?tab=apply')}
+                        style={{ background: 'linear-gradient(135deg, #1565C0, #1976D2)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 26px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                        🔄 Re-apply Admission Form
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2481,6 +2492,18 @@ const StudentDashboard = () => {
                       <p style={{ fontSize: '14px', color: '#555' }}>{getStatusMessage(myAdmission.status)}</p>
                     </div>
                   </div>
+
+                  {myAdmission.status === 'rejected' && (
+                    <div style={{ marginBottom: '24px', textAlign: 'center', background: '#fff8f8', border: '1px dashed #C62828', borderRadius: '12px', padding: '18px' }}>
+                      <p style={{ fontSize: '14px', color: '#555', marginBottom: '10px' }}>
+                        Aapka application reject ho gaya hai. Aap form dobara bhar kar submit kar sakte hain.
+                      </p>
+                      <button onClick={() => navigate('/admissions?tab=apply')}
+                        style={{ background: 'linear-gradient(135deg, #1565C0, #1976D2)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 28px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
+                        🔄 Re-apply Admission Form
+                      </button>
+                    </div>
+                  )}
 
                   {myAdmission.studentId && (
                     <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '2px solid #2E7D32' }}>
