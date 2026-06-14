@@ -977,6 +977,25 @@ const AccountsSectionDashboard = () => {
     finally { setReceiptsLoading(false); }
   }, []);
 
+  // Approved fee-structure edits → live amounts for fee collection ({ 'B.Sc.|bsc_c2': [amts] })
+  const [feeStructOverrides, setFeeStructOverrides] = useState({});
+  const fetchFeeStructOverrides = useCallback(async () => {
+    try {
+      const res = await API.get('/fee-structure-approvals');
+      const map = {};
+      (res.data.approvals || []).forEach(a => {
+        if (a.status === 'approved') {
+          const key = `${a.courseKey}|${a.itemId}`;
+          if (!(key in map)) map[key] = a.newAmounts; // newest-first (backend sorted) wins
+        }
+      });
+      setFeeStructOverrides(map);
+    } catch { /* ignore — fall back to default structure */ }
+  }, []);
+  useEffect(() => { fetchFeeStructOverrides(); }, [fetchFeeStructOverrides]);
+  // Amounts for a fee item, with approved edits applied
+  const itemAmounts = (courseKey, item) => feeStructOverrides[`${courseKey}|${item.id}`] || item.s;
+
   const fetchDocRequests = useCallback(async () => {
     setDocLoading(true);
     try {
@@ -1093,7 +1112,8 @@ const AccountsSectionDashboard = () => {
             .map((item, i) => {
               const semIdxs = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
               const idxs = semIdxs[selectedAdm.admissionYear||'1st Year'] || [0,1];
-              const yearAmt = (item.s[idxs[0]]||0) + (item.s[idxs[1]]||0);
+              const s = itemAmounts(ck, item); // approved edit if any, else default
+              const yearAmt = (s[idxs[0]]||0) + (s[idxs[1]]||0);
               return { sr: i+1, particular: item.name, amount: yearAmt };
             }).filter(r => r.amount > 0)
         : [];
@@ -1745,8 +1765,9 @@ const AccountsSectionDashboard = () => {
         const schol = Number(admScholarshipAmt||0);
 
         const yearItems = course ? course.items.map(item => {
-          const amt = (item.s[semIdxs[0]]||0) + (item.s[semIdxs[1]]||0);
-          return { ...item, yearAmt: amt };
+          const s = itemAmounts(ck, item); // approved edit if any, else default
+          const amt = (s[semIdxs[0]]||0) + (s[semIdxs[1]]||0);
+          return { ...item, s, yearAmt: amt };
         }).filter(item => item.yearAmt > 0) : [];
 
         const yearTotal = yearItems.reduce((s,i) => s + i.yearAmt, 0);
