@@ -349,6 +349,18 @@ const StudentSectionDashboard = () => {
     }
   };
 
+  // Delete a student's login credentials (only from the Not-Approved list)
+  const handleDeletePendingCred = async (s) => {
+    if (!window.confirm(`"${s.name || s.email}" ke login credentials delete karein?\n\nYe student dobara login nahi kar payega. Zaroorat padne par naya account bana sakte hain.`)) return;
+    try {
+      await API.delete('/auth/students/' + s._id);
+      setPendingCreds(prev => prev.filter(p => p._id !== s._id));
+      alert('✅ Login credentials deleted — ' + (s.name || s.email));
+    } catch (e) {
+      alert('❌ Delete failed: ' + (e.response?.data?.message || 'Error'));
+    }
+  };
+
   const getStatusStyle = (status) => {
     const styles = {
       pending:            { bg: '#fff3e0', color: '#E65100', label: '⏳ Pending' },
@@ -777,11 +789,14 @@ const StudentSectionDashboard = () => {
                               <td style={{ padding: '10px' }}>{s.phone || '—'}</td>
                               <td style={{ padding: '10px', color: '#666' }}>{s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-IN') : '—'}</td>
                               <td style={{ padding: '10px' }}>
-                                <button type="button" onClick={() => {
-                                  const txt = `Name: ${s.name}\nEmail: ${s.email}\nPassword: ${s.plainPassword || 'N/A'}`;
-                                  if (navigator.clipboard) navigator.clipboard.writeText(txt);
-                                  alert('✅ Copied!');
-                                }} style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>📋 Copy</button>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                  <button type="button" onClick={() => {
+                                    const txt = `Name: ${s.name}\nEmail: ${s.email}\nPassword: ${s.plainPassword || 'N/A'}`;
+                                    if (navigator.clipboard) navigator.clipboard.writeText(txt);
+                                    alert('✅ Copied!');
+                                  }} style={{ background: '#1565C0', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>📋 Copy</button>
+                                  <button type="button" onClick={() => handleDeletePendingCred(s)} style={{ background: '#fff', color: '#C62828', border: '1.5px solid #C62828', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🗑️ Delete</button>
+                                </div>
                               </td>
                             </tr>
                           ))}
