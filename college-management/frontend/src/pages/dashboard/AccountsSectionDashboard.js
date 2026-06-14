@@ -389,11 +389,45 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [newItem, setNewItem]           = useState({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
   const [editingItem, setEditingItem]   = useState(null);
   const [editAmounts, setEditAmounts]   = useState({});
+  // Approval records from backend — source of truth for what's approved/pending
+  const [feeApprovals, setFeeApprovals] = useState([]);
+
+  const fetchFeeApprovals = useCallback(async () => {
+    try {
+      const res = await API.get('/fee-structure-approvals?myOnly=true');
+      setFeeApprovals(res.data.approvals || []);
+    } catch { /* ignore — keep showing what we have */ }
+  }, []);
+
+  useEffect(() => { fetchFeeApprovals(); }, [fetchFeeApprovals]);
 
   const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
   const course = DETAILED_FEES[courseKey];
   const customItems = customFees[courseKey] || [];
-  const allItems = course ? [...course.items, ...customItems.filter(ci => !course.items.find(i=>i.id===ci.id))] : [];
+
+  // Reconcile with backend approvals (feeApprovals is sorted newest-first):
+  //  - newest APPROVED edit per item → live override amount
+  //  - newest edit that is still in the pipeline → shows as "pending"
+  const approvedOverrides = {};      // itemId -> approved amounts (live)
+  const pendingForCourse  = {};      // itemId -> { amounts, status:'pending' }
+  const seenNewest        = new Set();
+  feeApprovals.forEach(a => {
+    if (a.courseKey !== courseKey) return;
+    if (!seenNewest.has(a.itemId)) {
+      seenNewest.add(a.itemId);
+      if (['pending_principal', 'approved_by_principal', 'pending_admin'].includes(a.status)) {
+        pendingForCourse[a.itemId] = { amounts: a.newAmounts, status: 'pending', submittedAt: a.createdAt };
+      }
+    }
+    if (a.status === 'approved' && !(a.itemId in approvedOverrides)) {
+      approvedOverrides[a.itemId] = a.newAmounts;
+    }
+  });
+
+  const allItems = course
+    ? [...course.items, ...customItems.filter(ci => !course.items.find(i => i.id === ci.id))]
+        .map(it => approvedOverrides[it.id] ? { ...it, s: approvedOverrides[it.id] } : it)
+    : [];
 
   const saveCustomFees = (cf) => {
     localStorage.setItem('lkcwsc_custom_fees', JSON.stringify(cf));
@@ -427,13 +461,13 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
       savePending(pending);
       setEditingItem(null);
       showToast('✅ Edit submitted — sent to Principal for approval!');
+      fetchFeeApprovals(); // pull fresh status from backend
     } catch (e) {
       showToast('❌ ' + (e.response?.data?.message || 'Failed to submit for approval'));
     }
   };
 
-  const pendingForCourse = pendingEdits[courseKey] || {};
-  const hasPending = Object.values(pendingForCourse).some(p => p.status === 'pending');
+  const hasPending = Object.keys(pendingForCourse).length > 0;
 
   return (
     <div>
@@ -442,11 +476,17 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure 2025-26</h2>
           <p style={{ color:'#666', fontSize:14 }}>View and edit fee amounts. Changes require Principal/Admin approval.</p>
         </div>
-        {hasPending && (
-          <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'8px 14px', fontSize:13, color:'#E65100', fontWeight:600 }}>
-            ⏳ {Object.values(pendingForCourse).filter(p=>p.status==='pending').length} edit(s) pending approval
-          </div>
-        )}
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+          {hasPending && (
+            <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'8px 14px', fontSize:13, color:'#E65100', fontWeight:600 }}>
+              ⏳ {Object.values(pendingForCourse).filter(p=>p.status==='pending').length} edit(s) pending approval
+            </div>
+          )}
+          <button onClick={fetchFeeApprovals} title="Approval status latest karein"
+            style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            🔄 Refresh Status
+          </button>
+        </div>
       </div>
 
       <div style={{ display:'flex', gap:0, marginBottom:20, background:'#f0f4f8', borderRadius:10, padding:4, width:'fit-content' }}>
