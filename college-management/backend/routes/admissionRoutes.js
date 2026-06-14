@@ -81,7 +81,52 @@ router.post('/', uploadFields, async (req, res) => {
     data.principalStatus      = 'pending';
     data.status               = 'pending';
 
-    const admission = await Admission.create(data);
+    // 🔄 Re-apply handling: check if an application already exists for this email
+    let admission;
+    if (data.email) {
+      const existing = await Admission.findOne({ email: data.email }).sort({ createdAt: -1 });
+
+      if (existing) {
+        // Already approved (or Student ID generated) → block duplicate submission
+        if (existing.status === 'approved' || existing.studentId) {
+          return res.status(400).json({
+            success: false,
+            message: 'You already have an approved admission. Re-apply is not allowed.'
+          });
+        }
+        // Still under review → block duplicate submission
+        if (existing.status === 'pending') {
+          return res.status(400).json({
+            success: false,
+            message: 'Your application is already submitted and under review. Please wait for the result.'
+          });
+        }
+        // Previous application was rejected → allow re-apply by updating the SAME record
+        if (existing.status === 'rejected') {
+          // clear old rejection info so the dashboard shows a fresh "pending" status
+          data.rejectionReason   = '';
+          data.staffNotes        = '';
+          data.staffApprovedBy   = '';
+          data.staffApprovedDate = null;
+          data.studentId         = '';
+
+          admission = await Admission.findByIdAndUpdate(
+            existing._id,
+            { ...data },
+            { new: true, runValidators: true }
+          );
+          console.log('🔄 Admission re-applied (updated):', admission._id);
+
+          return res.status(200).json({
+            success: true,
+            message: 'Application re-submitted! Awaiting Student Section review.',
+            admission
+          });
+        }
+      }
+    }
+
+    admission = await Admission.create(data);
     console.log('✅ Admission created:', admission._id);
 
     res.status(201).json({
@@ -111,6 +156,7 @@ router.get('/', protect, authorizeRoles('admin', 'staff_principal'), async (req,
 router.get('/by-email/:email', protect, async (req, res) => {
   try {
     const admission = await Admission.findOne({ email: req.params.email })
+      .sort({ createdAt: -1 })
       .populate('course', 'name type code');
     if (!admission)
       return res.status(404).json({ success: false, message: 'No application found' });
