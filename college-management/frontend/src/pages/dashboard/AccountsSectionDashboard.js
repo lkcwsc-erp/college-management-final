@@ -961,6 +961,22 @@ const AccountsSectionDashboard = () => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_pay_history') || '[]'); } catch { return []; }
   });
 
+  // Full payment history (all receipts across all students) — for the Payment History tab
+  const [allReceipts, setAllReceipts]       = useState([]);
+  const [receiptsLoading, setReceiptsLoading] = useState(false);
+  const [histSearch, setHistSearch]         = useState('');
+  const [histFrom, setHistFrom]             = useState('');
+  const [histTo, setHistTo]                 = useState('');
+
+  const fetchAllReceipts = useCallback(async () => {
+    setReceiptsLoading(true);
+    try {
+      const res = await API.get('/admissions/receipts/all');
+      setAllReceipts(res.data.receipts || []); // already sorted newest-first by backend
+    } catch { /* keep whatever we have */ }
+    finally { setReceiptsLoading(false); }
+  }, []);
+
   const fetchDocRequests = useCallback(async () => {
     setDocLoading(true);
     try {
@@ -1131,6 +1147,72 @@ const AccountsSectionDashboard = () => {
       .catch(() => {});
   }, []);
   useEffect(() => { fetchExamFormBadge(); }, [fetchExamFormBadge, activeTab]);
+  // Load full payment history when the History tab is opened
+  useEffect(() => { if (activeTab === 'history') fetchAllReceipts(); }, [activeTab, fetchAllReceipts]);
+
+  // Filter + group the full receipts list for the Payment History tab
+  const filteredReceipts = allReceipts.filter(r => {
+    const q = histSearch.toLowerCase().trim();
+    if (q) {
+      const hay = `${r.studentName || ''} ${r.studentId || ''} ${r.receiptNo || ''} ${r.feeTypeLabel || r.feeType || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (r.paidAt) {
+      const d = new Date(r.paidAt);
+      if (histFrom && d < new Date(histFrom + 'T00:00:00')) return false;
+      if (histTo   && d > new Date(histTo   + 'T23:59:59')) return false;
+    }
+    return true;
+  });
+  const filteredReceiptsTotal = filteredReceipts.reduce((s, r) => s + (r.amount || 0), 0);
+  // Group date-wise (backend already sorts newest-first, so date order is preserved)
+  const receiptsByDate = [];
+  const dateIndex = {};
+  filteredReceipts.forEach(r => {
+    const key = r.paidAt ? new Date(r.paidAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Unknown date';
+    if (!(key in dateIndex)) { dateIndex[key] = receiptsByDate.length; receiptsByDate.push({ date: key, items: [], total: 0 }); }
+    const g = receiptsByDate[dateIndex[key]];
+    g.items.push(r);
+    g.total += (r.amount || 0);
+  });
+
+  const downloadReceiptsCSV = () => {
+    if (!filteredReceipts.length) { showToast('❌ No payments to export'); return; }
+    const headers = ['Date', 'Time', 'Receipt No', 'Student Name', 'Student ID', 'Course', 'Year', 'Fee Type', 'Amount', 'Payment Mode', 'Transaction ID', 'Collected By'];
+    const esc = (v) => {
+      const s = (v === null || v === undefined) ? '' : v.toString().replace(/"/g, '""');
+      return /[",\n]/.test(s) ? `"${s}"` : s;
+    };
+    const lines = [headers.join(',')];
+    filteredReceipts.forEach(r => {
+      const d = r.paidAt ? new Date(r.paidAt) : null;
+      lines.push([
+        d ? d.toLocaleDateString('en-IN') : '',
+        d ? d.toLocaleTimeString('en-IN') : '',
+        r.receiptNo || '',
+        r.studentName || '',
+        r.studentId || '',
+        r.courseType || '',
+        r.admissionYear || '',
+        r.feeTypeLabel || r.feeType || '',
+        r.amount || 0,
+        r.paymentMode === 'online' ? 'Online' : 'Cash',
+        r.transactionId || '',
+        r.collectedBy || '',
+      ].map(esc).join(','));
+    });
+    lines.push(['', '', '', '', '', '', '', 'TOTAL', filteredReceiptsTotal, '', '', ''].map(esc).join(','));
+    const csv = '\ufeff' + lines.join('\n'); // BOM so Excel reads UTF-8 + ₹ correctly
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payment-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✅ CSV downloaded');
+  };
+
 
   const pendingDocCount  = docRequests.filter(r => r.status === 'pending_accounts').length;
   const paidAdmCount     = admissions.filter(a => a.feesPaid).length;
@@ -1467,36 +1549,75 @@ const AccountsSectionDashboard = () => {
           {/* ════ PAYMENT HISTORY ════ */}
           {activeTab === 'history' && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <h2 style={{ color: '#1565C0', marginBottom: 4 }}>🧾 Payment History</h2>
-                  <p style={{ color: '#666', fontSize: 14 }}>All receipts generated in this session.</p>
+                  <p style={{ color: '#666', fontSize: 14 }}>All fee payments — date-wise, across every student.</p>
                 </div>
-                <div style={{ background: '#e8f5e9', color: '#1b5e20', borderRadius: 12, padding: '10px 20px', fontWeight: 700, fontSize: 15 }}>
-                  Total: ₹{totalCollected.toLocaleString('en-IN')}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ background: '#e8f5e9', color: '#1b5e20', borderRadius: 12, padding: '10px 20px', fontWeight: 700, fontSize: 15 }}>
+                    Total: ₹{filteredReceiptsTotal.toLocaleString('en-IN')}
+                  </div>
+                  <button onClick={fetchAllReceipts} style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🔄 Refresh</button>
+                  <button onClick={downloadReceiptsCSV} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>⬇️ Download CSV (Excel)</button>
                 </div>
               </div>
 
-              {payHistory.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">🧾</div><h3>No receipts yet</h3><p>Receipts will appear here once you collect fees.</p></div>
+              {/* Filters */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18, background: '#f7f9fc', border: '1px solid #e0e7ef', borderRadius: 12, padding: 14 }}>
+                <div style={{ flex: '1 1 220px' }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>🔍 Search</label>
+                  <input type="text" placeholder="Name / Student ID / Receipt / Fee type" value={histSearch} onChange={e => setHistSearch(e.target.value)}
+                    style={{ width: '100%', padding: '9px 10px', borderRadius: 8, border: '1px solid #ddd', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>From</label>
+                  <input type="date" value={histFrom} onChange={e => setHistFrom(e.target.value)} style={{ padding: '9px 10px', borderRadius: 8, border: '1px solid #ddd' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>To</label>
+                  <input type="date" value={histTo} onChange={e => setHistTo(e.target.value)} style={{ padding: '9px 10px', borderRadius: 8, border: '1px solid #ddd' }} />
+                </div>
+                {(histSearch || histFrom || histTo) && (
+                  <button onClick={() => { setHistSearch(''); setHistFrom(''); setHistTo(''); }}
+                    style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✕ Clear</button>
+                )}
+                <div style={{ marginLeft: 'auto', fontSize: 13, color: '#666', fontWeight: 600 }}>{filteredReceipts.length} payment(s)</div>
+              </div>
+
+              {receiptsLoading ? (
+                <div className="empty-state"><div className="empty-icon">⏳</div><h3>Loading payment history…</h3></div>
+              ) : filteredReceipts.length === 0 ? (
+                <div className="empty-state"><div className="empty-icon">🧾</div><h3>No payments found</h3><p>Try changing the filters, or collect fees to see receipts here.</p></div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {payHistory.map((p) => (
-                    <div key={p.id} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, borderLeft: '4px solid #2E7D32' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
-                          <h4 style={{ margin: 0, color: '#1565C0', fontSize: 14 }}>{p.studentName}</h4>
-                          <span style={{ fontSize: 11, background: '#e3f2fd', color: '#1565C0', padding: '2px 8px', borderRadius: 10 }}>{p.type === 'admission' ? '🎓 Admission' : '📄 Document'}</span>
-                        </div>
-                        <p style={{ fontSize: 12, color: '#666', margin: 0 }}>{p.feeLabel} • {p.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'} • {new Date(p.date).toLocaleDateString('en-IN')}</p>
-                        <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>Receipt: {p.id}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+                  {receiptsByDate.map((grp) => (
+                    <div key={grp.date}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 6, borderBottom: '2px solid #e3f2fd' }}>
+                        <h4 style={{ margin: 0, color: '#1565C0', fontSize: 14 }}>📅 {grp.date}</h4>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1b5e20' }}>₹{grp.total.toLocaleString('en-IN')} · {grp.items.length} receipt(s)</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: '#1b5e20' }}>₹{p.amount.toLocaleString('en-IN')}</div>
-                        <button onClick={() => printReceipt({ ...p, receiptNo: p.id })}
-                          style={{ marginTop: 6, background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          🖨️ Reprint
-                        </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {grp.items.map((p, i) => (
+                          <div key={(p.receiptNo || '') + i} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, borderLeft: '4px solid #2E7D32' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+                                <h4 style={{ margin: 0, color: '#1565C0', fontSize: 14 }}>{p.studentName || '—'}</h4>
+                                {p.studentId && <span style={{ fontSize: 11, background: '#e8f5e9', color: '#1b5e20', padding: '2px 8px', borderRadius: 10, fontFamily: 'monospace' }}>{p.studentId}</span>}
+                                <span style={{ fontSize: 11, background: '#e3f2fd', color: '#1565C0', padding: '2px 8px', borderRadius: 10 }}>{p.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'}</span>
+                              </div>
+                              <p style={{ fontSize: 12, color: '#666', margin: 0 }}>{p.feeTypeLabel || p.feeType || 'Fee'}{p.courseType ? ` • ${p.courseType}` : ''}{p.paidAt ? ` • ${new Date(p.paidAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}</p>
+                              <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>Receipt: {p.receiptNo || '—'}{p.transactionId ? ` • Txn: ${p.transactionId}` : ''}{p.collectedBy ? ` • By: ${p.collectedBy}` : ''}</p>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 20, fontWeight: 800, color: '#1b5e20' }}>₹{(p.amount || 0).toLocaleString('en-IN')}</div>
+                              <button onClick={() => printReceipt(p)}
+                                style={{ marginTop: 6, background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                🖨️ Reprint
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
