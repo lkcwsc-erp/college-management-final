@@ -1338,7 +1338,7 @@ const AccountsSectionDashboard = () => {
                 <h2 style={{ color: '#1565C0', margin: 0 }}>💰 Collect Fees</h2>
                 <button onClick={() => setShowWalkIn(true)}
                   style={{ background:'#E65100', color:'#fff', border:'none', borderRadius:9, padding:'10px 20px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                  🚶 Walk-in / Old Student Fee
+                   Old Student Fee Collect
                 </button>
               </div>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Collect admission fees, exam fees, and other dues from enrolled students.</p>
