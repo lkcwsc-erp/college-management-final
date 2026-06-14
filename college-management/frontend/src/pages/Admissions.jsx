@@ -809,7 +809,6 @@ const [activeTab, setActiveTab] = useState('process');
                           <option value="sc">SC</option>
                           <option value="st">ST</option>
                           <option value="obc">OBC</option>
-                          <option value="nt">NT</option>
                           <option value="vjnt">VJNT</option>
                         </select>
                       </div>
