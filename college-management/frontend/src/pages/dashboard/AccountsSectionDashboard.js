@@ -200,36 +200,6 @@ const calcWalkinAmount = (course, year, feeType) => {
   return FIXED[feeType] ?? '';
 };
 
-// ── Old-student fee collect: fee-head options built from the live fee structure ──
-// Year → the two semester indices that year covers in DETAILED_FEES (s[0..5])
-const yearSemIdx = (year) =>
-  year === '1st Year' ? [0, 1] : year === '2nd Year' ? [2, 3] : year === '3rd Year' ? [4, 5] : [];
-
-// Build the Fee Type dropdown options from the fee structure for a course + year.
-// Each head's amount = sum of that year's two semesters. Adds a "Full Year" total on top.
-const buildFeeStructOpts = (course, year) => {
-  const items = DETAILED_FEES[course]?.items || [];
-  const idx = yearSemIdx(year);
-  const heads = items
-    .map(it => ({
-      key: it.id,
-      label: `${it.section === 'University' ? '🎓' : '🏫'} ${it.name}`,
-      amount: idx.reduce((sum, i) => sum + (it.s[i] || 0), 0),
-    }))
-    .filter(it => it.amount > 0);
-  const yearTotal = YEARLY_FEES[course]?.years?.[year]?.total ?? '';
-  return [
-    { key: '__full__', label: `💰 Full Year — All Fees (${year})`, amount: yearTotal },
-    ...heads,
-  ];
-};
-
-// Amount for a chosen fee-head key, as per fee structure
-const feeStructAmount = (course, year, key) => {
-  const opt = buildFeeStructOpts(course, year).find(o => o.key === key);
-  return opt ? opt.amount : '';
-};
-
 const FEE_TYPES = [
   { key: 'admission',    label: '💰 Collect Fees' },
   { key: 'exam',         label: '📝 Exam Fee' },
@@ -1640,7 +1610,7 @@ const AccountsSectionDashboard = () => {
                 </button>
               </div>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Collect admission fees, exam fees, and other dues from enrolled students.</p>
-              {showWalkIn && <WalkInFeeModal onClose={() => setShowWalkIn(false)} user={user} API={API} showToast={showToast} />}
+              {showWalkIn && <WalkInFeeModal onClose={() => setShowWalkIn(false)} user={user} API={API} showToast={showToast} docFees={docFees} />}
 
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input type="text" placeholder="🔍 Search by name, student ID or email..." value={admSearch} onChange={e => setAdmSearch(e.target.value)}
@@ -2506,11 +2476,13 @@ const ExpenseTracker = ({ user }) => {
 /* ═══════════════════════════════════════════════════════════
    WALK-IN / OLD STUDENT FEE MODAL
 ═══════════════════════════════════════════════════════════ */
-const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
+const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
+  const docFeeKeys = Object.keys(docFees);
+  const firstDocKey = docFeeKeys[0] || '';
   const EMPTY_FORM = {
     studentName:'', phone:'', prnNo:'', rollNo:'',
     course:'B.A.', year:'2nd Year',
-    feeType:'__full__', amount: feeStructAmount('B.A.', '2nd Year', '__full__'), payMode:'cash', txnId:'', notes:'',
+    feeType: firstDocKey, amount: docFees[firstDocKey]?.price ?? '', payMode:'cash', txnId:'', notes:'',
   };
   const [view, setView]       = useState('form');
   const [form, setForm]       = useState(EMPTY_FORM);
@@ -2521,9 +2493,9 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_walkin_history') || '[]'); } catch { return []; }
   });
 
-  // Fee Type options come straight from the fee structure (course + year).
-  // Document/certificate fee types removed — old students pay structure heads only.
-  const feeOpts = buildFeeStructOpts(form.course, form.year);
+  // Fee Type options are the DOCUMENT fees (Bonafide, Marksheet, Migration, TC, etc.)
+  // from the document fee structure — amounts auto-fill from the approved doc fee list.
+  const feeOpts = Object.entries(docFees).map(([key, val]) => ({ key, label: val.label, amount: val.price }));
 
   const inp = { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
   const fmt = n => Number(n||0).toLocaleString('en-IN');
@@ -2761,14 +2733,14 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                     </div>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
-                      <select style={inp} value={form.course} onChange={e=>setForm(p=>({...p, course:e.target.value, feeType:'__full__', amount: feeStructAmount(e.target.value, p.year, '__full__')}))}>
+                      <select style={inp} value={form.course} onChange={e=>setForm(p=>({...p, course:e.target.value}))}>
                         <option value="B.A.">B.A.</option>
                         <option value="B.Sc.">B.Sc.</option>
                       </select>
                     </div>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
-                      <select style={inp} value={form.year} onChange={e=>setForm(p=>({...p, year:e.target.value, amount: feeStructAmount(p.course, e.target.value, p.feeType)}))}>
+                      <select style={inp} value={form.year} onChange={e=>setForm(p=>({...p, year:e.target.value}))}>
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
                         <option value="3rd Year">3rd Year</option>
@@ -2779,16 +2751,17 @@ const WalkInFeeModal = ({ onClose, user, API, showToast }) => {
                   <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:12 }}>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Fee Type *</label>
-                      <select style={inp} value={form.feeType} onChange={e=>setForm(p=>({...p, feeType:e.target.value, amount: feeStructAmount(p.course, p.year, e.target.value)}))}>
-                        {feeOpts.map(f=><option key={f.key} value={f.key}>{f.label}{f.amount!=='' ? ` — ₹${fmt(f.amount)}` : ''}</option>)}
+                      <select style={inp} value={form.feeType} onChange={e=>setForm(p=>({...p, feeType:e.target.value, amount: docFees[e.target.value]?.price ?? ''}))}>
+                        {feeOpts.length === 0 && <option value="">No document fees configured</option>}
+                        {feeOpts.map(f=><option key={f.key} value={f.key}>{f.label}{(f.amount!=='' && f.amount!=null) ? ` — ₹${fmt(f.amount)}` : ''}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Amount (₹) *</label>
                       <input type="number" min="0" style={{ ...inp, fontSize:17, fontWeight:800, textAlign:'right' }}
                         placeholder="0" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} />
-                      {form.year!=='Course completed' && form.amount!=='' && (
-                        <div style={{ fontSize:11, color:'#E65100', marginTop:4 }}>💡 Auto-filled from {form.course} · {form.year} fee structure (editable)</div>
+                      {form.amount!=='' && (
+                        <div style={{ fontSize:11, color:'#E65100', marginTop:4 }}>💡 Auto-filled from document fee structure (editable)</div>
                       )}
                     </div>
                   </div>
