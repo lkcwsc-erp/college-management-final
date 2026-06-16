@@ -635,7 +635,7 @@ const PrincipalDashboard = () => {
 
           {/* ── ALL STUDENTS ── */}
           {activeTab === 'fee_struct' && (
-            <FeeStructApprovalTab role="principal" />
+            <FeeStructApprovalTab role="principal" kind="structure" />
           )}
 
           {activeTab === 'all_students' && (
@@ -649,7 +649,10 @@ const PrincipalDashboard = () => {
           {/* ── DOC FEE APPROVALS ── */}
           {activeTab === 'doc_fees' && (
             <div>
-              <h2 style={{ color: '#C62828', marginBottom: 4 }}>💰 Document Fee Type Approvals</h2>
+              {/* New: document fee add/edit/delete requests from Accounts (Accounts → Principal → Admin) */}
+              <FeeStructApprovalTab role="principal" kind="document" />
+
+              <h2 style={{ color: '#C62828', margin: '28px 0 4px' }}>💰 Document Fee Type Approvals</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
                 Accounts Section ne naye document fee types add kiye hain — approve ya reject karo.
               </p>
@@ -1744,7 +1747,7 @@ const PrincipalResourcesTab = () => {
    FeeStructApprovalTab — used by both Principal and Admin
    role: 'principal' | 'admin'
 ═══════════════════════════════════════════════════════════ */
-const FeeStructApprovalTab = ({ role }) => {
+const FeeStructApprovalTab = ({ role, kind }) => {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [msg, setMsg]             = useState('');
@@ -1773,10 +1776,18 @@ const FeeStructApprovalTab = ({ role }) => {
     } catch (e) { flash('❌ ' + (e.response?.data?.message || 'Action failed')); }
   };
 
-  const pending = approvals.filter(a =>
+  // Document fee requests vs regular fee-structure edits share one backend;
+  // separate them by courseKey so each shows in its own tab.
+  const scoped = approvals.filter(a =>
+    kind === 'document' ? a.courseKey === 'DOC'
+      : kind === 'structure' ? a.courseKey !== 'DOC'
+      : true
+  );
+
+  const pending = scoped.filter(a =>
     role === 'principal' ? a.status === 'pending_principal' : a.status === 'pending_admin'
   );
-  const done = approvals.filter(a =>
+  const done = scoped.filter(a =>
     role === 'principal'
       ? ['approved', 'rejected_by_principal', 'rejected_by_admin', 'pending_admin'].includes(a.status)
       : ['approved', 'rejected_by_admin'].includes(a.status)
@@ -1798,9 +1809,11 @@ const FeeStructApprovalTab = ({ role }) => {
 
   return (
     <div>
-      <h2 style={{ color:'#1565C0', marginBottom:4 }}>🏛️ Fee Structure Approvals</h2>
+      <h2 style={{ color:'#1565C0', marginBottom:4 }}>{kind === 'document' ? '💰 Document Fee Approvals' : '🏛️ Fee Structure Approvals'}</h2>
       <p style={{ color:'#666', marginBottom:16, fontSize:14 }}>
-        Accounts Section ne fee amounts edit kiye hain — review karo aur approve ya reject karo.
+        {kind === 'document'
+          ? 'Accounts Section ne document fee add / edit / delete kiya hai — review karke approve ya reject karo.'
+          : 'Accounts Section ne fee amounts edit kiye hain — review karo aur approve ya reject karo.'}
       </p>
       {msg && <div style={{ padding:'10px 16px', borderRadius:9, marginBottom:14, fontWeight:600, fontSize:14, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
 
