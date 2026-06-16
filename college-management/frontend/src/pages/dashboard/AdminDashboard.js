@@ -1765,22 +1765,39 @@ const AdminFeeApprovalTab = ({ showMessage }) => {
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:14 }}>
-          <div style={{ background:'#f5f5f5', borderRadius:8, padding:'10px 14px' }}>
-            <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#888' }}>OLD AMOUNTS</p>
-            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-              {SEM_LABELS.map((sl, i) => (
-                <span key={i} style={{ fontSize:12, color:'#888' }}>{sl}: ₹{(a.oldAmounts?.[i]||0).toLocaleString('en-IN')}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px' }}>
-            <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#2E7D32' }}>NEW AMOUNTS</p>
-            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-              {SEM_LABELS.map((sl, i) => (
-                <span key={i} style={{ fontSize:12, fontWeight:700, color:'#2E7D32' }}>{sl}: ₹{(a.newAmounts?.[i]||0).toLocaleString('en-IN')}</span>
-              ))}
-            </div>
-          </div>
+          {a.courseKey === 'DOC' ? (
+            <>
+              <div style={{ background:'#f5f5f5', borderRadius:8, padding:'10px 14px' }}>
+                <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#888' }}>CURRENT FEE</p>
+                <span style={{ fontSize:13, color:'#888' }}>{a.isNewItem ? '— (new document)' : `₹${(a.oldAmounts?.[0]||0).toLocaleString('en-IN')}`}</span>
+              </div>
+              <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px' }}>
+                <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#2E7D32' }}>REQUESTED</p>
+                <span style={{ fontSize:13, fontWeight:700, color: a.newAmounts?.[0]===-1 ? '#C62828' : '#2E7D32' }}>
+                  {a.newAmounts?.[0] === -1 ? '🗑️ Delete this document type' : `₹${(a.newAmounts?.[0]||0).toLocaleString('en-IN')}`}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ background:'#f5f5f5', borderRadius:8, padding:'10px 14px' }}>
+                <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#888' }}>OLD AMOUNTS</p>
+                <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                  {SEM_LABELS.map((sl, i) => (
+                    <span key={i} style={{ fontSize:12, color:'#888' }}>{sl}: ₹{(a.oldAmounts?.[i]||0).toLocaleString('en-IN')}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background:'#e8f5e9', borderRadius:8, padding:'10px 14px' }}>
+                <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#2E7D32' }}>NEW AMOUNTS</p>
+                <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                  {SEM_LABELS.map((sl, i) => (
+                    <span key={i} style={{ fontSize:12, fontWeight:700, color:'#2E7D32' }}>{sl}: ₹{(a.newAmounts?.[i]||0).toLocaleString('en-IN')}</span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {isPending && (
