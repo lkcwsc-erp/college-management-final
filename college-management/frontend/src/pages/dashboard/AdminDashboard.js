@@ -874,6 +874,7 @@ const AdminDashboard = () => {
     { id: 'tc_requests',   label: '🎓 TC Requests' },
     { id: 'doc_requests',  label: '📋 Document Requests' },
     { id: 'fee_approval',  label: '💼 Fee Structure Approval' },
+    { id: 'doc_fee_approval', label: '💰 Doc Fee Approvals' },
     { id: 'achievements', label: '🏆 Achievements' },
   ];
 
@@ -1506,7 +1507,10 @@ const AdminDashboard = () => {
           {activeTab === 'doc_requests' && <AdminDocRequestsTab showMessage={showMessage} />}
 
           {/* Fee Structure Approval */}
-          {activeTab === 'fee_approval' && <AdminFeeApprovalTab showMessage={showMessage} />}
+          {activeTab === 'fee_approval' && <AdminFeeApprovalTab showMessage={showMessage} kind="structure" />}
+
+          {/* Doc Fee Approvals */}
+          {activeTab === 'doc_fee_approval' && <AdminFeeApprovalTab showMessage={showMessage} kind="document" />}
 
           {/* Achievements */}
           {activeTab === 'achievements' && <AdminAchievementsTab showMessage={showMessage} />}
@@ -1696,7 +1700,7 @@ const DETAILED_FEES_ADMIN = {
   'B.A.': ['ba_s1','ba_s2','ba_s3','ba_s4','ba_s5','ba_s6','ba_s7','ba_s8','ba_s9','ba_s10','ba_s11','ba_s12','ba_s13','ba_s14','ba_s15','ba_s16','ba_s17','ba_s18','ba_c1','ba_c2','ba_c3','ba_c4','ba_c5','ba_c6','ba_c7','ba_c8','ba_c9','ba_c10','ba_c11','ba_c12','ba_c13','ba_c14','ba_c15','ba_c16','ba_c17','ba_c18','ba_c19'],
 };
 
-const AdminFeeApprovalTab = ({ showMessage }) => {
+const AdminFeeApprovalTab = ({ showMessage, kind }) => {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [filter, setFilter]       = useState('pending'); // 'pending' | 'all'
@@ -1728,9 +1732,16 @@ const AdminFeeApprovalTab = ({ showMessage }) => {
     }
   };
 
+  // Document fee requests vs regular fee-structure edits share one backend;
+  // separate them by courseKey so each shows in its own tab.
+  const scoped = approvals.filter(a =>
+    kind === 'document' ? a.courseKey === 'DOC'
+      : kind === 'structure' ? a.courseKey !== 'DOC'
+      : true
+  );
   // Admin only acts on items the Principal already approved (pending_admin)
-  const pending = approvals.filter(a => a.status === 'pending_admin');
-  const shown   = filter === 'pending' ? pending : approvals;
+  const pending = scoped.filter(a => a.status === 'pending_admin');
+  const shown   = filter === 'pending' ? pending : scoped;
 
   const statusBadge = (s) => {
     const map = {
@@ -1820,15 +1831,15 @@ const AdminFeeApprovalTab = ({ showMessage }) => {
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure Approval</h2>
-          <p style={{ color:'#666', fontSize:14, margin:0 }}>Final approval for fee edits already approved by the Principal. Approving applies the new amounts.</p>
+          <h2 style={{ color:'#1565C0', marginBottom:4 }}>{kind === 'document' ? '💰 Doc Fee Approvals' : '💼 Fee Structure Approval'}</h2>
+          <p style={{ color:'#666', fontSize:14, margin:0 }}>{kind === 'document' ? 'Final approval for document fee add / edit / delete already approved by the Principal.' : 'Final approval for fee edits already approved by the Principal. Approving applies the new amounts.'}</p>
         </div>
       </div>
 
       <div style={{ display:'flex', gap:10, margin:'14px 0 20px', flexWrap:'wrap' }}>
         {[
           { key:'pending', label:`⏳ Pending Your Approval (${pending.length})`, color:'#1565C0', bg:'#e3f2fd' },
-          { key:'all',     label:`📋 All (${approvals.length})`,                  color:'#555',    bg:'#f5f5f5' },
+          { key:'all',     label:`📋 All (${scoped.length})`,                  color:'#555',    bg:'#f5f5f5' },
         ].map(t => (
           <div key={t.key} onClick={() => setFilter(t.key)}
             style={{ background:t.bg, color:t.color, borderRadius:20, padding:'6px 16px', fontSize:13, fontWeight:600, cursor:'pointer',
