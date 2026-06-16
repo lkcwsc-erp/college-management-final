@@ -289,7 +289,7 @@ const [activeTab, setActiveTab] = useState('process');
    if (user) {
       setFormData(prev => ({
         ...prev,
-        applicantName: user.name || '',
+        applicantName: (user.name || '').toUpperCase(),
         email: user.email || '',
         phone: user.phone || '',
         aadharNumber: user.aadharNumber || '',
@@ -352,8 +352,15 @@ const [activeTab, setActiveTab] = useState('process');
 
   const validateIFSC = (ifsc) => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc);
 
+  // In fields ki value hamesha capital letters me store/show hogi
+  const UPPERCASE_FIELDS = ['applicantName', 'caste', 'subCaste', 'fatherName', 'motherName', 'aadharName'];
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
+    if (UPPERCASE_FIELDS.includes(name)) {
+      value = value.toUpperCase();
+    }
     if (name === 'sscYOP') {
       setFormData({ ...formData, [name]: value, hscYOP: '' });
     } else {
@@ -794,9 +801,9 @@ const [activeTab, setActiveTab] = useState('process');
                         <label>Gender *</label>
                         <select name="gender" value={formData.gender} onChange={handleChange} required>
                           <option value="">Select Gender</option>
-                           <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
+                           <option value="male">MALE</option>
+                          <option value="female">FEMALE</option>
+                          <option value="other">OTHER</option>
                         </select>
                       </div>
                     </div>
