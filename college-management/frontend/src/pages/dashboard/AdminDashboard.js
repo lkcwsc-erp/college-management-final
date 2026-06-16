@@ -216,12 +216,14 @@ const AdminMessagingTab = ({ user, showMessage }) => {
     try {
       const res = await API.post('/auth/send-message', { recipients, subject, message });
 
-      // If target is staff_student, also save as notice for dashboard visibility
-      if (target === 'staff_student') {
+      // Persist staff-directed messages as dashboard notices so they appear in
+      // the staff dashboards' Messages box (e.g. Accounts Section).
+      if (target === 'all_staff' || target === 'staff_student' || target === 'specific') {
         await API.post('/notices', {
           title: subject,
           content: message,
-          targetAudience: 'staff_student',
+          targetAudience: target === 'all_staff' ? 'staff' : 'staff_student',
+          specificRecipients: target === 'specific' ? recipients.map(r => r.email) : [],
           category: 'general',
           isHighlighted: true,
           isActive: true,
