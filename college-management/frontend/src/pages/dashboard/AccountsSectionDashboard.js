@@ -689,29 +689,53 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 };
 
 /* ── Document Fees Manager ── */
-const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
+const DocFeesManager = ({ docFees, showToast }) => {
   const [editMode,    setEditMode]    = useState(false);
   const [edits,       setEdits]       = useState({});
   const [showAdd,     setShowAdd]     = useState(false);
   const [newType,     setNewType]     = useState({ key:'', label:'', price:'' });
-  const [pendingApproval, setPendingApproval] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('lkcwsc_docfee_pending') || '[]'); } catch { return []; }
+  const [docApprovals, setDocApprovals] = useState([]);
+  const fetchDocApprovals = useCallback(async () => {
+    try {
+      const res = await API.get('/fee-structure-approvals?myOnly=true');
+      setDocApprovals((res.data.approvals || []).filter(a => a.courseKey === 'DOC'));
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { fetchDocApprovals(); }, [fetchDocApprovals]);
+
+  // Newest still-in-pipeline edit per doc key → shows as "⏳ pending" on that row
+  const pendingDoc = {};
+  const seenDocKey = new Set();
+  docApprovals.forEach(a => {
+    if (seenDocKey.has(a.itemId)) return;
+    seenDocKey.add(a.itemId);
+    if (['pending_principal', 'approved_by_principal', 'pending_admin'].includes(a.status)) {
+      pendingDoc[a.itemId] = { newPrice: a.newAmounts?.[0], isDelete: a.newAmounts?.[0] === -1, status: a.status };
+    }
   });
 
   const inp = { padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
 
-  const submitForApproval = (changes) => {
-    const entry = {
-      id: Date.now(),
-      type: 'doc_fee_edit',
-      changes,
-      submittedAt: new Date().toISOString(),
-      status: 'pending',
-    };
-    const updated = [entry, ...pendingApproval].slice(0, 50);
-    setPendingApproval(updated);
-    localStorage.setItem('lkcwsc_docfee_pending', JSON.stringify(updated));
-    showToast('✅ Changes submitted for Principal/Admin approval!');
+  // Submit doc-fee changes into the SAME Accounts → Principal → Admin approval pipeline
+  // used by the fee structure (courseKey 'DOC'). Nothing is applied until Admin approves.
+  const submitForApproval = async (changes) => {
+    try {
+      for (const c of changes) {
+        await API.post('/fee-structure-approvals/submit', {
+          courseKey:   'DOC',
+          itemId:      c.key,
+          itemName:    c.label,
+          itemSection: 'Document',
+          oldAmounts:  c.oldPrice == null ? [] : [Number(c.oldPrice)],
+          newAmounts:  c.deleted ? [-1] : [Number(c.newPrice) || 0],
+          isNewItem:   !!c.isNew,
+        });
+      }
+      showToast('✅ Changes Principal → Admin approval ke liye bheje! Approval ke baad hi apply honge.');
+      fetchDocApprovals();
+    } catch (e) {
+      showToast('❌ ' + (e.response?.data?.message || 'Submit failed'), 'error');
+    }
   };
 
   const handleSaveEdit = () => {
@@ -722,7 +746,7 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
       }
     });
     if (changes.length === 0) { setEditMode(false); return; }
-    submitForApproval(changes);
+    submitForApproval(changes);   // does NOT apply locally — waits for approval
     setEditMode(false);
   };
 
@@ -730,24 +754,19 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     if (!newType.key.trim() || !newType.label.trim()) { showToast('Key aur Label dono required hain', 'error'); return; }
     const key = newType.key.trim().toUpperCase().replace(/\s+/g, '_');
     if (docFees[key]) { showToast('Ye type already exist karta hai', 'error'); return; }
-    const updated = { ...docFees, [key]: { label: newType.label.trim(), price: Number(newType.price) || 0 } };
-    setDocFees(updated);
-    saveDocFees(updated);
-    submitForApproval([{ key, label: newType.label, oldPrice: null, newPrice: Number(newType.price) || 0, isNew: true }]);
+    // Submit for approval only — added to the live list after Admin approval.
+    submitForApproval([{ key, label: newType.label.trim(), oldPrice: null, newPrice: Number(newType.price) || 0, isNew: true }]);
     setNewType({ key:'', label:'', price:'' });
     setShowAdd(false);
   };
 
   const handleDelete = (key) => {
-    if (!window.confirm(`"${docFees[key]?.label}" delete karna chahte ho?`)) return;
-    const updated = { ...docFees };
-    delete updated[key];
-    setDocFees(updated);
-    saveDocFees(updated);
-    submitForApproval([{ key, label: docFees[key]?.label, deleted: true }]);
+    if (!window.confirm(`"${docFees[key]?.label}" delete ke liye approval bhejein? (Principal → Admin approve karenge, tabhi hatega)`)) return;
+    // Submit deletion for approval only — removed from live list after Admin approval.
+    submitForApproval([{ key, label: docFees[key]?.label, oldPrice: docFees[key]?.price, deleted: true }]);
   };
 
-  const hasPending = pendingApproval.filter(p => p.status === 'pending').length > 0;
+  const hasPending = Object.keys(pendingDoc).length > 0;
 
   return (
     <div>
@@ -756,7 +775,7 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           <p style={{ color:'#666', fontSize:14, margin:0 }}>Document fee amounts manage karo. Changes Principal/Admin approval ke baad apply honge.</p>
           {hasPending && (
             <p style={{ fontSize:12, color:'#E65100', fontWeight:600, margin:'4px 0 0' }}>
-              ⏳ {pendingApproval.filter(p=>p.status==='pending').length} change(s) approval pending hain
+              ⏳ {Object.keys(pendingDoc).length} change(s) approval pending hain (Principal → Admin)
             </p>
           )}
         </div>
@@ -818,7 +837,14 @@ const DocFeesManager = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         </div>
         {Object.entries(docFees).map(([key, val], idx) => (
           <div key={key} style={{ display:'grid', gridTemplateColumns:'1fr 120px 80px', padding:'14px 20px', alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fafbff':'#fff' }}>
-            <span style={{ fontSize:14, color:'#222', fontWeight:500 }}>{val.label}</span>
+            <span style={{ fontSize:14, color:'#222', fontWeight:500 }}>
+              {val.label}
+              {pendingDoc[key] && (
+                <span style={{ marginLeft:8, fontSize:11, fontWeight:700, background:'#fff3e0', color:'#E65100', padding:'2px 8px', borderRadius:8 }}>
+                  ⏳ {pendingDoc[key].isDelete ? 'delete pending' : `→ ₹${pendingDoc[key].newPrice} pending`}
+                </span>
+              )}
+            </span>
             {editMode ? (
               <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap:4 }}>
                 <span style={{ color:'#555', fontWeight:600 }}>₹</span>
@@ -1013,14 +1039,34 @@ const AccountsSectionDashboard = () => {
   const fetchFeeStructOverrides = useCallback(async () => {
     try {
       const res = await API.get('/fee-structure-approvals');
+      const approvals = res.data.approvals || []; // newest-first (backend sorted)
       const map = {};
-      (res.data.approvals || []).forEach(a => {
-        if (a.status === 'approved') {
+      approvals.forEach(a => {
+        if (a.status === 'approved' && a.courseKey !== 'DOC') {
           const key = `${a.courseKey}|${a.itemId}`;
-          if (!(key in map)) map[key] = a.newAmounts; // newest-first (backend sorted) wins
+          if (!(key in map)) map[key] = a.newAmounts; // newest-first wins
         }
       });
       setFeeStructOverrides(map);
+
+      // Document fees: base list with APPROVED changes applied (only post Admin approval).
+      // Pending/rejected DOC edits are ignored, so the accountant keeps charging the old
+      // amount until the change is fully approved.
+      const effective = loadDocFees();
+      const seenDoc = new Set();
+      approvals.forEach(a => {
+        if (a.courseKey !== 'DOC' || a.status !== 'approved') return;
+        if (seenDoc.has(a.itemId)) return; // newest approved per key already applied
+        seenDoc.add(a.itemId);
+        const price = Number(a.newAmounts?.[0]);
+        if (price === -1) {
+          delete effective[a.itemId]; // approved deletion
+        } else {
+          effective[a.itemId] = { label: a.itemName || effective[a.itemId]?.label || a.itemId, price };
+        }
+      });
+      setDocFees(effective);
+      saveDocFees(effective);
     } catch { /* ignore — fall back to default structure */ }
   }, []);
   useEffect(() => { fetchFeeStructOverrides(); }, [fetchFeeStructOverrides]);
