@@ -2479,14 +2479,33 @@ const ExpenseTracker = ({ user }) => {
 const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const docFeeKeys = Object.keys(docFees);
   const firstDocKey = docFeeKeys[0] || '';
-  // Course (tuition) fee from the yearly fee structure for a given course + year
-  const courseFeeFor = (course, year) => YEARLY_FEES[course]?.years?.[year]?.total ?? '';
+
+  // ── Course (tuition) fee heads from the itemized DETAILED_FEES structure ──
+  // A "Year" covers two semesters; index offset 0/2/4 for 1st/2nd/3rd Year.
+  const courseFeeOptions = (course, year) => {
+    const items = DETAILED_FEES[course]?.items || [];
+    const off = year === '1st Year' ? 0 : year === '2nd Year' ? 2 : year === '3rd Year' ? 4 : -1;
+    if (off < 0) return []; // 'Course completed' → no structured heads
+    return items
+      .map(it => ({ id: it.id, name: it.name, section: it.section, amount: (it.s[off] || 0) + (it.s[off + 1] || 0) }))
+      .filter(o => o.amount > 0);
+  };
+  const courseFeeAmountFor = (course, year, headId) => {
+    const opts = courseFeeOptions(course, year);
+    if (headId === 'ALL') return opts.reduce((s, o) => s + o.amount, 0) || '';
+    return opts.find(o => o.id === headId)?.amount ?? '';
+  };
+  const courseFeeHeadName = (course, year, headId) =>
+    headId === 'ALL' ? `Course Fee — ${course} ${year}`
+      : `${courseFeeOptions(course, year).find(o => o.id === headId)?.name || 'Course Fee'} — ${course} ${year}`;
+
   const EMPTY_FORM = {
     studentName:'', phone:'', prnNo:'', rollNo:'',
     course:'B.A.', year:'2nd Year',
     // Fee Type — Course Fee and/or Document Fee can both be selected
     courseFeeOn: true,
-    courseFeeAmount: courseFeeFor('B.A.', '2nd Year'),
+    courseFeeHead: 'ALL',
+    courseFeeAmount: courseFeeAmountFor('B.A.', '2nd Year', 'ALL'),
     docFeeOn: false,
     docFeeType: firstDocKey,
     docFeeAmount: docFees[firstDocKey]?.price ?? '',
@@ -2512,7 +2531,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const calcLineItems = (f) => {
     const items = [];
     if (f.courseFeeOn) {
-      items.push({ label: `Course Fee — ${f.course} ${f.year}`, amount: Number(f.courseFeeAmount || 0) });
+      items.push({ label: courseFeeHeadName(f.course, f.year, f.courseFeeHead), amount: Number(f.courseFeeAmount || 0) });
     }
     if (f.docFeeOn) {
       const lbl = docFees[f.docFeeType]?.label || feeOpts.find(o => o.key === f.docFeeType)?.label || 'Document Fee';
@@ -2773,7 +2792,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
                       <select style={inp} value={form.course}
-                        onChange={e=>setForm(p=>({...p, course:e.target.value, courseFeeAmount: courseFeeFor(e.target.value, p.year) }))}>
+                        onChange={e=>setForm(p=>({...p, course:e.target.value, courseFeeAmount: courseFeeAmountFor(e.target.value, p.year, p.courseFeeHead) }))}>
                         <option value="B.A.">B.A.</option>
                         <option value="B.Sc.">B.Sc.</option>
                       </select>
@@ -2781,7 +2800,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
                       <select style={inp} value={form.year}
-                        onChange={e=>setForm(p=>({...p, year:e.target.value, courseFeeAmount: courseFeeFor(p.course, e.target.value) }))}>
+                        onChange={e=>setForm(p=>({...p, year:e.target.value, courseFeeAmount: courseFeeAmountFor(p.course, e.target.value, p.courseFeeHead) }))}>
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
                         <option value="3rd Year">3rd Year</option>
@@ -2801,7 +2820,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                       <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'#333', cursor:'pointer' }}>
                         <input type="checkbox" checked={form.courseFeeOn}
                           onChange={e=>setForm(p=>({...p, courseFeeOn:e.target.checked,
-                            courseFeeAmount: e.target.checked && (p.courseFeeAmount==='' || p.courseFeeAmount==null) ? courseFeeFor(p.course,p.year) : p.courseFeeAmount }))} />
+                            courseFeeAmount: e.target.checked ? courseFeeAmountFor(p.course, p.year, p.courseFeeHead) : p.courseFeeAmount }))} />
                         📚 Course Fee (Tuition)
                       </label>
                       <input type="number" min="0" disabled={!form.courseFeeOn}
@@ -2810,7 +2829,19 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                         onChange={e=>setForm(p=>({...p, courseFeeAmount:e.target.value}))} />
                     </div>
                     {form.courseFeeOn && (
-                      <div style={{ fontSize:11, color:'#E65100', margin:'4px 0 10px' }}>💡 {form.course} · {form.year} — fee structure se auto-filled (editable)</div>
+                      <>
+                        <div style={{ marginTop:8 }}>
+                          <select style={inp} value={form.courseFeeHead}
+                            onChange={e=>setForm(p=>({...p, courseFeeHead:e.target.value, courseFeeAmount: courseFeeAmountFor(p.course, p.year, e.target.value) }))}>
+                            <option value="ALL">💯 Full Year Fee — All heads (₹{fmt(courseFeeAmountFor(form.course, form.year, 'ALL'))})</option>
+                            {courseFeeOptions(form.course, form.year).map(o => (
+                              <option key={o.id} value={o.id}>{o.section==='University'?'🎓':'🏛️'} {o.name} — ₹{fmt(o.amount)}</option>
+                            ))}
+                            {courseFeeOptions(form.course, form.year).length === 0 && <option value="ALL">No structured fees for this year</option>}
+                          </select>
+                        </div>
+                        <div style={{ fontSize:11, color:'#E65100', margin:'4px 0 10px' }}>💡 {form.course} · {form.year} — fee structure se auto-filled (editable)</div>
+                      </>
                     )}
 
                     {/* Document Fee */}
