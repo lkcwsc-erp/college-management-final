@@ -2479,10 +2479,18 @@ const ExpenseTracker = ({ user }) => {
 const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const docFeeKeys = Object.keys(docFees);
   const firstDocKey = docFeeKeys[0] || '';
+  // Course (tuition) fee from the yearly fee structure for a given course + year
+  const courseFeeFor = (course, year) => YEARLY_FEES[course]?.years?.[year]?.total ?? '';
   const EMPTY_FORM = {
     studentName:'', phone:'', prnNo:'', rollNo:'',
     course:'B.A.', year:'2nd Year',
-    feeType: firstDocKey, amount: docFees[firstDocKey]?.price ?? '', payMode:'cash', txnId:'', notes:'',
+    // Fee Type — Course Fee and/or Document Fee can both be selected
+    courseFeeOn: true,
+    courseFeeAmount: courseFeeFor('B.A.', '2nd Year'),
+    docFeeOn: false,
+    docFeeType: firstDocKey,
+    docFeeAmount: docFees[firstDocKey]?.price ?? '',
+    payMode:'cash', txnId:'', notes:'',
   };
   const [view, setView]       = useState('form');
   const [form, setForm]       = useState(EMPTY_FORM);
@@ -2500,6 +2508,19 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const inp = { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
   const fmt = n => Number(n||0).toLocaleString('en-IN');
 
+  // Build the selected fee line items (Course Fee and/or Document Fee)
+  const calcLineItems = (f) => {
+    const items = [];
+    if (f.courseFeeOn) {
+      items.push({ label: `Course Fee — ${f.course} ${f.year}`, amount: Number(f.courseFeeAmount || 0) });
+    }
+    if (f.docFeeOn) {
+      const lbl = docFees[f.docFeeType]?.label || feeOpts.find(o => o.key === f.docFeeType)?.label || 'Document Fee';
+      items.push({ label: lbl, amount: Number(f.docFeeAmount || 0) });
+    }
+    return items;
+  };
+
   const saveToHistory = (rec) => {
     const updated = [rec, ...history].slice(0, 200);
     setHistory(updated);
@@ -2508,10 +2529,15 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
 
   const handleCollect = async () => {
     if (!form.studentName.trim()) { setMsg('❌ Student name required'); return; }
-    if (!form.amount || Number(form.amount) <= 0) { setMsg('❌ Enter valid amount'); return; }
+    if (!form.courseFeeOn && !form.docFeeOn) { setMsg('❌ Select at least one Fee Type (Course Fee / Document Fee)'); return; }
+    const items = calcLineItems(form);
+    const total = items.reduce((s, i) => s + i.amount, 0);
+    if (!total || total <= 0) { setMsg('❌ Enter a valid amount'); return; }
     if (form.payMode === 'online' && !form.txnId.trim()) { setMsg('❌ Transaction ID required for online payment'); return; }
     setSaving(true); setMsg('');
     const receiptNo = 'OS' + Date.now().toString().slice(-6);
+    const feeType = form.courseFeeOn && form.docFeeOn ? 'mixed'
+      : form.courseFeeOn ? 'course' : form.docFeeType;
     const rec = {
       studentName:  form.studentName,
       phone:        form.phone,
@@ -2519,9 +2545,10 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
       rollNo:       form.rollNo,
       course:       form.course,
       admissionYear: form.year,
-      feeType:      form.feeType,
-      feeTypeLabel: feeOpts.find(f=>f.key===form.feeType)?.label || form.feeType,
-      amount:       Number(form.amount),
+      feeType,
+      feeTypeLabel: items.map(i => i.label).join(' + '),
+      lineItems:    items,
+      amount:       total,
       paymentMode:  form.payMode,
       transactionId: form.txnId || '',
       notes:        form.notes,
@@ -2547,6 +2574,14 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
     const courseFull = (r.course||'').toLowerCase().includes('sc') ? 'Bachelor of Science (B.Sc.)'
       : (r.course||'').toLowerCase().includes('a') ? 'Bachelor of Arts (B.A.)' : (r.course||'—');
     const classStr = courseFull + (r.admissionYear ? ' — ' + r.admissionYear : '');
+
+    // Particulars rows — one per selected fee (Course Fee / Document Fee)
+    const recItems = (r.lineItems && r.lineItems.length)
+      ? r.lineItems
+      : [{ label: r.feeTypeLabel || r.feeType || 'Fee', amount: amt }];
+    const feeRowsHtml = recItems.map((it, i) =>
+      `<tr><td>${i + 1}</td><td>${it.label}</td><td>₹${Number(it.amount || 0).toLocaleString('en-IN')}.00</td></tr>`
+    ).join('');
 
     // amount in words
     const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
@@ -2624,7 +2659,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
       <table class="fees">
         <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td>${r.feeTypeLabel||r.feeType||'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+          ${feeRowsHtml}
           <tr class="totrow"><td colspan="2" style="text-align:right;padding-right:10px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
         </tbody>
       </table>
@@ -2647,6 +2682,8 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   };
 
   const totalCollected = history.reduce((s,r) => s + (r.amount||0), 0);
+  const walkinLineItems = calcLineItems(form);
+  const totalAmount = walkinLineItems.reduce((s, i) => s + i.amount, 0);
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
@@ -2683,7 +2720,9 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                       receipt.prnNo && ['PRN No.', receipt.prnNo],
                       receipt.rollNo && ['Roll No.', receipt.rollNo],
                       ['Course / Year', `${receipt.course} · ${receipt.admissionYear}`],
-                      ['Fee Type', receipt.feeTypeLabel],
+                      ...((receipt.lineItems && receipt.lineItems.length)
+                        ? receipt.lineItems.map(it => [it.label, `₹ ${fmt(it.amount)}/-`])
+                        : [['Fee Type', receipt.feeTypeLabel]]),
                       ['Amount', `₹ ${fmt(receipt.amount)}/-`],
                       ['Payment', receipt.paymentMode==='online'?'🌐 Online':'💵 Cash'],
                       receipt.transactionId && ['Txn ID', receipt.transactionId],
@@ -2733,14 +2772,16 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                     </div>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
-                      <select style={inp} value={form.course} onChange={e=>setForm(p=>({...p, course:e.target.value}))}>
+                      <select style={inp} value={form.course}
+                        onChange={e=>setForm(p=>({...p, course:e.target.value, courseFeeAmount: courseFeeFor(e.target.value, p.year) }))}>
                         <option value="B.A.">B.A.</option>
                         <option value="B.Sc.">B.Sc.</option>
                       </select>
                     </div>
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
-                      <select style={inp} value={form.year} onChange={e=>setForm(p=>({...p, year:e.target.value}))}>
+                      <select style={inp} value={form.year}
+                        onChange={e=>setForm(p=>({...p, year:e.target.value, courseFeeAmount: courseFeeFor(p.course, e.target.value) }))}>
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
                         <option value="3rd Year">3rd Year</option>
@@ -2748,21 +2789,54 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                       </select>
                     </div>
                   </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:12 }}>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Fee Type *</label>
-                      <select style={inp} value={form.feeType} onChange={e=>setForm(p=>({...p, feeType:e.target.value, amount: docFees[e.target.value]?.price ?? ''}))}>
+
+                  {/* ── Fee Type — Course Fee + Document Fee (select one or both) ── */}
+                  <div style={{ border:'1px solid #ffe0b2', background:'#fff8f0', borderRadius:10, padding:'12px 14px' }}>
+                    <div style={{ fontSize:12, fontWeight:800, color:'#E65100', marginBottom:10 }}>
+                      Fee Type * <span style={{ fontWeight:600, color:'#999' }}>(Course Fee, Document Fee — ya dono select karein)</span>
+                    </div>
+
+                    {/* Course Fee */}
+                    <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr', gap:12, alignItems:'center' }}>
+                      <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'#333', cursor:'pointer' }}>
+                        <input type="checkbox" checked={form.courseFeeOn}
+                          onChange={e=>setForm(p=>({...p, courseFeeOn:e.target.checked,
+                            courseFeeAmount: e.target.checked && (p.courseFeeAmount==='' || p.courseFeeAmount==null) ? courseFeeFor(p.course,p.year) : p.courseFeeAmount }))} />
+                        📚 Course Fee (Tuition)
+                      </label>
+                      <input type="number" min="0" disabled={!form.courseFeeOn}
+                        style={{ ...inp, fontSize:15, fontWeight:800, textAlign:'right', opacity: form.courseFeeOn?1:0.4 }}
+                        placeholder="0" value={form.courseFeeOn ? form.courseFeeAmount : ''}
+                        onChange={e=>setForm(p=>({...p, courseFeeAmount:e.target.value}))} />
+                    </div>
+                    {form.courseFeeOn && (
+                      <div style={{ fontSize:11, color:'#E65100', margin:'4px 0 10px' }}>💡 {form.course} · {form.year} — fee structure se auto-filled (editable)</div>
+                    )}
+
+                    {/* Document Fee */}
+                    <div style={{ display:'grid', gridTemplateColumns:'auto 1.4fr 1fr', gap:10, alignItems:'center', marginTop: form.courseFeeOn ? 0 : 8 }}>
+                      <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'#333', cursor:'pointer', whiteSpace:'nowrap' }}>
+                        <input type="checkbox" checked={form.docFeeOn}
+                          onChange={e=>setForm(p=>({...p, docFeeOn:e.target.checked,
+                            docFeeAmount: e.target.checked ? (docFees[p.docFeeType]?.price ?? '') : p.docFeeAmount }))} />
+                        📄 Document Fee
+                      </label>
+                      <select style={{ ...inp, opacity: form.docFeeOn?1:0.4 }} disabled={!form.docFeeOn}
+                        value={form.docFeeType}
+                        onChange={e=>setForm(p=>({...p, docFeeType:e.target.value, docFeeAmount: docFees[e.target.value]?.price ?? '' }))}>
                         {feeOpts.length === 0 && <option value="">No document fees configured</option>}
                         {feeOpts.map(f=><option key={f.key} value={f.key}>{f.label}{(f.amount!=='' && f.amount!=null) ? ` — ₹${fmt(f.amount)}` : ''}</option>)}
                       </select>
+                      <input type="number" min="0" disabled={!form.docFeeOn}
+                        style={{ ...inp, fontSize:15, fontWeight:800, textAlign:'right', opacity: form.docFeeOn?1:0.4 }}
+                        placeholder="0" value={form.docFeeOn ? form.docFeeAmount : ''}
+                        onChange={e=>setForm(p=>({...p, docFeeAmount:e.target.value}))} />
                     </div>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Amount (₹) *</label>
-                      <input type="number" min="0" style={{ ...inp, fontSize:17, fontWeight:800, textAlign:'right' }}
-                        placeholder="0" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} />
-                      {form.amount!=='' && (
-                        <div style={{ fontSize:11, color:'#E65100', marginTop:4 }}>💡 Auto-filled from document fee structure (editable)</div>
-                      )}
+
+                    {/* Total */}
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:12, paddingTop:10, borderTop:'1px dashed #ffcc80' }}>
+                      <span style={{ fontSize:13, fontWeight:700, color:'#555' }}>Total Amount</span>
+                      <span style={{ fontSize:20, fontWeight:900, color:'#2E7D32' }}>₹{fmt(totalAmount)}</span>
                     </div>
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
