@@ -8,15 +8,20 @@ const FORM_TYPES = [
   { key: 'backlog', label: '📋 Backlog Exam Form Request', color: '#E65100', bg: '#fff8e1' },
 ];
 
-// ─── Exam fee line from the college fee structure (per-semester amounts) ───────
-// Sirf "Examination Fee" line (Practical Exam Fee include NAHI hoti).
+// Backlog (KT) exam form: har selected semester par flat ₹700 fee.
+const BACKLOG_FEE_PER_SEM = 700;
+
+// ─── Regular exam fee lines from the college fee structure (per-semester) ──────
+// Examination Fee + Practical Exam Fee dono add hote hai.
 // s = [Sem1, Sem2, Sem3, Sem4, Sem5, Sem6].
 const EXAM_FEE_LINES = {
   BA: [
-    { name: 'Examination Fee', s: [750, 750, 750, 750, 750, 750] },
+    { name: 'Examination Fee',           s: [750, 750, 750, 750, 750, 750] },
+    { name: 'Practical Exam Fee (Geo/Psy)', s: [0,   0,   0,   0,   500, 500] },
   ],
   BSC: [
-    { name: 'Examination Fee', s: [750, 750, 750, 750, 750, 750] },
+    { name: 'Examination Fee',  s: [750, 750, 750, 750, 750, 750] },
+    { name: 'Practical Exam Fee', s: [250, 250, 250, 250, 250, 250] },
   ],
 };
 
@@ -34,7 +39,7 @@ const semIndexFor = (sem) => {
   return (n >= 1 && n <= 6) ? n - 1 : -1;
 };
 
-// Student ke course + semester ke hisab se exam fee ka breakdown + total nikalta hai
+// REGULAR: course + semester ke hisab se Examination + Practical fee ka breakdown
 const computeExamFee = (req) => {
   const key = courseKeyFor(req?.course);
   const idx = semIndexFor(req?.semester);
@@ -45,12 +50,31 @@ const computeExamFee = (req) => {
     .map(l => ({ name: l.name, amount: Number(l.s[idx]) || 0 }))
     .filter(l => l.amount > 0);
   const total = lines.reduce((sum, l) => sum + l.amount, 0);
-  return { lines, total, ok: true };
+  return { lines, total, ok: lines.length > 0 };
 };
 
+// BACKLOG: har semester ₹700. backlogSemesters array se nikalta hai
+// (purane records me array na ho to form ke apne semester ko 1 backlog maan leta hai).
+const computeBacklogFee = (req) => {
+  let sems = Array.isArray(req?.backlogSemesters)
+    ? req.backlogSemesters.filter(s => s && s.semester)
+    : [];
+  if (sems.length === 0 && req?.semester) sems = [{ semester: req.semester, subjects: [] }];
+  const lines = sems.map(s => {
+    const cnt = Array.isArray(s.subjects) ? s.subjects.length : 0;
+    return {
+      name: `${s.semester} Semester${cnt ? ` (${cnt} subject${cnt > 1 ? 's' : ''})` : ''}`,
+      amount: BACKLOG_FEE_PER_SEM,
+    };
+  });
+  const total = lines.length * BACKLOG_FEE_PER_SEM;
+  return { lines, total, ok: lines.length > 0 };
+};
+
+const feeFor = (req) =>
+  req?.formType === 'backlog' ? computeBacklogFee(req) : computeExamFee(req);
+
 // ─── Student Exam Form Requests (Accounts Section) ──────────────────────────────
-// Shows all exam-form requests submitted by students, grouped by Course (BA / BSc)
-// and then by type (Regular / Backlog). Accounts staff collect the exam fee here.
 const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -79,7 +103,7 @@ const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
 
   const openCollect = (req) => {
     setSelected(req);
-    const info = computeExamFee(req);        // fee structure se auto-calculate
+    const info = feeFor(req);                // regular -> exam+practical, backlog -> 700/sem
     setFeeInfo(info);
     setAmount(info.ok && info.total > 0 ? String(info.total) : '');
     setPayMode('cash');
@@ -121,47 +145,72 @@ const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
       matchesSearch(r)
     );
 
-  const RequestCard = ({ r }) => (
-    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '14px 16px', boxShadow: '0 1px 5px rgba(0,0,0,.05)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#222' }}>{r.studentName}</div>
-          <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
-            {r.semester} Semester · {r.examEvent}
+  const RequestCard = ({ r }) => {
+    const isBacklog = r.formType === 'backlog';
+    const backlogSems = Array.isArray(r.backlogSemesters) ? r.backlogSemesters.filter(s => s && s.semester) : [];
+    return (
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '14px 16px', boxShadow: '0 1px 5px rgba(0,0,0,.05)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#222' }}>{r.studentName}</div>
+            <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+              {r.semester} Semester · {r.examEvent}
+            </div>
           </div>
+          {r.feeStatus === 'collected' ? (
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: '#e8f5e9', color: '#2E7D32' }}>
+              ✅ Paid ₹{r.feeAmount}
+            </span>
+          ) : (
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: '#fff3e0', color: '#E65100' }}>
+              ⏳ Fees Pending
+            </span>
+          )}
         </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 14px', fontSize: 13, color: '#444', marginTop: 10 }}>
+          <span><strong>PRN:</strong> {r.prnNumber || '—'}</span>
+          <span><strong>Student ID:</strong> {r.studentId || '—'}</span>
+          <span><strong>Course:</strong> {r.course || '—'}</span>
+          <span><strong>Adm. Year:</strong> {r.admissionYear || '—'}</span>
+          <span><strong>Semester:</strong> {r.semester || '—'}</span>
+          <span><strong>Mobile:</strong> {r.mobileNo || '—'}</span>
+        </div>
+
+        {/* Backlog semesters + subjects preview */}
+        {isBacklog && backlogSems.length > 0 && (
+          <div style={{ marginTop: 10, background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#E65100', marginBottom: 4 }}>
+              🔁 Backlog Semesters ({backlogSems.length} × ₹{BACKLOG_FEE_PER_SEM} = ₹{(backlogSems.length * BACKLOG_FEE_PER_SEM).toLocaleString('en-IN')})
+            </div>
+            {backlogSems.map((s, i) => (
+              <div key={i} style={{ fontSize: 12, color: '#6b4e00', padding: '1px 0' }}>
+                <strong>{s.semester} Sem:</strong>{' '}
+                {(s.subjects && s.subjects.length)
+                  ? s.subjects.map(su => `${su.name}${su.code ? ` (${su.code})` : ''}`).join(', ')
+                  : '—'}
+              </div>
+            ))}
+          </div>
+        )}
+
         {r.feeStatus === 'collected' ? (
-          <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: '#e8f5e9', color: '#2E7D32' }}>
-            ✅ Paid ₹{r.feeAmount}
-          </span>
+          <div style={{ marginTop: 10, fontSize: 12, color: '#2E7D32', background: '#f1f8e9', borderRadius: 8, padding: '6px 12px' }}>
+            Receipt: <strong>{r.feeReceiptNo}</strong> · {r.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'} · Collected by {r.feeCollectedBy}
+          </div>
         ) : (
-          <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, background: '#fff3e0', color: '#E65100' }}>
-            ⏳ Fees Pending
-          </span>
+          <button onClick={() => openCollect(r)}
+            style={{ marginTop: 12, background: themeColor, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            💰 Collect Fees
+          </button>
         )}
       </div>
+    );
+  };
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 14px', fontSize: 13, color: '#444', marginTop: 10 }}>
-        <span><strong>PRN:</strong> {r.prnNumber || '—'}</span>
-        <span><strong>Student ID:</strong> {r.studentId || '—'}</span>
-        <span><strong>Course:</strong> {r.course || '—'}</span>
-        <span><strong>Adm. Year:</strong> {r.admissionYear || '—'}</span>
-        <span><strong>Semester:</strong> {r.semester || '—'}</span>
-        <span><strong>Mobile:</strong> {r.mobileNo || '—'}</span>
-      </div>
-
-      {r.feeStatus === 'collected' ? (
-        <div style={{ marginTop: 10, fontSize: 12, color: '#2E7D32', background: '#f1f8e9', borderRadius: 8, padding: '6px 12px' }}>
-          Receipt: <strong>{r.feeReceiptNo}</strong> · {r.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'} · Collected by {r.feeCollectedBy}
-        </div>
-      ) : (
-        <button onClick={() => openCollect(r)}
-          style={{ marginTop: 12, background: themeColor, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-          💰 Collect Fees
-        </button>
-      )}
-    </div>
-  );
+  const selBacklog = selected && selected.formType === 'backlog'
+    ? (Array.isArray(selected.backlogSemesters) ? selected.backlogSemesters.filter(s => s && s.semester) : [])
+    : [];
 
   return (
     <div>
@@ -232,11 +281,30 @@ const ExamFeeRequestsTab = ({ themeColor = '#1565C0', onToast }) => {
               <div><strong>Form:</strong> {selected.formType === 'regular' ? 'Regular' : 'Backlog'} · {selected.semester} Sem · {selected.examEvent}</div>
             </div>
 
-            {/* Auto-calculated exam fee (from college fee structure, by course + semester) */}
+            {/* Backlog: selected semesters + subjects detail */}
+            {selected.formType === 'backlog' && selBacklog.length > 0 && (
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: 14, marginBottom: 18 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#E65100', marginBottom: 8 }}>
+                  🔁 Backlog Subjects
+                </div>
+                {selBacklog.map((s, i) => (
+                  <div key={i} style={{ fontSize: 12.5, color: '#6b4e00', padding: '3px 0', borderTop: i ? '1px dashed #ffe082' : 'none' }}>
+                    <strong>{s.semester} Semester:</strong>{' '}
+                    {(s.subjects && s.subjects.length)
+                      ? s.subjects.map(su => `${su.name}${su.code ? ` (${su.code})` : ''}`).join(', ')
+                      : '—'}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Auto-calculated exam fee (from college fee structure / backlog rule) */}
             {feeInfo.ok && feeInfo.total > 0 ? (
               <div style={{ background: '#f1f8e9', border: '1px solid #c5e1a5', borderRadius: 10, padding: 14, marginBottom: 18 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#2E7D32', marginBottom: 8 }}>
-                  ⚡ Auto-calculated from Fee Structure ({courseKeyFor(selected.course) === 'BSC' ? 'BSc' : 'BA'} · {selected.semester} Sem)
+                  {selected.formType === 'backlog'
+                    ? `⚡ Backlog Fee — ₹${BACKLOG_FEE_PER_SEM} per semester`
+                    : `⚡ Auto-calculated from Fee Structure (${courseKeyFor(selected.course) === 'BSC' ? 'BSc' : 'BA'} · ${selected.semester} Sem)`}
                 </div>
                 {feeInfo.lines.map((l, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#444', padding: '2px 0' }}>
