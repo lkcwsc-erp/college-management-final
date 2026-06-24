@@ -174,7 +174,7 @@ router.get('/exam-form/available', protect, authorizeRoles('student'), async (re
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/exam-form/submit', protect, authorizeRoles('student'), async (req, res) => {
   try {
-    const { publishedFormId } = req.body;
+    const { publishedFormId, backlogSemesters } = req.body;
     if (!publishedFormId)
       return res.status(400).json({ success: false, message: 'publishedFormId is required.' });
 
@@ -199,6 +199,21 @@ router.post('/exam-form/submit', protect, authorizeRoles('student'), async (req,
     if (existing)
       return res.status(400).json({ success: false, message: 'You have already filled this exam form.' });
 
+    // Backlog form ke liye semester + subjects clean karke store karo
+    let cleanBacklog = [];
+    if (published.formType === 'backlog' && Array.isArray(backlogSemesters)) {
+      cleanBacklog = backlogSemesters
+        .filter(s => s && s.semester)
+        .map(s => ({
+          semester: String(s.semester),
+          subjects: (Array.isArray(s.subjects) ? s.subjects : [])
+            .filter(sub => sub && (sub.name || sub.code))
+            .map(sub => ({ name: String(sub.name || ''), code: String(sub.code || '') })),
+        }));
+      if (cleanBacklog.length === 0)
+        return res.status(400).json({ success: false, message: 'Backlog form ke liye kam se kam ek semester select karein.' });
+    }
+
     const formReq = await ExamFormRequest.create({
       studentEmail:  req.user.email,
       studentName:   admission.applicantName,
@@ -210,6 +225,7 @@ router.post('/exam-form/submit', protect, authorizeRoles('student'), async (req,
       examEvent:     published.examEvent,
       mobileNo:      admission.phone || '',
       formType:      published.formType,
+      backlogSemesters: cleanBacklog,
     });
 
     res.status(201).json({ success: true, message: 'Exam form submitted successfully!', request: formReq });
