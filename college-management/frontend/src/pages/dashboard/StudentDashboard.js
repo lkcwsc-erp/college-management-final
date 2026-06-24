@@ -2145,6 +2145,71 @@ const StudentDashboard = () => {
   const [examFormSubmitting, setExamFormSubmitting] = useState('');
   const [examFormMsg, setExamFormMsg] = useState('');
 
+  // Backlog (KT) exam form — per published-form draft:
+  // { [formId]: [ { semester, subjects: [ { name, code } ] } ] }
+  const [backlogDraft, setBacklogDraft] = useState({});
+  const BACKLOG_SEM_OPTIONS = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+  const BACKLOG_FEE_PER_SEM = 700;
+
+  const getBacklogRows = (fid) => backlogDraft[fid] || [];
+  const setBacklogRows = (fid, rows) => setBacklogDraft(p => ({ ...p, [fid]: rows }));
+
+  const addBacklogSem = (fid) =>
+    setBacklogRows(fid, [...getBacklogRows(fid), { semester: '', subjects: [{ name: '', code: '' }] }]);
+  const removeBacklogSem = (fid, si) =>
+    setBacklogRows(fid, getBacklogRows(fid).filter((_, i) => i !== si));
+  const changeBacklogSem = (fid, si, val) => {
+    const rows = getBacklogRows(fid).map((r, i) => i === si ? { ...r, semester: val } : r);
+    setBacklogRows(fid, rows);
+  };
+  const addBacklogSubject = (fid, si) => {
+    const rows = getBacklogRows(fid).map((r, i) =>
+      i === si ? { ...r, subjects: [...r.subjects, { name: '', code: '' }] } : r);
+    setBacklogRows(fid, rows);
+  };
+  const removeBacklogSubject = (fid, si, ji) => {
+    const rows = getBacklogRows(fid).map((r, i) =>
+      i === si ? { ...r, subjects: r.subjects.filter((_, k) => k !== ji) } : r);
+    setBacklogRows(fid, rows);
+  };
+  const changeBacklogSubject = (fid, si, ji, field, val) => {
+    const rows = getBacklogRows(fid).map((r, i) => {
+      if (i !== si) return r;
+      const subs = r.subjects.map((s, k) => k === ji ? { ...s, [field]: val } : s);
+      return { ...r, subjects: subs };
+    });
+    setBacklogRows(fid, rows);
+  };
+
+  const submitExamForm = async (f, isBacklog) => {
+    setExamFormSubmitting(f._id); setExamFormMsg('');
+    try {
+      const payload = { publishedFormId: f._id };
+      if (isBacklog) {
+        const rows = getBacklogRows(f._id)
+          .filter(r => r.semester)
+          .map(r => ({
+            semester: r.semester,
+            subjects: (r.subjects || []).filter(s => s.name || s.code),
+          }));
+        if (rows.length === 0) {
+          setExamFormMsg('❌ Kam se kam ek semester select karein aur uske subjects bharein.');
+          setExamFormSubmitting(''); return;
+        }
+        if (rows.some(r => r.subjects.length === 0)) {
+          setExamFormMsg('❌ Har selected semester me kam se kam ek subject (name) daalein.');
+          setExamFormSubmitting(''); return;
+        }
+        payload.backlogSemesters = rows;
+      }
+      await API.post('/results/exam-form/submit', payload);
+      setExamFormMsg('✅ Exam form submitted! Pay fees at the Accounts Section.');
+      setBacklogDraft(p => { const n = { ...p }; delete n[f._id]; return n; });
+      fetchExamForms();
+    } catch (e) { setExamFormMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
+    finally { setExamFormSubmitting(''); }
+  };
+
   const fetchExamForms = () => {
     API.get('/results/exam-form/available')
       .then(res => setAvailableForms(res.data.forms || []))
@@ -3122,19 +3187,87 @@ const StudentDashboard = () => {
                                 Name: {myAdmission?.applicantName || user?.name} | Course: {myAdmission?.courseType || f.course} | Year: {myAdmission?.admissionYear || f.admissionYear}<br/>
                                 Semester: <strong>{f.semester}</strong> | Exam Event: <strong>{f.examEvent}</strong>
                               </div>
+
+                              {/* ── Backlog form: semester + subjects + ₹700/sem ── */}
+                              {!isRegular && (() => {
+                                const rows = getBacklogRows(f._id);
+                                const validSems = rows.filter(r => r.semester).length;
+                                return (
+                                  <div style={{ background:'#fff8e1', border:'1px solid #ffe082', borderRadius:10, padding:16, marginBottom:16 }}>
+                                    <div style={{ fontSize:13, fontWeight:700, color:'#E65100', marginBottom:6 }}>
+                                      🔁 Backlog / KT Details
+                                    </div>
+                                    <p style={{ fontSize:12, color:'#8a6d00', margin:'0 0 12px' }}>
+                                      Jis-jis semester ke backlog ke liye form bharna hai wo select karein, aur har semester ke subjects (name + code) daalein.
+                                      Har semester par <strong>₹{BACKLOG_FEE_PER_SEM}</strong> exam fee lagegi (Accounts Section me pay hogi).
+                                    </p>
+
+                                    {rows.length === 0 && (
+                                      <p style={{ fontSize:12, color:'#aaa', margin:'0 0 12px' }}>Abhi tak koi semester add nahi kiya.</p>
+                                    )}
+
+                                    {rows.map((row, si) => (
+                                      <div key={si} style={{ background:'#fff', border:'1px solid #ffe0b2', borderRadius:10, padding:12, marginBottom:12 }}>
+                                        <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:10, flexWrap:'wrap' }}>
+                                          <select value={row.semester} onChange={e => changeBacklogSem(f._id, si, e.target.value)}
+                                            style={{ flex:1, minWidth:160, padding:'9px 12px', borderRadius:8, border:'1.5px solid #E65100', fontSize:13 }}>
+                                            <option value="">-- Select Semester --</option>
+                                            {BACKLOG_SEM_OPTIONS.map(s => (
+                                              <option key={s} value={s}
+                                                disabled={rows.some((r2, k) => k !== si && r2.semester === s)}>
+                                                {s} Semester
+                                              </option>
+                                            ))}
+                                          </select>
+                                          <span style={{ fontSize:12, fontWeight:700, color:'#E65100' }}>₹{BACKLOG_FEE_PER_SEM}</span>
+                                          <button type="button" onClick={() => removeBacklogSem(f._id, si)}
+                                            style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:7, padding:'7px 12px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                                            🗑 Remove
+                                          </button>
+                                        </div>
+
+                                        {row.subjects.map((sub, ji) => (
+                                          <div key={ji} style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+                                            <input type="text" placeholder="Subject Name" value={sub.name}
+                                              onChange={e => changeBacklogSubject(f._id, si, ji, 'name', e.target.value)}
+                                              style={{ flex:2, minWidth:140, padding:'8px 10px', borderRadius:7, border:'1px solid #ddd', fontSize:13 }} />
+                                            <input type="text" placeholder="Subject Code" value={sub.code}
+                                              onChange={e => changeBacklogSubject(f._id, si, ji, 'code', e.target.value)}
+                                              style={{ flex:1, minWidth:100, padding:'8px 10px', borderRadius:7, border:'1px solid #ddd', fontSize:13 }} />
+                                            {row.subjects.length > 1 && (
+                                              <button type="button" onClick={() => removeBacklogSubject(f._id, si, ji)}
+                                                style={{ background:'#f3f4f6', color:'#888', border:'1px solid #ddd', borderRadius:7, padding:'0 12px', fontSize:14, cursor:'pointer' }}>✕</button>
+                                            )}
+                                          </div>
+                                        ))}
+
+                                        <button type="button" onClick={() => addBacklogSubject(f._id, si)}
+                                          style={{ background:'#fff3e0', color:'#E65100', border:'1px dashed #E65100', borderRadius:7, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer', marginTop:2 }}>
+                                          ➕ Add Subject
+                                        </button>
+                                      </div>
+                                    ))}
+
+                                    <button type="button" onClick={() => addBacklogSem(f._id)}
+                                      style={{ background:'#E65100', color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                                      ➕ Add Semester
+                                    </button>
+
+                                    {validSems > 0 && (
+                                      <div style={{ marginTop:14, background:'#fff', border:'1px solid #ffcc80', borderRadius:8, padding:'10px 14px', display:'flex', justifyContent:'space-between', fontSize:14, fontWeight:800, color:'#E65100' }}>
+                                        <span>Total Exam Fee ({validSems} × ₹{BACKLOG_FEE_PER_SEM})</span>
+                                        <span>₹{(validSems * BACKLOG_FEE_PER_SEM).toLocaleString('en-IN')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
                               <button
                                 disabled={examFormSubmitting === f._id}
-                                onClick={async () => {
-                                  setExamFormSubmitting(f._id); setExamFormMsg('');
-                                  try {
-                                    await API.post('/results/exam-form/submit', { publishedFormId: f._id });
-                                    setExamFormMsg('✅ Exam form submitted! Pay fees at the Accounts Section.');
-                                    fetchExamForms();
-                                  } catch(e) { setExamFormMsg('❌ ' + (e.response?.data?.message || 'Failed')); }
-                                  finally { setExamFormSubmitting(''); }
-                                }}
+                                onClick={() => submitExamForm(f, !isRegular)}
                                 style={{ background: examFormSubmitting===f._id?'#aaa':(isRegular?'#1565C0':'#E65100'), color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: examFormSubmitting===f._id?'not-allowed':'pointer' }}>
-                                {examFormSubmitting===f._id ? '⏳ Submitting...' : '📝 Fill Exam Form'}
+                                {examFormSubmitting===f._id ? '⏳ Submitting...' : '📝 Submit Exam Form'}
                               </button>
                               <p style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>* After submission, pay exam fees at the Accounts Section.</p>
                             </div>
