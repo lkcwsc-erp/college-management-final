@@ -488,10 +488,14 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                 ].map(({ label, url }) => (
                   <div key={label} style={{ background: url?'#f0fdf4':'#fafafa', borderRadius:12, border:`1px solid ${url?'#a5d6a7':'#e0e7ef'}`, padding:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <span style={{ fontSize:13, fontWeight:600, color: url?'#1a1a2e':'#aaa' }}>{label}</span>
-                    {url
-                      ? <a href={url} target="_blank" rel="noreferrer"
-                          style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'4px 10px', borderRadius:6, textDecoration:'none' }}>View ↗</a>
-                      : <span style={{ fontSize:11, color:'#ccc' }}>Not uploaded</span>
+                    {role === 'exam'
+                      ? (url
+                          ? <span style={{ fontSize:16, fontWeight:800, color:'#2E7D32' }}>✓</span>
+                          : <span style={{ fontSize:11, color:'#ccc' }}>Not uploaded</span>)
+                      : (url
+                          ? <a href={url} target="_blank" rel="noreferrer"
+                              style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'4px 10px', borderRadius:6, textDecoration:'none' }}>View ↗</a>
+                          : <span style={{ fontSize:11, color:'#ccc' }}>Not uploaded</span>)
                     }
                   </div>
                 ))}
