@@ -1299,6 +1299,74 @@ const SEM_BY_YEAR = {
   '3rd Year': ['5th', '6th'],
 };
 
+// ─── Sidebar Message Box (notices/messages from Admin & Principal) ────────────
+const SidebarMessageBox = () => {
+  const [notices, setNotices] = useState([]);
+  const [active, setActive]   = useState(null);
+
+  useEffect(() => {
+    API.get('/notices')
+      .then(res => {
+        const all = res.data.notices || [];
+        const staffMsgs = all.filter(n =>
+          ['all', 'staff', 'staff_student'].includes(n.targetAudience) || n.category === 'exam'
+        );
+        setNotices(staffMsgs);
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div style={{ margin: '14px 12px', background: 'rgba(255,255,255,0.10)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,255,255,0.18)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>💬 Message Box</span>
+        <span style={{ fontSize: 11, fontWeight: 700, background: '#fff', color: '#f57c00', borderRadius: 10, padding: '1px 8px' }}>{notices.length}</span>
+      </div>
+
+      {notices.length === 0 ? (
+        <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.7)', margin: 0 }}>No new messages.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+          {notices.slice(0, 8).map(n => (
+            <button key={n._id} onClick={() => setActive(n)}
+              style={{ textAlign: 'left', background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', width: '100%' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {n.isHighlighted ? '📌 ' : ''}{n.title}
+              </div>
+              <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>
+                {n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Read modal */}
+      {active && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setActive(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 26, maxWidth: 460, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: '#f57c00', margin: '0 0 6px' }}>{active.isHighlighted ? '📌 ' : '💬 '}{active.title}</h3>
+            <p style={{ fontSize: 11, color: '#999', margin: '0 0 14px' }}>
+              {active.category ? `${active.category} · ` : ''}{active.createdAt ? new Date(active.createdAt).toLocaleString('en-IN') : ''}
+            </p>
+            <p style={{ fontSize: 14, color: '#333', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{active.content}</p>
+            {active.attachment && (
+              <a href={active.attachment} target="_blank" rel="noreferrer"
+                style={{ display: 'inline-block', marginTop: 10, fontSize: 13, fontWeight: 700, color: '#1565C0' }}>📎 View Attachment ↗</a>
+            )}
+            <button onClick={() => setActive(null)}
+              style={{ width: '100%', marginTop: 18, background: '#f3f4f6', color: '#555', border: 'none', borderRadius: 9, padding: 11, fontSize: 14, cursor: 'pointer' }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main ExamSectionDashboard ────────────────────────────────────────────────
 const ExamSectionDashboard = () => {
   const { user, logout } = useAuth();
@@ -1397,6 +1465,7 @@ const ExamSectionDashboard = () => {
             <button key={t.id} className={activeTab === t.id ? 'active' : ''} onClick={() => setActiveTab(t.id)}>{t.label}</button>
           ))}
         </nav>
+        <SidebarMessageBox />
         <button className="sidebar-logout" onClick={handleLogout}>🚪 Logout</button>
       </aside>
 
