@@ -11,7 +11,18 @@ const examFormRequestSchema = new mongoose.Schema({
   examEvent:       { type: String, required: true }, // e.g. "April-May 2026"
   mobileNo:        { type: String, default: '' },
   formType:        { type: String, enum: ['regular', 'backlog'], required: true },
- 
+
+  // Backlog (KT) exam form ke liye — student jitne semester ke backlog bharta hai
+  // unka data yahan store hota hai. Har semester par ₹700 exam fee lagti hai
+  // (Accounts Section collect karte waqt). Regular form me ye khaali rehta hai.
+  backlogSemesters: [{
+    semester: { type: String, default: '' },         // e.g. "3rd"
+    subjects: [{
+      name: { type: String, default: '' },           // Subject Name
+      code: { type: String, default: '' },           // Subject Code
+    }],
+  }],
+
   // Fee collection by Accounts Section
   feeStatus:       { type: String, enum: ['pending', 'collected'], default: 'pending' },
   feeAmount:       { type: Number, default: 0 },
