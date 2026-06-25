@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
 const Admission = require('../models/Admission');
+const WalkinReceipt = require('../models/WalkinReceipt');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../utils/upload');
 
@@ -501,6 +502,46 @@ router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'adm
   }
 });
 
+// ========== WALK-IN / OLD STUDENT — Save Fee Receipt ==========
+// Old/walk-in students may have no Admission record, so their receipts are stored
+// in a dedicated WalkinReceipt collection (instead of Admission.feeLedger).
+router.post('/receipts/walkin', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
+  try {
+    const b = req.body || {};
+    const receipt = await WalkinReceipt.create({
+      receiptNo:     b.receiptNo || 'OS' + Date.now().toString().slice(-6),
+      studentName:   b.studentName || '',
+      phone:         b.phone || '',
+      prnNo:         b.prnNo || '',
+      rollNo:        b.rollNo || '',
+      course:        b.course || '',
+      admissionYear: b.admissionYear || '',
+      feeType:       b.feeType || '',
+      feeTypeLabel:  b.feeTypeLabel || '',
+      lineItems:     Array.isArray(b.lineItems) ? b.lineItems : [],
+      amount:        Number(b.amount) || 0,
+      paymentMode:   b.paymentMode || 'cash',
+      transactionId: b.transactionId || '',
+      notes:         b.notes || '',
+      collectedBy:   b.collectedBy || (req.user?.name || 'Accounts Staff'),
+      paidAt:        b.paidAt ? new Date(b.paidAt) : new Date(),
+    });
+    res.status(201).json({ success: true, message: 'Walk-in receipt saved', receipt });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ========== WALK-IN / OLD STUDENT — List Receipts ==========
+router.get('/receipts/walkin/all', protect, authorizeRoles('staff_accounts','staff_student','staff_exam','staff_scholarship','staff_principal','admin'), async (req, res) => {
+  try {
+    const receipts = await WalkinReceipt.find().sort({ paidAt: -1 });
+    res.json({ success: true, receipts, total: receipts.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ========== ALL STAFF — View Payment Receipts ==========
 router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_student','staff_exam','staff_scholarship','staff_principal','admin'), async (req, res) => {
   try {
@@ -528,7 +569,30 @@ router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_stud
           collectedBy:   p.collectedBy,
           paidAt:        p.paidAt,
           semester:      p.semester,
+          isWalkin:      false,
         });
+      });
+    });
+
+    // Merge in Walk-in / Old Student receipts so they also show in Payment History
+    const walkins = await WalkinReceipt.find().sort({ paidAt: -1 });
+    walkins.forEach(w => {
+      receipts.push({
+        receiptNo:     w.receiptNo,
+        studentName:   w.studentName,
+        studentEmail:  '',
+        studentId:     w.prnNo || w.rollNo || '',
+        courseType:    w.course,
+        admissionYear: w.admissionYear,
+        feeType:       w.feeType,
+        feeTypeLabel:  w.feeTypeLabel,
+        amount:        w.amount,
+        paymentMode:   w.paymentMode,
+        transactionId: w.transactionId,
+        collectedBy:   w.collectedBy,
+        paidAt:        w.paidAt,
+        semester:      '',
+        isWalkin:      true,
       });
     });
 
