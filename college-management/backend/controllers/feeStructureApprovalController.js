@@ -5,7 +5,7 @@ const FeeStructureApproval = require('../models/FeeStructureApproval');
 // ── Accounts Section: Submit new approval request ────────────────────────────
 exports.submitApproval = async (req, res) => {
   try {
-    const { courseKey, itemId, itemName, itemSection, oldAmounts, newAmounts, isNewItem } = req.body;
+    const { courseKey, itemId, itemName, itemSection, oldAmounts, newAmounts, isNewItem, isDeletion } = req.body;
     if (!courseKey || !itemId || !itemName || !newAmounts) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
@@ -23,6 +23,7 @@ exports.submitApproval = async (req, res) => {
       oldAmounts: oldAmounts || [],
       newAmounts,
       isNewItem: !!isNewItem,
+      isDeletion: !!isDeletion,
       status: 'pending_principal',
     });
 
