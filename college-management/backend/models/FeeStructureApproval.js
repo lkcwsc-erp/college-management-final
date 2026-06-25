@@ -8,6 +8,7 @@ const feeStructureApprovalSchema = new mongoose.Schema({
   oldAmounts:   [Number],                  // 6 semester amounts before edit
   newAmounts:   [Number],                  // 6 semester amounts after edit
   isNewItem:    { type: Boolean, default: false },
+  isDeletion:   { type: Boolean, default: false },  // delete this fee item (after approval)
 
   submittedBy:      { type: String },
   submittedByEmail: { type: String },
