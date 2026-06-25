@@ -408,25 +408,29 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   // Reconcile with backend approvals (feeApprovals is sorted newest-first):
   //  - newest APPROVED edit per item → live override amount
-  //  - newest edit that is still in the pipeline → shows as "pending"
+  //  - newest APPROVED deletion per item → item removed from structure
+  //  - newest edit/delete still in the pipeline → shows as "pending"
   const approvedOverrides = {};      // itemId -> approved amounts (live)
-  const pendingForCourse  = {};      // itemId -> { amounts, status:'pending' }
+  const approvedDeleted   = {};      // itemId -> true (approved deletion)
+  const pendingForCourse  = {};      // itemId -> { amounts, status:'pending', isDelete }
   const seenNewest        = new Set();
   feeApprovals.forEach(a => {
     if (a.courseKey !== courseKey) return;
     if (!seenNewest.has(a.itemId)) {
       seenNewest.add(a.itemId);
       if (['pending_principal', 'approved_by_principal', 'pending_admin'].includes(a.status)) {
-        pendingForCourse[a.itemId] = { amounts: a.newAmounts, status: 'pending', submittedAt: a.createdAt };
+        pendingForCourse[a.itemId] = { amounts: a.newAmounts, status: 'pending', isDelete: !!a.isDeletion, submittedAt: a.createdAt };
       }
     }
-    if (a.status === 'approved' && !(a.itemId in approvedOverrides)) {
-      approvedOverrides[a.itemId] = a.newAmounts;
+    if (a.status === 'approved' && !(a.itemId in approvedOverrides) && !(a.itemId in approvedDeleted)) {
+      if (a.isDeletion) approvedDeleted[a.itemId] = true;  // newest approved deletion
+      else approvedOverrides[a.itemId] = a.newAmounts;     // newest approved amounts
     }
   });
 
   const allItems = course
     ? [...course.items, ...customItems.filter(ci => !course.items.find(i => i.id === ci.id))]
+        .filter(it => !approvedDeleted[it.id])
         .map(it => approvedOverrides[it.id] ? { ...it, s: approvedOverrides[it.id] } : it)
     : [];
 
@@ -442,7 +446,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
-  const submitEdit = async (itemId, newAmounts, newItemMeta = null) => {
+  const submitEdit = async (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
     const isNewItem = !!newItemMeta;
     const item = newItemMeta || allItems.find(i => i.id === itemId) || editingItem || {};
     const oldAmounts = isNewItem ? [] : (item.s || []);
@@ -456,16 +460,25 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         oldAmounts,
         newAmounts,
         isNewItem,
+        isDeletion,
       });
       // Keep a local marker so this row shows "⏳ pending" immediately for the accountant
       const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
       savePending(pending);
       setEditingItem(null);
-      showToast('✅ Edit submitted — sent to Principal for approval!');
+      showToast(isDeletion
+        ? '🗑️ Delete request Principal → Admin approval ke liye bheja gaya!'
+        : '✅ Edit submitted — sent to Principal for approval!');
       fetchFeeApprovals(); // pull fresh status from backend
     } catch (e) {
       showToast('❌ ' + (e.response?.data?.message || 'Failed to submit for approval'));
     }
+  };
+
+  // Delete a fee item → routed through Principal → Admin approval (applied only after approval)
+  const submitDelete = (item) => {
+    if (!window.confirm(`"${item.name}" delete karne ke liye approval bhejein?\n(Principal → Admin approve karenge, tabhi structure se hatega)`)) return;
+    submitEdit(item.id, (item.s && item.s.length ? item.s : [0,0,0,0,0,0]), null, true);
   };
 
   const hasPending = Object.keys(pendingForCourse).length > 0;
@@ -517,8 +530,8 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           </div>
 
           <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', background:'#1565C0', padding:'10px 14px', gap:6 }}>
-              {['Fee Item','Section','Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI','Edit'].map(h=>(
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 1fr', background:'#1565C0', padding:'10px 14px', gap:6 }}>
+              {['Fee Item','Section','Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI','Action'].map(h=>(
                 <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:11 }}>{h}</span>
               ))}
             </div>
@@ -528,16 +541,20 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
               const isPending = pendingForCourse[item.id]?.status === 'pending';
               const pendAmts  = pendingForCourse[item.id]?.amounts || null;
               return (
-                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafeff':'#fff' }}>
-                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
+                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 1fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafeff':'#fff' }}>
+                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>{pendingForCourse[item.id]?.isDelete?'🗑️ delete pending':'⏳ pending'}</span>}</span>
                   <span style={{ fontSize:10, color:'#888', background:'#e8eaf6', padding:'2px 5px', borderRadius:5 }}>Univ.</span>
                   {(pendAmts||item.s).map((amt,si)=>(
                     <span key={si} style={{ fontSize:11, fontWeight:amt>0?700:400, color:amt>0?'#1565C0':'#ddd', textAlign:'right' }}>
                       {amt>0?`₹${amt}`:'—'}
                     </span>
                   ))}
-                  <button onClick={()=>{ setEditingItem(item); setEditAmounts(Object.fromEntries(item.s.map((a,i)=>[i,a]))); }}
-                    style={{ fontSize:10, background:'#e3f2fd', color:'#1565C0', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>✏️</button>
+                  <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
+                    <button onClick={()=>{ setEditingItem(item); setEditAmounts(Object.fromEntries(item.s.map((a,i)=>[i,a]))); }}
+                      style={{ fontSize:10, background:'#e3f2fd', color:'#1565C0', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>✏️</button>
+                    <button onClick={()=>submitDelete(item)} title="Delete (Principal → Admin approval)"
+                      style={{ fontSize:10, background:'#ffebee', color:'#C62828', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>🗑️</button>
+                  </div>
                 </div>
               );
             })}
@@ -547,21 +564,25 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
               const isPending = pendingForCourse[item.id]?.status === 'pending';
               const pendAmts  = pendingForCourse[item.id]?.amounts || null;
               return (
-                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafff8':'#fff' }}>
-                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>⏳ pending</span>}</span>
+                <div key={item.id} style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 1fr', padding:'7px 14px', gap:6, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:isPending?'#fff8e1':idx%2===0?'#fafff8':'#fff' }}>
+                  <span style={{ fontSize:12, color:'#333' }}>{item.name}{isPending&&<span style={{fontSize:10,color:'#E65100',marginLeft:4}}>{pendingForCourse[item.id]?.isDelete?'🗑️ delete pending':'⏳ pending'}</span>}</span>
                   <span style={{ fontSize:10, color:'#888', background:'#e8f5e9', padding:'2px 5px', borderRadius:5 }}>College</span>
                   {(pendAmts||item.s).map((amt,si)=>(
                     <span key={si} style={{ fontSize:11, fontWeight:amt>0?700:400, color:amt>0?'#2E7D32':'#ddd', textAlign:'right' }}>
                       {amt>0?`₹${amt}`:'—'}
                     </span>
                   ))}
-                  <button onClick={()=>{ setEditingItem(item); setEditAmounts(Object.fromEntries(item.s.map((a,i)=>[i,a]))); }}
-                    style={{ fontSize:10, background:'#e8f5e9', color:'#2E7D32', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>✏️</button>
+                  <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
+                    <button onClick={()=>{ setEditingItem(item); setEditAmounts(Object.fromEntries(item.s.map((a,i)=>[i,a]))); }}
+                      style={{ fontSize:10, background:'#e8f5e9', color:'#2E7D32', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>✏️</button>
+                    <button onClick={()=>submitDelete(item)} title="Delete (Principal → Admin approval)"
+                      style={{ fontSize:10, background:'#ffebee', color:'#C62828', border:'none', borderRadius:5, padding:'3px 6px', cursor:'pointer', fontWeight:700 }}>🗑️</button>
+                  </div>
                 </div>
               );
             })}
 
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 0.6fr', padding:'10px 14px', gap:6, background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 0.8fr repeat(6,1fr) 1fr', padding:'10px 14px', gap:6, background:'#e3f2fd', borderTop:'2px solid #1565C0' }}>
               <span style={{ fontWeight:800, fontSize:13, color:'#1a237e' }}>TOTAL</span><span></span>
               {semLabels.map((_,si)=><span key={si} style={{ fontWeight:800, fontSize:12, color:'#1a237e', textAlign:'right' }}>₹{allItems.reduce((s,i)=>s+(i.s[si]||0),0).toLocaleString('en-IN')}</span>)}
               <span></span>
@@ -849,6 +870,88 @@ const DocFeesManager = ({ docFees, showToast }) => {
 };
 
 
+// ── Old Student / Walk-in fee collections (Finance Overview) ──────────────────
+// Pulls walk-in receipts persisted in the backend so old-student fees collected
+// via "Old Student Fee Collect" also show up in the Finance Overview.
+const WalkinCollections = ({ themeColor }) => {
+  const [rows, setRows]       = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch]   = useState('');
+
+  const fetchRows = useCallback(() => {
+    setLoading(true);
+    API.get('/admissions/receipts/walkin/all')
+      .then(res => setRows(res.data.receipts || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(() => { fetchRows(); }, [fetchRows]);
+
+  const filtered = rows.filter(r => {
+    const q = search.toLowerCase().trim();
+    if (!q) return true;
+    return `${r.studentName||''} ${r.prnNo||''} ${r.rollNo||''} ${r.receiptNo||''} ${r.feeTypeLabel||''}`.toLowerCase().includes(q);
+  });
+  const total = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+
+  return (
+    <div style={{ marginTop:28 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, flexWrap:'wrap', gap:10 }}>
+        <div>
+          <h3 style={{ color:'#E65100', margin:0 }}>🧑‍🎓 Old Student / Walk-in Collections</h3>
+          <p style={{ color:'#666', fontSize:13, margin:'2px 0 0' }}>Fees collected from old/walk-in students (not in the regular admission list).</p>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <div style={{ background:'#fff3e0', color:'#E65100', borderRadius:20, padding:'6px 16px', fontSize:13, fontWeight:700 }}>
+            Total Collected: ₹{total.toLocaleString('en-IN')}
+          </div>
+          <button onClick={fetchRows}
+            style={{ padding:'8px 14px', background:'#fff3e0', color:'#E65100', border:'1px solid #ffcc80', borderRadius:9, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+
+      <input type="text" placeholder="🔍 Search old student (name / PRN / receipt)..." value={search} onChange={e=>setSearch(e.target.value)}
+        style={{ width:'100%', padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14, marginBottom:12, boxSizing:'border-box' }} />
+
+      {loading ? (
+        <div style={{ textAlign:'center', padding:20 }}>⏳</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:24, textAlign:'center', color:'#888', fontSize:14 }}>
+          📭 No old-student / walk-in collections yet.
+        </div>
+      ) : (
+        <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1.2fr 1.2fr 1fr 0.9fr 1fr', background:themeColor || '#E65100', padding:'10px 14px', gap:8 }}>
+            {['Student','Course / Year','Fee Type','Receipt No','Mode','Amount'].map(h=>(
+              <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((r, idx) => (
+            <div key={(r.receiptNo||'')+idx} style={{ display:'grid', gridTemplateColumns:'1.6fr 1.2fr 1.2fr 1fr 0.9fr 1fr', padding:'10px 14px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:idx%2===0?'#fffaf5':'#fff' }}>
+              <div>
+                <p style={{ fontWeight:600, fontSize:13, margin:0 }}>{r.studentName || '—'}</p>
+                <p style={{ fontSize:10, color:'#888', margin:0 }}>{r.prnNo ? 'PRN: '+r.prnNo : (r.rollNo ? 'Roll: '+r.rollNo : '')}</p>
+              </div>
+              <span style={{ fontSize:12 }}>{r.course || '—'}{r.admissionYear ? ' · '+r.admissionYear : ''}</span>
+              <span style={{ fontSize:12, color:'#555' }}>{r.feeTypeLabel || r.feeType || '—'}</span>
+              <span style={{ fontSize:11, fontFamily:'monospace', color:'#E65100', fontWeight:600 }}>{r.receiptNo || '—'}</span>
+              <span style={{ fontSize:11, fontWeight:700, color: r.paymentMode==='online' ? '#1565C0' : '#2E7D32' }}>{r.paymentMode==='online'?'Online':'Cash'}</span>
+              <span style={{ fontSize:13, fontWeight:800, color:'#1b5e20' }}>₹{(r.amount||0).toLocaleString('en-IN')}</span>
+            </div>
+          ))}
+          <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1.2fr 1.2fr 1fr 0.9fr 1fr', padding:'10px 14px', gap:8, background:'#fff3e0', borderTop:'2px solid #E65100' }}>
+            <span style={{ fontWeight:800, fontSize:13, color:'#E65100', gridColumn:'1 / 6' }}>TOTAL</span>
+            <span style={{ fontWeight:800, fontSize:13, color:'#E65100' }}>₹{total.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 const AccountsStudentFeeView = ({ themeColor }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -887,7 +990,7 @@ const AccountsStudentFeeView = ({ themeColor }) => {
     <div>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14, marginBottom:20 }}>
         <div style={{ background:'#e3f2fd', borderRadius:12, padding:'14px 18px' }}>
-          <div style={{ fontSize:12, color:'#1565C0', fontWeight:600 }}>Total Annual Fees</div>
+          <div style={{ fontSize:12, color:'#1565C0', fontWeight:600 }}>Total Academic Fees</div>
           <div style={{ fontSize:20, fontWeight:800, color:'#0d47a1' }}>₹{totalFees.toLocaleString('en-IN')}</div>
         </div>
         <div style={{ background:'#e8f5e9', borderRadius:12, padding:'14px 18px' }}>
@@ -906,7 +1009,7 @@ const AccountsStudentFeeView = ({ themeColor }) => {
       {loading ? <div style={{textAlign:'center',padding:20}}>⏳</div> : (
         <div style={{ background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid #e0e7ef', boxShadow:'0 2px 10px rgba(0,0,0,.05)' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr', background:themeColor, padding:'10px 14px', gap:8 }}>
-            {['Student','Course/Year','Annual Fee','Paid','Pending','Status'].map(h=>(
+            {['Student','Course/Year','Academic Fee','Paid','Pending','Status'].map(h=>(
               <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
             ))}
           </div>
@@ -965,6 +1068,8 @@ const AccountsSectionDashboard = () => {
   const [showWalkIn, setShowWalkIn]         = useState(false);
   const [admSearch, setAdmSearch]           = useState('');
   const [admFilter, setAdmFilter]           = useState('all');
+  const [admCourseFilter, setAdmCourseFilter] = useState('all');
+  const [admYearFilter, setAdmYearFilter]   = useState('all');
   const [selectedAdm, setSelectedAdm]       = useState(null);
   const [admPayMode, setAdmPayMode]         = useState('cash');
   const [admTxnId, setAdmTxnId]             = useState('');
@@ -1006,18 +1111,43 @@ const AccountsSectionDashboard = () => {
 
   // Approved fee-structure edits → live amounts for fee collection ({ 'B.Sc.|bsc_c2': [amts] })
   const [feeStructOverrides, setFeeStructOverrides] = useState({});
+  // Approved NEW fee items (added via Fee Structure tab) → must appear in Collect Fees modal
+  const [extraFeeItems, setExtraFeeItems] = useState({});   // { 'B.Sc.': [ {id,name,section,s} ] }
+  // Approved DELETED fee items → must be hidden from structure & Collect Fees modal
+  const [deletedFeeMap, setDeletedFeeMap] = useState({});   // { 'B.Sc.|itemId': true }
   const fetchFeeStructOverrides = useCallback(async () => {
     try {
       const res = await API.get('/fee-structure-approvals');
       const approvals = res.data.approvals || []; // newest-first (backend sorted)
       const map = {};
+      const deleted = {};
+      const decided = new Set();   // courseKey|itemId whose NEWEST approved decision is locked
+      const customMeta = {};       // key -> {courseKey,id,name,section} for approved new items
       approvals.forEach(a => {
-        if (a.status === 'approved' && a.courseKey !== 'DOC') {
-          const key = `${a.courseKey}|${a.itemId}`;
-          if (!(key in map)) map[key] = a.newAmounts; // newest-first wins
+        if (a.courseKey === 'DOC' || a.status !== 'approved') return;
+        const key = `${a.courseKey}|${a.itemId}`;
+        if (!decided.has(key)) {
+          decided.add(key);
+          if (a.isDeletion) deleted[key] = true;       // newest decision = delete
+          else map[key] = a.newAmounts;                // newest approved amounts win
+        }
+        // Any approved new-item approval marks this as a custom item that must show up
+        if (a.isNewItem && !customMeta[key]) {
+          customMeta[key] = { courseKey: a.courseKey, id: a.itemId, name: a.itemName, section: a.itemSection || 'College' };
         }
       });
       setFeeStructOverrides(map);
+      setDeletedFeeMap(deleted);
+      // Build the live list of approved new items (latest amounts, excluding deleted)
+      const extras = {};
+      Object.values(customMeta).forEach(m => {
+        const key = `${m.courseKey}|${m.id}`;
+        if (deleted[key]) return;
+        const s = map[key] || [0, 0, 0, 0, 0, 0];
+        if (!extras[m.courseKey]) extras[m.courseKey] = [];
+        extras[m.courseKey].push({ id: m.id, name: m.name, section: m.section, s });
+      });
+      setExtraFeeItems(extras);
 
       // Document fees: base list with APPROVED changes applied (only post Admin approval).
       // Pending/rejected DOC edits are ignored, so the accountant keeps charging the old
@@ -1183,8 +1313,12 @@ const AccountsSectionDashboard = () => {
       const ct = (selectedAdm.courseType||'').toLowerCase();
       const ck = ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
       const course2 = ck ? DETAILED_FEES[ck] : null;
-      const feeBreakdown = course2 && Object.keys(selectedFeeItems).length > 0
-        ? course2.items
+      const breakdownItems = [
+        ...((course2 && course2.items) || []),
+        ...((ck && extraFeeItems[ck]) || []),
+      ].filter(it => !(ck && deletedFeeMap[`${ck}|${it.id}`]));
+      const feeBreakdown = ck && Object.keys(selectedFeeItems).length > 0
+        ? breakdownItems
             .filter(item => selectedFeeItems[item.id])
             .map((item, i) => {
               const semIdxs = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
@@ -1323,11 +1457,17 @@ const AccountsSectionDashboard = () => {
     return matchFilter && matchSearch;
   });
 
+  // Course/year options for the Collect Fees filter dropdowns (derived from the student list)
+  const admCourseOptions = [...new Set(admissions.map(a => a.courseType).filter(Boolean))];
+  const admYearOptions   = [...new Set(admissions.map(a => a.admissionYear).filter(Boolean))];
+
   const filteredAdm = admissions.filter(a => {
     const matchFilter = admFilter === 'all' || (admFilter === 'paid' ? a.feesPaid : !a.feesPaid);
     const q = admSearch.toLowerCase();
     const matchSearch = !q || a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
-    return matchFilter && matchSearch;
+    const matchCourse = admCourseFilter === 'all' || a.courseType === admCourseFilter;
+    const matchYear   = admYearFilter === 'all' || a.admissionYear === admYearFilter;
+    return matchFilter && matchSearch && matchCourse && matchYear;
   });
 
   const tabs = [
@@ -1596,6 +1736,7 @@ const AccountsSectionDashboard = () => {
               <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📊 Finance Overview</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Student-wise fee summary — paid, pending, and payment history.</p>
               <AccountsStudentFeeView themeColor="#1565C0" />
+              <WalkinCollections themeColor="#E65100" />
             </div>
           )}
 
@@ -1620,6 +1761,16 @@ const AccountsSectionDashboard = () => {
                   <option value="all">All Students</option>
                   <option value="unpaid">💸 Fees Pending</option>
                   <option value="paid">✅ Fees Paid</option>
+                </select>
+                <select value={admCourseFilter} onChange={e => setAdmCourseFilter(e.target.value)}
+                  style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+                  <option value="all">📚 All Courses</option>
+                  {admCourseOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select value={admYearFilter} onChange={e => setAdmYearFilter(e.target.value)}
+                  style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+                  <option value="all">🎓 All Years / Sem</option>
+                  {admYearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
                 <button onClick={fetchAdmissions}
                   style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
@@ -1745,11 +1896,12 @@ const AccountsSectionDashboard = () => {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {grp.items.map((p, i) => (
-                          <div key={(p.receiptNo || '') + i} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, borderLeft: '4px solid #2E7D32' }}>
+                          <div key={(p.receiptNo || '') + i} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, borderLeft: `4px solid ${p.isWalkin ? '#E65100' : '#2E7D32'}` }}>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
                                 <h4 style={{ margin: 0, color: '#1565C0', fontSize: 14 }}>{p.studentName || '—'}</h4>
                                 {p.studentId && <span style={{ fontSize: 11, background: '#e8f5e9', color: '#1b5e20', padding: '2px 8px', borderRadius: 10, fontFamily: 'monospace' }}>{p.studentId}</span>}
+                                {p.isWalkin && <span style={{ fontSize: 11, background: '#fff3e0', color: '#E65100', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>🧑‍🎓 Old Student</span>}
                                 <span style={{ fontSize: 11, background: '#e3f2fd', color: '#1565C0', padding: '2px 8px', borderRadius: 10 }}>{p.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'}</span>
                               </div>
                               <p style={{ fontSize: 12, color: '#666', margin: 0 }}>{p.feeTypeLabel || p.feeType || 'Fee'}{p.courseType ? ` • ${p.courseType}` : ''}{p.paidAt ? ` • ${new Date(p.paidAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}</p>
@@ -1890,11 +2042,17 @@ const AccountsSectionDashboard = () => {
         const semIdxs = yearSemIdx[admYear] || [0,1];
         const schol = Number(admScholarshipAmt||0);
 
-        const yearItems = course ? course.items.map(item => {
+        // Base items = DETAILED_FEES items + approved NEW items, minus approved-DELETED items
+        const baseItems = [
+          ...((course && course.items) || []),
+          ...((extraFeeItems[ck]) || []),
+        ].filter(it => !deletedFeeMap[`${ck}|${it.id}`]);
+
+        const yearItems = baseItems.map(item => {
           const s = itemAmounts(ck, item); // approved edit if any, else default
           const amt = (s[semIdxs[0]]||0) + (s[semIdxs[1]]||0);
           return { ...item, s, yearAmt: amt };
-        }).filter(item => item.yearAmt > 0) : [];
+        }).filter(item => item.yearAmt > 0);
 
         const yearTotal = yearItems.reduce((s,i) => s + i.yearAmt, 0);
 
@@ -1940,7 +2098,7 @@ const AccountsSectionDashboard = () => {
                 <button
                   style={{ flex:1, padding:'8px', borderRadius:8, border:`2px solid ${!admCollectDocMode?'#1565C0':'#ddd'}`, background:!admCollectDocMode?'#e3f2fd':'#fff', color:!admCollectDocMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
                   onClick={()=>setAdmCollectDocMode(false)}>
-                  🎓 Admission / Annual Fees
+                  🎓 Academic Fee
                 </button>
                 <button
                   style={{ flex:1, padding:'8px', borderRadius:8, border:`2px solid ${admCollectDocMode?'#1565C0':'#ddd'}`, background:admCollectDocMode?'#e3f2fd':'#fff', color:admCollectDocMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
@@ -2003,7 +2161,7 @@ const AccountsSectionDashboard = () => {
               {!admCollectDocMode && (
                 <div>
                   <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Annual Fee ({admYear})</span>
+                    <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Academic Fee ({admYear})</span>
                     <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{yearTotal.toLocaleString('en-IN')}</span>
                   </div>
 
@@ -2018,7 +2176,7 @@ const AccountsSectionDashboard = () => {
                       </div>
                     </div>
 
-                    {!course ? (
+                    {yearItems.length === 0 ? (
                       <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ Course not detected. Enter amount manually below.</div>
                     ) : (
                       <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:260, overflowY:'auto' }}>
