@@ -1837,6 +1837,7 @@ const FeeStructApprovalTab = ({ role, kind }) => {
                       <span style={{ fontSize:15, fontWeight:700, color:'#333' }}>{a.itemName}</span>
                       <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{a.courseKey} — {a.itemSection}</span>
                       {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#e3f2fd', color:'#1565C0', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
+                      {a.isDeletion && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Request</span>}
                     </div>
                     {statusBadge(a.status)}
                   </div>
