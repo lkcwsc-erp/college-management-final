@@ -1766,6 +1766,7 @@ const AdminFeeApprovalTab = ({ showMessage, kind }) => {
               <span style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'2px 10px', borderRadius:10 }}>{a.courseKey}</span>
               {a.itemSection && <span style={{ fontSize:11, color:'#888' }}>{a.itemSection}</span>}
               {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, background:'#e8f5e9', color:'#2E7D32', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
+              {a.isDeletion && <span style={{ fontSize:11, fontWeight:700, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Request</span>}
             </div>
             <div style={{ fontSize:11, color:'#aaa' }}>
               Submitted by {a.submittedBy || '—'} · {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN') : '—'}
