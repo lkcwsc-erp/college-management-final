@@ -290,6 +290,7 @@ aadharNumber: {
       collectedBy:   { type: String, default: '' },
       paidAt:        { type: Date, default: Date.now },
       semester:      { type: String, default: '' },
+      year:          { type: String, default: '' },
     }],
     lastFeePayment: {
       paidAt:        { type: Date },
