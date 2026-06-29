@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import API from '../../api/axios';
 import './Dashboard.css';
 import StudentViewFull from './StudentViewFull';
@@ -153,6 +154,14 @@ const YEARLY_FEES = {
 // Helper — detect course type from admission data
 const detectCourse = (adm) => {
   const ct = (adm.courseType || adm.course?.name || '').toLowerCase();
+  if (ct.includes('b.sc') || ct.includes('bsc') || ct.includes('science')) return 'B.Sc.';
+  if (ct.includes('b.a') || ct.includes('ba') || ct.includes('arts')) return 'B.A.';
+  return null;
+};
+
+// Helper — normalize any course string to 'B.A.' / 'B.Sc.' (tolerant matching)
+const normCourse = (str) => {
+  const ct = (str || '').toLowerCase();
   if (ct.includes('b.sc') || ct.includes('bsc') || ct.includes('science')) return 'B.Sc.';
   if (ct.includes('b.a') || ct.includes('ba') || ct.includes('arts')) return 'B.A.';
   return null;
@@ -1081,6 +1090,10 @@ const AccountsSectionDashboard = () => {
   const [admDocType, setAdmDocType]         = useState(''); // eslint-disable-line no-unused-vars
   const [selectedFeeItems, setSelectedFeeItems] = useState({});
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
+  // Other Fee (free-form) for the Collect Fee modal — description + amount
+  const [admOtherFeeOn, setAdmOtherFeeOn]   = useState(false);
+  const [admOtherFeeDesc, setAdmOtherFeeDesc] = useState('');
+  const [admOtherFeeAmt, setAdmOtherFeeAmt] = useState('');
   const [admLoading2, setAdmLoading2]       = useState(false);
 
   const [expenses, setExpenses]             = useState(() => { // eslint-disable-line no-unused-vars
@@ -1099,6 +1112,8 @@ const AccountsSectionDashboard = () => {
   const [histSearch, setHistSearch]         = useState('');
   const [histFrom, setHistFrom]             = useState('');
   const [histTo, setHistTo]                 = useState('');
+  const [histCourse, setHistCourse]         = useState('all');
+  const [histYear, setHistYear]             = useState('all');
 
   const fetchAllReceipts = useCallback(async () => {
     setReceiptsLoading(true);
@@ -1317,17 +1332,23 @@ const AccountsSectionDashboard = () => {
         ...((course2 && course2.items) || []),
         ...((ck && extraFeeItems[ck]) || []),
       ].filter(it => !(ck && deletedFeeMap[`${ck}|${it.id}`]));
-      const feeBreakdown = ck && Object.keys(selectedFeeItems).length > 0
-        ? breakdownItems
-            .filter(item => selectedFeeItems[item.id])
-            .map((item, i) => {
-              const semIdxs = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
-              const idxs = semIdxs[selectedAdm.admissionYear||'1st Year'] || [0,1];
-              const s = itemAmounts(ck, item); // approved edit if any, else default
-              const yearAmt = (s[idxs[0]]||0) + (s[idxs[1]]||0);
-              return { sr: i+1, particular: item.name, amount: yearAmt };
-            }).filter(r => r.amount > 0)
+      const feeBreakdown_semIdxs = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
+      const feeBreakdown_idxs = feeBreakdown_semIdxs[selectedAdm.admissionYear||'1st Year'] || [0,1];
+      const academicRows = (ck ? breakdownItems : [])
+        .filter(item => selectedFeeItems[item.id])
+        .map(item => {
+          const s = itemAmounts(ck, item); // approved edit if any, else default
+          const yearAmt = (s[feeBreakdown_idxs[0]]||0) + (s[feeBreakdown_idxs[1]]||0);
+          return { particular: item.name, amount: yearAmt };
+        }).filter(r => r.amount > 0);
+      const docRows = Object.entries(selectedFeeItems)
+        .filter(([k,v]) => k.startsWith('doc_') && v)
+        .map(([k]) => { const dk = k.replace('doc_',''); return { particular: docFees[dk]?.label || 'Document Fee', amount: docFees[dk]?.price || 0 }; })
+        .filter(r => r.amount > 0);
+      const otherRows = (admOtherFeeOn && Number(admOtherFeeAmt) > 0)
+        ? [{ particular: (admOtherFeeDesc||'').trim() || 'Other Fee', amount: Number(admOtherFeeAmt) }]
         : [];
+      const feeBreakdown = [...academicRows, ...docRows, ...otherRows].map((r, i) => ({ sr: i+1, ...r }));
 
       const entry = {
         id: rNo, date: new Date().toISOString(),
@@ -1363,6 +1384,8 @@ const AccountsSectionDashboard = () => {
       setSelectedAdm(null);
       setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash');
       setAdmSelectedSem(''); setAdmScholarshipAmt('');
+      setSelectedFeeItems({}); setAdmCollectDocMode(false);
+      setAdmOtherFeeOn(false); setAdmOtherFeeDesc(''); setAdmOtherFeeAmt('');
       fetchAdmissions();
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); }
     finally { setAdmLoading2(false); }
@@ -1385,9 +1408,11 @@ const AccountsSectionDashboard = () => {
   const filteredReceipts = allReceipts.filter(r => {
     const q = histSearch.toLowerCase().trim();
     if (q) {
-      const hay = `${r.studentName || ''} ${r.studentId || ''} ${r.receiptNo || ''} ${r.feeTypeLabel || r.feeType || ''}`.toLowerCase();
+      const hay = `${r.studentName || ''} ${r.studentId || ''} ${r.prnNo || ''} ${r.rollNo || ''} ${r.receiptNo || ''} ${r.feeTypeLabel || r.feeType || ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
+    if (histCourse !== 'all' && normCourse(r.courseType) !== histCourse) return false;
+    if (histYear !== 'all' && (r.admissionYear || '') !== histYear) return false;
     if (r.paidAt) {
       const d = new Date(r.paidAt);
       if (histFrom && d < new Date(histFrom + 'T00:00:00')) return false;
@@ -1442,6 +1467,43 @@ const AccountsSectionDashboard = () => {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast('✅ CSV downloaded');
+  };
+
+  const downloadReceiptsXLSX = () => {
+    if (!filteredReceipts.length) { showToast('❌ No payments to export'); return; }
+    const rows = filteredReceipts.map(r => {
+      const d = r.paidAt ? new Date(r.paidAt) : null;
+      return {
+        'Date':          d ? d.toLocaleDateString('en-IN') : '',
+        'Time':          d ? d.toLocaleTimeString('en-IN') : '',
+        'Receipt No':    r.receiptNo || '',
+        'Student Name':  r.studentName || '',
+        'PRN / Student ID': r.prnNo || r.studentId || '',
+        'Roll No':       r.rollNo || '',
+        'Course':        r.courseType || '',
+        'Year':          r.admissionYear || '',
+        'Fee Type':      r.feeTypeLabel || r.feeType || '',
+        'Amount (₹)':    r.amount || 0,
+        'Payment Mode':  r.paymentMode === 'online' ? 'Online' : 'Cash',
+        'Transaction ID': r.transactionId || '',
+        'Collected By':  r.collectedBy || '',
+      };
+    });
+    rows.push({
+      'Date': '', 'Time': '', 'Receipt No': '', 'Student Name': '', 'PRN / Student ID': '',
+      'Roll No': '', 'Course': '', 'Year': '', 'Fee Type': 'TOTAL',
+      'Amount (₹)': filteredReceiptsTotal, 'Payment Mode': '', 'Transaction ID': '', 'Collected By': '',
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 22 }, { wch: 18 },
+      { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 26 }, { wch: 12 },
+      { wch: 12 }, { wch: 18 }, { wch: 18 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Payment History');
+    XLSX.writeFile(wb, `payment-history-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('✅ Excel file downloaded');
   };
 
 
@@ -1856,7 +1918,8 @@ const AccountsSectionDashboard = () => {
                     Total: ₹{filteredReceiptsTotal.toLocaleString('en-IN')}
                   </div>
                   <button onClick={fetchAllReceipts} style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🔄 Refresh</button>
-                  <button onClick={downloadReceiptsCSV} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>⬇️ Download CSV (Excel)</button>
+                  <button onClick={downloadReceiptsXLSX} style={{ background: '#1b7a3d', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>⬇️ Excel (.xlsx)</button>
+                  <button onClick={downloadReceiptsCSV} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>⬇️ CSV</button>
                 </div>
               </div>
 
@@ -1864,8 +1927,27 @@ const AccountsSectionDashboard = () => {
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 18, background: '#f7f9fc', border: '1px solid #e0e7ef', borderRadius: 12, padding: 14 }}>
                 <div style={{ flex: '1 1 220px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>🔍 Search</label>
-                  <input type="text" placeholder="Name / Student ID / Receipt / Fee type" value={histSearch} onChange={e => setHistSearch(e.target.value)}
+                  <input type="text" placeholder="PRN / Roll No / Name / Receipt / Fee type" value={histSearch} onChange={e => setHistSearch(e.target.value)}
                     style={{ width: '100%', padding: '9px 10px', borderRadius: 8, border: '1px solid #ddd', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>Course</label>
+                  <select value={histCourse} onChange={e => setHistCourse(e.target.value)}
+                    style={{ padding: '9px 10px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>
+                    <option value="all">All Courses</option>
+                    <option value="B.A.">B.A.</option>
+                    <option value="B.Sc.">B.Sc.</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>Year</label>
+                  <select value={histYear} onChange={e => setHistYear(e.target.value)}
+                    style={{ padding: '9px 10px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>
+                    <option value="all">All Years</option>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                  </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>From</label>
@@ -1875,8 +1957,8 @@ const AccountsSectionDashboard = () => {
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 4 }}>To</label>
                   <input type="date" value={histTo} onChange={e => setHistTo(e.target.value)} style={{ padding: '9px 10px', borderRadius: 8, border: '1px solid #ddd' }} />
                 </div>
-                {(histSearch || histFrom || histTo) && (
-                  <button onClick={() => { setHistSearch(''); setHistFrom(''); setHistTo(''); }}
+                {(histSearch || histFrom || histTo || histCourse !== 'all' || histYear !== 'all') && (
+                  <button onClick={() => { setHistSearch(''); setHistFrom(''); setHistTo(''); setHistCourse('all'); setHistYear('all'); }}
                     style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✕ Clear</button>
                 )}
                 <div style={{ marginLeft: 'auto', fontSize: 13, color: '#666', fontWeight: 600 }}>{filteredReceipts.length} payment(s)</div>
@@ -1904,7 +1986,8 @@ const AccountsSectionDashboard = () => {
                                 {p.isWalkin && <span style={{ fontSize: 11, background: '#fff3e0', color: '#E65100', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>🧑‍🎓 Old Student</span>}
                                 <span style={{ fontSize: 11, background: '#e3f2fd', color: '#1565C0', padding: '2px 8px', borderRadius: 10 }}>{p.paymentMode === 'online' ? '🌐 Online' : '💵 Cash'}</span>
                               </div>
-                              <p style={{ fontSize: 12, color: '#666', margin: 0 }}>{p.feeTypeLabel || p.feeType || 'Fee'}{p.courseType ? ` • ${p.courseType}` : ''}{p.paidAt ? ` • ${new Date(p.paidAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}</p>
+                              <p style={{ fontSize: 12, color: '#666', margin: 0 }}>{p.feeTypeLabel || p.feeType || 'Fee'}{p.courseType ? ` • ${p.courseType}` : ''}{p.admissionYear ? ` • ${p.admissionYear}` : ''}{p.paidAt ? ` • ${new Date(p.paidAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}</p>
+                              {(p.prnNo || p.rollNo) && <p style={{ fontSize: 11, color: '#999', margin: '2px 0 0' }}>{p.prnNo ? `PRN: ${p.prnNo}` : ''}{p.prnNo && p.rollNo ? ' • ' : ''}{p.rollNo ? `Roll: ${p.rollNo}` : ''}</p>}
                               <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>Receipt: {p.receiptNo || '—'}{p.transactionId ? ` • Txn: ${p.transactionId}` : ''}{p.collectedBy ? ` • By: ${p.collectedBy}` : ''}</p>
                             </div>
                             <div style={{ textAlign: 'right' }}>
@@ -2059,25 +2142,35 @@ const AccountsSectionDashboard = () => {
         const calcSelected = (map) =>
           yearItems.reduce((s,i) => s + (map[i.id] ? i.yearAmt : 0), 0);
 
+        const otherAdd = () => (admOtherFeeOn ? Number(admOtherFeeAmt || 0) : 0);
+
         const selectAll = () => {
           const m = {};
           yearItems.forEach(i => { m[i.id] = true; });
           setSelectedFeeItems(m);
-          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol)));
+          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol + otherAdd())));
         };
 
-        const clearAll = () => { setSelectedFeeItems({}); setAdmFeeAmt('0'); };
+        const clearAll = () => { setSelectedFeeItems({}); setAdmFeeAmt(String(Math.max(0, otherAdd()))); };
 
         const toggleItem = (id) => {
           const m = { ...selectedFeeItems, [id]: !selectedFeeItems[id] };
           setSelectedFeeItems(m);
-          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol)));
+          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol + otherAdd())));
         };
 
         const selGross   = calcSelected(selectedFeeItems);
         const netPayable = Math.max(0, selGross - schol);
         const amtPaid    = Number(admFeeAmt||0);
         const balance    = Math.max(0, netPayable - amtPaid);
+        const docSelTotal = Object.entries(selectedFeeItems)
+          .filter(([k,v]) => k.startsWith('doc_') && v)
+          .reduce((s,[k]) => s + (docFees[k.replace('doc_','')]?.price || 0), 0);
+        // Recompute suggested amount including the free-form Other Fee
+        const recalcWithOther = (on, amt) => {
+          const add = on ? Number(amt || 0) : 0;
+          setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + add)));
+        };
 
         const uItems = yearItems.filter(i => i.section === 'University');
         const cItems = yearItems.filter(i => i.section === 'College');
@@ -2085,6 +2178,7 @@ const AccountsSectionDashboard = () => {
         const closeAdmModal = () => {
           setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem('');
           setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType('');
+          setAdmOtherFeeOn(false); setAdmOtherFeeDesc(''); setAdmOtherFeeAmt('');
         };
 
         return (
@@ -2124,7 +2218,7 @@ const AccountsSectionDashboard = () => {
                             return s + (docFees[dKey]?.price||0);
                           },0);
                           const annualTotal = yearItems.reduce((s,i)=>s+(m[i.id]?i.yearAmt:0),0);
-                          setAdmFeeAmt(String(Math.max(0, docTotal + annualTotal - Number(admScholarshipAmt||0))));
+                          setAdmFeeAmt(String(Math.max(0, docTotal + annualTotal - Number(admScholarshipAmt||0) + (admOtherFeeOn ? Number(admOtherFeeAmt||0) : 0))));
                         }}
                           style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', borderRadius:9, border:`2px solid ${isSelected?'#1565C0':'#e0e7ef'}`, background:isSelected?'#e3f2fd':'#fff', cursor:'pointer' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -2240,6 +2334,24 @@ const AccountsSectionDashboard = () => {
                           <span style={{ color:'#1565C0' }}>Net Payable</span>
                           <span style={{ color:'#1565C0' }}>₹{netPayable.toLocaleString('en-IN')}</span>
                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom:14, border:'1px solid #ffe0b2', background:'#fff8f0', borderRadius:10, padding:'12px 14px' }}>
+                    <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:800, color:'#E65100', cursor:'pointer' }}>
+                      <input type="checkbox" checked={admOtherFeeOn}
+                        onChange={e => { const on = e.target.checked; setAdmOtherFeeOn(on); recalcWithOther(on, admOtherFeeAmt); }} />
+                      ➕ Other Fee <span style={{ fontWeight:600, color:'#999' }}>(description + amount)</span>
+                    </label>
+                    {admOtherFeeOn && (
+                      <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr', gap:10, marginTop:10 }}>
+                        <input type="text" placeholder="Description (e.g. Late Fee, Sports, Misc.)" value={admOtherFeeDesc}
+                          onChange={e => setAdmOtherFeeDesc(e.target.value)}
+                          style={{ padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13, boxSizing:'border-box' }} />
+                        <input type="number" min="0" placeholder="Amount ₹" value={admOtherFeeAmt}
+                          onChange={e => { setAdmOtherFeeAmt(e.target.value); recalcWithOther(admOtherFeeOn, e.target.value); }}
+                          style={{ padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:15, fontWeight:800, textAlign:'right', boxSizing:'border-box' }} />
                       </div>
                     )}
                   </div>
@@ -2667,6 +2779,10 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
     docFeeOn: false,
     docFeeType: firstDocKey,
     docFeeAmount: docFees[firstDocKey]?.price ?? '',
+    // Other Fee — free-form description + amount
+    otherFeeOn: false,
+    otherFeeDesc: '',
+    otherFeeAmount: '',
     payMode:'cash', txnId:'', notes:'',
   };
   const [view, setView]       = useState('form');
@@ -2695,6 +2811,10 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
       const lbl = docFees[f.docFeeType]?.label || feeOpts.find(o => o.key === f.docFeeType)?.label || 'Document Fee';
       items.push({ label: lbl, amount: Number(f.docFeeAmount || 0) });
     }
+    if (f.otherFeeOn) {
+      const lbl = (f.otherFeeDesc || '').trim() || 'Other Fee';
+      items.push({ label: lbl, amount: Number(f.otherFeeAmount || 0) });
+    }
     return items;
   };
 
@@ -2706,15 +2826,19 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
 
   const handleCollect = async () => {
     if (!form.studentName.trim()) { setMsg('❌ Student name required'); return; }
-    if (!form.courseFeeOn && !form.docFeeOn) { setMsg('❌ Select at least one Fee Type (Course Fee / Document Fee)'); return; }
+    if (!form.courseFeeOn && !form.docFeeOn && !form.otherFeeOn) { setMsg('❌ Select at least one Fee Type (Course / Document / Other)'); return; }
+    if (form.otherFeeOn && !(form.otherFeeDesc || '').trim()) { setMsg('❌ Enter a description for Other Fee'); return; }
     const items = calcLineItems(form);
     const total = items.reduce((s, i) => s + i.amount, 0);
     if (!total || total <= 0) { setMsg('❌ Enter a valid amount'); return; }
     if (form.payMode === 'online' && !form.txnId.trim()) { setMsg('❌ Transaction ID required for online payment'); return; }
     setSaving(true); setMsg('');
     const receiptNo = 'OS' + Date.now().toString().slice(-6);
-    const feeType = form.courseFeeOn && form.docFeeOn ? 'mixed'
-      : form.courseFeeOn ? 'course' : form.docFeeType;
+    const onCount = [form.courseFeeOn, form.docFeeOn, form.otherFeeOn].filter(Boolean).length;
+    const feeType = onCount > 1 ? 'mixed'
+      : form.courseFeeOn ? 'course'
+      : form.docFeeOn ? form.docFeeType
+      : 'other';
     const rec = {
       studentName:  form.studentName,
       phone:        form.phone,
@@ -3020,6 +3144,24 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                         style={{ ...inp, fontSize:15, fontWeight:800, textAlign:'right', opacity: form.docFeeOn?1:0.4 }}
                         placeholder="0" value={form.docFeeOn ? form.docFeeAmount : ''}
                         onChange={e=>setForm(p=>({...p, docFeeAmount:e.target.value}))} />
+                    </div>
+
+                    {/* Other Fee — free-form description + amount */}
+                    <div style={{ display:'grid', gridTemplateColumns:'auto 1.4fr 1fr', gap:10, alignItems:'center', marginTop:10, paddingTop:10, borderTop:'1px dashed #ffcc80' }}>
+                      <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'#333', cursor:'pointer', whiteSpace:'nowrap' }}>
+                        <input type="checkbox" checked={form.otherFeeOn}
+                          onChange={e=>setForm(p=>({...p, otherFeeOn:e.target.checked }))} />
+                        ➕ Other Fee
+                      </label>
+                      <input type="text" disabled={!form.otherFeeOn}
+                        style={{ ...inp, opacity: form.otherFeeOn?1:0.4 }}
+                        placeholder="Description (e.g. Late Fee, Sports, Misc.)"
+                        value={form.otherFeeOn ? form.otherFeeDesc : ''}
+                        onChange={e=>setForm(p=>({...p, otherFeeDesc:e.target.value}))} />
+                      <input type="number" min="0" disabled={!form.otherFeeOn}
+                        style={{ ...inp, fontSize:15, fontWeight:800, textAlign:'right', opacity: form.otherFeeOn?1:0.4 }}
+                        placeholder="0" value={form.otherFeeOn ? form.otherFeeAmount : ''}
+                        onChange={e=>setForm(p=>({...p, otherFeeAmount:e.target.value}))} />
                     </div>
 
                     {/* Total */}
