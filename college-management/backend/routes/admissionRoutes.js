@@ -459,7 +459,7 @@ router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', '
 // ========== MARK ADMISSION FEES PAID ==========
 router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
-    const { fees, paymentMode, transactionId, receiptNo, collectedBy, feeType, feeTypeLabel, semester, totalFees, scholarshipAmount } = req.body;
+    const { fees, paymentMode, transactionId, receiptNo, collectedBy, feeType, feeTypeLabel, semester, year, totalFees, scholarshipAmount } = req.body;
     const admission = await Admission.findById(req.params.id);
     if (!admission) return res.status(404).json({ success: false, message: 'Admission not found' });
 
@@ -474,6 +474,7 @@ router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'adm
       collectedBy: collectedBy || '',
       paidAt: new Date(),
       semester: semester || '',
+      year: year || '',
     });
 
     // Update totals
@@ -560,7 +561,7 @@ router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_stud
           studentEmail:  adm.email,
           studentId:     adm.studentId,
           courseType:    adm.courseType,
-          admissionYear: adm.admissionYear,
+          admissionYear: p.year || adm.admissionYear,
           feeType:       p.feeType,
           feeTypeLabel:  p.feeTypeLabel,
           amount:        p.amount,
@@ -582,6 +583,8 @@ router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_stud
         studentName:   w.studentName,
         studentEmail:  '',
         studentId:     w.prnNo || w.rollNo || '',
+        prnNo:         w.prnNo || '',
+        rollNo:        w.rollNo || '',
         courseType:    w.course,
         admissionYear: w.admissionYear,
         feeType:       w.feeType,
