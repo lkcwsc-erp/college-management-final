@@ -1,5 +1,142 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
+
+// ─── Year-wise official fee totals (SNDT 2025-26) ─────────────────────────────
+const OFFICIAL_FEES_YEARLY = {
+  'B.Sc.': {
+    label: 'B.Sc. (Un-aided)',
+    years: {
+      '1st Year': { total: 30677, sem1: 29927, sem2: 750  },
+      '2nd Year': { total: 28957, sem1: 28207, sem2: 750  },
+      '3rd Year': { total: 30692, sem1: 27842, sem2: 2850 },
+    }
+  },
+  'B.A.': {
+    label: 'B.A. (Un-aided)',
+    years: {
+      '1st Year': { total: 14627, sem1: 13877, sem2: 750  },
+      '2nd Year': { total: 12707, sem1: 11957, sem2: 750  },
+      '3rd Year': { total: 14542, sem1: 12092, sem2: 2450 },
+    }
+  },
+};
+
+const svfCourseKey = (ct) => {
+  const c = (ct || '').toLowerCase();
+  if (c.includes('b.sc') || c.includes('bsc') || c.includes('science')) return 'B.Sc.';
+  if (c.includes('b.a') || c.includes('ba') || c.includes('arts')) return 'B.A.';
+  return null;
+};
+
+const svfGenReceiptNo = () => `REC${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+
+// Official A5 fee receipt (same format used by the Accounts Section)
+const svfPrintReceipt = (data) => {
+  const acadYear = data.academicYear || (() => { const y = new Date().getFullYear(); const m = new Date().getMonth() + 1; return m >= 6 ? `${y}-${String(y + 1).slice(2)}` : `${y - 1}-${String(y).slice(2)}`; })();
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const amt = data.amount || 0;
+  const payMode = data.paymentMode === 'online' ? 'Online' : 'Cash';
+  const txnId = data.transactionId || '';
+  const logo = window.location.origin + '/college-logo.png';
+  const ct = (data.courseType || '').toLowerCase();
+  const courseFull = ct.includes('b.sc') || ct.includes('bsc') || ct.includes('science') ? 'Bachelor of Science (B.Sc.)'
+    : ct.includes('b.a') || ct.includes('ba') || ct.includes('arts') ? 'Bachelor of Arts (B.A.)'
+    : (data.courseType || '—');
+  const classStr = courseFull + (data.admissionYear ? ' — ' + data.admissionYear : '');
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const inW = (n) => { if (n === 0) return ''; if (n < 20) return a[n] + ' '; if (n < 100) return b[Math.floor(n / 10)] + ' ' + (n % 10 ? a[n % 10] + ' ' : ''); if (n < 1000) return a[Math.floor(n / 100)] + 'Hundred ' + (n % 100 ? inW(n % 100) : ''); if (n < 100000) return inW(Math.floor(n / 1000)) + 'Thousand ' + (n % 1000 ? inW(n % 1000) : ''); return inW(Math.floor(n / 100000)) + 'Lakh ' + (n % 100000 ? inW(n % 100000) : ''); };
+  const amtWords = (inW(amt).trim() || 'Zero') + ' Only';
+  const rows = (data.feeBreakdown && data.feeBreakdown.length > 0)
+    ? data.feeBreakdown.map((r, i) => `<tr><td>${i + 1}</td><td>${r.particular || r.label || 'Fee'}</td><td>₹${Number(r.amount || 0).toLocaleString('en-IN')}.00</td></tr>`).join('')
+    : `<tr><td>1</td><td>${data.feeTypeLabel || 'Fee'}</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>`;
+  const html = `<!DOCTYPE html><html><head><title>Fee Receipt</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#fff;padding:10px;font-size:12px}
+    .receipt{width:160mm;border:1px solid #999;margin:0 auto}
+    .hdr{display:flex;align-items:center;gap:14px;padding:14px 28px;border-bottom:1.5px solid #000}
+    .hlogo{width:84px;height:84px;object-fit:contain;flex-shrink:0;margin-left:6px}
+    .htxt{flex:1;text-align:center}
+    .htrust{font-size:9px;color:#222;font-weight:700}
+    .hname{font-size:13px;font-weight:900;color:#000;line-height:1.3;margin:2px 0}
+    .haddr{font-size:9px;color:#333;margin-top:1px}
+    .hcontact{font-size:9.5px;color:#000;font-weight:800;margin-top:2px}
+    .titlebar{text-align:center;padding:5px;border-bottom:1px solid #999;font-size:13px;font-weight:900;letter-spacing:2px;background:#f5f5f5}
+    .copyline{padding:4px 12px;font-size:10px;border-bottom:1px dashed #aaa}
+    .metarow{display:flex;justify-content:space-between;padding:4px 12px;font-size:11px;border-bottom:1px dashed #aaa}
+    .infobox{padding:4px 12px;border-bottom:1px dashed #aaa}
+    table.info{width:100%;border-collapse:collapse;font-size:11px}
+    table.info td{padding:2px 4px}
+    .lbl{font-weight:700;color:#444;width:95px}
+    .val{font-weight:600;color:#000}
+    table.fees{width:100%;border-collapse:collapse;margin-top:4px}
+    table.fees thead tr{background:#ddd}
+    table.fees th{padding:5px 8px;font-size:11px;font-weight:700;text-align:left;border:1px solid #aaa}
+    table.fees th:last-child{text-align:right}
+    table.fees td{padding:5px 8px;font-size:11px;border:1px solid #ccc}
+    table.fees td:first-child{text-align:center;width:32px}
+    table.fees td:last-child{text-align:right}
+    .totrow td{font-weight:800;font-size:12px;background:#f0f0f0;border-top:2px solid #555}
+    .amtline{padding:5px 12px;font-size:11px;border-top:1px dashed #aaa}
+    .payline{padding:4px 12px;font-size:11px}
+    .sigrow{display:flex;justify-content:space-between;align-items:flex-end;padding:6px 12px 8px;border-top:1px dashed #aaa}
+    .sigsys{font-size:9px;color:#666;font-style:italic}
+    .sigbox{text-align:center;font-size:10px}
+    .sigline{border-top:1px solid #444;margin-top:22px;padding-top:3px;font-weight:700}
+    @media print{body{padding:0}.receipt{width:100%}@page{size:A5;margin:5mm}}
+  </style></head><body>
+  <div class="receipt">
+    <div class="hdr">
+      <img src="${logo}" class="hlogo"/>
+      <div class="htxt">
+        <div class="htrust">Vidyaniketan Sevabhavi Sanstha, Dongargaon (She.)</div>
+        <div class="hname">Late Kalpana Chawla Women's Senior College (LKCWSC)</div>
+        <div class="haddr">Affiliated to SNDT Women's University, Mumbai</div>
+        <div class="haddr">Gangakhed, Dist. Parbhani, Maharashtra – 431514</div>
+        <div class="hcontact">📞 +91 9307162914 &nbsp;|&nbsp; ✉️ lkcwscgkd@gmail.com &nbsp;|&nbsp; 🌐 lkcwsc.vnssorg.com</div>
+      </div>
+    </div>
+    <div class="titlebar">FEE RECEIPT</div>
+    <div class="copyline">Fee Receipt (Student Copy)</div>
+    <div class="metarow">
+      <span><b>Receipt No. :</b> ${data.receiptNo}</span>
+      <span><b>Date :</b> ${dateStr}</span>
+    </div>
+    <div class="infobox">
+      <table class="info">
+        <tr>
+          <td class="lbl">Student Name</td><td class="val">: ${data.studentName || '—'}</td>
+          <td class="lbl" style="padding-left:16px">Student UID</td><td class="val">: ${data.studentId || '—'}</td>
+        </tr>
+        <tr>
+          <td class="lbl">Class</td><td class="val">: ${classStr}</td>
+          <td class="lbl" style="padding-left:16px">Academic Year</td><td class="val">: ${acadYear}</td>
+        </tr>
+      </table>
+    </div>
+    <table class="fees">
+      <thead><tr><th>S.No.</th><th>Particulars</th><th>Total (in Rs.)</th></tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="totrow"><td colspan="2" style="text-align:right;padding-right:10px">Total Amount</td><td>₹${amt.toLocaleString('en-IN')}.00</td></tr>
+      </tbody>
+    </table>
+    <div class="amtline">Amt. in words (Rs.) : <b>${amtWords}</b></div>
+    <div class="payline">
+      Paid by : <b>${payMode}</b> &nbsp;&nbsp; Rs. <b>${amt.toLocaleString('en-IN')}.00</b>
+      ${txnId ? ` &nbsp;&nbsp; Transaction ID : <b>${txnId}</b>` : ''} &nbsp;&nbsp; Date : <b>${dateStr}</b>
+    </div>
+    <div class="sigrow">
+      <div class="sigsys">This is system generated receipt and does not require seal/stamp.<br/>Collected by: ${data.collectedBy || 'Accounts Section'}</div>
+      <div class="sigbox"><div class="sigline">Accounts Section<br/>LKCWSC</div></div>
+    </div>
+  </div>
+  <scr${'ipt'}>window.onload=()=>{window.print()}</scr${'ipt'}></body></html>`;
+  const w = window.open('', '_blank', 'width=680,height=680');
+  w.document.write(html); w.document.close();
+};
 
 // ─── Exam Forms Detail Tab ────────────────────────────────────────────────────
 const ExamFormsDetailTab = ({ studentEmail, themeColor }) => {
@@ -63,6 +200,7 @@ const ExamFormsDetailTab = ({ studentEmail, themeColor }) => {
 // role:      'student_section' | 'exam' | 'scholarship' | 'accounts' | 'principal' | 'readonly'
 
 const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'readonly' }) => {
+  const { user } = useAuth();
   const [admissions, setAdmissions]   = useState([]);
   const [loading, setLoading]         = useState(false);
   const [search, setSearch]           = useState('');
@@ -76,6 +214,67 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [editData, setEditData]       = useState({});
   const [saving, setSaving]           = useState(false);
   const [msg, setMsg]                 = useState('');
+
+  // ── Pay Remaining Fees (Accounts) ──
+  const [payModal, setPayModal]       = useState(null); // { year, total, schol, netPay, paid, balance }
+  const [payAmt, setPayAmt]           = useState('');
+  const [payMode, setPayMode]         = useState('cash');
+  const [payTxn, setPayTxn]           = useState('');
+  const [paySaving, setPaySaving]     = useState(false);
+  const [payMsg, setPayMsg]           = useState('');
+
+  const canCollect = role === 'accounts' || role === 'principal';
+
+  const openPayModal = (yr, info) => {
+    setPayModal({ year: yr, ...info });
+    setPayAmt(String(info.balance > 0 ? info.balance : ''));
+    setPayMode('cash'); setPayTxn(''); setPayMsg('');
+  };
+  const closePayModal = () => { setPayModal(null); setPayAmt(''); setPayTxn(''); setPayMsg(''); };
+
+  const handlePayRemaining = async () => {
+    const amt = Number(payAmt);
+    if (!amt || amt <= 0) { setPayMsg('❌ Enter a valid amount'); return; }
+    if (payMode === 'online' && !payTxn.trim()) { setPayMsg('❌ Transaction ID required for online'); return; }
+    setPaySaving(true); setPayMsg('');
+    const rNo = svfGenReceiptNo();
+    try {
+      await API.put(`/admissions/mark-fees-paid/${selected._id}`, {
+        fees: amt,
+        paymentMode: payMode,
+        transactionId: payTxn,
+        receiptNo: rNo,
+        collectedBy: user?.name || 'Accounts Staff',
+        feeType: 'admission',
+        feeTypeLabel: `Academic Fee — ${payModal.year}`,
+        year: payModal.year,
+        totalFees: payModal.total || undefined,
+        scholarshipAmount: payModal.schol || undefined,
+      });
+      svfPrintReceipt({
+        receiptNo: rNo,
+        studentName: selected.applicantName,
+        studentId: selected.studentId,
+        courseType: selected.courseType,
+        admissionYear: payModal.year,
+        amount: amt,
+        paymentMode: payMode,
+        transactionId: payTxn,
+        collectedBy: user?.name || 'Accounts Staff',
+        feeTypeLabel: `Academic Fee — ${payModal.year}`,
+      });
+      // Refresh and keep this student selected
+      const res = await API.get('/admissions/staff-view/all');
+      setAdmissions(res.data.admissions || []);
+      const updated = (res.data.admissions || []).find(a => a._id === selected._id);
+      if (updated) setSelected(updated);
+      closePayModal();
+      setMsg('✅ Fee collected & receipt generated!');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e) {
+      setPayMsg('❌ ' + (e.response?.data?.message || 'Failed to collect fee'));
+    } finally { setPaySaving(false); }
+  };
 
   // Scholarship edit (scholarship section)
   const [scholEdit, setScholEdit]     = useState(false);
@@ -520,6 +719,72 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                   ))}
                 </div>
 
+                {/* ── Fee Structure Details (year-wise) + Pay Remaining Fees ── */}
+                {(() => {
+                  const ck = svfCourseKey(selected.courseType);
+                  const schol = selected.scholarshipAmount || 0;
+                  const ledger = selected.feeLedger || [];
+                  const currentYear = selected.admissionYear;
+                  const legacyPaid = ledger.filter(p => !p.year).reduce((s, p) => s + (p.amount || 0), 0);
+                  const paidForYear = (yr) => {
+                    const tagged = ledger.filter(p => p.year === yr).reduce((s, p) => s + (p.amount || 0), 0);
+                    return tagged + (yr === currentYear ? legacyPaid : 0);
+                  };
+                  return (
+                    <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', overflow:'hidden' }}>
+                      <div style={{ background:'#009688', padding:'10px 16px', textAlign:'center' }}>
+                        <span style={{ color:'#fff', fontWeight:700, fontSize:14, letterSpacing:1 }}>Fee Structure Details</span>
+                      </div>
+                      {!ck ? (
+                        <div style={{ padding:16, textAlign:'center', color:'#888', fontSize:13 }}>Course not detected — cannot show fee structure.</div>
+                      ) : (
+                        <div style={{ overflowX:'auto' }}>
+                          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+                            <thead>
+                              <tr style={{ background:'#f5f5f5' }}>
+                                {['Fee Structure','Year','Total','Scholarship','Net Payable','Paid','Balance Due', ...(canCollect ? ['Action'] : [])].map(h => (
+                                  <th key={h} style={{ padding:'9px 10px', fontWeight:700, color:'#009688', textAlign:'center', borderBottom:'2px solid #009688', fontSize:12, whiteSpace:'nowrap' }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(OFFICIAL_FEES_YEARLY[ck]?.years || {}).map(([yr, data], i) => {
+                                const isCurrent = yr === currentYear;
+                                const netPay = Math.max(0, data.total - schol);
+                                const paid = paidForYear(yr);
+                                const balance = Math.max(0, netPay - paid);
+                                return (
+                                  <tr key={yr} style={{ background: isCurrent ? '#e0f7fa' : i % 2 === 0 ? '#fafafa' : '#fff', fontWeight: isCurrent ? 700 : 400 }}>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0' }}>
+                                      {OFFICIAL_FEES_YEARLY[ck]?.label} {isCurrent && <span style={{ background:'#009688', color:'#fff', fontSize:10, padding:'1px 6px', borderRadius:8, marginLeft:4 }}>Current</span>}
+                                    </td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color:'#009688', fontWeight:700 }}>{yr}</td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0' }}>₹{data.total.toLocaleString('en-IN')}</td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color: schol > 0 ? '#7B1FA2' : '#999' }}>{schol > 0 ? `₹${schol.toLocaleString('en-IN')}` : '₹0'}</td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', fontWeight:700 }}>₹{netPay.toLocaleString('en-IN')}</td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color:'#2E7D32', fontWeight:700 }}>₹{paid.toLocaleString('en-IN')}</td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color: balance > 0 ? '#C62828' : '#2E7D32', fontWeight:700 }}>{balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : '✅ Paid'}</td>
+                                    {canCollect && (
+                                      <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0' }}>
+                                        {balance > 0 ? (
+                                          <button onClick={() => openPayModal(yr, { total: data.total, schol, netPay, paid, balance })}
+                                            style={{ background:'#009688', color:'#fff', border:'none', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+                                            💰 Pay Remaining
+                                          </button>
+                                        ) : <span style={{ fontSize:11, color:'#2E7D32', fontWeight:600 }}>—</span>}
+                                      </td>
+                                    )}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Fee Ledger */}
                 {selected.feeLedger?.length > 0 ? (
                   <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e0e7ef', padding:20 }}>
@@ -656,6 +921,67 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
               <ExamFormsDetailTab studentEmail={selected.email} themeColor={themeColor} />
             )}
           </>
+        )}
+
+        {/* ── Pay Remaining Fees modal (Accounts) ── */}
+        {payModal && (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:10000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+            onClick={closePayModal}>
+            <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:440, padding:24, boxShadow:'0 8px 40px rgba(0,0,0,0.25)' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                <h3 style={{ color:'#009688', margin:0, fontSize:17 }}>💰 Pay Remaining Fees</h3>
+                <button onClick={closePayModal} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#555' }}>✕</button>
+              </div>
+              <p style={{ fontSize:13, color:'#666', margin:'0 0 14px' }}>{selected.applicantName} — {selected.courseType} · <strong>{payModal.year}</strong></p>
+
+              <div style={{ background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'12px 14px', marginBottom:16, fontSize:13 }}>
+                {[
+                  ['Total Fees', `₹${(payModal.total||0).toLocaleString('en-IN')}`],
+                  ['Scholarship', `− ₹${(payModal.schol||0).toLocaleString('en-IN')}`],
+                  ['Net Payable', `₹${(payModal.netPay||0).toLocaleString('en-IN')}`],
+                  ['Already Paid', `₹${(payModal.paid||0).toLocaleString('en-IN')}`],
+                ].map(([l,v]) => (
+                  <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', color:'#555' }}>
+                    <span>{l}</span><span style={{ fontWeight:600 }}>{v}</span>
+                  </div>
+                ))}
+                <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 0 0', marginTop:6, borderTop:'1px dashed #cfd8e3', fontWeight:800 }}>
+                  <span style={{ color:'#C62828' }}>Balance Due</span>
+                  <span style={{ color:'#C62828' }}>₹{(payModal.balance||0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Amount Collected (₹) *</label>
+              <input type="number" min="0" value={payAmt} onChange={e => setPayAmt(e.target.value)}
+                style={{ width:'100%', padding:'12px 14px', borderRadius:10, border:'2px solid #009688', fontSize:18, fontWeight:700, textAlign:'center', boxSizing:'border-box', marginBottom:14 }} />
+
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Payment Mode *</label>
+              <div style={{ display:'flex', gap:10, marginBottom:14 }}>
+                {[{k:'cash',l:'💵 Cash'},{k:'online',l:'🌐 Online / UPI'}].map(m => (
+                  <button key={m.k} onClick={() => setPayMode(m.k)}
+                    style={{ flex:1, padding:'10px', borderRadius:9, border:`2px solid ${payMode===m.k?'#009688':'#ddd'}`, background:payMode===m.k?'#009688':'#fff', color:payMode===m.k?'#fff':'#555', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+                    {m.l}
+                  </button>
+                ))}
+              </div>
+
+              {payMode === 'online' && (
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Transaction ID *</label>
+                  <input type="text" placeholder="UPI / Txn Reference" value={payTxn} onChange={e => setPayTxn(e.target.value)}
+                    style={{ width:'100%', padding:'10px 14px', borderRadius:9, border:'2px solid #009688', fontSize:14, boxSizing:'border-box' }} />
+                </div>
+              )}
+
+              {payMsg && <div style={{ padding:'9px 12px', borderRadius:8, marginBottom:12, fontSize:13, background:'#ffebee', color:'#C62828', fontWeight:600 }}>{payMsg}</div>}
+
+              <button onClick={handlePayRemaining} disabled={paySaving}
+                style={{ width:'100%', background: paySaving ? '#aaa' : '#009688', color:'#fff', border:'none', borderRadius:10, padding:14, fontSize:15, fontWeight:700, cursor: paySaving ? 'not-allowed' : 'pointer' }}>
+                {paySaving ? '⏳ Processing...' : '🖨️ Collect & Print Receipt'}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     );
