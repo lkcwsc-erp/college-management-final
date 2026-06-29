@@ -2793,6 +2793,9 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const [history, setHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('lkcwsc_walkin_history') || '[]'); } catch { return []; }
   });
+  const [histSearch, setHistSearch] = useState('');
+  const [histCourse, setHistCourse] = useState('all');
+  const [histYear, setHistYear]     = useState('all');
 
   // Fee Type options are the DOCUMENT fees (Bonafide, Marksheet, Migration, TC, etc.)
   // from the document fee structure — amounts auto-fill from the approved doc fee list.
@@ -2982,13 +2985,57 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
     w.document.write(html); w.document.close();
   };
 
-  const totalCollected = history.reduce((s,r) => s + (r.amount||0), 0);
+  const filteredHistory = history.filter(r => {
+    const q = histSearch.toLowerCase().trim();
+    if (q) {
+      const hay = `${r.studentName||''} ${r.prnNo||''} ${r.rollNo||''} ${r.phone||''} ${r.receiptNo||''} ${r.feeTypeLabel||''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (histCourse !== 'all' && normCourse(r.course) !== histCourse) return false;
+    if (histYear !== 'all' && (r.admissionYear||'') !== histYear) return false;
+    return true;
+  });
+  const totalCollected = filteredHistory.reduce((s,r) => s + (r.amount||0), 0);
+
+  const downloadWalkinXLSX = () => {
+    if (!filteredHistory.length) { showToast?.('❌ No receipts to export'); return; }
+    const rows = filteredHistory.map(r => {
+      const d = r.paidAt ? new Date(r.paidAt) : null;
+      return {
+        'Date':          d ? d.toLocaleDateString('en-IN') : '',
+        'Time':          d ? d.toLocaleTimeString('en-IN') : '',
+        'Receipt No':    r.receiptNo || '',
+        'Student Name':  r.studentName || '',
+        'PRN No':        r.prnNo || '',
+        'Roll No':       r.rollNo || '',
+        'Phone':         r.phone || '',
+        'Course':        r.course || '',
+        'Year':          r.admissionYear || '',
+        'Fee Details':   r.feeTypeLabel || '',
+        'Amount (₹)':    r.amount || 0,
+        'Payment Mode':  r.paymentMode === 'online' ? 'Online' : 'Cash',
+        'Transaction ID': r.transactionId || '',
+        'Collected By':  r.collectedBy || '',
+      };
+    });
+    rows.push({
+      'Date':'', 'Time':'', 'Receipt No':'', 'Student Name':'', 'PRN No':'', 'Roll No':'', 'Phone':'',
+      'Course':'', 'Year':'', 'Fee Details':'TOTAL', 'Amount (₹)':totalCollected, 'Payment Mode':'', 'Transaction ID':'', 'Collected By':'',
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:12},{wch:10},{wch:14},{wch:22},{wch:16},{wch:10},{wch:12},{wch:10},{wch:10},{wch:26},{wch:12},{wch:12},{wch:18},{wch:16}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Old Student Fees');
+    XLSX.writeFile(wb, `old-student-fees-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast?.('✅ Excel file downloaded');
+  };
+
   const walkinLineItems = calcLineItems(form);
   const totalAmount = walkinLineItems.reduce((s, i) => s + i.amount, 0);
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:580, maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.25)', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth: view==='history' ? 900 : 580, maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.25)', display:'flex', flexDirection:'column' }}>
 
         <div style={{ padding:'18px 24px', borderBottom:'1px solid #f0f4f8', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
           <div style={{ display:'flex', gap:8 }}>
@@ -3200,13 +3247,49 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
 
           {view==='history' && (
             <div>
-              <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap' }}>
-                <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:12, padding:'12px 18px', fontWeight:700, fontSize:15 }}>
-                  💰 Total Collected: ₹{fmt(totalCollected)}
+              <div style={{ display:'flex', gap:12, marginBottom:14, flexWrap:'wrap', alignItems:'center' }}>
+                <div style={{ background:'#e8f5e9', color:'#2E7D32', borderRadius:12, padding:'10px 18px', fontWeight:700, fontSize:15 }}>
+                  💰 Total: ₹{fmt(totalCollected)}
                 </div>
-                <div style={{ background:'#e3f2fd', color:'#1565C0', borderRadius:12, padding:'12px 18px', fontWeight:700, fontSize:15 }}>
-                  🧾 Receipts: {history.length}
+                <div style={{ background:'#e3f2fd', color:'#1565C0', borderRadius:12, padding:'10px 18px', fontWeight:700, fontSize:15 }}>
+                  🧾 Receipts: {filteredHistory.length}{filteredHistory.length !== history.length ? ` / ${history.length}` : ''}
                 </div>
+                <button onClick={downloadWalkinXLSX}
+                  style={{ marginLeft:'auto', background:'#1b7a3d', color:'#fff', border:'none', borderRadius:10, padding:'10px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                  ⬇️ Excel (.xlsx)
+                </button>
+              </div>
+
+              {/* Filters: search (PRN/Roll/Name) + Course + Year */}
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-end', marginBottom:16, background:'#f7f9fc', border:'1px solid #e0e7ef', borderRadius:12, padding:12 }}>
+                <div style={{ flex:'1 1 220px' }}>
+                  <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#555', marginBottom:4 }}>🔍 Search</label>
+                  <input type="text" placeholder="PRN / Roll No / Name" value={histSearch} onChange={e=>setHistSearch(e.target.value)}
+                    style={{ width:'100%', padding:'9px 10px', borderRadius:8, border:'1px solid #ddd', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#555', marginBottom:4 }}>Course</label>
+                  <select value={histCourse} onChange={e=>setHistCourse(e.target.value)}
+                    style={{ padding:'9px 10px', borderRadius:8, border:'1px solid #ddd', background:'#fff', cursor:'pointer' }}>
+                    <option value="all">All Courses</option>
+                    <option value="B.A.">B.A.</option>
+                    <option value="B.Sc.">B.Sc.</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#555', marginBottom:4 }}>Year</label>
+                  <select value={histYear} onChange={e=>setHistYear(e.target.value)}
+                    style={{ padding:'9px 10px', borderRadius:8, border:'1px solid #ddd', background:'#fff', cursor:'pointer' }}>
+                    <option value="all">All Years</option>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                  </select>
+                </div>
+                {(histSearch || histCourse !== 'all' || histYear !== 'all') && (
+                  <button onClick={()=>{ setHistSearch(''); setHistCourse('all'); setHistYear('all'); }}
+                    style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'9px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>✕ Clear</button>
+                )}
               </div>
 
               {history.length === 0 ? (
@@ -3214,10 +3297,15 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                   <div style={{ fontSize:40 }}>🧾</div>
                   <p>No walk-in receipts yet</p>
                 </div>
+              ) : filteredHistory.length === 0 ? (
+                <div style={{ textAlign:'center', padding:40, color:'#aaa' }}>
+                  <div style={{ fontSize:40 }}>🔍</div>
+                  <p>No receipts match the filters</p>
+                </div>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  {history.map((r, idx) => (
-                    <div key={idx} style={{ background:'#fafbff', border:'1px solid #e0e7ef', borderRadius:12, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+                  {filteredHistory.map((r, idx) => (
+                    <div key={(r.receiptNo||'')+idx} style={{ background:'#fafbff', border:'1px solid #e0e7ef', borderRadius:12, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
                       <div style={{ flex:1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
                           <span style={{ fontWeight:700, fontSize:14, color:'#1a1a2e' }}>{r.studentName}</span>
