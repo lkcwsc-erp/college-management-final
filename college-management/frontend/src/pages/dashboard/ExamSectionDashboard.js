@@ -323,12 +323,15 @@ const ExamDocTab = ({ type, title, desc, color }) => {
 
       {/* Action Modal */}
       {selected && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: 20, maxWidth: 420, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ color, marginBottom: 12, fontSize: 17 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 20, maxWidth: 420, width: '100%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color, margin: '0 0 12px', fontSize: 17, flexShrink: 0 }}>
               {type === 'TC' ? '📄 Verify Result for TC' : '📋 Process Marksheet Request'}
             </h3>
-            <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
+
+            {/* Scrollable content */}
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: 4 }}>
+            <div style={{ background: '#f8faff', borderRadius: 10, padding: 12, marginBottom: 14, fontSize: 12.5 }}>
              {[
                 ['Student', selected.studentName],
                 ['PRN', selected.prnNumber || '—'],
@@ -353,7 +356,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
                 ['Urgency', selected.urgency === 'urgent' ? '⚡ Urgent' : 'Normal'],
                 ['Reason', selected.reason || '—'],
               ].map(([l, v]) => (
-                <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
+                <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid #f0f0f0' }}>
                   <span style={{ color: '#888', fontWeight: 600 }}>{l}</span>
                   <span style={{ color: '#222' }}>{v}</span>
                 </div>
@@ -362,10 +365,10 @@ const ExamDocTab = ({ type, title, desc, color }) => {
             </div>
 
             {type === 'TC' && (
-              <div className="form-group" style={{ marginBottom: 14 }}>
+              <div className="form-group" style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontWeight: 700, color, marginBottom: 6, fontSize: 13 }}>Student Result Status *</label>
                 <select value={resultStatus} onChange={e => setResultStatus(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `2px solid ${color}55`, fontSize: 14 }}>
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: `2px solid ${color}55`, fontSize: 14 }}>
                   <option value="pass">✅ Pass — All subjects cleared</option>
                   <option value="atkt">⚠️ ATKT — Some subjects pending</option>
                   <option value="fail">❌ Fail — All subjects failed</option>
@@ -374,28 +377,33 @@ const ExamDocTab = ({ type, title, desc, color }) => {
               </div>
             )}
 
-            <div className="form-group" style={{ marginBottom: 16 }}>
+            <div className="form-group" style={{ marginBottom: 4 }}>
               <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: 6, fontSize: 13 }}>Notes (optional)</label>
               <textarea rows="2" placeholder="Add any notes..." value={notes} onChange={e => setNotes(e.target.value)}
                 style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
             </div>
+            </div>
+            {/* End scrollable content */}
 
-            {msg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: '#ffebee', color: '#C62828' }}>{msg}</div>}
+            {/* Pinned footer (always visible) */}
+            <div style={{ flexShrink: 0, paddingTop: 12 }}>
+              {msg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 10, fontSize: 13, background: '#ffebee', color: '#C62828' }}>{msg}</div>}
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={handleApprove} disabled={saving}
-                style={{ flex: 1, background: saving ? '#aaa' : color, color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                {saving ? '⏳...' : type === 'TC' ? '✅ Verify & Forward to Principal' : '✅ Issue Marksheet to Student'}
-              </button>
-              <button onClick={handleReject} disabled={saving}
-                style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '12px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                ❌ Reject
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={handleApprove} disabled={saving}
+                  style={{ flex: 1, background: saving ? '#aaa' : color, color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  {saving ? '⏳...' : type === 'TC' ? '✅ Verify & Forward to Principal' : '✅ Issue Marksheet to Student'}
+                </button>
+                <button onClick={handleReject} disabled={saving}
+                  style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '12px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                  ❌ Reject
+                </button>
+              </div>
+              <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }}
+                style={{ width: '100%', marginTop: 10, background: '#f3f4f6', color: '#555', border: 'none', borderRadius: 8, padding: 10, fontSize: 14, cursor: 'pointer' }}>
+                Cancel
               </button>
             </div>
-            <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }}
-              style={{ width: '100%', marginTop: 10, background: '#f3f4f6', color: '#555', border: 'none', borderRadius: 8, padding: 10, fontSize: 14, cursor: 'pointer' }}>
-              Cancel
-            </button>
           </div>
         </div>
       )}
