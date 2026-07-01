@@ -2728,9 +2728,6 @@ const ExpenseTracker = ({ user }) => {
    WALK-IN / OLD STUDENT FEE MODAL
 ═══════════════════════════════════════════════════════════ */
 const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
-  const docFeeKeys = Object.keys(docFees);
-  const firstDocKey = docFeeKeys[0] || '';
-
   // ── Course (tuition) fee heads from the itemized DETAILED_FEES structure ──
   // A "Year" covers two semesters; index offset 0/2/4 for 1st/2nd/3rd Year.
   const courseFeeOptions = (course, year) => {
@@ -2741,29 +2738,18 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
       .map(it => ({ id: it.id, name: it.name, section: it.section, amount: (it.s[off] || 0) + (it.s[off + 1] || 0) }))
       .filter(o => o.amount > 0);
   };
-  const courseFeeAmountFor = (course, year, headId) => {
-    const opts = courseFeeOptions(course, year);
-    if (headId === 'ALL') return opts.reduce((s, o) => s + o.amount, 0) || '';
-    return opts.find(o => o.id === headId)?.amount ?? '';
-  };
-  const courseFeeHeadName = (course, year, headId) =>
-    headId === 'ALL' ? `Course Fee — ${course} ${year}`
-      : `${courseFeeOptions(course, year).find(o => o.id === headId)?.name || 'Course Fee'} — ${course} ${year}`;
 
   const EMPTY_FORM = {
     studentName:'', phone:'', prnNo:'', rollNo:'',
     course:'B.A.', year:'2nd Year',
-    // Fee Type — Course Fee and/or Document Fee can both be selected
-    courseFeeOn: true,
-    courseFeeHead: 'ALL',
-    courseFeeAmount: courseFeeAmountFor('B.A.', '2nd Year', 'ALL'),
-    docFeeOn: false,
-    docFeeType: firstDocKey,
-    docFeeAmount: docFees[firstDocKey]?.price ?? '',
+    docMode: false,          // false = Academic Fee tab, true = Document Fees tab
+    selectedHeads: {},       // { headId: true } — selected academic (course) fee heads
+    selectedDocs: {},        // { docKey: true } — selected document fees
     // Other Fee — free-form description + amount
     otherFeeOn: false,
     otherFeeDesc: '',
     otherFeeAmount: '',
+    amountCollected: '',     // editable; auto-fills from selected items
     payMode:'cash', txnId:'', notes:'',
   };
   const [view, setView]       = useState('form');
@@ -2778,29 +2764,41 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const [histCourse, setHistCourse] = useState('all');
   const [histYear, setHistYear]     = useState('all');
 
-  // Fee Type options are the DOCUMENT fees (Bonafide, Marksheet, Migration, TC, etc.)
-  // from the document fee structure — amounts auto-fill from the approved doc fee list.
-  const feeOpts = Object.entries(docFees).map(([key, val]) => ({ key, label: val.label, amount: val.price }));
-
   const inp = { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' };
   const fmt = n => Number(n||0).toLocaleString('en-IN');
 
-  // Build the selected fee line items (Course Fee and/or Document Fee)
+  // Build the selected fee line items (Academic heads + Document fees + Other)
   const calcLineItems = (f) => {
     const items = [];
-    if (f.courseFeeOn) {
-      items.push({ label: courseFeeHeadName(f.course, f.year, f.courseFeeHead), amount: Number(f.courseFeeAmount || 0) });
-    }
-    if (f.docFeeOn) {
-      const lbl = docFees[f.docFeeType]?.label || feeOpts.find(o => o.key === f.docFeeType)?.label || 'Document Fee';
-      items.push({ label: lbl, amount: Number(f.docFeeAmount || 0) });
-    }
+    courseFeeOptions(f.course, f.year)
+      .filter(o => f.selectedHeads?.[o.id])
+      .forEach(o => items.push({ label: `${o.name} — ${f.course} ${f.year}`, amount: o.amount }));
+    Object.entries(f.selectedDocs || {}).filter(([, v]) => v).forEach(([k]) => {
+      const d = docFees[k];
+      if (d) items.push({ label: d.label, amount: Number(d.price) || 0 });
+    });
     if (f.otherFeeOn) {
       const lbl = (f.otherFeeDesc || '').trim() || 'Other Fee';
       items.push({ label: lbl, amount: Number(f.otherFeeAmount || 0) });
     }
     return items;
   };
+
+  const sumItems = (f) => calcLineItems(f).reduce((s, i) => s + i.amount, 0);
+
+  // Update the form and auto-refresh the suggested "Amount Collected"
+  const applyForm = (updater) => setForm(p => {
+    const next = typeof updater === 'function' ? updater(p) : { ...p, ...updater };
+    return { ...next, amountCollected: String(sumItems(next) || '') };
+  });
+
+  const toggleHead = (id) => applyForm(p => ({ ...p, selectedHeads: { ...p.selectedHeads, [id]: !p.selectedHeads?.[id] } }));
+  const selectAllHeads = () => applyForm(p => {
+    const all = {}; courseFeeOptions(p.course, p.year).forEach(o => { all[o.id] = true; });
+    return { ...p, selectedHeads: all };
+  });
+  const clearHeads = () => applyForm(p => ({ ...p, selectedHeads: {} }));
+  const toggleDoc = (key) => applyForm(p => ({ ...p, selectedDocs: { ...p.selectedDocs, [key]: !p.selectedDocs?.[key] } }));
 
   const saveToHistory = (rec) => {
     const updated = [rec, ...history].slice(0, 200);
@@ -2810,18 +2808,21 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
 
   const handleCollect = async () => {
     if (!form.studentName.trim()) { setMsg('❌ Student name required'); return; }
-    if (!form.courseFeeOn && !form.docFeeOn && !form.otherFeeOn) { setMsg('❌ Select at least one Fee Type (Course / Document / Other)'); return; }
-    if (form.otherFeeOn && !(form.otherFeeDesc || '').trim()) { setMsg('❌ Enter a description for Other Fee'); return; }
     const items = calcLineItems(form);
-    const total = items.reduce((s, i) => s + i.amount, 0);
+    const academicSel = courseFeeOptions(form.course, form.year).some(o => form.selectedHeads?.[o.id]);
+    const docSel = Object.values(form.selectedDocs || {}).some(Boolean);
+    if (!academicSel && !docSel && !form.otherFeeOn) { setMsg('❌ Select at least one fee item (Academic / Document / Other)'); return; }
+    if (form.otherFeeOn && !(form.otherFeeDesc || '').trim()) { setMsg('❌ Enter a description for Other Fee'); return; }
+    const total = Number(form.amountCollected || 0) || items.reduce((s, i) => s + i.amount, 0);
     if (!total || total <= 0) { setMsg('❌ Enter a valid amount'); return; }
     if (form.payMode === 'online' && !form.txnId.trim()) { setMsg('❌ Transaction ID required for online payment'); return; }
     setSaving(true); setMsg('');
     const receiptNo = 'OS' + Date.now().toString().slice(-6);
-    const onCount = [form.courseFeeOn, form.docFeeOn, form.otherFeeOn].filter(Boolean).length;
+    const onCount = [academicSel, docSel, form.otherFeeOn].filter(Boolean).length;
+    const firstDoc = Object.entries(form.selectedDocs || {}).find(([, v]) => v)?.[0];
     const feeType = onCount > 1 ? 'mixed'
-      : form.courseFeeOn ? 'course'
-      : form.docFeeOn ? form.docFeeType
+      : academicSel ? 'course'
+      : docSel ? (firstDoc || 'document')
       : 'other';
     const rec = {
       studentName:  form.studentName,
@@ -3011,8 +3012,14 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
     showToast?.('✅ Excel file downloaded');
   };
 
-  const walkinLineItems = calcLineItems(form);
-  const totalAmount = walkinLineItems.reduce((s, i) => s + i.amount, 0);
+  // Academic (course) fee heads for the currently selected course + year
+  const acadItems   = courseFeeOptions(form.course, form.year);
+  const acadUniv    = acadItems.filter(o => o.section === 'University');
+  const acadCollege = acadItems.filter(o => o.section !== 'University');
+  const acadYearTotal   = acadItems.reduce((s, o) => s + o.amount, 0);
+  const acadSelectedSum = acadItems.filter(o => form.selectedHeads?.[o.id]).reduce((s, o) => s + o.amount, 0);
+  const docFeeEntries   = Object.entries(docFees);
+  const docSelectedSum  = docFeeEntries.filter(([k]) => form.selectedDocs?.[k]).reduce((s, [, v]) => s + (Number(v.price) || 0), 0);
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
@@ -3078,148 +3085,225 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                   </div>
                 </div>
               ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                  <div>
-                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Student Name *</label>
-                    <input style={inp} placeholder="e.g. Priya Santosh Sharma" value={form.studentName} onChange={e=>setForm(p=>({...p,studentName:e.target.value}))} />
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Phone No.</label>
-                      <input style={inp} placeholder="9876543210" maxLength={10} value={form.phone}
-                        onChange={e=>{ if(/^\d{0,10}$/.test(e.target.value)) setForm(p=>({...p,phone:e.target.value})); }} />
-                    </div>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>PRN No.</label>
-                      <input style={inp} placeholder="e.g. 2200123456" value={form.prnNo} onChange={e=>setForm(p=>({...p,prnNo:e.target.value}))} />
-                    </div>
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Roll No.</label>
-                      <input style={inp} placeholder="e.g. 101" value={form.rollNo} onChange={e=>setForm(p=>({...p,rollNo:e.target.value}))} />
-                    </div>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
-                      <select style={inp} value={form.course}
-                        onChange={e=>setForm(p=>({...p, course:e.target.value, courseFeeAmount: courseFeeAmountFor(e.target.value, p.year, p.courseFeeHead) }))}>
-                        <option value="B.A.">B.A.</option>
-                        <option value="B.Sc.">B.Sc.</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
-                      <select style={inp} value={form.year}
-                        onChange={e=>setForm(p=>({...p, year:e.target.value, courseFeeAmount: courseFeeAmountFor(p.course, e.target.value, p.courseFeeHead) }))}>
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="Course completed">Course completed</option>
-                      </select>
-                    </div>
-                  </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
-                  {/* ── Fee Type — Course Fee + Document Fee (select one or both) ── */}
-                  <div style={{ border:'1px solid #ffe0b2', background:'#fff8f0', borderRadius:10, padding:'12px 14px' }}>
-                    <div style={{ fontSize:12, fontWeight:800, color:'#E65100', marginBottom:10 }}>
-                      Fee Type * <span style={{ fontWeight:600, color:'#999' }}>(Course Fee, Document Fee — ya dono select karein)</span>
+                  {/* ── Old Student starting details (editable) ── */}
+                  <div style={{ border:'1px solid #ffe0b2', background:'#fff8f0', borderRadius:12, padding:'14px 16px' }}>
+                    <div style={{ fontSize:12, fontWeight:800, color:'#E65100', marginBottom:10 }}>🧑‍🎓 Old Student Details</div>
+                    <div style={{ marginBottom:12 }}>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Student Name *</label>
+                      <input style={inp} placeholder="e.g. Priya Santosh Sharma" value={form.studentName} onChange={e=>setForm(p=>({...p,studentName:e.target.value}))} />
                     </div>
-
-                    {/* Course Fee */}
-                    <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr', gap:12, alignItems:'center' }}>
-                      <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'#333', cursor:'pointer' }}>
-                        <input type="checkbox" checked={form.courseFeeOn}
-                          onChange={e=>setForm(p=>({...p, courseFeeOn:e.target.checked,
-                            courseFeeAmount: e.target.checked ? courseFeeAmountFor(p.course, p.year, p.courseFeeHead) : p.courseFeeAmount }))} />
-                        📚 Course Fee (Tuition)
-                      </label>
-                      <input type="number" min="0" disabled={!form.courseFeeOn}
-                        style={{ ...inp, fontSize:15, fontWeight:800, textAlign:'right', opacity: form.courseFeeOn?1:0.4 }}
-                        placeholder="0" value={form.courseFeeOn ? form.courseFeeAmount : ''}
-                        onChange={e=>setForm(p=>({...p, courseFeeAmount:e.target.value}))} />
-                    </div>
-                    {form.courseFeeOn && (
-                      <>
-                        <div style={{ marginTop:8 }}>
-                          <select style={inp} value={form.courseFeeHead}
-                            onChange={e=>setForm(p=>({...p, courseFeeHead:e.target.value, courseFeeAmount: courseFeeAmountFor(p.course, p.year, e.target.value) }))}>
-                            <option value="ALL">💯 Full Year Fee — All heads (₹{fmt(courseFeeAmountFor(form.course, form.year, 'ALL'))})</option>
-                            {courseFeeOptions(form.course, form.year).map(o => (
-                              <option key={o.id} value={o.id}>{o.section==='University'?'🎓':'🏛️'} {o.name} — ₹{fmt(o.amount)}</option>
-                            ))}
-                            {courseFeeOptions(form.course, form.year).length === 0 && <option value="ALL">No structured fees for this year</option>}
-                          </select>
-                        </div>
-                        <div style={{ fontSize:11, color:'#E65100', margin:'4px 0 10px' }}>💡 {form.course} · {form.year} — fee structure se auto-filled (editable)</div>
-                      </>
-                    )}
-
-                    {/* Document Fee */}
-                    <div style={{ display:'grid', gridTemplateColumns:'auto 1.4fr 1fr', gap:10, alignItems:'center', marginTop: form.courseFeeOn ? 0 : 8 }}>
-                      <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'#333', cursor:'pointer', whiteSpace:'nowrap' }}>
-                        <input type="checkbox" checked={form.docFeeOn}
-                          onChange={e=>setForm(p=>({...p, docFeeOn:e.target.checked,
-                            docFeeAmount: e.target.checked ? (docFees[p.docFeeType]?.price ?? '') : p.docFeeAmount }))} />
-                        📄 Document Fee
-                      </label>
-                      <select style={{ ...inp, opacity: form.docFeeOn?1:0.4 }} disabled={!form.docFeeOn}
-                        value={form.docFeeType}
-                        onChange={e=>setForm(p=>({...p, docFeeType:e.target.value, docFeeAmount: docFees[e.target.value]?.price ?? '' }))}>
-                        {feeOpts.length === 0 && <option value="">No document fees configured</option>}
-                        {feeOpts.map(f=><option key={f.key} value={f.key}>{f.label}{(f.amount!=='' && f.amount!=null) ? ` — ₹${fmt(f.amount)}` : ''}</option>)}
-                      </select>
-                      <input type="number" min="0" disabled={!form.docFeeOn}
-                        style={{ ...inp, fontSize:15, fontWeight:800, textAlign:'right', opacity: form.docFeeOn?1:0.4 }}
-                        placeholder="0" value={form.docFeeOn ? form.docFeeAmount : ''}
-                        onChange={e=>setForm(p=>({...p, docFeeAmount:e.target.value}))} />
-                    </div>
-
-                    {/* Other Fee — free-form description + amount */}
-                    <div style={{ display:'grid', gridTemplateColumns:'auto 1.4fr 1fr', gap:10, alignItems:'center', marginTop:10, paddingTop:10, borderTop:'1px dashed #ffcc80' }}>
-                      <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'#333', cursor:'pointer', whiteSpace:'nowrap' }}>
-                        <input type="checkbox" checked={form.otherFeeOn}
-                          onChange={e=>setForm(p=>({...p, otherFeeOn:e.target.checked }))} />
-                        ➕ Other Fee
-                      </label>
-                      <input type="text" disabled={!form.otherFeeOn}
-                        style={{ ...inp, opacity: form.otherFeeOn?1:0.4 }}
-                        placeholder="Description (e.g. Late Fee, Sports, Misc.)"
-                        value={form.otherFeeOn ? form.otherFeeDesc : ''}
-                        onChange={e=>setForm(p=>({...p, otherFeeDesc:e.target.value}))} />
-                      <input type="number" min="0" disabled={!form.otherFeeOn}
-                        style={{ ...inp, fontSize:15, fontWeight:800, textAlign:'right', opacity: form.otherFeeOn?1:0.4 }}
-                        placeholder="0" value={form.otherFeeOn ? form.otherFeeAmount : ''}
-                        onChange={e=>setForm(p=>({...p, otherFeeAmount:e.target.value}))} />
-                    </div>
-
-                    {/* Total */}
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:12, paddingTop:10, borderTop:'1px dashed #ffcc80' }}>
-                      <span style={{ fontSize:13, fontWeight:700, color:'#555' }}>Total Amount</span>
-                      <span style={{ fontSize:20, fontWeight:900, color:'#2E7D32' }}>₹{fmt(totalAmount)}</span>
-                    </div>
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                    <div>
-                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Payment Mode</label>
-                      <select style={inp} value={form.payMode} onChange={e=>setForm(p=>({...p,payMode:e.target.value}))}>
-                        <option value="cash">💵 Cash</option>
-                        <option value="online">🌐 Online / UPI</option>
-                      </select>
-                    </div>
-                    {form.payMode==='online' && (
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
                       <div>
-                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Txn ID / UTR *</label>
-                        <input style={inp} placeholder="Ref No." value={form.txnId} onChange={e=>setForm(p=>({...p,txnId:e.target.value}))} />
+                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Phone No.</label>
+                        <input style={inp} placeholder="9876543210" maxLength={10} value={form.phone}
+                          onChange={e=>{ if(/^\d{0,10}$/.test(e.target.value)) setForm(p=>({...p,phone:e.target.value})); }} />
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>PRN No.</label>
+                        <input style={inp} placeholder="e.g. 2200123456" value={form.prnNo} onChange={e=>setForm(p=>({...p,prnNo:e.target.value}))} />
+                      </div>
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+                      <div>
+                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Roll No.</label>
+                        <input style={inp} placeholder="e.g. 101" value={form.rollNo} onChange={e=>setForm(p=>({...p,rollNo:e.target.value}))} />
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Course</label>
+                        <select style={inp} value={form.course}
+                          onChange={e=>applyForm(p=>({...p, course:e.target.value, selectedHeads:{} }))}>
+                          <option value="B.A.">B.A.</option>
+                          <option value="B.Sc.">B.Sc.</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Year</label>
+                        <select style={inp} value={form.year}
+                          onChange={e=>applyForm(p=>({...p, year:e.target.value, selectedHeads:{} }))}>
+                          <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
+                          <option value="Course completed">Course completed</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Academic Fee / Document Fees tabs ── */}
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button
+                      style={{ flex:1, padding:'9px', borderRadius:8, border:`2px solid ${!form.docMode?'#1565C0':'#ddd'}`, background:!form.docMode?'#e3f2fd':'#fff', color:!form.docMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                      onClick={()=>setForm(p=>({...p, docMode:false}))}>
+                      🎓 Academic Fee
+                    </button>
+                    <button
+                      style={{ flex:1, padding:'9px', borderRadius:8, border:`2px solid ${form.docMode?'#1565C0':'#ddd'}`, background:form.docMode?'#e3f2fd':'#fff', color:form.docMode?'#1565C0':'#555', fontWeight:700, fontSize:13, cursor:'pointer' }}
+                      onClick={()=>setForm(p=>({...p, docMode:true}))}>
+                      📄 Document Fees
+                    </button>
+                  </div>
+
+                  <p style={{ color:'#666', fontSize:13, margin:0 }}>
+                    {form.studentName || '—'} — {form.course} · {form.year}{form.prnNo ? ` · PRN: ${form.prnNo}` : ''}
+                  </p>
+
+                  {/* ── ACADEMIC FEE TAB ── */}
+                  {!form.docMode && (
+                    <div>
+                      <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                        <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Academic Fee ({form.year})</span>
+                        <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{fmt(acadYearTotal)}</span>
+                      </div>
+
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                        <label style={{ fontSize:13, fontWeight:700, color:'#1565C0' }}>Select Fee Items</label>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <button onClick={selectAllHeads}
+                            style={{ padding:'5px 14px', background:'#1565C0', color:'#fff', border:'none', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☑ Select All</button>
+                          <button onClick={clearHeads}
+                            style={{ padding:'5px 14px', background:'#f5f5f5', color:'#555', border:'1px solid #ddd', borderRadius:7, fontWeight:700, fontSize:12, cursor:'pointer' }}>☐ Clear</button>
+                        </div>
+                      </div>
+
+                      {acadItems.length === 0 ? (
+                        <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ No structured fees for this course / year. Use “Other Fee” below or enter amount manually.</div>
+                      ) : (
+                        <div style={{ border:'1px solid #e0e7ef', borderRadius:10, overflow:'hidden', maxHeight:260, overflowY:'auto' }}>
+                          {acadUniv.length > 0 && (
+                            <>
+                              <div style={{ background:'#e8eaf6', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1a237e', letterSpacing:0.5 }}>UNIVERSITY FEES (A)</div>
+                              {acadUniv.map((o, idx) => (
+                                <div key={o.id} onClick={()=>toggleHead(o.id)}
+                                  style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:form.selectedHeads?.[o.id]?'#e8f4ff':idx%2===0?'#fafbff':'#fff', userSelect:'none' }}>
+                                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                                    <input type="checkbox" checked={!!form.selectedHeads?.[o.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
+                                    <span style={{ fontSize:13, color:'#333' }}>{o.name}</span>
+                                  </div>
+                                  <span style={{ fontSize:13, fontWeight:700, color:'#1565C0', flexShrink:0 }}>₹{fmt(o.amount)}</span>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                          {acadCollege.length > 0 && (
+                            <>
+                              <div style={{ background:'#e8f5e9', padding:'5px 14px', fontSize:11, fontWeight:800, color:'#1b5e20', letterSpacing:0.5 }}>COLLEGE FEES (B)</div>
+                              {acadCollege.map((o) => (
+                                <div key={o.id} onClick={()=>toggleHead(o.id)}
+                                  style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderBottom:'1px solid #f0f4f8', cursor:'pointer', background:form.selectedHeads?.[o.id]?'#f0fff4':'#fff', userSelect:'none' }}>
+                                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                                    <input type="checkbox" checked={!!form.selectedHeads?.[o.id]} readOnly style={{ width:15, height:15, cursor:'pointer' }}/>
+                                    <span style={{ fontSize:13, color:'#333' }}>{o.name}</span>
+                                  </div>
+                                  <span style={{ fontSize:13, fontWeight:700, color:'#2E7D32', flexShrink:0 }}>₹{fmt(o.amount)}</span>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {acadSelectedSum > 0 && (
+                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, fontWeight:800, marginTop:10, color:'#1565C0' }}>
+                          <span>Academic Selected</span>
+                          <span>₹{fmt(acadSelectedSum)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── DOCUMENT FEES TAB ── */}
+                  {form.docMode && (
+                    <div>
+                      <p style={{ fontSize:13, color:'#666', marginBottom:10 }}>Document fees select karo (multiple select ho sakte hain):</p>
+                      {docFeeEntries.length === 0 ? (
+                        <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ No document fees configured.</div>
+                      ) : (
+                        <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:260, overflowY:'auto', border:'1px solid #e0e7ef', borderRadius:10, padding:10 }}>
+                          {docFeeEntries.map(([key, val]) => {
+                            const on = !!form.selectedDocs?.[key];
+                            return (
+                              <div key={key} onClick={()=>toggleDoc(key)}
+                                style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', borderRadius:9, border:`2px solid ${on?'#1565C0':'#e0e7ef'}`, background:on?'#e3f2fd':'#fff', cursor:'pointer' }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                                  <input type="checkbox" checked={on} readOnly style={{ width:15, height:15 }}/>
+                                  <span style={{ fontSize:13, fontWeight:on?700:500, color:on?'#1565C0':'#333' }}>{val.label}</span>
+                                </div>
+                                <span style={{ fontSize:14, fontWeight:700, color:on?'#1565C0':'#888' }}>₹{fmt(val.price)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {docSelectedSum > 0 && (
+                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, fontWeight:800, marginTop:10, color:'#1565C0' }}>
+                          <span>Document Selected</span>
+                          <span>₹{fmt(docSelectedSum)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Other Fee ── */}
+                  <div style={{ border:'1px solid #ffe0b2', background:'#fff8f0', borderRadius:10, padding:'12px 14px' }}>
+                    <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:800, color:'#E65100', cursor:'pointer' }}>
+                      <input type="checkbox" checked={form.otherFeeOn}
+                        onChange={e=>applyForm(p=>({...p, otherFeeOn:e.target.checked }))} />
+                      ➕ Other Fee <span style={{ fontWeight:600, color:'#999' }}>(description + amount)</span>
+                    </label>
+                    {form.otherFeeOn && (
+                      <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr', gap:10, marginTop:10 }}>
+                        <input type="text" placeholder="Description (e.g. Late Fee, Sports, Misc.)"
+                          value={form.otherFeeDesc} onChange={e=>setForm(p=>({...p, otherFeeDesc:e.target.value}))}
+                          style={{ padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:13, boxSizing:'border-box' }} />
+                        <input type="number" min="0" placeholder="Amount ₹"
+                          value={form.otherFeeAmount} onChange={e=>applyForm(p=>({...p, otherFeeAmount:e.target.value}))}
+                          style={{ padding:'9px 12px', borderRadius:8, border:'1px solid #ddd', fontSize:15, fontWeight:800, textAlign:'right', boxSizing:'border-box' }} />
                       </div>
                     )}
                   </div>
+
+                  {/* ── Amount Collected ── */}
+                  <div>
+                    <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Amount Collected (₹) *</label>
+                    <input type="number" min="0" placeholder="Enter amount"
+                      value={form.amountCollected} onChange={e=>setForm(p=>({...p, amountCollected:e.target.value}))}
+                      style={{ width:'100%', padding:'13px 16px', borderRadius:10, border:'2px solid #1565C0', fontSize:18, fontWeight:700, textAlign:'center', boxSizing:'border-box', outline:'none' }} />
+                  </div>
+
+                  {/* ── Payment Mode ── */}
+                  <div>
+                    <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#333', marginBottom:8 }}>Payment Mode *</label>
+                    <div style={{ display:'flex', gap:10 }}>
+                      {[{k:'cash',l:'💵 Cash'},{k:'online',l:'🌐 Online / UPI'}].map(m => (
+                        <button key={m.k} onClick={()=>setForm(p=>({...p, payMode:m.k}))}
+                          style={{ flex:1, padding:'11px', borderRadius:9, border:`2px solid ${form.payMode===m.k?'#1565C0':'#ddd'}`, background:form.payMode===m.k?'#1565C0':'#fff', color:form.payMode===m.k?'#fff':'#555', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+                          {m.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {form.payMode==='online' && (
+                    <div>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>Txn ID / UTR *</label>
+                      <input style={inp} placeholder="Ref No." value={form.txnId} onChange={e=>setForm(p=>({...p,txnId:e.target.value}))} />
+                    </div>
+                  )}
+
                   <div>
                     <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Notes (optional)</label>
                     <input style={inp} placeholder="e.g. Exam fee for Sem IV backlog" value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} />
                   </div>
+
                   <button onClick={handleCollect} disabled={saving}
-                    style={{ background:'#E65100', color:'#fff', border:'none', borderRadius:9, padding:'13px', fontWeight:700, fontSize:15, cursor:saving?'not-allowed':'pointer', opacity:saving?0.7:1 }}>
-                    {saving ? '⏳ Processing...' : '💰 Collect Fee & Generate Receipt'}
+                    style={{ background: saving ? '#b0bec5' : '#1565C0', color:'#fff', border:'none', borderRadius:10, padding:'14px', fontWeight:700, fontSize:15, cursor:saving?'not-allowed':'pointer' }}>
+                    {saving ? '⏳ Processing...' : '🖨️ Collect & Print Receipt'}
+                  </button>
+                  <button onClick={onClose}
+                    style={{ background:'#f3f4f6', color:'#555', border:'none', borderRadius:10, padding:'12px', fontSize:14, cursor:'pointer' }}>
+                    Cancel
                   </button>
                 </div>
               )}
