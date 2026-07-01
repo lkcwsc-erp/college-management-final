@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import API from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 
@@ -208,6 +208,8 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [catFilter, setCatFilter]     = useState('all');
   const [academicYearFilter, setAcademicYearFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('current'); // 'current' | 'past' | 'all'
+  const [visibleCount, setVisibleCount] = useState(10); // infinite scroll: show 10, load 10 more on scroll
+  const loaderRef = useRef(null);
   const [selected, setSelected]       = useState(null);
   const [detailTab, setDetailTab]     = useState('overview');
   const [editMode, setEditMode]       = useState(false);
@@ -336,6 +338,25 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
 
   useEffect(() => { fetchAdmissions(); }, [fetchAdmissions]);
 
+  // ── Infinite scroll: reset to first 10 whenever filters/search change ──
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [search, yearFilter, academicYearFilter, catFilter, statusFilter, selected]);
+
+  // ── Infinite scroll: load next 10 when the loader sentinel comes into view ──
+  useEffect(() => {
+    if (selected) return; // list not rendered in detail view
+    const el = loaderRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount(c => c + 10);
+      }
+    }, { rootMargin: '150px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [selected, visibleCount, admissions.length, search, yearFilter, academicYearFilter, catFilter, statusFilter]);
+
   const handleScholSave = async () => {
     setScholSaving(true);
     try {
@@ -449,7 +470,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
     const TABS = [
       { id:'overview',  label:'👤 Overview' },
       { id:'academic',  label:'🎓 Academic' },
-      { id:'documents', label:'📎 Documents' },
+      { id:'documents', label:'📎 Documents', show: role !== 'exam' },
       { id:'fees',      label:'💰 Fees',       show: role === 'accounts' || role === 'student_section' || role === 'principal' },
       { id:'scholarship',label:'🏅 Scholarship', show: role === 'scholarship' || role === 'student_section' || role === 'principal' },
       { id:'exam_forms', label:'📝 Exam Forms',  show: role === 'exam' || role === 'accounts' || role === 'student_section' || role === 'principal' },
@@ -704,23 +725,8 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
             {/* ── TAB: Fees ─────────────────────────────── */}
             {detailTab === 'fees' && (
               <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                {/* Fee summary cards */}
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
-                  {[
-                    { label:'Total Fees',    value:`₹${Number(selected.totalFees||0).toLocaleString('en-IN')}`,            bg:'#e3f2fd', color:'#1565C0' },
-                    { label:'Scholarship',   value:`₹${Number(selected.scholarshipAmount||0).toLocaleString('en-IN')}`,    bg:'#f3e5f5', color:'#7B1FA2' },
-                    { label:'Net Payable',   value:`₹${Math.max(0,(selected.totalFees||0)-(selected.scholarshipAmount||0)).toLocaleString('en-IN')}`, bg:'#fff8e1', color:'#F57F17' },
-                    { label:'Paid',          value:`₹${Number(selected.feesPaid||0).toLocaleString('en-IN')}`,             bg:'#e8f5e9', color:'#2E7D32' },
-                  ].map(c => (
-                    <div key={c.label} style={{ background:c.bg, borderRadius:12, padding:'14px 16px', textAlign:'center' }}>
-                      <div style={{ fontSize:11, color:c.color, fontWeight:600, marginBottom:4 }}>{c.label}</div>
-                      <div style={{ fontSize:16, fontWeight:800, color:c.color }}>{c.value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ── Fee Structure Details (year-wise) + Pay Remaining Fees ── */}
-                {(() => {
+                {/* ── Fee Structure Details (year-wise) + Pay Remaining Fees — Accounts only ── */}
+                {role === 'accounts' && (() => {
                   const ck = svfCourseKey(selected.courseType);
                   const schol = selected.scholarshipAmount || 0;
                   const ledger = selected.feeLedger || [];
@@ -1054,7 +1060,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
               <span key={h} style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{h}</span>
             ))}
           </div>
-          {filteredAdmissions.map((s,idx) => {
+          {filteredAdmissions.slice(0, visibleCount).map((s,idx) => {
             const sc = schColor(s.scholarshipStatus);
             return (
               <div key={s._id} style={{ display:'grid', gridTemplateColumns:'1fr 1.8fr 1.5fr 0.7fr 1.2fr 0.9fr 0.9fr 0.6fr', padding:'10px 16px', gap:8, alignItems:'center', borderBottom:'1px solid #f0f4f8', background:s.tcIssued?'#fff8f8':idx%2===0?'#fafbff':'#fff' }}>
@@ -1079,6 +1085,11 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
               </div>
             );
           })}
+          {visibleCount < filteredAdmissions.length && (
+            <div ref={loaderRef} style={{ padding:'14px 16px', textAlign:'center', fontSize:12, color:'#888', background:'#fafbff' }}>
+              ⏳ Scroll for more… (showing {Math.min(visibleCount, filteredAdmissions.length)} of {filteredAdmissions.length})
+            </div>
+          )}
         </div>
       )}
     </div>
