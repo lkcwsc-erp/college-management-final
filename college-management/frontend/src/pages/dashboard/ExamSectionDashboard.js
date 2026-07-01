@@ -325,9 +325,15 @@ const ExamDocTab = ({ type, title, desc, color }) => {
       {selected && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto' }}>
           <div style={{ background: '#fff', borderRadius: 14, padding: 20, maxWidth: 420, width: '100%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ color, margin: '0 0 12px', fontSize: 17, flexShrink: 0 }}>
-              {type === 'TC' ? '📄 Verify Result for TC' : '📋 Process Marksheet Request'}
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, margin: '0 0 12px', flexShrink: 0 }}>
+              <h3 style={{ color, margin: 0, fontSize: 17 }}>
+                {type === 'TC' ? '📄 Verify Result for TC' : '📋 Process Marksheet Request'}
+              </h3>
+              <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }} title="Close" aria-label="Close"
+                style={{ background: '#f3f4f6', color: '#555', border: 'none', borderRadius: 8, width: 30, height: 30, lineHeight: '30px', fontSize: 18, fontWeight: 700, cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                ✕
+              </button>
+            </div>
 
             {/* Scrollable content */}
             <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: 4 }}>
