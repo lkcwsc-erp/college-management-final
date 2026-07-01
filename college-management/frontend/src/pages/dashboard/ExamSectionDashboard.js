@@ -324,8 +324,8 @@ const ExamDocTab = ({ type, title, desc, color }) => {
       {/* Action Modal */}
       {selected && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 520, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ color, marginBottom: 14 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 20, maxWidth: 420, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ color, marginBottom: 12, fontSize: 17 }}>
               {type === 'TC' ? '📄 Verify Result for TC' : '📋 Process Marksheet Request'}
             </h3>
             <div style={{ background: '#f8faff', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>
@@ -954,7 +954,7 @@ const ExamDataTab = () => {
 
   return (
     <div>
-      <h2 style={{ color:'#f57c00', marginBottom:4 }}>📊 Student Exam Data</h2>
+      <h2 style={{ color:'#f57c00', marginBottom:4 }}>📊 Student Result</h2>
       <p style={{ color:'#666', marginBottom:20, fontSize:14 }}>View and update student exam results. Click on a student to see all their exams.</p>
 
       <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
@@ -1447,7 +1447,7 @@ const ExamSectionDashboard = () => {
     { id: 'tc_verify',     label: '📄 TC Verification' },
     { id: 'marksheet',     label: '📋 Marksheet Requests' },
     { id: 'students',      label: '👩‍🎓 View Students' },
-    { id: 'exam_data',     label: '📊 Student Exam Data' },
+    { id: 'exam_data',     label: '📊 Student Result' },
   ];
 
   return (
