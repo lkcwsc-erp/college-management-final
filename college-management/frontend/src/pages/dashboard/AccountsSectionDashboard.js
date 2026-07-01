@@ -1541,7 +1541,7 @@ const AccountsSectionDashboard = () => {
     { id: 'fee_struct',    label: '💼 Fee Structure' },
     { id: 'expenses',      label: '🏗️ College Expenses' },
     { id: 'history',       label: '🧾 Payment History' },
-    { id: 'finance',       label: '📊 Finance Overview' },
+    { id: 'finance',       label: '📊 Payment Overview' },
     { id: 'all_students',  label: '👩‍🎓 All Students' },
   ];
 
@@ -1795,7 +1795,7 @@ const AccountsSectionDashboard = () => {
           {/* ════ FINANCE OVERVIEW ════ */}
           {activeTab === 'finance' && (
             <div>
-              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📊 Finance Overview</h2>
+              <h2 style={{ color: '#1565C0', marginBottom: 4 }}>📊 Payment Overview</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>Student-wise fee summary — paid, pending, and payment history.</p>
               <AccountsStudentFeeView themeColor="#1565C0" />
               <WalkinCollections themeColor="#E65100" />
@@ -2451,7 +2451,7 @@ const fmt2 = n => Number(n||0).toLocaleString('en-IN');
 const EMPTY_EXP = {
   description:'', amount:'', date: new Date().toISOString().split('T')[0],
   category:'other', paidTo:'', paymentMode:'Cash',
-  academicYear:'2025-26', remarks:'', billFile:null, billName:'',
+  academicYear:'2025-26', remarks:'', billInvoiceNo:'',
 };
 
 const ExpenseTracker = ({ user }) => {
@@ -2470,15 +2470,6 @@ const ExpenseTracker = ({ user }) => {
   const save = (updated) => {
     setExpenses(updated);
     localStorage.setItem('lkcwsc_expenses_v2', JSON.stringify(updated));
-  };
-
-  const handleBillUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 200*1024) { flash('❌ File size must be under 200KB'); return; }
-    const reader = new FileReader();
-    reader.onload = () => setForm(p => ({ ...p, billFile: reader.result, billName: file.name }));
-    reader.readAsDataURL(file);
   };
 
   const handleSave = () => {
@@ -2522,11 +2513,11 @@ const ExpenseTracker = ({ user }) => {
 
   const exportExcel = () => {
     const rows = [
-      ['Date','Description','Category','Amount','Payment Mode','Paid To','Academic Year','Remarks','Entered By'],
+      ['Date','Description','Category','Amount','Payment Mode','Paid To','Academic Year','Remarks','Bill/Invoice No','Entered By'],
       ...filtered.map(e => [
         e.date, e.description,
         EXPENSE_CATEGORIES.find(c=>c.value===e.category)?.label || e.category,
-        e.amount, e.paymentMode, e.paidTo, e.academicYear, e.remarks, e.enteredBy,
+        e.amount, e.paymentMode, e.paidTo, e.academicYear, e.remarks, e.billInvoiceNo, e.enteredBy,
       ])
     ];
     const csv = rows.map(r => r.map(v => `"${v||''}"`).join(',')).join('\n');
@@ -2621,25 +2612,16 @@ const ExpenseTracker = ({ user }) => {
               </select>
             </div>
 
-            <div style={{ gridColumn:'1/-1' }}>
+            <div>
               <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Remarks</label>
               <input style={inp} placeholder="Additional notes..." value={form.remarks}
                 onChange={e=>setForm(p=>({...p,remarks:e.target.value}))} />
             </div>
 
-            <div style={{ gridColumn:'1/-1' }}>
-              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>
-                📎 Bill / Invoice Upload (PDF/JPG/PNG — max 200KB)
-              </label>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleBillUpload}
-                style={{ ...inp, padding:'6px' }} />
-              {form.billName && (
-                <p style={{ fontSize:12, color:'#2E7D32', margin:'4px 0 0', fontWeight:600 }}>
-                  ✅ {form.billName}
-                  <button onClick={()=>setForm(p=>({...p,billFile:null,billName:''}))}
-                    style={{ marginLeft:8, background:'none', border:'none', color:'#C62828', cursor:'pointer', fontSize:12 }}>✕</button>
-                </p>
-              )}
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#555', marginBottom:5 }}>Bill / Invoice No</label>
+              <input style={inp} placeholder="e.g. INV-2025-001" value={form.billInvoiceNo}
+                onChange={e=>setForm(p=>({...p,billInvoiceNo:e.target.value}))} />
             </div>
 
           </div>
@@ -2715,11 +2697,10 @@ const ExpenseTracker = ({ user }) => {
                         {e.date} · By: {e.enteredBy}
                       </div>
                       {e.remarks && <div style={{ fontSize:12, color:'#888', fontStyle:'italic', marginTop:2 }}>📝 {e.remarks}</div>}
-                      {e.billFile && (
-                        <a href={e.billFile} download={e.billName}
-                          style={{ fontSize:12, color:'#1565C0', textDecoration:'underline', marginTop:2, display:'inline-block' }}>
-                          📎 {e.billName}
-                        </a>
+                      {e.billInvoiceNo && (
+                        <div style={{ fontSize:12, color:'#1565C0', marginTop:2, fontWeight:600 }}>
+                          🧾 Bill/Invoice No: {e.billInvoiceNo}
+                        </div>
                       )}
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>
