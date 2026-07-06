@@ -541,6 +541,17 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     showToast(`✅ ${name} fee structure ban gaya (${structYear} se copy)! Ab amounts edit kar sakte ho.`);
   };
 
+  // ── Delete an entire custom-year structure (base year cannot be deleted) ──
+  const deleteYearStructure = (yr) => {
+    if (yr === BASE_STRUCT_YEAR) { showToast('❌ Base year (2025-26) delete nahi ho sakta', 'error'); return; }
+    if (!window.confirm(`⚠️ "${yr}" ka poora fee structure delete karein?\n\nYe sirf structure (B.Sc./B.A. amounts) delete karega — students ke fee records / receipts safe rahenge. Lekin agar koi student is year ke structure se fees collect kar raha hai to base year amounts use honge.\n\nPakka delete karna hai?`)) return;
+    const all = { ...yearStructs };
+    delete all[yr];
+    saveYearStructuresLS(all); setYearStructs(all);
+    if (structYear === yr) setStructYear(BASE_STRUCT_YEAR);
+    showToast(`🗑️ ${yr} fee structure delete ho gaya`);
+  };
+
   const submitEdit = async (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
     // Custom year → save directly, no Principal/Admin approval needed
     if (!isBaseYear) { applyDirectYearEdit(itemId, newAmounts, newItemMeta, isDeletion); return; }
@@ -607,6 +618,12 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
             {showNewYear ? '✕ Cancel' : '➕ New Year Structure'}
           </button>
+          {!isBaseYear && (
+            <button onClick={() => deleteYearStructure(structYear)} title={`Delete ${structYear} structure`}
+              style={{ background:'#ffebee', color:'#C62828', border:'1px solid #ef9a9a', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              🗑️ Delete {structYear}
+            </button>
+          )}
           {isBaseYear && hasPending && (
             <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'8px 14px', fontSize:13, color:'#E65100', fontWeight:600 }}>
               ⏳ {Object.values(pendingForCourse).filter(p=>p.status==='pending').length} edit(s) pending approval
