@@ -233,6 +233,45 @@ const loadDocFees = () => {
 };
 const saveDocFees = (fees) => localStorage.setItem('lkcwsc_doc_fees', JSON.stringify(fees));
 
+// ─── Multi-year fee structures (2025-26 base + custom years e.g. 2026-27) ────
+// The SNDT 2025-26 structure above (DETAILED_FEES) is the BASE year. New academic
+// years can be created from the Fee Structure tab; they are stored per-year and
+// used everywhere (Collect Fees modal, Walk-in modal) via the year selector.
+const BASE_STRUCT_YEAR = '2025-26';
+
+// Current academic year from today's date (June onwards = new AY)
+const currentAcadYear = () => {
+  const d = new Date(); const y = d.getFullYear();
+  return (d.getMonth() + 1) >= 6 ? `${y}-${String(y + 1).slice(2)}` : `${y - 1}-${String(y).slice(2)}`;
+};
+
+// Previous academic year, e.g. '2026-27' → '2025-26'
+const prevAcadYear = (ay) => {
+  const start = Number((ay || '').slice(0, 4));
+  if (!start) return '';
+  return `${start - 1}-${String(start).slice(2)}`;
+};
+
+const loadYearStructures = () => {
+  try { return JSON.parse(localStorage.getItem('lkcwsc_year_structures') || '{}'); } catch { return {}; }
+};
+const saveYearStructuresLS = (s) => localStorage.setItem('lkcwsc_year_structures', JSON.stringify(s));
+
+// Structure for a given academic year. Base year → DETAILED_FEES; custom years
+// → saved structure; unknown year → falls back to the base so fee collection
+// never breaks even if that year's structure hasn't been created yet.
+const getStructureForYear = (ay) => {
+  if (!ay || ay === BASE_STRUCT_YEAR) return DETAILED_FEES;
+  const all = loadYearStructures();
+  return all[ay] || DETAILED_FEES;
+};
+
+// Options for every academic-year selector: base year + all custom years (sorted)
+const listStructYears = () => [
+  BASE_STRUCT_YEAR,
+  ...Object.keys(loadYearStructures()).filter(y => y !== BASE_STRUCT_YEAR).sort(),
+];
+
 // ─── Receipt printer (official format per LKCWSC document) ───────────────────
 const printReceipt = (data) => {
   const acadYear = data.academicYear || (() => { const y=new Date().getFullYear(); const m=new Date().getMonth()+1; return m>=6?`${y}-${String(y+1).slice(2)}`:`${y-1}-${String(y).slice(2)}`; })();
@@ -387,6 +426,11 @@ const F = ({ label, value }) => (
 // ─── Fee Structure Tab Component ─────────────────────────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [feeView, setFeeView]           = useState('bsc');
+  // Multi-year: which academic year's structure is being viewed/edited
+  const [structYear, setStructYear]     = useState(BASE_STRUCT_YEAR);
+  const [yearStructs, setYearStructs]   = useState(loadYearStructures);
+  const [showNewYear, setShowNewYear]   = useState(false);
+  const [newYearName, setNewYearName]   = useState('');
   const [editDocFees2, setEditDocFees2] = useState(false); // eslint-disable-line no-unused-vars
   const [docFeeEdits2, setDocFeeEdits2] = useState({}); // eslint-disable-line no-unused-vars
   const [customFees, setCustomFees]     = useState(() => {
@@ -412,18 +456,23 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   useEffect(() => { fetchFeeApprovals(); }, [fetchFeeApprovals]);
 
   const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
-  const course = DETAILED_FEES[courseKey];
+  const isBaseYear = structYear === BASE_STRUCT_YEAR;
+  const course = isBaseYear
+    ? DETAILED_FEES[courseKey]
+    : (yearStructs[structYear]?.[courseKey] || { label: `${DETAILED_FEES[courseKey].label} — ${structYear}`, items: [] });
   const customItems = customFees[courseKey] || [];
 
   // Reconcile with backend approvals (feeApprovals is sorted newest-first):
   //  - newest APPROVED edit per item → live override amount
   //  - newest APPROVED deletion per item → item removed from structure
   //  - newest edit/delete still in the pipeline → shows as "pending"
+  // NOTE: approvals apply only to the BASE year structure; custom-year
+  // structures are edited directly (they're that year's own master data).
   const approvedOverrides = {};      // itemId -> approved amounts (live)
   const approvedDeleted   = {};      // itemId -> true (approved deletion)
   const pendingForCourse  = {};      // itemId -> { amounts, status:'pending', isDelete }
   const seenNewest        = new Set();
-  feeApprovals.forEach(a => {
+  if (isBaseYear) feeApprovals.forEach(a => {
     if (a.courseKey !== courseKey) return;
     if (!seenNewest.has(a.itemId)) {
       seenNewest.add(a.itemId);
@@ -437,11 +486,13 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     }
   });
 
-  const allItems = course
-    ? [...course.items, ...customItems.filter(ci => !course.items.find(i => i.id === ci.id))]
-        .filter(it => !approvedDeleted[it.id])
-        .map(it => approvedOverrides[it.id] ? { ...it, s: approvedOverrides[it.id] } : it)
-    : [];
+  const allItems = isBaseYear
+    ? (course
+        ? [...course.items, ...customItems.filter(ci => !course.items.find(i => i.id === ci.id))]
+            .filter(it => !approvedDeleted[it.id])
+            .map(it => approvedOverrides[it.id] ? { ...it, s: approvedOverrides[it.id] } : it)
+        : [])
+    : (course?.items || []);
 
   const saveCustomFees = (cf) => {
     localStorage.setItem('lkcwsc_custom_fees', JSON.stringify(cf));
@@ -455,7 +506,44 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
+  // ── Custom-year structures: edits apply DIRECTLY (no approval pipeline) ──
+  // The custom year is its own master data entered by Accounts, so add /
+  // edit / delete save straight into localStorage for that year.
+  const applyDirectYearEdit = (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
+    const all = { ...yearStructs };
+    const yr  = all[structYear] ? { ...all[structYear] } : {};
+    const src = yr[courseKey]
+      ? { ...yr[courseKey], items: [...yr[courseKey].items] }
+      : { label: `${DETAILED_FEES[courseKey].label} — ${structYear}`, items: JSON.parse(JSON.stringify(DETAILED_FEES[courseKey].items)) };
+    if (isDeletion)          src.items = src.items.filter(i => i.id !== itemId);
+    else if (newItemMeta)    src.items = [...src.items, { id: newItemMeta.id, name: newItemMeta.name, section: newItemMeta.section, s: newAmounts }];
+    else                     src.items = src.items.map(i => i.id === itemId ? { ...i, s: newAmounts } : i);
+    yr[courseKey] = src; all[structYear] = yr;
+    saveYearStructuresLS(all); setYearStructs(all);
+    setEditingItem(null);
+    showToast(isDeletion
+      ? `🗑️ Item ${structYear} structure se remove ho gaya`
+      : `✅ ${structYear} structure updated!`);
+  };
+
+  // ── Create a new academic-year structure (copy of the selected year) ──
+  const createNewYear = () => {
+    const name = newYearName.trim();
+    if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Format: YYYY-YY (e.g. 2026-27)', 'error'); return; }
+    if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
+    const src = isBaseYear ? DETAILED_FEES : (yearStructs[structYear] || DETAILED_FEES);
+    const clone = JSON.parse(JSON.stringify({ 'B.Sc.': src['B.Sc.'] || DETAILED_FEES['B.Sc.'], 'B.A.': src['B.A.'] || DETAILED_FEES['B.A.'] }));
+    clone['B.Sc.'].label = `B.Sc. (Un-aided) — ${name}`;
+    clone['B.A.'].label  = `B.A. (Un-aided) — ${name}`;
+    const all = { ...yearStructs, [name]: clone };
+    saveYearStructuresLS(all); setYearStructs(all);
+    setStructYear(name); setShowNewYear(false); setNewYearName('');
+    showToast(`✅ ${name} fee structure ban gaya (${structYear} se copy)! Ab amounts edit kar sakte ho.`);
+  };
+
   const submitEdit = async (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
+    // Custom year → save directly, no Principal/Admin approval needed
+    if (!isBaseYear) { applyDirectYearEdit(itemId, newAmounts, newItemMeta, isDeletion); return; }
     const isNewItem = !!newItemMeta;
     const item = newItemMeta || allItems.find(i => i.id === itemId) || editingItem || {};
     const oldAmounts = isNewItem ? [] : (item.s || []);
@@ -484,9 +572,12 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     }
   };
 
-  // Delete a fee item → routed through Principal → Admin approval (applied only after approval)
+  // Delete a fee item → base year: Principal → Admin approval; custom year: direct
   const submitDelete = (item) => {
-    if (!window.confirm(`"${item.name}" delete karne ke liye approval bhejein?\n(Principal → Admin approve karenge, tabhi structure se hatega)`)) return;
+    const q = isBaseYear
+      ? `"${item.name}" delete karne ke liye approval bhejein?\n(Principal → Admin approve karenge, tabhi structure se hatega)`
+      : `"${item.name}" ko ${structYear} structure se delete karein?`;
+    if (!window.confirm(q)) return;
     submitEdit(item.id, (item.s && item.s.length ? item.s : [0,0,0,0,0,0]), null, true);
   };
 
@@ -496,21 +587,67 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure 2025-26</h2>
-          <p style={{ color:'#666', fontSize:14 }}>View and edit fee amounts. Changes require Principal/Admin approval.</p>
+          <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure {structYear}</h2>
+          <p style={{ color:'#666', fontSize:14 }}>
+            {isBaseYear
+              ? 'View and edit fee amounts. Changes require Principal/Admin approval.'
+              : `${structYear} ka apna structure — direct edit hota hai (approval required nahi).`}
+          </p>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-          {hasPending && (
+          {/* Academic year selector — base + custom years */}
+          <select value={structYear} onChange={e => { setStructYear(e.target.value); setEditingItem(null); setAddingItem(false); }}
+            style={{ padding:'8px 12px', borderRadius:10, border:'2px solid #1565C0', fontSize:13, fontWeight:700, color:'#1565C0', background:'#fff', cursor:'pointer' }}>
+            <option value={BASE_STRUCT_YEAR}>📅 {BASE_STRUCT_YEAR} (Base)</option>
+            {Object.keys(yearStructs).filter(y => y !== BASE_STRUCT_YEAR).sort().map(y => (
+              <option key={y} value={y}>📅 {y}</option>
+            ))}
+          </select>
+          <button onClick={() => setShowNewYear(v => !v)}
+            style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            {showNewYear ? '✕ Cancel' : '➕ New Year Structure'}
+          </button>
+          {isBaseYear && hasPending && (
             <div style={{ background:'#fff3e0', border:'1px solid #ffe082', borderRadius:10, padding:'8px 14px', fontSize:13, color:'#E65100', fontWeight:600 }}>
               ⏳ {Object.values(pendingForCourse).filter(p=>p.status==='pending').length} edit(s) pending approval
             </div>
           )}
-          <button onClick={fetchFeeApprovals} title="Approval status latest karein"
-            style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-            🔄 Refresh Status
-          </button>
+          {isBaseYear && (
+            <button onClick={fetchFeeApprovals} title="Approval status latest karein"
+              style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+              🔄 Refresh Status
+            </button>
+          )}
         </div>
       </div>
+
+      {/* ── Create new academic-year structure ── */}
+      {showNewYear && (
+        <div style={{ background:'#f0fff4', border:'2px dashed #2E7D32', borderRadius:12, padding:16, marginBottom:16 }}>
+          <h4 style={{ color:'#2E7D32', margin:'0 0 6px', fontSize:14 }}>➕ Naya Academic Year Fee Structure</h4>
+          <p style={{ fontSize:12, color:'#666', margin:'0 0 12px' }}>
+            Currently selected year <strong>{structYear}</strong> ka poora structure copy hoga — phir aap us naye year me har fee item ka amount edit / add / delete kar sakte ho.
+            Fees collect karte time modal me year select karke usi structure se fees lagegi (e.g. 2026 me 1st year admission → 2027 me 2nd year fees 2027-28 structure se).
+          </p>
+          <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+            <input type="text" placeholder="e.g. 2026-27" value={newYearName} maxLength={7}
+              onChange={e => setNewYearName(e.target.value)}
+              style={{ padding:'9px 14px', borderRadius:8, border:'2px solid #2E7D32', fontSize:15, fontWeight:700, width:140, textAlign:'center' }} />
+            <button onClick={createNewYear}
+              style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              ✅ Create ({structYear} se copy)
+            </button>
+            <button onClick={() => { setShowNewYear(false); setNewYearName(''); }}
+              style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {!isBaseYear && (
+        <div style={{ background:'#e3f2fd', border:'1px solid #90caf9', borderRadius:10, padding:'10px 14px', marginBottom:16, fontSize:12, color:'#1565C0', fontWeight:600 }}>
+          ✏️ Ye <strong>{structYear}</strong> ka alag structure hai — edits yahin turant save hote hain aur Collect Fees / Walk-in modal me "{structYear}" select karne par yehi amounts lagenge.
+        </div>
+      )}
 
       <div style={{ display:'flex', gap:0, marginBottom:20, background:'#f0f4f8', borderRadius:10, padding:4, width:'fit-content' }}>
         {[{id:'bsc',label:'📗 B.Sc.'},{id:'ba',label:'📘 B.A.'},{id:'doc',label:'📄 Document Fees'}].map(t => (
@@ -631,19 +768,25 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                     </div>
                   ))}
                 </div>
-                <p style={{ fontSize:11, color:'#E65100', marginBottom:10 }}>⚠️ New items will be sent for Principal/Admin approval before appearing in fee collection.</p>
+                <p style={{ fontSize:11, color:'#E65100', marginBottom:10 }}>
+                  {isBaseYear
+                    ? '⚠️ New items will be sent for Principal/Admin approval before appearing in fee collection.'
+                    : `✅ Item directly ${structYear} structure me add ho jayega (approval required nahi).`}
+                </p>
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={()=>{
                     if (!newItem.name.trim()) return;
                     const id = 'custom_'+Date.now();
                     const item = { id, name:newItem.name.trim(), section:newItem.section, s:[0,1,2,3,4,5].map(i=>newItem[`s${i}`]||0) };
-                    const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
-                    saveCustomFees(cf);
+                    if (isBaseYear) {
+                      const cf = { ...customFees, [courseKey]: [...(customFees[courseKey]||[]), item] };
+                      saveCustomFees(cf);
+                    }
                     submitEdit(id, item.s, item);
                     setAddingItem(false);
                     setNewItem({ name:'', section:'College', s0:0,s1:0,s2:0,s3:0,s4:0,s5:0 });
                   }} style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                    ✅ Add & Send for Approval
+                    {isBaseYear ? '✅ Add & Send for Approval' : `✅ Add to ${structYear}`}
                   </button>
                   <button onClick={()=>setAddingItem(false)} style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
                 </div>
@@ -665,13 +808,15 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                     </div>
                   ))}
                 </div>
-                <div style={{ background:'#fff3e0', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#E65100', marginBottom:16 }}>
-                  ⚠️ Changes will be sent to <strong>Principal / Admin</strong> for approval. They will be applied only after approval.
+                <div style={{ background:isBaseYear?'#fff3e0':'#e8f5e9', borderRadius:8, padding:'10px 14px', fontSize:12, color:isBaseYear?'#E65100':'#2E7D32', marginBottom:16 }}>
+                  {isBaseYear
+                    ? <>⚠️ Changes will be sent to <strong>Principal / Admin</strong> for approval. They will be applied only after approval.</>
+                    : <>✅ Change directly <strong>{structYear}</strong> structure me save hoga (approval required nahi).</>}
                 </div>
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={()=>submitEdit(editingItem.id, [0,1,2,3,4,5].map(i=>editAmounts[i]||0))}
                     style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
-                    📤 Submit for Approval
+                    {isBaseYear ? '📤 Submit for Approval' : '💾 Save'}
                   </button>
                   <button onClick={()=>setEditingItem(null)} style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
                 </div>
@@ -1090,6 +1235,11 @@ const AccountsSectionDashboard = () => {
   const [admDocType, setAdmDocType]         = useState(''); // eslint-disable-line no-unused-vars
   const [selectedFeeItems, setSelectedFeeItems] = useState({});
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
+  // Multi-year: which academic year's fee structure applies in the Collect modal
+  const [admAcadYear, setAdmAcadYear]             = useState(currentAcadYear());
+  // Previous year(s) remaining balance — include in this collection?
+  const [admPrevDuesOn, setAdmPrevDuesOn]         = useState(false);
+  const [admPrevDuesAmt, setAdmPrevDuesAmt]       = useState(0);
   // Other Fee (free-form) for the Collect Fee modal — description + amount
   const [admOtherFeeOn, setAdmOtherFeeOn]   = useState(false);
   const [admOtherFeeDesc, setAdmOtherFeeDesc] = useState('');
@@ -1327,17 +1477,19 @@ const AccountsSectionDashboard = () => {
 
       const ct = (selectedAdm.courseType||'').toLowerCase();
       const ck = ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
-      const course2 = ck ? DETAILED_FEES[ck] : null;
+      // Use the fee structure of the academic year selected in the modal
+      const course2 = ck ? getStructureForYear(admAcadYear)[ck] : null;
+      const isBaseAY = admAcadYear === BASE_STRUCT_YEAR;
       const breakdownItems = [
         ...((course2 && course2.items) || []),
-        ...((ck && extraFeeItems[ck]) || []),
-      ].filter(it => !(ck && deletedFeeMap[`${ck}|${it.id}`]));
+        ...((isBaseAY && ck && extraFeeItems[ck]) || []),
+      ].filter(it => !(isBaseAY && ck && deletedFeeMap[`${ck}|${it.id}`]));
       const feeBreakdown_semIdxs = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
       const feeBreakdown_idxs = feeBreakdown_semIdxs[selectedAdm.admissionYear||'1st Year'] || [0,1];
       const academicRows = (ck ? breakdownItems : [])
         .filter(item => selectedFeeItems[item.id])
         .map(item => {
-          const s = itemAmounts(ck, item); // approved edit if any, else default
+          const s = isBaseAY ? itemAmounts(ck, item) : item.s; // approved edit only on base year
           const yearAmt = (s[feeBreakdown_idxs[0]]||0) + (s[feeBreakdown_idxs[1]]||0);
           return { particular: item.name, amount: yearAmt };
         }).filter(r => r.amount > 0);
@@ -1348,7 +1500,10 @@ const AccountsSectionDashboard = () => {
       const otherRows = (admOtherFeeOn && Number(admOtherFeeAmt) > 0)
         ? [{ particular: (admOtherFeeDesc||'').trim() || 'Other Fee', amount: Number(admOtherFeeAmt) }]
         : [];
-      const feeBreakdown = [...academicRows, ...docRows, ...otherRows].map((r, i) => ({ sr: i+1, ...r }));
+      const prevDuesRows = (admPrevDuesOn && admPrevDuesAmt > 0)
+        ? [{ particular: 'Previous Year Balance / Dues', amount: admPrevDuesAmt }]
+        : [];
+      const feeBreakdown = [...academicRows, ...docRows, ...otherRows, ...prevDuesRows].map((r, i) => ({ sr: i+1, ...r }));
 
       const entry = {
         id: rNo, date: new Date().toISOString(),
@@ -1377,6 +1532,7 @@ const AccountsSectionDashboard = () => {
         feeTypeLabel: feeType?.label || entry.feeLabel || 'Fee',
         courseType: selectedAdm.courseType || '',
         admissionYear: selectedAdm.admissionYear || '',
+        academicYear: admAcadYear,
         verificationNo: 'ERP' + rNo,
         feeBreakdown: entry.feeBreakdown || [],
       });
@@ -1386,6 +1542,7 @@ const AccountsSectionDashboard = () => {
       setAdmSelectedSem(''); setAdmScholarshipAmt('');
       setSelectedFeeItems({}); setAdmCollectDocMode(false);
       setAdmOtherFeeOn(false); setAdmOtherFeeDesc(''); setAdmOtherFeeAmt('');
+      setAdmAcadYear(currentAcadYear()); setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0);
       fetchAdmissions();
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); }
     finally { setAdmLoading2(false); }
@@ -1882,7 +2039,7 @@ const AccountsSectionDashboard = () => {
                         color: adm.feesPaid ? '#2E7D32' : '#E65100' }}>
                         {adm.feesPaid ? '✅ Paid' : '⏳ Pending'}
                       </span>
-                      <button onClick={() => { setSelectedAdm(adm); setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash'); setAdmFeeType('admission'); setAdmSelectedSem(''); setAdmScholarshipAmt(adm.scholarshipAmount > 0 ? String(adm.scholarshipAmount) : ''); }}
+                      <button onClick={() => { setSelectedAdm(adm); setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash'); setAdmFeeType('admission'); setAdmSelectedSem(''); setAdmScholarshipAmt(adm.scholarshipAmount > 0 ? String(adm.scholarshipAmount) : ''); setAdmAcadYear(currentAcadYear()); setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0); }}
                         style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         💰 Collect
                       </button>
@@ -2119,48 +2276,69 @@ const AccountsSectionDashboard = () => {
         const ct = (selectedAdm.courseType||'').toLowerCase();
         const ck = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.'
           : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
-        const course = ck ? DETAILED_FEES[ck] : null;
+        // Structure of the academic year selected in this modal (multi-year support)
+        const structFees = getStructureForYear(admAcadYear);
+        const isBaseAY = admAcadYear === BASE_STRUCT_YEAR;
+        const structYearOptions = listStructYears();
+        const course = ck ? structFees[ck] : null;
         const admYear = selectedAdm.admissionYear || '1st Year';
         const yearSemIdx = { '1st Year':[0,1], '2nd Year':[2,3], '3rd Year':[4,5] };
         const semIdxs = yearSemIdx[admYear] || [0,1];
         const schol = Number(admScholarshipAmt||0);
 
-        // Base items = DETAILED_FEES items + approved NEW items, minus approved-DELETED items
+        // Base items = selected year's items (+ approved NEW / − approved-DELETED only on base year)
         const baseItems = [
           ...((course && course.items) || []),
-          ...((extraFeeItems[ck]) || []),
-        ].filter(it => !deletedFeeMap[`${ck}|${it.id}`]);
+          ...((isBaseAY && extraFeeItems[ck]) || []),
+        ].filter(it => !(isBaseAY && deletedFeeMap[`${ck}|${it.id}`]));
 
         const yearItems = baseItems.map(item => {
-          const s = itemAmounts(ck, item); // approved edit if any, else default
+          const s = isBaseAY ? itemAmounts(ck, item) : item.s; // approved edits apply on base year only
           const amt = (s[semIdxs[0]]||0) + (s[semIdxs[1]]||0);
           return { ...item, s, yearAmt: amt };
         }).filter(item => item.yearAmt > 0);
 
         const yearTotal = yearItems.reduce((s,i) => s + i.yearAmt, 0);
 
+        // ── Previous year(s) remaining balance (carry-forward) ──
+        // e.g. student now 2nd Year in AY 2026-27 → 1st Year expected total is
+        // computed from the 2025-26 structure; minus everything paid so far.
+        const priorYears = admYear === '2nd Year' ? ['1st Year'] : admYear === '3rd Year' ? ['1st Year','2nd Year'] : [];
+        const prevExpected = ck ? priorYears.reduce((sum, py, i) => {
+          const stepsBack = priorYears.length - i;
+          let ay = admAcadYear;
+          for (let k = 0; k < stepsBack; k++) ay = prevAcadYear(ay);
+          const st = getStructureForYear(ay);
+          const idxs = yearSemIdx[py] || [0,1];
+          const its = st[ck]?.items || [];
+          return sum + its.reduce((s2, it) => s2 + (it.s[idxs[0]]||0) + (it.s[idxs[1]]||0), 0);
+        }, 0) : 0;
+        const totalPaidSoFar = (selectedAdm.feeLedger||[]).reduce((s2,p)=>s2+(p.amount||0),0);
+        const prevBalance = Math.max(0, prevExpected - totalPaidSoFar);
+
         const calcSelected = (map) =>
           yearItems.reduce((s,i) => s + (map[i.id] ? i.yearAmt : 0), 0);
 
         const otherAdd = () => (admOtherFeeOn ? Number(admOtherFeeAmt || 0) : 0);
+        const prevAdd  = () => (admPrevDuesOn ? admPrevDuesAmt : 0);
 
         const selectAll = () => {
           const m = {};
           yearItems.forEach(i => { m[i.id] = true; });
           setSelectedFeeItems(m);
-          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol + otherAdd())));
+          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol + otherAdd() + prevAdd())));
         };
 
-        const clearAll = () => { setSelectedFeeItems({}); setAdmFeeAmt(String(Math.max(0, otherAdd()))); };
+        const clearAll = () => { setSelectedFeeItems({}); setAdmFeeAmt(String(Math.max(0, otherAdd() + prevAdd()))); };
 
         const toggleItem = (id) => {
           const m = { ...selectedFeeItems, [id]: !selectedFeeItems[id] };
           setSelectedFeeItems(m);
-          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol + otherAdd())));
+          setAdmFeeAmt(String(Math.max(0, calcSelected(m) - schol + otherAdd() + prevAdd())));
         };
 
         const selGross   = calcSelected(selectedFeeItems);
-        const netPayable = Math.max(0, selGross - schol);
+        const netPayable = Math.max(0, selGross - schol + prevAdd());
         const amtPaid    = Number(admFeeAmt||0);
         const balance    = Math.max(0, netPayable - amtPaid);
         const docSelTotal = Object.entries(selectedFeeItems)
@@ -2169,7 +2347,21 @@ const AccountsSectionDashboard = () => {
         // Recompute suggested amount including the free-form Other Fee
         const recalcWithOther = (on, amt) => {
           const add = on ? Number(amt || 0) : 0;
-          setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + add)));
+          setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + add + prevAdd())));
+        };
+        // Toggle "include previous year balance" → refresh suggested amount
+        const togglePrevDues = (on) => {
+          setAdmPrevDuesOn(on);
+          setAdmPrevDuesAmt(on ? prevBalance : 0);
+          const add = on ? prevBalance : 0;
+          setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + otherAdd() + add)));
+        };
+        // Change the fee-structure year → clear selections (amounts differ per year)
+        const changeAcadYear = (ay) => {
+          setAdmAcadYear(ay);
+          setSelectedFeeItems({});
+          setAdmFeeAmt('');
+          setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0);
         };
 
         const uItems = yearItems.filter(i => i.section === 'University');
@@ -2179,6 +2371,7 @@ const AccountsSectionDashboard = () => {
           setSelectedAdm(null); setAdmFeeAmt(''); setAdmSelectedSem('');
           setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType('');
           setAdmOtherFeeOn(false); setAdmOtherFeeDesc(''); setAdmOtherFeeAmt('');
+          setAdmAcadYear(currentAcadYear()); setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0);
         };
 
         return (
@@ -2218,7 +2411,7 @@ const AccountsSectionDashboard = () => {
                             return s + (docFees[dKey]?.price||0);
                           },0);
                           const annualTotal = yearItems.reduce((s,i)=>s+(m[i.id]?i.yearAmt:0),0);
-                          setAdmFeeAmt(String(Math.max(0, docTotal + annualTotal - Number(admScholarshipAmt||0) + (admOtherFeeOn ? Number(admOtherFeeAmt||0) : 0))));
+                          setAdmFeeAmt(String(Math.max(0, docTotal + annualTotal - Number(admScholarshipAmt||0) + (admOtherFeeOn ? Number(admOtherFeeAmt||0) : 0) + (admPrevDuesOn ? admPrevDuesAmt : 0))));
                         }}
                           style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', borderRadius:9, border:`2px solid ${isSelected?'#1565C0':'#e0e7ef'}`, background:isSelected?'#e3f2fd':'#fff', cursor:'pointer' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -2254,8 +2447,41 @@ const AccountsSectionDashboard = () => {
               {/* ── ANNUAL FEES TAB ── */}
               {!admCollectDocMode && (
                 <div>
+                  {/* Fee structure year selector — student ke current AY ke structure se fees lagegi */}
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'10px 14px', flexWrap:'wrap' }}>
+                    <label style={{ fontSize:13, fontWeight:700, color:'#1565C0' }}>📅 Fee Structure Year</label>
+                    <select value={admAcadYear} onChange={e => changeAcadYear(e.target.value)}
+                      style={{ padding:'7px 12px', borderRadius:8, border:'2px solid #1565C0', fontSize:13, fontWeight:700, color:'#1565C0', background:'#fff', cursor:'pointer' }}>
+                      {!structYearOptions.includes(admAcadYear) && (
+                        <option value={admAcadYear}>{admAcadYear} (base amounts)</option>
+                      )}
+                      {structYearOptions.map(y => <option key={y} value={y}>{y}{y===BASE_STRUCT_YEAR?' (Base)':''}</option>)}
+                    </select>
+                    {!structYearOptions.includes(admAcadYear) && (
+                      <span style={{ fontSize:11, color:'#E65100', fontWeight:600 }}>⚠️ {admAcadYear} ka structure abhi bana nahi — {BASE_STRUCT_YEAR} base amounts lag rahe hain (Fee Structure tab me "➕ New Year" se banao)</span>
+                    )}
+                  </div>
+
+                  {/* Previous year(s) remaining balance */}
+                  {priorYears.length > 0 && prevBalance > 0 && (
+                    <div style={{ background:'#ffebee', border:'1px solid #ef9a9a', borderRadius:10, padding:'10px 14px', marginBottom:12 }}>
+                      <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, fontWeight:800, color:'#C62828' }}>
+                        <input type="checkbox" checked={admPrevDuesOn} onChange={e => togglePrevDues(e.target.checked)} />
+                        ⚠️ Last Year Balance: ₹{prevBalance.toLocaleString('en-IN')} — is receipt me add karein?
+                      </label>
+                      <p style={{ fontSize:11, color:'#b71c1c', margin:'6px 0 0' }}>
+                        Previous year(s) expected (us saal ke structure se): ₹{prevExpected.toLocaleString('en-IN')} · Ab tak paid: ₹{totalPaidSoFar.toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                  )}
+                  {priorYears.length > 0 && prevBalance === 0 && prevExpected > 0 && (
+                    <div style={{ background:'#e8f5e9', border:'1px solid #a5d6a7', borderRadius:10, padding:'8px 14px', marginBottom:12, fontSize:12, color:'#2E7D32', fontWeight:600 }}>
+                      ✅ Previous year(s) ki fees fully paid hai — koi balance nahi.
+                    </div>
+                  )}
+
                   <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Academic Fee ({admYear})</span>
+                    <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Academic Fee ({admYear} · {admAcadYear})</span>
                     <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{yearTotal.toLocaleString('en-IN')}</span>
                   </div>
 
@@ -2328,6 +2554,12 @@ const AccountsSectionDashboard = () => {
                           <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#7B1FA2', marginBottom:4 }}>
                             <span>Scholarship Deduction</span>
                             <span style={{ fontWeight:700 }}>− ₹{schol.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                        {admPrevDuesOn && admPrevDuesAmt > 0 && (
+                          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#C62828', marginBottom:4 }}>
+                            <span>+ Previous Year Balance</span>
+                            <span style={{ fontWeight:700 }}>+ ₹{admPrevDuesAmt.toLocaleString('en-IN')}</span>
                           </div>
                         )}
                         <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, fontWeight:800, borderTop:'2px solid #e0e7ef', paddingTop:8, marginTop:6 }}>
@@ -2728,10 +2960,10 @@ const ExpenseTracker = ({ user }) => {
    WALK-IN / OLD STUDENT FEE MODAL
 ═══════════════════════════════════════════════════════════ */
 const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
-  // ── Course (tuition) fee heads from the itemized DETAILED_FEES structure ──
+  // ── Course (tuition) fee heads from the selected year's fee structure ──
   // A "Year" covers two semesters; index offset 0/2/4 for 1st/2nd/3rd Year.
-  const courseFeeOptions = (course, year) => {
-    const items = DETAILED_FEES[course]?.items || [];
+  const courseFeeOptions = (course, year, feeYear) => {
+    const items = getStructureForYear(feeYear)[course]?.items || [];
     const off = year === '1st Year' ? 0 : year === '2nd Year' ? 2 : year === '3rd Year' ? 4 : -1;
     if (off < 0) return []; // 'Course completed' → no structured heads
     return items
@@ -2742,6 +2974,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const EMPTY_FORM = {
     studentName:'', phone:'', prnNo:'', rollNo:'',
     course:'B.A.', year:'2nd Year',
+    feeYear: currentAcadYear(),  // which academic year's fee structure applies
     docMode: false,          // false = Academic Fee tab, true = Document Fees tab
     selectedHeads: {},       // { headId: true } — selected academic (course) fee heads
     selectedDocs: {},        // { docKey: true } — selected document fees
@@ -2770,7 +3003,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   // Build the selected fee line items (Academic heads + Document fees + Other)
   const calcLineItems = (f) => {
     const items = [];
-    courseFeeOptions(f.course, f.year)
+    courseFeeOptions(f.course, f.year, f.feeYear)
       .filter(o => f.selectedHeads?.[o.id])
       .forEach(o => items.push({ label: `${o.name} — ${f.course} ${f.year}`, amount: o.amount }));
     Object.entries(f.selectedDocs || {}).filter(([, v]) => v).forEach(([k]) => {
@@ -2794,7 +3027,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
 
   const toggleHead = (id) => applyForm(p => ({ ...p, selectedHeads: { ...p.selectedHeads, [id]: !p.selectedHeads?.[id] } }));
   const selectAllHeads = () => applyForm(p => {
-    const all = {}; courseFeeOptions(p.course, p.year).forEach(o => { all[o.id] = true; });
+    const all = {}; courseFeeOptions(p.course, p.year, p.feeYear).forEach(o => { all[o.id] = true; });
     return { ...p, selectedHeads: all };
   });
   const clearHeads = () => applyForm(p => ({ ...p, selectedHeads: {} }));
@@ -2809,7 +3042,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   const handleCollect = async () => {
     if (!form.studentName.trim()) { setMsg('❌ Student name required'); return; }
     const items = calcLineItems(form);
-    const academicSel = courseFeeOptions(form.course, form.year).some(o => form.selectedHeads?.[o.id]);
+    const academicSel = courseFeeOptions(form.course, form.year, form.feeYear).some(o => form.selectedHeads?.[o.id]);
     const docSel = Object.values(form.selectedDocs || {}).some(Boolean);
     if (!academicSel && !docSel && !form.otherFeeOn) { setMsg('❌ Select at least one fee item (Academic / Document / Other)'); return; }
     if (form.otherFeeOn && !(form.otherFeeDesc || '').trim()) { setMsg('❌ Enter a description for Other Fee'); return; }
@@ -2832,6 +3065,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
       course:       form.course,
       admissionYear: form.year,
       feeType,
+      feeStructYear: form.feeYear,
       feeTypeLabel: items.map(i => i.label).join(' + '),
       lineItems:    items,
       amount:       total,
@@ -3013,7 +3247,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
   };
 
   // Academic (course) fee heads for the currently selected course + year
-  const acadItems   = courseFeeOptions(form.course, form.year);
+  const acadItems   = courseFeeOptions(form.course, form.year, form.feeYear);
   const acadUniv    = acadItems.filter(o => o.section === 'University');
   const acadCollege = acadItems.filter(o => o.section !== 'University');
   const acadYearTotal   = acadItems.reduce((s, o) => s + o.amount, 0);
@@ -3129,6 +3363,17 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                         </select>
                       </div>
                     </div>
+                    <div style={{ marginTop:12 }}>
+                      <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:5 }}>📅 Fee Structure Year</label>
+                      <select style={{ ...inp, fontWeight:700, color:'#1565C0', border:'2px solid #1565C0' }} value={form.feeYear}
+                        onChange={e=>applyForm(p=>({...p, feeYear:e.target.value, selectedHeads:{} }))}>
+                        {!listStructYears().includes(form.feeYear) && (
+                          <option value={form.feeYear}>{form.feeYear} (base amounts)</option>
+                        )}
+                        {listStructYears().map(y => <option key={y} value={y}>{y}{y===BASE_STRUCT_YEAR?' (Base)':''}</option>)}
+                      </select>
+                      <p style={{ fontSize:10, color:'#999', margin:'4px 0 0' }}>Jis academic year ke structure se fees leni hai wo select karo (naya year "Fee Structure" tab me banao).</p>
+                    </div>
                   </div>
 
                   {/* ── Academic Fee / Document Fees tabs ── */}
@@ -3153,7 +3398,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                   {!form.docMode && (
                     <div>
                       <div style={{ background:'#e3f2fd', borderRadius:10, padding:'10px 16px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                        <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Academic Fee ({form.year})</span>
+                        <span style={{ fontSize:13, color:'#555', fontWeight:600 }}>Academic Fee ({form.year} · {form.feeYear})</span>
                         <span style={{ fontSize:16, fontWeight:800, color:'#1565C0' }}>₹{fmt(acadYearTotal)}</span>
                       </div>
 
