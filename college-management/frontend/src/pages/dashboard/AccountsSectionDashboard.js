@@ -431,6 +431,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const [yearStructs, setYearStructs]   = useState(loadYearStructures);
   const [showNewYear, setShowNewYear]   = useState(false);
   const [newYearName, setNewYearName]   = useState('');
+  const [yearUploadBusy, setYearUploadBusy] = useState(false);
   const [editDocFees2, setEditDocFees2] = useState(false); // eslint-disable-line no-unused-vars
   const [docFeeEdits2, setDocFeeEdits2] = useState({}); // eslint-disable-line no-unused-vars
   const [customFees, setCustomFees]     = useState(() => {
@@ -454,6 +455,27 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   }, []);
 
   useEffect(() => { fetchFeeApprovals(); }, [fetchFeeApprovals]);
+
+  // New-academic-year structures submitted via Excel upload (Principal → Admin pipeline)
+  const yearApprovals = feeApprovals.filter(a => a.isNewYearStructure);
+
+  // Once Admin approves a year, mirror its structureData into the local
+  // year-structure cache so it immediately shows up in the year selector
+  // and in Collect Fees / Walk-in flows — same place the manual "copy" flow writes to.
+  useEffect(() => {
+    const approvedYears = yearApprovals.filter(a => a.status === 'approved' && a.structureData);
+    if (approvedYears.length === 0) return;
+    let changed = false;
+    const all = { ...yearStructs };
+    approvedYears.forEach(a => {
+      if (!all[a.academicYear]) {
+        all[a.academicYear] = JSON.parse(JSON.stringify(a.structureData));
+        changed = true;
+      }
+    });
+    if (changed) { saveYearStructuresLS(all); setYearStructs(all); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feeApprovals]);
 
   const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
   const isBaseYear = structYear === BASE_STRUCT_YEAR;
@@ -539,6 +561,87 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     saveYearStructuresLS(all); setYearStructs(all);
     setStructYear(name); setShowNewYear(false); setNewYearName('');
     showToast(`✅ ${name} fee structure ban gaya (${structYear} se copy)! Ab amounts edit kar sakte ho.`);
+  };
+
+  // ── Download an Excel template (current year's items) to edit & re-upload ──
+  const downloadYearTemplate = () => {
+    const src = isBaseYear ? DETAILED_FEES : (yearStructs[structYear] || DETAILED_FEES);
+    const rows = [];
+    ['B.Sc.', 'B.A.'].forEach(ct => {
+      const items = (src[ct] || DETAILED_FEES[ct]).items;
+      items.forEach(it => {
+        rows.push({
+          CourseType: ct,
+          Section: it.section,
+          'Item Name': it.name,
+          'Sem I': it.s[0]||0, 'Sem II': it.s[1]||0, 'Sem III': it.s[2]||0,
+          'Sem IV': it.s[3]||0, 'Sem V': it.s[4]||0, 'Sem VI': it.s[5]||0,
+        });
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Fee Structure');
+    XLSX.writeFile(wb, `fee-structure-template-${structYear}.xlsx`);
+    showToast('⬇️ Template downloaded — amounts edit karke wapas upload karo');
+  };
+
+  // ── Upload an edited Excel sheet → submit as new-year structure for approval ──
+  const handleYearExcelUpload = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting same file later
+    if (!file) return;
+
+    const name = newYearName.trim();
+    if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Pehle upar Academic Year likho (format: YYYY-YY, e.g. 2026-27)', 'error'); return; }
+    if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
+    const alreadyPending = yearApprovals.find(a => a.academicYear === name && ['pending_principal','pending_admin'].includes(a.status));
+    if (alreadyPending) { showToast(`❌ ${name} ke liye ek request pehle se pending hai (approval ka wait karo)`, 'error'); return; }
+
+    setYearUploadBusy(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: 0 });
+        if (!rows.length) throw new Error('Excel sheet empty hai');
+
+        const structureData = {};
+        rows.forEach((row, idx) => {
+          const ct = String(row.CourseType || '').trim();
+          const courseKeyNorm = /b\.?sc/i.test(ct) ? 'B.Sc.' : /b\.?a\.?/i.test(ct) ? 'B.A.' : null;
+          if (!courseKeyNorm) throw new Error(`Row ${idx+2}: CourseType 'B.Sc.' ya 'B.A.' hona chahiye`);
+          const itemName = String(row['Item Name'] || '').trim();
+          if (!itemName) throw new Error(`Row ${idx+2}: Item Name missing hai`);
+          const section = /univ/i.test(String(row.Section||'')) ? 'University' : 'College';
+          const s = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].map(c => Number(row[c])||0);
+          const prefix = courseKeyNorm.toLowerCase().replace(/[^a-z]/g,'');
+          const id = `${prefix}_${itemName.toLowerCase().replace(/[^a-z0-9]+/g,'_')}`;
+          if (!structureData[courseKeyNorm]) {
+            structureData[courseKeyNorm] = { label: `${DETAILED_FEES[courseKeyNorm].label} — ${name}`, items: [] };
+          }
+          structureData[courseKeyNorm].items.push({ id, name: itemName, section, s });
+        });
+        if (!structureData['B.Sc.'] || !structureData['B.A.']) {
+          throw new Error('Excel me B.Sc. aur B.A. dono course ke rows hone chahiye');
+        }
+
+        await API.post('/fee-structure-approvals/submit-year', {
+          academicYear: name,
+          sourceYear: structYear,
+          structureData,
+        });
+        showToast(`✅ ${name} ka structure Excel se submit ho gaya — Principal → Admin approval ke baad hi structure me apply hoga!`);
+        setShowNewYear(false); setNewYearName('');
+        fetchFeeApprovals();
+      } catch (err) {
+        showToast('❌ ' + (err.response?.data?.message || err.message || 'Upload failed'), 'error');
+      } finally {
+        setYearUploadBusy(false);
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   // ── Delete an entire custom-year structure (base year cannot be deleted) ──
@@ -657,6 +760,46 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             <button onClick={() => { setShowNewYear(false); setNewYearName(''); }}
               style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
           </div>
+
+          <div style={{ borderTop:'1px dashed #2E7D32', margin:'16px 0 14px' }} />
+
+          <h4 style={{ color:'#1565C0', margin:'0 0 6px', fontSize:14 }}>📊 Ya phir Excel se seedha upload karo</h4>
+          <p style={{ fontSize:12, color:'#666', margin:'0 0 12px' }}>
+            Pehle template download karo, Excel me har item ka naya amount bharo (naye items rows bhi add kar sakte ho),
+            phir upar <strong>Academic Year</strong> box me naya year (e.g. 2026-27) likhkar wahi file upload karo.
+            Upload hote hi ye <strong>seedha apply nahi hoga</strong> — pehle <strong>Principal</strong>, phir <strong>Admin</strong> approve karenge, tabhi structure me live hoga.
+          </p>
+          <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+            <button onClick={downloadYearTemplate}
+              style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90caf9', borderRadius:8, padding:'10px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              ⬇️ Download Template ({structYear})
+            </button>
+            <label style={{ background: yearUploadBusy ? '#90a4ae' : '#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'10px 18px', fontSize:13, fontWeight:700, cursor: yearUploadBusy ? 'not-allowed' : 'pointer' }}>
+              {yearUploadBusy ? '⏳ Uploading…' : '📤 Upload Excel & Submit for Approval'}
+              <input type="file" accept=".xlsx,.xls" onChange={handleYearExcelUpload} disabled={yearUploadBusy} style={{ display:'none' }} />
+            </label>
+          </div>
+
+          {yearApprovals.length > 0 && (
+            <div style={{ marginTop:14, display:'flex', flexDirection:'column', gap:6 }}>
+              {yearApprovals.slice(0,5).map(a => {
+                const map = {
+                  pending_principal: { bg:'#fff3e0', color:'#E65100', label:'⏳ Pending Principal' },
+                  pending_admin:     { bg:'#e3f2fd', color:'#1565C0', label:'⏳ Pending Admin' },
+                  approved:          { bg:'#e8f5e9', color:'#2E7D32', label:'✅ Approved & Live' },
+                  rejected_by_principal: { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Principal' },
+                  rejected_by_admin:     { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Admin' },
+                };
+                const c = map[a.status] || { bg:'#f5f5f5', color:'#555', label:a.status };
+                return (
+                  <div key={a._id} style={{ fontSize:12, display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontWeight:700, color:'#333' }}>{a.academicYear}</span>
+                    <span style={{ padding:'2px 10px', borderRadius:10, background:c.bg, color:c.color, fontWeight:700 }}>{c.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
