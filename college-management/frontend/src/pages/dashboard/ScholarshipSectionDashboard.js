@@ -48,7 +48,11 @@ const VERIFICATION_STATUS = {
   rejected: { label: 'Rejected', bg: '#ffebee', color: '#C62828' },
 };
 
-const FEE_STRUCTURE = {
+// FALLBACK ONLY — used if the Accounts Section hasn't created a fee structure
+// for the selected academic year yet (or the API call fails). The live,
+// year-wise + category-wise amounts always come from the Accounts Section's
+// fee structure via the backend (see fetchFeeStructureMap below).
+const FALLBACK_FEE_STRUCTURE = {
   'B.Sc': {
     FY: {
       'Enrollment Fee': 400,
@@ -110,9 +114,86 @@ const FEE_STRUCTURE = {
 };
 
 const ALL_CATEGORIES = ['SC','ST','OBC','VJ/DT(NT-A)','NT-B','NT-C','NT-D','SBC','EWS','SEBC','OPEN'];
-const ACADEMIC_YEARS = ['2023-24','2024-25','2025-26','2026-27'];
+const ACADEMIC_YEARS = ['2023-24','2024-25','2025-26','2026-27','2027-28','2028-29','2029-30'];
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
+
+/* ─────────────────────────────────────────────
+   FEE STRUCTURE — sourced from Accounts Section
+   The Accounts Section creates/edits the actual fee structure per
+   course + academic year (semester-wise). Here we fetch that same
+   data (by academicYear) and derive:
+     - yearTotals      { FY, SY, TY }  → full fee (Reserved categories)
+     - tuitionByYear    { FY, SY, TY }  → Tuition Fee only (OPEN category)
+     - headwiseByYear   { FY:{head:amt}, SY:{...}, TY:{...} } → for display
+   Course keys are normalized both ways: 'B.Sc' (UI) <-> 'B.Sc.' (backend).
+───────────────────────────────────────────── */
+const YEAR_SEM_IDX = { FY: [0, 1], SY: [2, 3], TY: [4, 5] };
+
+const uiToBackendCourse = (ct) => (ct === 'B.Sc' ? 'B.Sc.' : ct === 'B.A' ? 'B.A.' : ct);
+
+const deriveYearTotalsLocal = (items) => {
+  const totals = {};
+  Object.entries(YEAR_SEM_IDX).forEach(([yr, idxs]) => {
+    totals[yr] = (items || []).reduce((sum, it) => sum + (it.s?.[idxs[0]] || 0) + (it.s?.[idxs[1]] || 0), 0);
+  });
+  return totals;
+};
+
+const deriveTuitionByYearLocal = (items) => {
+  const tuitionItems = (items || []).filter(it => /tuition\s*fee/i.test(it.name || ''));
+  const totals = {};
+  Object.entries(YEAR_SEM_IDX).forEach(([yr, idxs]) => {
+    totals[yr] = tuitionItems.reduce((sum, it) => sum + (it.s?.[idxs[0]] || 0) + (it.s?.[idxs[1]] || 0), 0);
+  });
+  return totals;
+};
+
+const deriveHeadwiseByYearLocal = (items) => {
+  const headwise = { FY: {}, SY: {}, TY: {} };
+  Object.entries(YEAR_SEM_IDX).forEach(([yr, idxs]) => {
+    (items || []).forEach(it => {
+      const val = (it.s?.[idxs[0]] || 0) + (it.s?.[idxs[1]] || 0);
+      if (val) headwise[yr][it.name] = (headwise[yr][it.name] || 0) + val;
+    });
+  });
+  return headwise;
+};
+
+// Fetch + normalize the Accounts Section's fee structure for one academic year.
+// Returns { 'B.Sc': {...}, 'B.A': {...} } (also indexed by 'B.Sc.'/'B.A.') or null on failure.
+const fetchFeeStructureMap = async (academicYear) => {
+  try {
+    const res = await API.get('/fee-structure', { params: { academicYear } });
+    const docs = res.data.structures || [];
+    if (!docs.length) return {};
+    const map = {};
+    docs.forEach(doc => {
+      const entry = {
+        items: doc.items || [],
+        yearTotals: doc.yearTotals || deriveYearTotalsLocal(doc.items),
+        tuitionByYear: doc.tuitionByYear || deriveTuitionByYearLocal(doc.items),
+        headwiseByYear: doc.headwiseByYear || deriveHeadwiseByYearLocal(doc.items),
+      };
+      map[doc.courseType] = entry;                                   // 'B.Sc.' / 'B.A.'
+      map[doc.courseType.replace(/\.$/, '')] = entry;                 // 'B.Sc'  / 'B.A' (trailing dot stripped, matches UI select values)
+    });
+    return map;
+  } catch (err) {
+    console.warn('Could not load fee structure from Accounts Section:', err?.response?.data?.message || err.message);
+    return null;
+  }
+};
+
+// Given the fetched map + course/category info, compute the scholarship amount:
+//   OPEN category            → Tuition Fee only
+//   Reserved categories      → full fee structure total (Full MahaDBT benefit)
+const computeScholarshipAmount = (feeMapForYear, courseType, admissionYear, isOpen) => {
+  const entry = feeMapForYear?.[courseType];
+  if (!entry) return '';
+  const val = isOpen ? entry.tuitionByYear?.[admissionYear] : entry.yearTotals?.[admissionYear];
+  return val || val === 0 ? val : '';
+};
 
 /* ─────────────────────────────────────────────
    MAIN COMPONENT
@@ -916,22 +997,54 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
   const [activeView, setActiveView] = useState('feeStructure');
   const [feeAY, setFeeAY] = useState('2025-26');
 
-  const toggleCategory = (cat) => {
-    setForm(p => {
-      const cats = p.categories || [];
-      const newCats = cats.includes(cat) ? cats.filter(c => c !== cat) : [...cats, cat];
-      const isOpen = newCats.length === 1 && newCats[0] === 'OPEN';
-      const structure = FEE_STRUCTURE[p.courseType]?.[p.admissionYear];
-      let autoAmt = p.scholarshipAmount;
+  // Cache of Accounts Section fee structures, keyed by academic year.
+  const [feeMapCache,   setFeeMapCache]   = useState({});
+  const [feeMapLoading, setFeeMapLoading] = useState(false);
+
+  // Returns the fee-structure map for a given academic year — cached, or
+  // fetched fresh from the Accounts Section's data via the backend.
+  const ensureFeeMap = useCallback(async (ay) => {
+    if (feeMapCache[ay]) return feeMapCache[ay];
+    setFeeMapLoading(true);
+    const remote = await fetchFeeStructureMap(ay);
+    setFeeMapLoading(false);
+    const finalMap = (remote && Object.keys(remote).length) ? remote : null;
+    setFeeMapCache(prev => ({ ...prev, [ay]: finalMap }));
+    return finalMap;
+  }, [feeMapCache]);
+
+  // Recompute the auto-filled scholarship amount whenever category / course /
+  // admission-year / academic-year changes — always for the CURRENTLY
+  // SELECTED academic year, so switching year (e.g. 2026-27, 2027-28) pulls
+  // that year's fee structure from the Accounts Section, category-wise.
+  const recalcAmount = async (patch) => {
+    const next = { ...form, ...patch };
+    const cats = next.categories || [];
+    const isOpen = cats.length === 1 && cats[0] === 'OPEN';
+    if (!next.courseType || !next.admissionYear || !next.academicYear || cats.length === 0) {
+      setForm(next);
+      return;
+    }
+    const map = await ensureFeeMap(next.academicYear);
+    let autoAmt = '';
+    if (map) {
+      autoAmt = computeScholarshipAmount(map, next.courseType, next.admissionYear, isOpen);
+    } else {
+      // Fallback: Accounts Section hasn't created this year's structure yet.
+      const structure = FALLBACK_FEE_STRUCTURE[next.courseType]?.[next.admissionYear];
       if (structure) {
-        if (isOpen) {
-          autoAmt = structure['Tuition Fee'] || '';
-        } else if (newCats.length > 0 && !newCats.includes('OPEN')) {
-          autoAmt = Object.values(structure).reduce((s, v) => s + Number(v || 0), 0) || '';
-        }
+        autoAmt = isOpen
+          ? structure['Tuition Fee'] || ''
+          : Object.values(structure).reduce((s, v) => s + Number(v || 0), 0) || '';
       }
-      return { ...p, categories: newCats, scholarshipAmount: autoAmt };
-    });
+    }
+    setForm({ ...next, scholarshipAmount: autoAmt });
+  };
+
+  const toggleCategory = (cat) => {
+    const cats = form.categories || [];
+    const newCats = cats.includes(cat) ? cats.filter(c => c !== cat) : [...cats, cat];
+    recalcAmount({ categories: newCats });
   };
 
   return (
@@ -993,48 +1106,31 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
             </FormField>
 
             <FormField label="Course Type" color={themeColor}>
-              <select value={form.courseType} onChange={e => {
-                const ct = e.target.value;
-                const ay = form.admissionYear;
-                const cats = form.categories || [];
-                const isOpen = cats.length === 1 && cats[0] === 'OPEN';
-                const structure = FEE_STRUCTURE[ct]?.[ay];
-                let autoAmt = '';
-                if (structure) {
-                  autoAmt = isOpen
-                    ? structure['Tuition Fee'] || ''
-                    : Object.values(structure).reduce((s, v) => s + Number(v || 0), 0) || '';
-                }
-                setForm(p => ({ ...p, courseType: ct, scholarshipAmount: autoAmt }));
-              }} style={fieldStyle}>
+              <select value={form.courseType} onChange={e => recalcAmount({ courseType: e.target.value })} style={fieldStyle}>
                 <option value="">Select Course</option>
                 {['B.Sc','B.A'].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </FormField>
 
             <FormField label="Admission Year" color={themeColor}>
-              <select value={form.admissionYear} onChange={e => {
-                const ay = e.target.value;
-                const ct = form.courseType;
-                const cats = form.categories || [];
-                const isOpen = cats.length === 1 && cats[0] === 'OPEN';
-                const structure = FEE_STRUCTURE[ct]?.[ay];
-                let autoAmt = '';
-                if (structure) {
-                  autoAmt = isOpen
-                    ? structure['Tuition Fee'] || ''
-                    : Object.values(structure).reduce((s, v) => s + Number(v || 0), 0) || '';
-                }
-                setForm(p => ({ ...p, admissionYear: ay, scholarshipAmount: autoAmt }));
-              }} style={fieldStyle}>
+              <select value={form.admissionYear} onChange={e => recalcAmount({ admissionYear: e.target.value })} style={fieldStyle}>
                 {['FY','SY','TY'].map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </FormField>
 
             <FormField label="Academic Year" color={themeColor}>
-              <select value={form.academicYear} onChange={e => setForm(p => ({ ...p, academicYear: e.target.value }))} style={fieldStyle}>
+              <select value={form.academicYear} onChange={e => recalcAmount({ academicYear: e.target.value })} style={fieldStyle}>
                 {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>
+                {feeMapLoading
+                  ? '⏳ Loading fee structure...'
+                  : feeMapCache[form.academicYear] === null
+                    ? `⚠️ Accounts Section ne ${form.academicYear} ke liye fee structure abhi nahi banaya — fallback amounts use ho rahe hain.`
+                    : feeMapCache[form.academicYear]
+                      ? `✅ ${form.academicYear} ka fee structure Accounts Section se live liya gaya hai.`
+                      : ''}
+              </p>
             </FormField>
 
             {form.scholarshipAmount !== '' && form.courseType && (
@@ -1100,50 +1196,52 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
 
 
 /* ═══════════════════════════════════════════════════════════
-   FEE STRUCTURE VIEW
+   FEE STRUCTURE VIEW — live, year-wise, from Accounts Section
 ═══════════════════════════════════════════════════════════ */
 const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
   const COURSES = ['B.Sc', 'B.A'];
   const YEARS   = ['FY', 'SY', 'TY'];
 
   const [activeCourse, setActiveCourse] = useState('B.Sc');
-  const [editMode,     setEditMode]     = useState(false);
-  const [feeData,      setFeeData]      = useState(() => JSON.parse(JSON.stringify(FEE_STRUCTURE)));
-  const [saving,       setSaving]       = useState(false);
-  const [savedMsg,     setSavedMsg]     = useState('');
+  const [remoteMap,    setRemoteMap]    = useState(null);   // fetched map for `academicYear`, or null while unknown
+  const [fetchStatus,  setFetchStatus]  = useState('idle');  // idle | loading | ok | empty | error
 
-  const handleFeeChange = (year, head, val) => {
-    setFeeData(prev => ({
-      ...prev,
-      [activeCourse]: {
-        ...prev[activeCourse],
-        [year]: { ...prev[activeCourse][year], [head]: Number(val) || 0 },
-      },
-    }));
+  const load = useCallback(async () => {
+    setFetchStatus('loading');
+    const map = await fetchFeeStructureMap(academicYear);
+    if (map === null) { setFetchStatus('error'); setRemoteMap(null); return; }
+    if (!Object.keys(map).length) { setFetchStatus('empty'); setRemoteMap(null); return; }
+    setRemoteMap(map);
+    setFetchStatus('ok');
+  }, [academicYear]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Fall back to the static reference structure only if Accounts Section
+  // hasn't created this academic year's structure yet.
+  const entry = remoteMap?.[activeCourse];
+  const fallbackYearData = FALLBACK_FEE_STRUCTURE[activeCourse] || {};
+  const headwiseByYear = entry?.headwiseByYear || {
+    FY: fallbackYearData.FY || {}, SY: fallbackYearData.SY || {}, TY: fallbackYearData.TY || {},
   };
-
-  const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      setEditMode(false);
-      setSavedMsg('✅ Fee structure updated successfully');
-      setTimeout(() => setSavedMsg(''), 3500);
-    }, 700);
+  const yearTotals     = entry?.yearTotals || {
+    FY: Object.values(fallbackYearData.FY || {}).reduce((s, v) => s + Number(v || 0), 0),
+    SY: Object.values(fallbackYearData.SY || {}).reduce((s, v) => s + Number(v || 0), 0),
+    TY: Object.values(fallbackYearData.TY || {}).reduce((s, v) => s + Number(v || 0), 0),
   };
-
-  const courseData = feeData[activeCourse] || {};
-  const allHeads = [...new Set(YEARS.flatMap(y => Object.keys(courseData[y] || {})))];
-  const reservedTotal = (y) => Object.values(courseData[y] || {}).reduce((s, v) => s + Number(v || 0), 0);
+  const tuitionByYear  = entry?.tuitionByYear || {
+    FY: fallbackYearData.FY?.['Tuition Fee'] || 0,
+    SY: fallbackYearData.SY?.['Tuition Fee'] || 0,
+    TY: fallbackYearData.TY?.['Tuition Fee'] || 0,
+  };
+  const allHeads = [...new Set(YEARS.flatMap(y => Object.keys(headwiseByYear[y] || {})))];
 
   return (
     <div>
-      {savedMsg && <MsgBanner msg={savedMsg} />}
-
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', gap: 0, background: '#f0f4f8', borderRadius: 10, padding: 4 }}>
           {COURSES.map(c => (
-            <button key={c} onClick={() => { setActiveCourse(c); setEditMode(false); }}
+            <button key={c} onClick={() => setActiveCourse(c)}
               style={{ padding: '8px 28px', borderRadius: 8, border: 'none',
                 background: activeCourse === c ? themeColor : 'transparent',
                 color: activeCourse === c ? '#fff' : '#555',
@@ -1158,22 +1256,33 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
           <select value={academicYear} onChange={e => setAcademicYear(e.target.value)} style={{ ...inputStyle, minWidth: 130 }}>
             {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          {!editMode ? (
-            <button onClick={() => setEditMode(true)} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>✏️ Edit Fees</button>
-          ) : (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={handleSave} disabled={saving}
-                style={{ padding: '8px 18px', background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                {saving ? '⏳ Saving...' : '💾 Save'}
-              </button>
-              <button onClick={() => { setEditMode(false); setFeeData(JSON.parse(JSON.stringify(FEE_STRUCTURE))); }}
-                style={{ padding: '8px 14px', background: '#eee', color: '#333', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
-                Cancel
-              </button>
-            </div>
-          )}
+          <button onClick={load} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>
+            🔄 Refresh
+          </button>
         </div>
       </div>
+
+      {fetchStatus === 'loading' && (
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f5', color: '#666', fontSize: 13, marginBottom: 14 }}>
+          ⏳ Loading {academicYear} fee structure...
+        </div>
+      )}
+      {fetchStatus === 'empty' && (
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fff3e0', border: '1px solid #ffcc80', color: '#E65100', fontSize: 13, marginBottom: 14 }}>
+          ⚠️ Accounts Section ne <strong>{academicYear}</strong> ke liye abhi tak fee structure create nahi kiya hai.
+          Neeche fallback (2025-26 reference) amounts dikhaye ja rahe hain — Accounts Section me ye year create hote hi yahan automatically update ho jayega.
+        </div>
+      )}
+      {fetchStatus === 'error' && (
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#ffebee', border: '1px solid #ef9a9a', color: '#C62828', fontSize: 13, marginBottom: 14 }}>
+          ❌ Server se fee structure load nahi ho paya. "🔄 Refresh" try karein.
+        </div>
+      )}
+      {fetchStatus === 'ok' && (
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#e8f5e9', border: '1px solid #a5d6a7', color: '#2E7D32', fontSize: 13, marginBottom: 14 }}>
+          ✅ <strong>{academicYear}</strong> ka fee structure Accounts Section se live liya gaya hai.
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
         <div style={{ background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: 10, padding: '12px 16px' }}>
@@ -1205,9 +1314,9 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
 
         {/* Fee rows */}
         {allHeads.map((head, idx) => {
-          const isTuition = head === 'Tuition Fee';
-          const hasAnyValue = YEARS.some(y => Number(courseData[y]?.[head] || 0) > 0);
-          if (!editMode && !hasAnyValue) return null;
+          const isTuition = /tuition\s*fee/i.test(head);
+          const hasAnyValue = YEARS.some(y => Number(headwiseByYear[y]?.[head] || 0) > 0);
+          if (!hasAnyValue) return null;
 
           return (
             <div key={head} style={{
@@ -1222,34 +1331,39 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
               {/* Fee head label */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: isTuition ? 700 : 500, color: isTuition ? '#7B1FA2' : '#333' }}>
-                  {head}
+                  {head}{isTuition ? ' (OPEN category applies here)' : ''}
                 </span>
               </div>
 
               {/* Value per year */}
               {YEARS.map(y => {
-                const val = courseData[y]?.[head] ?? 0;
+                const val = headwiseByYear[y]?.[head] ?? 0;
                 return (
                   <div key={y} style={{ textAlign: 'center' }}>
-                    {editMode ? (
-                      <input type="number" value={val}
-                        onChange={e => handleFeeChange(y, head, e.target.value)}
-                        style={{ width: '90px', padding: '5px 8px', borderRadius: 6,
-                          border: `2px solid ${isTuition ? '#ce93d8' : '#e0e7ef'}`,
-                          fontSize: 13, textAlign: 'right' }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: 13, fontWeight: val ? 600 : 400,
-                        color: val ? (isTuition ? '#7B1FA2' : '#444') : '#ccc' }}>
-                        {val ? `₹${fmt(val)}` : '—'}
-                      </span>
-                    )}
+                    <span style={{ fontSize: 13, fontWeight: val ? 600 : 400,
+                      color: val ? (isTuition ? '#7B1FA2' : '#444') : '#ccc' }}>
+                      {val ? `₹${fmt(val)}` : '—'}
+                    </span>
                   </div>
                 );
               })}
             </div>
           );
         })}
+
+        {/* OPEN (Tuition Fee only) row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+          padding: '13px 20px', gap: 8, background: '#fff3e0', borderTop: `2px solid #ffcc8044` }}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#E65100' }}>Total — OPEN Category</span>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#E65100' }}>Tuition Fee only</p>
+          </div>
+          {YEARS.map(y => (
+            <span key={y} style={{ fontSize: 15, fontWeight: 800, color: '#E65100', textAlign: 'center' }}>
+              ₹{fmt(tuitionByYear[y])}
+            </span>
+          ))}
+        </div>
 
         {/* Reserved Total row */}
         <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
@@ -1260,7 +1374,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
           </div>
           {YEARS.map(y => (
             <span key={y} style={{ fontSize: 15, fontWeight: 800, color: themeColor, textAlign: 'center' }}>
-              ₹{fmt(reservedTotal(y))}
+              ₹{fmt(yearTotals[y])}
             </span>
           ))}
         </div>
@@ -1269,27 +1383,36 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
       {/* Quick summary cards per year */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
         {YEARS.map(y => {
-          const total = reservedTotal(y);
           const yearLabel = y === 'FY' ? 'First Year' : y === 'SY' ? 'Second Year' : 'Third Year';
           return (
             <div key={y} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e0e7ef', padding: '14px 16px' }}>
               <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: themeColor, borderBottom: `2px solid ${themeColor}22`, paddingBottom: 6 }}>
-                {activeCourse} — {yearLabel}
+                {activeCourse} — {yearLabel} ({academicYear})
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                   <span style={{ color: '#888' }}>Total Fees</span>
-                  <span style={{ fontWeight: 700, color: '#333' }}>₹{fmt(total)}</span>
+                  <span style={{ fontWeight: 700, color: '#333' }}>₹{fmt(yearTotals[y])}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                   <span style={{ color: '#1565C0' }}>Reserved Scholarship</span>
-                  <span style={{ fontWeight: 700, color: '#1565C0' }}>₹{fmt(total)}</span>
+                  <span style={{ fontWeight: 700, color: '#1565C0' }}>₹{fmt(yearTotals[y])}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: '#E65100' }}>OPEN Scholarship</span>
+                  <span style={{ fontWeight: 700, color: '#E65100' }}>₹{fmt(tuitionByYear[y])}</span>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      <p style={{ marginTop: 14, fontSize: 11, color: '#999' }}>
+        ✏️ Fee structure is created/edited from the <strong>Accounts Section → Fee Structure</strong> tab.
+        This view only reads it — select a different academic year above to see that year's amounts here
+        and have them auto-applied (category-wise) in the "Custom Records" form.
+      </p>
     </div>
   );
 };
