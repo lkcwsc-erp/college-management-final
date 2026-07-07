@@ -1234,7 +1234,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   // hasn't created this academic year's structure yet.
   const entry = remoteMap?.[activeCourse];
   const fallbackYearData = FALLBACK_FEE_STRUCTURE[activeCourse] || {};
-  const headwiseByYear = entry?.headwiseByYear || {
+  const rawHeadwise = entry?.headwiseByYear || {
     FY: fallbackYearData.FY || {}, SY: fallbackYearData.SY || {}, TY: fallbackYearData.TY || {},
   };
   const yearTotals     = entry?.yearTotals || {
@@ -1247,7 +1247,39 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
     SY: fallbackYearData.SY?.['Tuition Fee'] || 0,
     TY: fallbackYearData.TY?.['Tuition Fee'] || 0,
   };
-  const allHeads = [...new Set(YEARS.flatMap(y => Object.keys(headwiseByYear[y] || {})))];
+
+  // ── Fixed display heads ──────────────────────────────────────────────
+  // Scholarship view me HAMESHA yehi 7 fee heads dikhte hain (pehle jaise).
+  // Sirf amounts selected academic year ke Accounts fee structure ke items
+  // se aggregate hote hain — baaki sab items "Other Fee" me jud jaate hain,
+  // taaki total bilkul Accounts structure ke total se match kare.
+  const DISPLAY_HEADS = ['Enrollment Fee', 'Admission Fee', 'Tuition Fee', 'Gymkhana Fee', 'Laboratory Fee', 'Library Fee', 'Other Fee'];
+  const matchHead = (name) => {
+    const n = String(name || '').trim();
+    if (/^enrollment\s*fee/i.test(n))          return 'Enrollment Fee';
+    if (/^admission\s*fee/i.test(n))           return 'Admission Fee';
+    if (/tuition\s*fee/i.test(n))              return 'Tuition Fee';
+    if (/gymkhana/i.test(n))                   return 'Gymkhana Fee';
+    if (/^laboratory\s*fee/i.test(n))          return 'Laboratory Fee';
+    if (/^library\s*fee$/i.test(n))            return 'Library Fee';
+    return null; // sab kuch aur → 'Other Fee'
+  };
+  const groupHeads = (raw, total) => {
+    const out = { 'Enrollment Fee': 0, 'Admission Fee': 0, 'Tuition Fee': 0, 'Gymkhana Fee': 0, 'Laboratory Fee': 0, 'Library Fee': 0, 'Other Fee': 0 };
+    let named = 0;
+    Object.entries(raw || {}).forEach(([name, amt]) => {
+      const head = matchHead(name);
+      if (head) { out[head] += Number(amt) || 0; named += Number(amt) || 0; }
+    });
+    out['Other Fee'] = Math.max(0, (Number(total) || 0) - named);
+    return out;
+  };
+  const headwiseByYear = {
+    FY: groupHeads(rawHeadwise.FY, yearTotals.FY),
+    SY: groupHeads(rawHeadwise.SY, yearTotals.SY),
+    TY: groupHeads(rawHeadwise.TY, yearTotals.TY),
+  };
+  const allHeads = DISPLAY_HEADS;
 
   return (
     <div>
