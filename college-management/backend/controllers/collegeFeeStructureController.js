@@ -1,7 +1,9 @@
 /* ============================================================
    controllers/collegeFeeStructureController.js
    CRUD for college fee structure (total fees per item).
-   Used by: Admin tab in AccountsSectionDashboard
+   Used by: Accounts Section (create/edit) and
+            Scholarship Section → MahaDBT Receivable (read, apply
+            year-wise + category-wise).
    ============================================================ */
 const CollegeFeeStructure = require('../models/CollegeFeeStructure');
 
@@ -19,6 +21,48 @@ function deriveYearTotals(items) {
   return totals; // { FY: 30677, SY: 28957, TY: 30692 }
 }
 
+/* ── helper: derive Tuition-Fee-only totals per year ──────────
+   Used for the "OPEN" scholarship category, which under MahaDBT
+   only covers the Tuition Fee, not the full fee structure.        */
+function deriveTuitionByYear(items) {
+  const years = { FY: [0,1], SY: [2,3], TY: [4,5] };
+  const tuitionItems = items.filter(item => /tuition\s*fee/i.test(item.name || ''));
+  const totals = {};
+  for (const [yr, idxs] of Object.entries(years)) {
+    totals[yr] = tuitionItems.reduce(
+      (sum, item) => sum + (item.s[idxs[0]] || 0) + (item.s[idxs[1]] || 0),
+      0
+    );
+  }
+  return totals; // { FY: 16500, SY: 16500, TY: 16500 }
+}
+
+/* ── helper: derive a simple { FeeHeadName: amount } map per year ──
+   Used by the Scholarship Section's read-only Fee Structure view so
+   it can render the same fee-head breakdown Accounts entered,
+   without needing to know about semesters.                          */
+function deriveHeadwiseByYear(items) {
+  const years = { FY: [0,1], SY: [2,3], TY: [4,5] };
+  const headwise = { FY: {}, SY: {}, TY: {} };
+  for (const [yr, idxs] of Object.entries(years)) {
+    items.forEach(item => {
+      const val = (item.s[idxs[0]] || 0) + (item.s[idxs[1]] || 0);
+      if (val) headwise[yr][item.name] = (headwise[yr][item.name] || 0) + val;
+    });
+  }
+  return headwise;
+}
+
+function withDerived(doc) {
+  const obj = doc.toObject ? doc.toObject() : doc;
+  return {
+    ...obj,
+    yearTotals:   deriveYearTotals(obj.items || []),
+    tuitionByYear: deriveTuitionByYear(obj.items || []),
+    headwiseByYear: deriveHeadwiseByYear(obj.items || []),
+  };
+}
+
 
 /* ─────────────────────────────────────────────────────────────
    GET /api/fee-structure
@@ -32,10 +76,7 @@ exports.getAllFeeStructures = async (req, res) => {
     if (req.query.academicYear) filter.academicYear = req.query.academicYear;
 
     const docs = await CollegeFeeStructure.find(filter).sort({ courseType: 1, academicYear: -1 });
-    const result = docs.map(doc => ({
-      ...doc.toObject(),
-      yearTotals: deriveYearTotals(doc.items),
-    }));
+    const result = docs.map(withDerived);
     return res.json({ success: true, structures: result });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -50,7 +91,7 @@ exports.getFeeStructureById = async (req, res) => {
   try {
     const doc = await CollegeFeeStructure.findById(req.params.id);
     if (!doc) return res.status(404).json({ success: false, message: 'Not found' });
-    return res.json({ success: true, structure: { ...doc.toObject(), yearTotals: deriveYearTotals(doc.items) } });
+    return res.json({ success: true, structure: withDerived(doc) });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -86,7 +127,48 @@ exports.createFeeStructure = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Fee structure created',
-      structure: { ...doc.toObject(), yearTotals: deriveYearTotals(doc.items) },
+      structure: withDerived(doc),
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+/* ─────────────────────────────────────────────────────────────
+   POST /api/fee-structure/upsert
+   Create-or-update in a single call. Used by the Accounts Section
+   "Create new academic year" / direct item-edit flows so a custom
+   year's structure (e.g. 2026-27, 2027-28) is always persisted to
+   the database and instantly available everywhere — including the
+   Scholarship Section's MahaDBT Receivable Management tab.
+   Body: { courseType, academicYear, items: [...] }
+───────────────────────────────────────────────────────────── */
+exports.upsertFeeStructure = async (req, res) => {
+  try {
+    const { courseType, academicYear, items, createdBy } = req.body;
+    if (!courseType || !academicYear || !Array.isArray(items)) {
+      return res.status(400).json({ success: false, message: 'courseType, academicYear and items are required' });
+    }
+
+    let doc = await CollegeFeeStructure.findOne({ courseType, academicYear });
+    if (doc) {
+      doc.items = items;
+      doc.isActive = true;
+      if (createdBy) doc.updatedBy = createdBy;
+      doc.markModified('items');
+      await doc.save();
+    } else {
+      doc = await CollegeFeeStructure.create({
+        courseType, academicYear, items,
+        createdBy: createdBy || '', isActive: true,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Fee structure saved',
+      structure: withDerived(doc),
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -114,7 +196,7 @@ exports.updateFeeStructure = async (req, res) => {
     return res.json({
       success: true,
       message: 'Updated successfully',
-      structure: { ...doc.toObject(), yearTotals: deriveYearTotals(doc.items) },
+      structure: withDerived(doc),
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -147,7 +229,7 @@ exports.updateFeeItem = async (req, res) => {
     return res.json({
       success: true,
       message: 'Item updated',
-      structure: { ...doc.toObject(), yearTotals: deriveYearTotals(doc.items) },
+      structure: withDerived(doc),
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -188,7 +270,7 @@ exports.addFeeItem = async (req, res) => {
       success: true,
       message: 'Fee item added',
       newItem,
-      structure: { ...doc.toObject(), yearTotals: deriveYearTotals(doc.items) },
+      structure: withDerived(doc),
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -217,7 +299,7 @@ exports.deleteFeeItem = async (req, res) => {
     return res.json({
       success: true,
       message: 'Item deleted',
-      structure: { ...doc.toObject(), yearTotals: deriveYearTotals(doc.items) },
+      structure: withDerived(doc),
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
