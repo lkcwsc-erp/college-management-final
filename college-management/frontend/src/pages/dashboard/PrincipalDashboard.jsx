@@ -1807,6 +1807,16 @@ const FeeStructApprovalTab = ({ role, kind }) => {
 
   const SEM_LABELS = ['S-I','S-II','S-III','S-IV','S-V','S-VI'];
 
+  // FY/SY/TY totals from a course's items (Sem pairs: FY=[I,II], SY=[III,IV], TY=[V,VI])
+  const yearTotalsOf = (items) => {
+    const idx = { FY: [0, 1], SY: [2, 3], TY: [4, 5] };
+    const t = {};
+    Object.entries(idx).forEach(([yr, [i1, i2]]) => {
+      t[yr] = (items || []).reduce((s, it) => s + (Number(it.s?.[i1]) || 0) + (Number(it.s?.[i2]) || 0), 0);
+    });
+    return t;
+  };
+
   return (
     <div>
       <h2 style={{ color:'#1565C0', marginBottom:4 }}>{kind === 'document' ? '💰 Document Fee Approvals' : '🏛️ Fee Structure Approvals'}</h2>
@@ -1835,7 +1845,8 @@ const FeeStructApprovalTab = ({ role, kind }) => {
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
                     <div>
                       <span style={{ fontSize:15, fontWeight:700, color:'#333' }}>{a.itemName}</span>
-                      <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{a.courseKey} — {a.itemSection}</span>
+                      {!a.isNewYearStructure && <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{a.courseKey} — {a.itemSection}</span>}
+                      {a.isNewYearStructure && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#f3e5f5', color:'#7B1FA2', padding:'2px 8px', borderRadius:8 }}>🆕 New Year Structure{a.sourceYear ? ` (${a.sourceYear} se copy)` : ''}</span>}
                       {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#e3f2fd', color:'#1565C0', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
                       {a.isDeletion && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Request</span>}
                     </div>
@@ -1843,7 +1854,22 @@ const FeeStructApprovalTab = ({ role, kind }) => {
                   </div>
                   {/* Amount comparison */}
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:14 }}>
-                    {a.courseKey === 'DOC' ? (
+                    {a.isNewYearStructure ? (
+                      ['B.Sc.', 'B.A.'].map(ck => {
+                        const items = a.structureData?.[ck]?.items || [];
+                        const t = yearTotalsOf(items);
+                        return (
+                          <div key={ck} style={{ background:'#f3e5f5', borderRadius:8, padding:'10px 14px' }}>
+                            <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#7B1FA2' }}>{ck} — {a.academicYear} ({items.length} fee items)</p>
+                            <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
+                              {['FY','SY','TY'].map(yr => (
+                                <span key={yr} style={{ fontSize:12, fontWeight:700, color:'#7B1FA2' }}>{yr}: ₹{(t[yr]||0).toLocaleString('en-IN')}</span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : a.courseKey === 'DOC' ? (
                       <>
                         <div style={{ background:'#f5f5f5', borderRadius:8, padding:'10px 14px' }}>
                           <p style={{ margin:'0 0 6px', fontSize:11, fontWeight:700, color:'#888' }}>CURRENT FEE</p>
