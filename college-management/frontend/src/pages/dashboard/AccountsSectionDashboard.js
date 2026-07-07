@@ -228,7 +228,7 @@ const loadDocFees = () => {
   try {
     const s = localStorage.getItem('lkcwsc_doc_fees');
     if (s) return { ...DEFAULT_DOC_FEES, ...JSON.parse(s) };
-  } catch {}
+  } catch (_) {}
   return { ...DEFAULT_DOC_FEES };
 };
 const saveDocFees = (fees) => localStorage.setItem('lkcwsc_doc_fees', JSON.stringify(fees));
@@ -252,62 +252,58 @@ const prevAcadYear = (ay) => {
   return `${start - 1}-${String(start).slice(2)}`;
 };
 
+// Next academic year, e.g. '2025-26' → '2026-27'
+const nextAcadYear = (ay) => {
+  const start = Number((ay || '').slice(0, 4));
+  if (!start) return '';
+  return `${start + 1}-${String(start + 2).slice(2)}`;
+};
+
+// Correct fee-structure year for a student's CURRENT standing, based on the AY
+// they were originally admitted in (adm.academicYear) + how far along they are
+// now (adm.admissionYear: '1st Year' / '2nd Year' / '3rd Year').
+// e.g. admitted 2026-27 as 1st Year, now showing as 2nd Year → fees should be
+// from the 2027-28 structure, not whatever today's calendar year happens to be.
+const expectedAcadYearForAdm = (adm) => {
+  const baseAY = adm?.academicYear;
+  if (!baseAY || !/^\d{4}-\d{2}$/.test(baseAY)) return currentAcadYear();
+  const offset = adm.admissionYear === '2nd Year' ? 1 : adm.admissionYear === '3rd Year' ? 2 : 0;
+  let ay = baseAY;
+  for (let i = 0; i < offset; i++) ay = nextAcadYear(ay);
+  return ay;
+};
+
 const loadYearStructures = () => {
   try { return JSON.parse(localStorage.getItem('lkcwsc_year_structures') || '{}'); } catch { return {}; }
 };
 const saveYearStructuresLS = (s) => localStorage.setItem('lkcwsc_year_structures', JSON.stringify(s));
 
-// ─── Backend persistence for year-wise fee structures ─────────────────────────
-// Structures used to live ONLY in this browser's localStorage, which is why a
-// year's structure created here never showed up anywhere else (e.g. the
-// Scholarship Section's MahaDBT Receivable Management tab). These helpers push
-// / pull the same structures to/from the database (CollegeFeeStructure) so
-// every section reads the same year-wise + category-wise fee data.
-const pushStructureToBackend = async (academicYear, courseKey, items, createdBy) => {
-  try {
-    await API.post('/fee-structure/upsert', { courseType: courseKey, academicYear, items, createdBy });
-    return true;
-  } catch (err) {
-    console.warn(`Could not sync ${courseKey} ${academicYear} fee structure to server:`, err?.response?.data?.message || err.message);
-    return false;
-  }
+// ── Approved (LIVE) custom-year structures ──────────────────────────────────
+// A custom year's draft (lkcwsc_year_structures) is just what Accounts is
+// working on. It only becomes usable for actual fee collection once every
+// item in it has been approved by Principal → Admin. The approved snapshot
+// is kept separately here so a pending/rejected draft can NEVER accidentally
+// get used to charge a student.
+const loadApprovedYearStructs = () => {
+  try { return JSON.parse(localStorage.getItem('lkcwsc_year_approved_structs') || '{}'); } catch { return {}; }
 };
+const saveApprovedYearStructsLS = (s) => localStorage.setItem('lkcwsc_year_approved_structs', JSON.stringify(s));
 
-const fetchBackendStructures = async () => {
-  try {
-    const res = await API.get('/fee-structure');
-    const docs = res.data.structures || [];
-    // Group into { [academicYear]: { 'B.Sc.': {label, items}, 'B.A.': {label, items} } }
-    const grouped = {};
-    docs.forEach(doc => {
-      if (!grouped[doc.academicYear]) grouped[doc.academicYear] = {};
-      grouped[doc.academicYear][doc.courseType] = {
-        label: DETAILED_FEES[doc.courseType]?.label
-          ? `${DETAILED_FEES[doc.courseType].label} — ${doc.academicYear}`
-          : `${doc.courseType} — ${doc.academicYear}`,
-        items: doc.items || [],
-      };
-    });
-    return grouped;
-  } catch (err) {
-    console.warn('Could not load fee structures from server:', err?.response?.data?.message || err.message);
-    return null;
-  }
-};
-
-// Structure for a given academic year. Base year → DETAILED_FEES; custom years
-// → saved structure; unknown year → falls back to the base so fee collection
-// never breaks even if that year's structure hasn't been created yet.
+// Structure for a given academic year. Base year → DETAILED_FEES; approved
+// custom years → their approved structure; a year that's still draft/pending/
+// rejected falls back to the base, exactly like an year that doesn't exist
+// yet — so fee collection can never use an un-approved structure.
 const getStructureForYear = (ay) => {
   if (!ay || ay === BASE_STRUCT_YEAR) return DETAILED_FEES;
-  const all = loadYearStructures();
-  return all[ay] || DETAILED_FEES;
+  const approved = loadApprovedYearStructs();
+  return approved[ay] || DETAILED_FEES;
 };
 
-// Options for every academic-year selector: base year + all custom years (sorted)
+// Options for every academic-year selector used during fee collection:
+// base year + only the custom years that are FULLY approved.
 const listStructYears = () => [
   BASE_STRUCT_YEAR,
-  ...Object.keys(loadYearStructures()).filter(y => y !== BASE_STRUCT_YEAR).sort(),
+  ...Object.keys(loadApprovedYearStructs()).sort(),
 ];
 
 // ─── Receipt printer (official format per LKCWSC document) ───────────────────
@@ -463,15 +459,12 @@ const F = ({ label, value }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Fee Structure Tab Component ─────────────────────────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
-  const { user } = useAuth();
   const [feeView, setFeeView]           = useState('bsc');
   // Multi-year: which academic year's structure is being viewed/edited
   const [structYear, setStructYear]     = useState(BASE_STRUCT_YEAR);
   const [yearStructs, setYearStructs]   = useState(loadYearStructures);
-  const [syncingServer, setSyncingServer] = useState(false);
   const [showNewYear, setShowNewYear]   = useState(false);
   const [newYearName, setNewYearName]   = useState('');
-  const [yearUploadBusy, setYearUploadBusy] = useState(false);
   const [editDocFees2, setEditDocFees2] = useState(false); // eslint-disable-line no-unused-vars
   const [docFeeEdits2, setDocFeeEdits2] = useState({}); // eslint-disable-line no-unused-vars
   const [customFees, setCustomFees]     = useState(() => {
@@ -496,78 +489,12 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   useEffect(() => { fetchFeeApprovals(); }, [fetchFeeApprovals]);
 
-  // ── Sync with backend on load ──────────────────────────────────────────────
-  // Pull every year's fee structure from the database. If the base year
-  // (2025-26) isn't in the DB yet, seed it from DETAILED_FEES once — after
-  // that the database is the shared source of truth for every section
-  // (Accounts, Scholarship's MahaDBT Receivable, etc.), not just this browser.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setSyncingServer(true);
-      const remote = await fetchBackendStructures();
-      if (cancelled) return;
-      if (remote) {
-        if (!remote[BASE_STRUCT_YEAR]) {
-          await Promise.all(['B.Sc.', 'B.A.'].map(ck =>
-            pushStructureToBackend(BASE_STRUCT_YEAR, ck, DETAILED_FEES[ck].items, user?.name || 'Accounts Staff')
-          ));
-        }
-        // Merge any DB-only custom years (e.g. created from another device)
-        // into the local cache without discarding local-only edits.
-        const merged = { ...loadYearStructures() };
-        Object.entries(remote).forEach(([ay, courses]) => {
-          if (ay === BASE_STRUCT_YEAR) return;
-          merged[ay] = { ...(merged[ay] || {}), ...courses };
-        });
-        saveYearStructuresLS(merged);
-        setYearStructs(merged);
-
-        // Push any LOCAL-ONLY years up to the database. Purane years jo
-        // sirf is browser ke localStorage me bane the (backend sync se
-        // pehle), wo yahan ek baar DB me chale jaate hain — tabhi wo
-        // Scholarship Section ke MahaDBT Receivable year dropdown me
-        // select karne ke liye dikhenge.
-        const localOnly = Object.entries(merged).filter(
-          ([ay]) => ay !== BASE_STRUCT_YEAR && !remote[ay]
-        );
-        for (const [ay, courses] of localOnly) {
-          await Promise.all(
-            Object.entries(courses)
-              .filter(([, v]) => Array.isArray(v?.items) && v.items.length)
-              .map(([ck, v]) => pushStructureToBackend(ay, ck, v.items, user?.name || 'Accounts Staff'))
-          );
-        }
-      }
-      setSyncingServer(false);
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // New-academic-year structures submitted via Excel upload (Principal → Admin pipeline)
-  const yearApprovals = feeApprovals.filter(a => a.isNewYearStructure);
-
-  // Once Admin approves a year, mirror its structureData into the local
-  // year-structure cache so it immediately shows up in the year selector
-  // and in Collect Fees / Walk-in flows — same place the manual "copy" flow writes to.
-  useEffect(() => {
-    const approvedYears = yearApprovals.filter(a => a.status === 'approved' && a.structureData);
-    if (approvedYears.length === 0) return;
-    let changed = false;
-    const all = { ...yearStructs };
-    approvedYears.forEach(a => {
-      if (!all[a.academicYear]) {
-        all[a.academicYear] = JSON.parse(JSON.stringify(a.structureData));
-        changed = true;
-      }
-    });
-    if (changed) { saveYearStructuresLS(all); setYearStructs(all); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feeApprovals]);
-
-  const courseKey = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
-  const isBaseYear = structYear === BASE_STRUCT_YEAR;
+  const courseKey  = feeView === 'bsc' ? 'B.Sc.' : 'B.A.';
+  const isBaseYear  = structYear === BASE_STRUCT_YEAR;
+  // Custom years are namespaced in the approval queue as "2026-27::B.Sc." so
+  // they go through the exact same Principal → Admin pipeline as base-year
+  // edits, but tracked separately per academic year.
+  const fullCourseKey = isBaseYear ? courseKey : `${structYear}::${courseKey}`;
   const course = isBaseYear
     ? DETAILED_FEES[courseKey]
     : (yearStructs[structYear]?.[courseKey] || { label: `${DETAILED_FEES[courseKey].label} — ${structYear}`, items: [] });
@@ -577,18 +504,22 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   //  - newest APPROVED edit per item → live override amount
   //  - newest APPROVED deletion per item → item removed from structure
   //  - newest edit/delete still in the pipeline → shows as "pending"
-  // NOTE: approvals apply only to the BASE year structure; custom-year
-  // structures are edited directly (they're that year's own master data).
+  //  - newest REJECTED edit → shows as "rejected", draft amount stays as-is
+  // Applies to BOTH the base year and every custom year — nothing is usable
+  // for fee collection until Principal → Admin have approved it here.
   const approvedOverrides = {};      // itemId -> approved amounts (live)
   const approvedDeleted   = {};      // itemId -> true (approved deletion)
   const pendingForCourse  = {};      // itemId -> { amounts, status:'pending', isDelete }
+  const rejectedForCourse = {};      // itemId -> { reason }
   const seenNewest        = new Set();
-  if (isBaseYear) feeApprovals.forEach(a => {
-    if (a.courseKey !== courseKey) return;
+  feeApprovals.forEach(a => {
+    if (a.courseKey !== fullCourseKey) return;
     if (!seenNewest.has(a.itemId)) {
       seenNewest.add(a.itemId);
       if (['pending_principal', 'approved_by_principal', 'pending_admin'].includes(a.status)) {
         pendingForCourse[a.itemId] = { amounts: a.newAmounts, status: 'pending', isDelete: !!a.isDeletion, submittedAt: a.createdAt };
+      } else if (['rejected_by_principal', 'rejected_by_admin'].includes(a.status)) {
+        rejectedForCourse[a.itemId] = { reason: a.principalNote || a.adminNote || 'Rejected', isDelete: !!a.isDeletion };
       }
     }
     if (a.status === 'approved' && !(a.itemId in approvedOverrides) && !(a.itemId in approvedDeleted)) {
@@ -597,13 +528,47 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     }
   });
 
+  // ── Year-level approval status (only meaningful for custom years) ──
+  // 'draft'    → never submitted for approval yet, editable freely
+  // 'pending'  → at least one item awaiting Principal or Admin
+  // 'rejected' → at least one item rejected and not yet resubmitted (and none pending)
+  // 'approved' → every item that was ever submitted for this year+course is approved
+  const yearCourseApprovals = feeApprovals.filter(a => a.courseKey === fullCourseKey);
+  const yearCourseStatus = (() => {
+    if (isBaseYear) return 'approved'; // n/a — base year has no "year status" concept
+    if (yearCourseApprovals.length === 0) return 'draft';
+    if (Object.keys(pendingForCourse).length > 0) return 'pending';
+    if (Object.keys(rejectedForCourse).length > 0) return 'rejected';
+    return 'approved';
+  })();
+
+  // ── Sync fully-approved custom years into the LIVE structure store ──
+  // Whenever every item currently in the draft for {structYear} is approved,
+  // snapshot it into lkcwsc_year_approved_structs so getStructureForYear() /
+  // listStructYears() (used everywhere fees are actually collected) pick it up.
+  useEffect(() => {
+    if (isBaseYear) return;
+    if (yearCourseStatus !== 'approved' || yearCourseApprovals.length === 0) return;
+    const draftItems = (yearStructs[structYear]?.[courseKey]?.items) || [];
+    if (draftItems.length === 0) return;
+    const approvedStore = loadApprovedYearStructs();
+    const yearEntry = approvedStore[structYear] ? { ...approvedStore[structYear] } : {};
+    yearEntry[courseKey] = {
+      label: yearStructs[structYear]?.[courseKey]?.label || `${DETAILED_FEES[courseKey].label} — ${structYear}`,
+      items: draftItems,
+    };
+    approvedStore[structYear] = yearEntry;
+    saveApprovedYearStructsLS(approvedStore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBaseYear, yearCourseStatus, structYear, courseKey, feeApprovals]);
+
   const allItems = isBaseYear
     ? (course
         ? [...course.items, ...customItems.filter(ci => !course.items.find(i => i.id === ci.id))]
             .filter(it => !approvedDeleted[it.id])
             .map(it => approvedOverrides[it.id] ? { ...it, s: approvedOverrides[it.id] } : it)
         : [])
-    : (course?.items || []);
+    : (course?.items || []).filter(it => !approvedDeleted[it.id]);
 
   const saveCustomFees = (cf) => {
     localStorage.setItem('lkcwsc_custom_fees', JSON.stringify(cf));
@@ -617,10 +582,10 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
-  // ── Custom-year structures: edits apply DIRECTLY (no approval pipeline) ──
-  // The custom year is its own master data entered by Accounts, so add /
-  // edit / delete save straight into localStorage for that year.
-  const applyDirectYearEdit = async (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
+  // ── Custom-year DRAFT edits — save locally only, not yet usable for fee ──
+  // collection. Accounts can keep tweaking amounts here; nothing takes effect
+  // for students until it's submitted and approved (submitEdit / submitYearForApproval).
+  const applyDraftYearEdit = (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
     const all = { ...yearStructs };
     const yr  = all[structYear] ? { ...all[structYear] } : {};
     const src = yr[courseKey]
@@ -632,18 +597,12 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     yr[courseKey] = src; all[structYear] = yr;
     saveYearStructuresLS(all); setYearStructs(all);
     setEditingItem(null);
-
-    // Keep the database copy in sync so this edit is reflected everywhere
-    // (e.g. Scholarship Section → MahaDBT Receivable Management).
-    const ok = await pushStructureToBackend(structYear, courseKey, src.items, user?.name || 'Accounts Staff');
-
-    showToast(isDeletion
-      ? `🗑️ Item ${structYear} structure se remove ho gaya${ok ? '' : ' (⚠️ server sync fail hua)'}`
-      : `✅ ${structYear} structure updated!${ok ? '' : ' (⚠️ server sync fail hua)'}`);
   };
 
   // ── Create a new academic-year structure (copy of the selected year) ──
-  const createNewYear = async () => {
+  // This only creates a DRAFT — it must still be submitted and approved by
+  // Principal → Admin (see submitYearForApproval) before it's usable.
+  const createNewYear = () => {
     const name = newYearName.trim();
     if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Format: YYYY-YY (e.g. 2026-27)', 'error'); return; }
     if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
@@ -654,132 +613,64 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     const all = { ...yearStructs, [name]: clone };
     saveYearStructuresLS(all); setYearStructs(all);
     setStructYear(name); setShowNewYear(false); setNewYearName('');
-
-    // Persist to the database → immediately available in the Scholarship
-    // Section's MahaDBT Receivable Management tab (year-wise + category-wise).
-    setSyncingServer(true);
-    const [okSc, okA] = await Promise.all([
-      pushStructureToBackend(name, 'B.Sc.', clone['B.Sc.'].items, user?.name || 'Accounts Staff'),
-      pushStructureToBackend(name, 'B.A.',  clone['B.A.'].items,  user?.name || 'Accounts Staff'),
-    ]);
-    setSyncingServer(false);
-
-    showToast(okSc && okA
-      ? `✅ ${name} fee structure ban gaya (${structYear} se copy)! MahaDBT Receivable me bhi turant apply hoga.`
-      : `⚠️ ${name} structure yahan ban gaya, par server sync fail hua — dusre sections me abhi nahi dikhega. Dobara try karein.`);
+    showToast(`📝 ${name} ka DRAFT ban gaya (${structYear} se copy)! Amounts edit karke "📤 Send for Approval" dabayein — Principal → Admin approve karenge tabhi Collect Fees me use hoga.`);
   };
 
-  // ── Download an Excel template (current year's items) to edit & re-upload ──
-  const downloadYearTemplate = () => {
-    const src = isBaseYear ? DETAILED_FEES : (yearStructs[structYear] || DETAILED_FEES);
-    const rows = [];
-    ['B.Sc.', 'B.A.'].forEach(ct => {
-      const items = (src[ct] || DETAILED_FEES[ct]).items;
-      items.forEach(it => {
-        rows.push({
-          CourseType: ct,
-          Section: it.section,
-          'Item Name': it.name,
-          'Sem I': it.s[0]||0, 'Sem II': it.s[1]||0, 'Sem III': it.s[2]||0,
-          'Sem IV': it.s[3]||0, 'Sem V': it.s[4]||0, 'Sem VI': it.s[5]||0,
-        });
-      });
-    });
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Fee Structure');
-    XLSX.writeFile(wb, `fee-structure-template-${structYear}.xlsx`);
-    showToast('⬇️ Template downloaded — amounts edit karke wapas upload karo');
-  };
-
-  // ── Upload an edited Excel sheet → submit as new-year structure for approval ──
-  const handleYearExcelUpload = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-selecting same file later
-    if (!file) return;
-
-    const name = newYearName.trim();
-    if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Pehle upar Academic Year likho (format: YYYY-YY, e.g. 2026-27)', 'error'); return; }
-    if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
-    const alreadyPending = yearApprovals.find(a => a.academicYear === name && ['pending_principal','pending_admin'].includes(a.status));
-    if (alreadyPending) { showToast(`❌ ${name} ke liye ek request pehle se pending hai (approval ka wait karo)`, 'error'); return; }
-
-    setYearUploadBusy(true);
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const wb = XLSX.read(evt.target.result, { type: 'binary' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: 0 });
-        if (!rows.length) throw new Error('Excel sheet empty hai');
-
-        const structureData = {};
-        rows.forEach((row, idx) => {
-          const ct = String(row.CourseType || '').trim();
-          const courseKeyNorm = /b\.?sc/i.test(ct) ? 'B.Sc.' : /b\.?a\.?/i.test(ct) ? 'B.A.' : null;
-          if (!courseKeyNorm) throw new Error(`Row ${idx+2}: CourseType 'B.Sc.' ya 'B.A.' hona chahiye`);
-          const itemName = String(row['Item Name'] || '').trim();
-          if (!itemName) throw new Error(`Row ${idx+2}: Item Name missing hai`);
-          const section = /univ/i.test(String(row.Section||'')) ? 'University' : 'College';
-          const s = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'].map(c => Number(row[c])||0);
-          const prefix = courseKeyNorm.toLowerCase().replace(/[^a-z]/g,'');
-          const id = `${prefix}_${itemName.toLowerCase().replace(/[^a-z0-9]+/g,'_')}`;
-          if (!structureData[courseKeyNorm]) {
-            structureData[courseKeyNorm] = { label: `${DETAILED_FEES[courseKeyNorm].label} — ${name}`, items: [] };
-          }
-          structureData[courseKeyNorm].items.push({ id, name: itemName, section, s });
-        });
-        if (!structureData['B.Sc.'] || !structureData['B.A.']) {
-          throw new Error('Excel me B.Sc. aur B.A. dono course ke rows hone chahiye');
-        }
-
-        await API.post('/fee-structure-approvals/submit-year', {
-          academicYear: name,
-          sourceYear: structYear,
-          structureData,
-        });
-        showToast(`✅ ${name} ka structure Excel se submit ho gaya — Principal → Admin approval ke baad hi structure me apply hoga!`);
-        setShowNewYear(false); setNewYearName('');
-        fetchFeeApprovals();
-      } catch (err) {
-        showToast('❌ ' + (err.response?.data?.message || err.message || 'Upload failed'), 'error');
-      } finally {
-        setYearUploadBusy(false);
-      }
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  // ── Delete an entire custom-year structure (base year cannot be deleted) ──
-  const deleteYearStructure = async (yr) => {
+  // ── Delete an entire custom-year DRAFT (base year cannot be deleted) ──
+  const deleteYearStructure = (yr) => {
     if (yr === BASE_STRUCT_YEAR) { showToast('❌ Base year (2025-26) delete nahi ho sakta', 'error'); return; }
-    if (!window.confirm(`⚠️ "${yr}" ka poora fee structure delete karein?\n\nYe sirf structure (B.Sc./B.A. amounts) delete karega — students ke fee records / receipts safe rahenge. Lekin agar koi student is year ke structure se fees collect kar raha hai to base year amounts use honge.\n\nPakka delete karna hai?`)) return;
+    const approvedStore = loadApprovedYearStructs();
+    const isLive = !!approvedStore[yr];
+    if (!window.confirm(`⚠️ "${yr}" ka fee structure delete karein?\n\nYe draft (B.Sc./B.A. amounts) delete karega — students ke fee records / receipts safe rahenge.${isLive ? `\n\n⚠️ Ye year Principal/Admin se APPROVED hai aur abhi LIVE hai — draft delete karne se live structure turant nahi hatega. Agar poori tarah band karna hai to Admin se baat karein.` : ''}\n\nPakka delete karna hai?`)) return;
     const all = { ...yearStructs };
     delete all[yr];
     saveYearStructuresLS(all); setYearStructs(all);
     if (structYear === yr) setStructYear(BASE_STRUCT_YEAR);
+    showToast(`🗑️ ${yr} draft delete ho gaya`);
+  };
 
-    // Best-effort: also deactivate this year's structures in the database so
-    // it disappears from the Scholarship Section's year selector too.
+  // ── Submit the WHOLE draft year (both courses' items) for Principal → Admin approval ──
+  const submitYearForApproval = async () => {
+    const yr = structYear;
+    const draft = yearStructs[yr];
+    if (!draft) { showToast('❌ Pehle is year ka structure banayein', 'error'); return; }
+    const jobs = [];
+    ['B.Sc.', 'B.A.'].forEach(ck => {
+      const items = draft[ck]?.items || [];
+      items.forEach(it => {
+        jobs.push(API.post('/fee-structure-approvals/submit', {
+          courseKey: `${yr}::${ck}`,
+          itemId: it.id,
+          itemName: it.name,
+          itemSection: it.section || 'College',
+          oldAmounts: [],
+          newAmounts: it.s,
+          isNewItem: true,
+          isDeletion: false,
+        }));
+      });
+    });
+    if (jobs.length === 0) { showToast('❌ Is year me koi fee item nahi mila', 'error'); return; }
     try {
-      const res = await API.get('/fee-structure', { params: { academicYear: yr } });
-      const docs = res.data.structures || [];
-      await Promise.all(docs.map(d => API.delete(`/fee-structure/${d._id}`)));
-    } catch { /* ignore — local delete already done */ }
-
-    showToast(`🗑️ ${yr} fee structure delete ho gaya`);
+      await Promise.all(jobs);
+      showToast(`📤 ${yr} ka poora structure (${jobs.length} items) Principal ke paas approval ke liye bhej diya!`);
+      fetchFeeApprovals();
+    } catch (e) {
+      showToast('❌ ' + (e.response?.data?.message || 'Submit karne me error aaya'));
+    }
   };
 
   const submitEdit = async (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
-    // Custom year → save directly, no Principal/Admin approval needed
-    if (!isBaseYear) { applyDirectYearEdit(itemId, newAmounts, newItemMeta, isDeletion); return; }
+    // Always save the draft locally first (so custom-year amounts persist and
+    // are visible immediately), THEN send to Principal → Admin for approval.
+    // Nothing takes effect for students until it comes back "approved".
+    if (!isBaseYear) applyDraftYearEdit(itemId, newAmounts, newItemMeta, isDeletion);
     const isNewItem = !!newItemMeta;
     const item = newItemMeta || allItems.find(i => i.id === itemId) || editingItem || {};
     const oldAmounts = isNewItem ? [] : (item.s || []);
     try {
-      // Send to backend so it goes to Principal → then Admin for approval
       await API.post('/fee-structure-approvals/submit', {
-        courseKey,
+        courseKey: fullCourseKey,
         itemId,
         itemName:    item.name || itemId,
         itemSection: item.section || 'College',
@@ -789,7 +680,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         isDeletion,
       });
       // Keep a local marker so this row shows "⏳ pending" immediately for the accountant
-      const pending = { ...pendingEdits, [courseKey]: { ...(pendingEdits[courseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
+      const pending = { ...pendingEdits, [fullCourseKey]: { ...(pendingEdits[fullCourseKey]||{}), [itemId]: { amounts: newAmounts, submittedAt: new Date().toISOString(), status: 'pending' } } };
       savePending(pending);
       setEditingItem(null);
       showToast(isDeletion
@@ -801,16 +692,14 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     }
   };
 
-  // Delete a fee item → base year: Principal → Admin approval; custom year: direct
+  // Delete a fee item → always Principal → Admin approval (base year AND custom years)
   const submitDelete = (item) => {
-    const q = isBaseYear
-      ? `"${item.name}" delete karne ke liye approval bhejein?\n(Principal → Admin approve karenge, tabhi structure se hatega)`
-      : `"${item.name}" ko ${structYear} structure se delete karein?`;
-    if (!window.confirm(q)) return;
+    if (!window.confirm(`"${item.name}" delete karne ke liye approval bhejein?\n(Principal → Admin approve karenge, tabhi structure se hatega)`)) return;
     submitEdit(item.id, (item.s && item.s.length ? item.s : [0,0,0,0,0,0]), null, true);
   };
 
   const hasPending = Object.keys(pendingForCourse).length > 0;
+
 
   return (
     <div>
@@ -868,53 +757,13 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             <input type="text" placeholder="e.g. 2026-27" value={newYearName} maxLength={7}
               onChange={e => setNewYearName(e.target.value)}
               style={{ padding:'9px 14px', borderRadius:8, border:'2px solid #2E7D32', fontSize:15, fontWeight:700, width:140, textAlign:'center' }} />
-            <button onClick={createNewYear} disabled={syncingServer}
-              style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:syncingServer?'wait':'pointer', opacity:syncingServer?0.7:1 }}>
-              {syncingServer ? '⏳ Server sync ho raha hai...' : `✅ Create (${structYear} se copy)`}
+            <button onClick={createNewYear}
+              style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              ✅ Create ({structYear} se copy)
             </button>
             <button onClick={() => { setShowNewYear(false); setNewYearName(''); }}
               style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
           </div>
-
-          <div style={{ borderTop:'1px dashed #2E7D32', margin:'16px 0 14px' }} />
-
-          <h4 style={{ color:'#1565C0', margin:'0 0 6px', fontSize:14 }}>📊 Ya phir Excel se seedha upload karo</h4>
-          <p style={{ fontSize:12, color:'#666', margin:'0 0 12px' }}>
-            Pehle template download karo, Excel me har item ka naya amount bharo (naye items rows bhi add kar sakte ho),
-            phir upar <strong>Academic Year</strong> box me naya year (e.g. 2026-27) likhkar wahi file upload karo.
-            Upload hote hi ye <strong>seedha apply nahi hoga</strong> — pehle <strong>Principal</strong>, phir <strong>Admin</strong> approve karenge, tabhi structure me live hoga.
-          </p>
-          <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-            <button onClick={downloadYearTemplate}
-              style={{ background:'#e3f2fd', color:'#1565C0', border:'1px solid #90caf9', borderRadius:8, padding:'10px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-              ⬇️ Download Template ({structYear})
-            </button>
-            <label style={{ background: yearUploadBusy ? '#90a4ae' : '#1565C0', color:'#fff', border:'none', borderRadius:8, padding:'10px 18px', fontSize:13, fontWeight:700, cursor: yearUploadBusy ? 'not-allowed' : 'pointer' }}>
-              {yearUploadBusy ? '⏳ Uploading…' : '📤 Upload Excel & Submit for Approval'}
-              <input type="file" accept=".xlsx,.xls" onChange={handleYearExcelUpload} disabled={yearUploadBusy} style={{ display:'none' }} />
-            </label>
-          </div>
-
-          {yearApprovals.length > 0 && (
-            <div style={{ marginTop:14, display:'flex', flexDirection:'column', gap:6 }}>
-              {yearApprovals.slice(0,5).map(a => {
-                const map = {
-                  pending_principal: { bg:'#fff3e0', color:'#E65100', label:'⏳ Pending Principal' },
-                  pending_admin:     { bg:'#e3f2fd', color:'#1565C0', label:'⏳ Pending Admin' },
-                  approved:          { bg:'#e8f5e9', color:'#2E7D32', label:'✅ Approved & Live' },
-                  rejected_by_principal: { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Principal' },
-                  rejected_by_admin:     { bg:'#ffebee', color:'#C62828', label:'❌ Rejected by Admin' },
-                };
-                const c = map[a.status] || { bg:'#f5f5f5', color:'#555', label:a.status };
-                return (
-                  <div key={a._id} style={{ fontSize:12, display:'flex', gap:8, alignItems:'center' }}>
-                    <span style={{ fontWeight:700, color:'#333' }}>{a.academicYear}</span>
-                    <span style={{ padding:'2px 10px', borderRadius:10, background:c.bg, color:c.color, fontWeight:700 }}>{c.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
@@ -2314,7 +2163,7 @@ const AccountsSectionDashboard = () => {
                         color: adm.feesPaid ? '#2E7D32' : '#E65100' }}>
                         {adm.feesPaid ? '✅ Paid' : '⏳ Pending'}
                       </span>
-                      <button onClick={() => { setSelectedAdm(adm); setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash'); setAdmFeeType('admission'); setAdmSelectedSem(''); setAdmScholarshipAmt(adm.scholarshipAmount > 0 ? String(adm.scholarshipAmount) : ''); setAdmAcadYear(currentAcadYear()); setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0); }}
+                      <button onClick={() => { setSelectedAdm(adm); setAdmFeeAmt(''); setAdmTxnId(''); setAdmPayMode('cash'); setAdmFeeType('admission'); setAdmSelectedSem(''); setAdmScholarshipAmt(adm.scholarshipAmount > 0 ? String(adm.scholarshipAmount) : ''); setAdmAcadYear(expectedAcadYearForAdm(adm)); setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0); }}
                         style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         💰 Collect
                       </button>
