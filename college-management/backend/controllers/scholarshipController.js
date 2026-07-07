@@ -3,12 +3,47 @@
    Complete Scholarship Management — LKCWSC College ERP
    ============================================================ */
 
-const ScholarshipMaster = require('../models/ScholarshipMaster');
-const Admission         = require('../models/Admission');
-const XLSX              = require('xlsx');
+const ScholarshipMaster   = require('../models/ScholarshipMaster');
+const Admission           = require('../models/Admission');
+const CollegeFeeStructure = require('../models/CollegeFeeStructure');
+const XLSX                = require('xlsx');
 
 // Reserved categories — get full MahaDBT benefit
 const RESERVED_CATEGORIES = ['SC','ST','OBC','SBC','NT-B','NT-C','NT-D','VJ/DT(NT-A)','EWS','SEBC'];
+
+/* ── helper: year-wise amount from the Accounts Section's fee structure ──
+   Looks up the CollegeFeeStructure document that the Accounts Section
+   created for (courseType + academicYear) and derives:
+     Reserved categories → total of ALL fee heads for that admission year
+     OPEN category       → Tuition Fee only for that admission year
+   Returns a Number, or null if Accounts hasn't created that year yet.   */
+const YEAR_SEM_IDX = { FY: [0, 1], SY: [2, 3], TY: [4, 5] };
+
+async function amountFromFeeStructure(courseType, academicYear, admissionYear, isReserved) {
+  if (!academicYear || !YEAR_SEM_IDX[admissionYear]) return null;
+  try {
+    const escaped = String(courseType || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const doc = await CollegeFeeStructure.findOne({
+      courseType: { $regex: new RegExp(`^${escaped}\\.?$`, 'i') },
+      academicYear,
+      isActive: true,
+    });
+    if (!doc || !Array.isArray(doc.items) || doc.items.length === 0) return null;
+
+    const [i1, i2] = YEAR_SEM_IDX[admissionYear];
+    const items = isReserved
+      ? doc.items
+      : doc.items.filter(it => /tuition\s*fee/i.test(it.name || ''));
+
+    const total = items.reduce(
+      (sum, it) => sum + (Number(it.s?.[i1]) || 0) + (Number(it.s?.[i2]) || 0),
+      0
+    );
+    return total > 0 ? total : null;
+  } catch (err) {
+    return null;
+  }
+}
 
 
 /* ============================================================
@@ -250,6 +285,53 @@ exports.autoCalculateScholarship = async (req, res) => {
     }
 
     if (!master) {
+      const isReservedCat = RESERVED_CATEGORIES.some(
+        r => r.toLowerCase() === (normalizedCategory || '').toLowerCase()
+      );
+
+      // ── Try the Accounts Section's LIVE year-wise fee structure first ──
+      //    (CollegeFeeStructure — created per academicYear, e.g. 2026-27).
+      //    Reserved → all fee heads total; OPEN → Tuition Fee only.
+      let structAmt = await amountFromFeeStructure(
+        normalizedCourse, academicYear, normalizedYear, isReservedCat
+      );
+      // If the student's own academicYear has no structure yet, use the
+      // most recent academic year the Accounts Section has created.
+      if (structAmt == null) {
+        const latest = await CollegeFeeStructure.findOne({
+          courseType: { $regex: new RegExp(`^${normalizedCourse.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.?$`, 'i') },
+          isActive: true,
+        }).sort({ academicYear: -1 });
+        if (latest) {
+          structAmt = await amountFromFeeStructure(
+            latest.courseType, latest.academicYear, normalizedYear, isReservedCat
+          );
+        }
+      }
+
+      if (structAmt != null && structAmt > 0) {
+        admission.scholarshipEligibleAmount = structAmt;
+        admission.scholarshipAmount         = structAmt;
+        admission.scholarshipPendingAmount  = structAmt - (admission.scholarshipReceivedAmount || 0);
+        const netPayable = (admission.totalFees || 0) - structAmt;
+        const balance    = netPayable - (admission.feesPaid || 0);
+        await admission.save();
+        return res.status(200).json({
+          success: true,
+          message: `Auto-calculated from Accounts Section fee structure (${academicYear || 'latest year'})`,
+          data: {
+            scholarshipEligibleAmount: structAmt,
+            scholarshipAmount:         structAmt,
+            scholarshipPendingAmount:  admission.scholarshipPendingAmount,
+            totalFees:                 admission.totalFees,
+            netPayable,
+            balance,
+            categoryType: isReservedCat ? 'reserved' : 'open',
+            usedFeeStructure: true,
+          },
+        });
+      }
+
       // ── Hardcoded fallback from official MahaDBT Excel 2025-26 ──────────
       const RESERVED_AMOUNTS = {
         'B.Sc.': { FY: 26140, SY: 25340, TY: 25340 },
@@ -260,9 +342,7 @@ exports.autoCalculateScholarship = async (req, res) => {
         'B.A.':  { FY:  5500, SY:  5500, TY:  5500 },
       };
 
-      const isReservedFallback = RESERVED_CATEGORIES.some(
-        r => r.toLowerCase() === (normalizedCategory || '').toLowerCase()
-      );
+      const isReservedFallback = isReservedCat;
 
       const courseAmounts = isReservedFallback
         ? RESERVED_AMOUNTS[normalizedCourse]
@@ -308,9 +388,18 @@ exports.autoCalculateScholarship = async (req, res) => {
       // Reserved categories: full MahaDBT benefit
       eligibleAmount = master.mahaDBTReceivable;
     } else {
-      // OPEN category: scholarship = Tuition Fee only
-      // Use tuitionFee field if available, otherwise fall back to mahaDBTReceivable
-      eligibleAmount = admission.tuitionFee || master.mahaDBTReceivable || 0;
+      // OPEN category: scholarship = Tuition Fee only.
+      // Prefer the live year-wise Accounts fee structure (tuition-only),
+      // then the master's tuitionFee field, then the admission's tuitionFee,
+      // and finally the master receivable as last resort.
+      const tuitionFromStructure = await amountFromFeeStructure(
+        normalizedCourse, master.academicYear || academicYear, normalizedYear, false
+      );
+      eligibleAmount =
+        tuitionFromStructure ||
+        master.tuitionFee ||
+        admission.tuitionFee ||
+        master.mahaDBTReceivable || 0;
     }
 
     admission.scholarshipEligibleAmount = eligibleAmount;
