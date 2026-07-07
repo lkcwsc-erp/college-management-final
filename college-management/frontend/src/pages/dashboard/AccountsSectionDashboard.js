@@ -228,7 +228,7 @@ const loadDocFees = () => {
   try {
     const s = localStorage.getItem('lkcwsc_doc_fees');
     if (s) return { ...DEFAULT_DOC_FEES, ...JSON.parse(s) };
-  } catch (_) {}
+  } catch {}
   return { ...DEFAULT_DOC_FEES };
 };
 const saveDocFees = (fees) => localStorage.setItem('lkcwsc_doc_fees', JSON.stringify(fees));
@@ -522,6 +522,22 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         });
         saveYearStructuresLS(merged);
         setYearStructs(merged);
+
+        // Push any LOCAL-ONLY years up to the database. Purane years jo
+        // sirf is browser ke localStorage me bane the (backend sync se
+        // pehle), wo yahan ek baar DB me chale jaate hain — tabhi wo
+        // Scholarship Section ke MahaDBT Receivable year dropdown me
+        // select karne ke liye dikhenge.
+        const localOnly = Object.entries(merged).filter(
+          ([ay]) => ay !== BASE_STRUCT_YEAR && !remote[ay]
+        );
+        for (const [ay, courses] of localOnly) {
+          await Promise.all(
+            Object.entries(courses)
+              .filter(([, v]) => Array.isArray(v?.items) && v.items.length)
+              .map(([ck, v]) => pushStructureToBackend(ay, ck, v.items, user?.name || 'Accounts Staff'))
+          );
+        }
       }
       setSyncingServer(false);
     })();
@@ -852,9 +868,9 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             <input type="text" placeholder="e.g. 2026-27" value={newYearName} maxLength={7}
               onChange={e => setNewYearName(e.target.value)}
               style={{ padding:'9px 14px', borderRadius:8, border:'2px solid #2E7D32', fontSize:15, fontWeight:700, width:140, textAlign:'center' }} />
-            <button onClick={createNewYear}
-              style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-              ✅ Create ({structYear} se copy)
+            <button onClick={createNewYear} disabled={syncingServer}
+              style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:syncingServer?'wait':'pointer', opacity:syncingServer?0.7:1 }}>
+              {syncingServer ? '⏳ Server sync ho raha hai...' : `✅ Create (${structYear} se copy)`}
             </button>
             <button onClick={() => { setShowNewYear(false); setNewYearName(''); }}
               style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
