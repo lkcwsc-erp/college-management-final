@@ -130,8 +130,6 @@ const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
 ───────────────────────────────────────────── */
 const YEAR_SEM_IDX = { FY: [0, 1], SY: [2, 3], TY: [4, 5] };
 
-const uiToBackendCourse = (ct) => (ct === 'B.Sc' ? 'B.Sc.' : ct === 'B.A' ? 'B.A.' : ct);
-
 const deriveYearTotalsLocal = (items) => {
   const totals = {};
   Object.entries(YEAR_SEM_IDX).forEach(([yr, idxs]) => {
@@ -160,27 +158,35 @@ const deriveHeadwiseByYearLocal = (items) => {
   return headwise;
 };
 
-// Fetch + normalize the Accounts Section's fee structure for one academic year.
-// Returns { 'B.Sc': {...}, 'B.A': {...} } (also indexed by 'B.Sc.'/'B.A.') or null on failure.
-const fetchFeeStructureMap = async (academicYear) => {
+// Fetch ALL of the Accounts Section's fee structures in one call and group
+// them by academic year. This way:
+//   • the year dropdowns show EXACTLY the years Accounts has created
+//     (jo jo year Accounts se add hoga, wo yahan select karne ke liye aayega)
+//   • selecting a year shows THAT year's live amounts — no stale cache.
+// Returns { years: ['2027-28','2026-27',...], byYear: { '2026-27': map, ... } }
+// or null on network/server failure.
+const fetchAllFeeStructureMaps = async () => {
   try {
-    const res = await API.get('/fee-structure', { params: { academicYear } });
+    const res = await API.get('/fee-structure', { params: { _ts: Date.now() } });
     const docs = res.data.structures || [];
-    if (!docs.length) return {};
-    const map = {};
+    const byYear = {};
     docs.forEach(doc => {
+      if (!doc.academicYear) return;
       const entry = {
         items: doc.items || [],
         yearTotals: doc.yearTotals || deriveYearTotalsLocal(doc.items),
         tuitionByYear: doc.tuitionByYear || deriveTuitionByYearLocal(doc.items),
         headwiseByYear: doc.headwiseByYear || deriveHeadwiseByYearLocal(doc.items),
       };
-      map[doc.courseType] = entry;                                   // 'B.Sc.' / 'B.A.'
-      map[doc.courseType.replace(/\.$/, '')] = entry;                 // 'B.Sc'  / 'B.A' (trailing dot stripped, matches UI select values)
+      if (!byYear[doc.academicYear]) byYear[doc.academicYear] = {};
+      byYear[doc.academicYear][doc.courseType] = entry;                    // 'B.Sc.' / 'B.A.'
+      byYear[doc.academicYear][doc.courseType.replace(/\.$/, '')] = entry; // 'B.Sc'  / 'B.A' (matches UI select values)
     });
-    return map;
+    // Newest year first: '2027-28' > '2026-27' > ...
+    const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+    return { years, byYear };
   } catch (err) {
-    console.warn('Could not load fee structure from Accounts Section:', err?.response?.data?.message || err.message);
+    console.warn('Could not load fee structures from Accounts Section:', err?.response?.data?.message || err.message);
     return null;
   }
 };
@@ -597,7 +603,7 @@ const AcademicYearFilter = ({ value, onChange, style = {} }) => (
 /* ═══════════════════════════════════════════════════════════
    HOME DASHBOARD
 ═══════════════════════════════════════════════════════════ */
-const HomeDashboard = ({ db, user, onRefresh, onGoTab, onExport, exporting, academicYear, setAcademicYear }) => {
+const HomeDashboard = ({ db, onRefresh, onGoTab, onExport, exporting, academicYear, setAcademicYear }) => {
   const cards = [
     { label: 'Total Students', value: db.totalStudents || 0, icon: '👩‍🎓', cls: 'blue' },
     { label: 'Not Filled',     value: db.notFilled     || 0, icon: '📝',  cls: 'orange' },
@@ -995,29 +1001,40 @@ const ScholarshipEditCard = ({ selected, editMode, setEditMode, editData, setEdi
 const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSave, onEdit, onDelete, onCancelEdit }) => {
   const themeColor = '#7B1FA2';
   const [activeView, setActiveView] = useState('feeStructure');
-  const [feeAY, setFeeAY] = useState('2025-26');
 
-  // Cache of Accounts Section fee structures, keyed by academic year.
-  const [feeMapCache,   setFeeMapCache]   = useState({});
-  const [feeMapLoading, setFeeMapLoading] = useState(false);
+  // All fee structures from the Accounts Section, grouped by academic year.
+  const [allStructs,   setAllStructs]   = useState(null);    // { years:[], byYear:{} } | null
+  const [structStatus, setStructStatus] = useState('idle');  // idle | loading | ok | empty | error
+  const [feeAY,        setFeeAY]        = useState('');
 
-  // Returns the fee-structure map for a given academic year — cached, or
-  // fetched fresh from the Accounts Section's data via the backend.
-  const ensureFeeMap = useCallback(async (ay) => {
-    if (feeMapCache[ay]) return feeMapCache[ay];
-    setFeeMapLoading(true);
-    const remote = await fetchFeeStructureMap(ay);
-    setFeeMapLoading(false);
-    const finalMap = (remote && Object.keys(remote).length) ? remote : null;
-    setFeeMapCache(prev => ({ ...prev, [ay]: finalMap }));
-    return finalMap;
-  }, [feeMapCache]);
+  const loadAllStructures = useCallback(async () => {
+    setStructStatus('loading');
+    const data = await fetchAllFeeStructureMaps();
+    if (data === null) { setStructStatus('error'); setAllStructs(null); return; }
+    setAllStructs(data);
+    setStructStatus(data.years.length ? 'ok' : 'empty');
+    // Default the Fee Structure view to the newest year Accounts created.
+    setFeeAY(prev => (prev && data.years.includes(prev)) ? prev : (data.years[0] || '2025-26'));
+  }, []);
+
+  useEffect(() => { loadAllStructures(); }, [loadAllStructures]);
+
+  // Year dropdown options = jo jo year Accounts Section ne create kiye hain.
+  // Agar server se kuch nahi mila (empty/error), static list fallback.
+  const yearOptions = allStructs?.years?.length ? allStructs.years : ACADEMIC_YEARS;
+
+  // Fee-structure map for a given academic year — straight from the freshly
+  // fetched data (no per-year cache, so switching year kabhi stale nahi hota).
+  const getFeeMap = useCallback(
+    (ay) => (allStructs?.byYear?.[ay] && Object.keys(allStructs.byYear[ay]).length ? allStructs.byYear[ay] : null),
+    [allStructs]
+  );
 
   // Recompute the auto-filled scholarship amount whenever category / course /
   // admission-year / academic-year changes — always for the CURRENTLY
   // SELECTED academic year, so switching year (e.g. 2026-27, 2027-28) pulls
   // that year's fee structure from the Accounts Section, category-wise.
-  const recalcAmount = async (patch) => {
+  const recalcAmount = (patch) => {
     const next = { ...form, ...patch };
     const cats = next.categories || [];
     const isOpen = cats.length === 1 && cats[0] === 'OPEN';
@@ -1025,7 +1042,7 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
       setForm(next);
       return;
     }
-    const map = await ensureFeeMap(next.academicYear);
+    const map = getFeeMap(next.academicYear);
     let autoAmt = '';
     if (map) {
       autoAmt = computeScholarshipAmount(map, next.courseType, next.admissionYear, isOpen);
@@ -1063,7 +1080,15 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
       {msg && <MsgBanner msg={msg} />}
 
       {activeView === 'feeStructure' && (
-        <FeeStructureView academicYear={feeAY} setAcademicYear={setFeeAY} themeColor={themeColor} />
+        <FeeStructureView
+          academicYear={feeAY || yearOptions[0]}
+          setAcademicYear={setFeeAY}
+          yearOptions={yearOptions}
+          remoteMap={getFeeMap(feeAY || yearOptions[0])}
+          fetchStatus={structStatus === 'ok' && !getFeeMap(feeAY || yearOptions[0]) ? 'empty' : structStatus}
+          onRefresh={loadAllStructures}
+          themeColor={themeColor}
+        />
       )}
 
       {activeView === 'records' && (
@@ -1120,16 +1145,17 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
 
             <FormField label="Academic Year" color={themeColor}>
               <select value={form.academicYear} onChange={e => recalcAmount({ academicYear: e.target.value })} style={fieldStyle}>
-                {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                {!yearOptions.includes(form.academicYear) && form.academicYear && (
+                  <option value={form.academicYear}>{form.academicYear}</option>
+                )}
+                {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
               <p style={{ margin: '4px 0 0', fontSize: 11, color: '#888' }}>
-                {feeMapLoading
-                  ? '⏳ Loading fee structure...'
-                  : feeMapCache[form.academicYear] === null
-                    ? `⚠️ Accounts Section ne ${form.academicYear} ke liye fee structure abhi nahi banaya — fallback amounts use ho rahe hain.`
-                    : feeMapCache[form.academicYear]
-                      ? `✅ ${form.academicYear} ka fee structure Accounts Section se live liya gaya hai.`
-                      : ''}
+                {structStatus === 'loading'
+                  ? '⏳ Loading fee structures...'
+                  : getFeeMap(form.academicYear)
+                    ? `✅ ${form.academicYear} ka fee structure Accounts Section se live liya gaya hai.`
+                    : `⚠️ Accounts Section ne ${form.academicYear} ke liye fee structure abhi nahi banaya — fallback amounts use ho rahe hain.`}
               </p>
             </FormField>
 
@@ -1198,24 +1224,11 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
 /* ═══════════════════════════════════════════════════════════
    FEE STRUCTURE VIEW — live, year-wise, from Accounts Section
 ═══════════════════════════════════════════════════════════ */
-const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
+const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMap, fetchStatus, onRefresh, themeColor }) => {
   const COURSES = ['B.Sc', 'B.A'];
   const YEARS   = ['FY', 'SY', 'TY'];
 
   const [activeCourse, setActiveCourse] = useState('B.Sc');
-  const [remoteMap,    setRemoteMap]    = useState(null);   // fetched map for `academicYear`, or null while unknown
-  const [fetchStatus,  setFetchStatus]  = useState('idle');  // idle | loading | ok | empty | error
-
-  const load = useCallback(async () => {
-    setFetchStatus('loading');
-    const map = await fetchFeeStructureMap(academicYear);
-    if (map === null) { setFetchStatus('error'); setRemoteMap(null); return; }
-    if (!Object.keys(map).length) { setFetchStatus('empty'); setRemoteMap(null); return; }
-    setRemoteMap(map);
-    setFetchStatus('ok');
-  }, [academicYear]);
-
-  useEffect(() => { load(); }, [load]);
 
   // Fall back to the static reference structure only if Accounts Section
   // hasn't created this academic year's structure yet.
@@ -1254,9 +1267,9 @@ const FeeStructureView = ({ academicYear, setAcademicYear, themeColor }) => {
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={academicYear} onChange={e => setAcademicYear(e.target.value)} style={{ ...inputStyle, minWidth: 130 }}>
-            {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            {(yearOptions || ACADEMIC_YEARS).map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <button onClick={load} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>
+          <button onClick={onRefresh} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>
             🔄 Refresh
           </button>
         </div>
