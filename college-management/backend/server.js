@@ -50,6 +50,7 @@ app.use('/api/scholarships',     require('./routes/scholarshipRoutes')); // ← 
 app.use('/api/achievements', require('./routes/achievementRoutes'));
 app.use('/api/resources',    require('./routes/resourceRoutes'));
 app.use('/api/fee-structure-approvals', require('./routes/feeStructureApprovalRoutes')); // ← Fee structure edit approvals (Accounts → Principal → Admin)
+app.use('/api/fee-structure', require('./routes/collegeFeeStructureRoutes')); // ← Full year-wise/course-wise fee structure (Accounts creates, Scholarship's MahaDBT Receivable reads by academicYear)
 app.get('/', (req, res) => {
   res.json({ message: '🎓 Late Kalpana Chawla Mahila College API Running!' });
 });
