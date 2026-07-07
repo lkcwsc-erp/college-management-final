@@ -643,30 +643,36 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   };
 
   // ── Create a new academic-year structure (copy of the selected year) ──
+  // DIRECT APPLY NAHI hota — request Principal → Admin approval pipeline me
+  // jaati hai. Admin approve karega tabhi structure DB me live hoga (Accounts
+  // + Collect Fees + Scholarship MahaDBT Receivable sab jagah).
   const createNewYear = async () => {
     const name = newYearName.trim();
     if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Format: YYYY-YY (e.g. 2026-27)', 'error'); return; }
     if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
+    const alreadyPending = yearApprovals.find(a => a.academicYear === name && ['pending_principal', 'pending_admin'].includes(a.status));
+    if (alreadyPending) { showToast(`❌ ${name} ke liye ek request pehle se approval me hai`, 'error'); return; }
+
     const src = isBaseYear ? DETAILED_FEES : (yearStructs[structYear] || DETAILED_FEES);
     const clone = JSON.parse(JSON.stringify({ 'B.Sc.': src['B.Sc.'] || DETAILED_FEES['B.Sc.'], 'B.A.': src['B.A.'] || DETAILED_FEES['B.A.'] }));
     clone['B.Sc.'].label = `B.Sc. (Un-aided) — ${name}`;
     clone['B.A.'].label  = `B.A. (Un-aided) — ${name}`;
-    const all = { ...yearStructs, [name]: clone };
-    saveYearStructuresLS(all); setYearStructs(all);
-    setStructYear(name); setShowNewYear(false); setNewYearName('');
 
-    // Persist to the database → immediately available in the Scholarship
-    // Section's MahaDBT Receivable Management tab (year-wise + category-wise).
     setSyncingServer(true);
-    const [okSc, okA] = await Promise.all([
-      pushStructureToBackend(name, 'B.Sc.', clone['B.Sc.'].items, user?.name || 'Accounts Staff'),
-      pushStructureToBackend(name, 'B.A.',  clone['B.A.'].items,  user?.name || 'Accounts Staff'),
-    ]);
-    setSyncingServer(false);
-
-    showToast(okSc && okA
-      ? `✅ ${name} fee structure ban gaya (${structYear} se copy)! MahaDBT Receivable me bhi turant apply hoga.`
-      : `⚠️ ${name} structure yahan ban gaya, par server sync fail hua — dusre sections me abhi nahi dikhega. Dobara try karein.`);
+    try {
+      await API.post('/fee-structure-approvals/submit-year', {
+        academicYear: name,
+        sourceYear: structYear,
+        structureData: clone,
+      });
+      setShowNewYear(false); setNewYearName('');
+      fetchFeeApprovals();
+      showToast(`📨 ${name} ka structure (${structYear} se copy) approval ke liye bheja gaya — pehle Principal, phir Admin approve karenge, tabhi apply hoga.`);
+    } catch (err) {
+      showToast('❌ ' + (err.response?.data?.message || 'Approval request bhejne me fail hua'), 'error');
+    } finally {
+      setSyncingServer(false);
+    }
   };
 
   // ── Download an Excel template (current year's items) to edit & re-upload ──
@@ -861,8 +867,10 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         <div style={{ background:'#f0fff4', border:'2px dashed #2E7D32', borderRadius:12, padding:16, marginBottom:16 }}>
           <h4 style={{ color:'#2E7D32', margin:'0 0 6px', fontSize:14 }}>➕ Naya Academic Year Fee Structure</h4>
           <p style={{ fontSize:12, color:'#666', margin:'0 0 12px' }}>
-            Currently selected year <strong>{structYear}</strong> ka poora structure copy hoga — phir aap us naye year me har fee item ka amount edit / add / delete kar sakte ho.
-            Fees collect karte time modal me year select karke usi structure se fees lagegi (e.g. 2026 me 1st year admission → 2027 me 2nd year fees 2027-28 structure se).
+            Currently selected year <strong>{structYear}</strong> ka poora structure copy hoke <strong>approval ke liye jayega</strong> —
+            pehle <strong>Principal</strong>, phir <strong>Admin</strong> approve karenge, <strong>tabhi</strong> ye structure live hoga
+            (direct apply nahi hota). Approve hone ke baad aap us year ke items edit / add / delete kar sakte ho,
+            aur Collect Fees / Scholarship me wahi year select karke usi structure se fees lagegi.
           </p>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <input type="text" placeholder="e.g. 2026-27" value={newYearName} maxLength={7}
@@ -870,7 +878,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
               style={{ padding:'9px 14px', borderRadius:8, border:'2px solid #2E7D32', fontSize:15, fontWeight:700, width:140, textAlign:'center' }} />
             <button onClick={createNewYear} disabled={syncingServer}
               style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:syncingServer?'wait':'pointer', opacity:syncingServer?0.7:1 }}>
-              {syncingServer ? '⏳ Server sync ho raha hai...' : `✅ Create (${structYear} se copy)`}
+              {syncingServer ? '⏳ Bheja ja raha hai...' : `📨 Submit for Approval (${structYear} se copy)`}
             </button>
             <button onClick={() => { setShowNewYear(false); setNewYearName(''); }}
               style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
