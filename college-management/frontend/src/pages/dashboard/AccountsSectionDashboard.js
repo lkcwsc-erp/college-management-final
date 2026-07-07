@@ -257,6 +257,44 @@ const loadYearStructures = () => {
 };
 const saveYearStructuresLS = (s) => localStorage.setItem('lkcwsc_year_structures', JSON.stringify(s));
 
+// ─── Backend persistence for year-wise fee structures ─────────────────────────
+// Structures used to live ONLY in this browser's localStorage, which is why a
+// year's structure created here never showed up anywhere else (e.g. the
+// Scholarship Section's MahaDBT Receivable Management tab). These helpers push
+// / pull the same structures to/from the database (CollegeFeeStructure) so
+// every section reads the same year-wise + category-wise fee data.
+const pushStructureToBackend = async (academicYear, courseKey, items, createdBy) => {
+  try {
+    await API.post('/fee-structure/upsert', { courseType: courseKey, academicYear, items, createdBy });
+    return true;
+  } catch (err) {
+    console.warn(`Could not sync ${courseKey} ${academicYear} fee structure to server:`, err?.response?.data?.message || err.message);
+    return false;
+  }
+};
+
+const fetchBackendStructures = async () => {
+  try {
+    const res = await API.get('/fee-structure');
+    const docs = res.data.structures || [];
+    // Group into { [academicYear]: { 'B.Sc.': {label, items}, 'B.A.': {label, items} } }
+    const grouped = {};
+    docs.forEach(doc => {
+      if (!grouped[doc.academicYear]) grouped[doc.academicYear] = {};
+      grouped[doc.academicYear][doc.courseType] = {
+        label: DETAILED_FEES[doc.courseType]?.label
+          ? `${DETAILED_FEES[doc.courseType].label} — ${doc.academicYear}`
+          : `${doc.courseType} — ${doc.academicYear}`,
+        items: doc.items || [],
+      };
+    });
+    return grouped;
+  } catch (err) {
+    console.warn('Could not load fee structures from server:', err?.response?.data?.message || err.message);
+    return null;
+  }
+};
+
 // Structure for a given academic year. Base year → DETAILED_FEES; custom years
 // → saved structure; unknown year → falls back to the base so fee collection
 // never breaks even if that year's structure hasn't been created yet.
@@ -425,10 +463,12 @@ const F = ({ label, value }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Fee Structure Tab Component ─────────────────────────────────────────────
 const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
+  const { user } = useAuth();
   const [feeView, setFeeView]           = useState('bsc');
   // Multi-year: which academic year's structure is being viewed/edited
   const [structYear, setStructYear]     = useState(BASE_STRUCT_YEAR);
   const [yearStructs, setYearStructs]   = useState(loadYearStructures);
+  const [syncingServer, setSyncingServer] = useState(false);
   const [showNewYear, setShowNewYear]   = useState(false);
   const [newYearName, setNewYearName]   = useState('');
   const [yearUploadBusy, setYearUploadBusy] = useState(false);
@@ -455,6 +495,39 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   }, []);
 
   useEffect(() => { fetchFeeApprovals(); }, [fetchFeeApprovals]);
+
+  // ── Sync with backend on load ──────────────────────────────────────────────
+  // Pull every year's fee structure from the database. If the base year
+  // (2025-26) isn't in the DB yet, seed it from DETAILED_FEES once — after
+  // that the database is the shared source of truth for every section
+  // (Accounts, Scholarship's MahaDBT Receivable, etc.), not just this browser.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setSyncingServer(true);
+      const remote = await fetchBackendStructures();
+      if (cancelled) return;
+      if (remote) {
+        if (!remote[BASE_STRUCT_YEAR]) {
+          await Promise.all(['B.Sc.', 'B.A.'].map(ck =>
+            pushStructureToBackend(BASE_STRUCT_YEAR, ck, DETAILED_FEES[ck].items, user?.name || 'Accounts Staff')
+          ));
+        }
+        // Merge any DB-only custom years (e.g. created from another device)
+        // into the local cache without discarding local-only edits.
+        const merged = { ...loadYearStructures() };
+        Object.entries(remote).forEach(([ay, courses]) => {
+          if (ay === BASE_STRUCT_YEAR) return;
+          merged[ay] = { ...(merged[ay] || {}), ...courses };
+        });
+        saveYearStructuresLS(merged);
+        setYearStructs(merged);
+      }
+      setSyncingServer(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // New-academic-year structures submitted via Excel upload (Principal → Admin pipeline)
   const yearApprovals = feeApprovals.filter(a => a.isNewYearStructure);
@@ -531,7 +604,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   // ── Custom-year structures: edits apply DIRECTLY (no approval pipeline) ──
   // The custom year is its own master data entered by Accounts, so add /
   // edit / delete save straight into localStorage for that year.
-  const applyDirectYearEdit = (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
+  const applyDirectYearEdit = async (itemId, newAmounts, newItemMeta = null, isDeletion = false) => {
     const all = { ...yearStructs };
     const yr  = all[structYear] ? { ...all[structYear] } : {};
     const src = yr[courseKey]
@@ -543,13 +616,18 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     yr[courseKey] = src; all[structYear] = yr;
     saveYearStructuresLS(all); setYearStructs(all);
     setEditingItem(null);
+
+    // Keep the database copy in sync so this edit is reflected everywhere
+    // (e.g. Scholarship Section → MahaDBT Receivable Management).
+    const ok = await pushStructureToBackend(structYear, courseKey, src.items, user?.name || 'Accounts Staff');
+
     showToast(isDeletion
-      ? `🗑️ Item ${structYear} structure se remove ho gaya`
-      : `✅ ${structYear} structure updated!`);
+      ? `🗑️ Item ${structYear} structure se remove ho gaya${ok ? '' : ' (⚠️ server sync fail hua)'}`
+      : `✅ ${structYear} structure updated!${ok ? '' : ' (⚠️ server sync fail hua)'}`);
   };
 
   // ── Create a new academic-year structure (copy of the selected year) ──
-  const createNewYear = () => {
+  const createNewYear = async () => {
     const name = newYearName.trim();
     if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Format: YYYY-YY (e.g. 2026-27)', 'error'); return; }
     if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
@@ -560,7 +638,19 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     const all = { ...yearStructs, [name]: clone };
     saveYearStructuresLS(all); setYearStructs(all);
     setStructYear(name); setShowNewYear(false); setNewYearName('');
-    showToast(`✅ ${name} fee structure ban gaya (${structYear} se copy)! Ab amounts edit kar sakte ho.`);
+
+    // Persist to the database → immediately available in the Scholarship
+    // Section's MahaDBT Receivable Management tab (year-wise + category-wise).
+    setSyncingServer(true);
+    const [okSc, okA] = await Promise.all([
+      pushStructureToBackend(name, 'B.Sc.', clone['B.Sc.'].items, user?.name || 'Accounts Staff'),
+      pushStructureToBackend(name, 'B.A.',  clone['B.A.'].items,  user?.name || 'Accounts Staff'),
+    ]);
+    setSyncingServer(false);
+
+    showToast(okSc && okA
+      ? `✅ ${name} fee structure ban gaya (${structYear} se copy)! MahaDBT Receivable me bhi turant apply hoga.`
+      : `⚠️ ${name} structure yahan ban gaya, par server sync fail hua — dusre sections me abhi nahi dikhega. Dobara try karein.`);
   };
 
   // ── Download an Excel template (current year's items) to edit & re-upload ──
@@ -645,13 +735,22 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   };
 
   // ── Delete an entire custom-year structure (base year cannot be deleted) ──
-  const deleteYearStructure = (yr) => {
+  const deleteYearStructure = async (yr) => {
     if (yr === BASE_STRUCT_YEAR) { showToast('❌ Base year (2025-26) delete nahi ho sakta', 'error'); return; }
     if (!window.confirm(`⚠️ "${yr}" ka poora fee structure delete karein?\n\nYe sirf structure (B.Sc./B.A. amounts) delete karega — students ke fee records / receipts safe rahenge. Lekin agar koi student is year ke structure se fees collect kar raha hai to base year amounts use honge.\n\nPakka delete karna hai?`)) return;
     const all = { ...yearStructs };
     delete all[yr];
     saveYearStructuresLS(all); setYearStructs(all);
     if (structYear === yr) setStructYear(BASE_STRUCT_YEAR);
+
+    // Best-effort: also deactivate this year's structures in the database so
+    // it disappears from the Scholarship Section's year selector too.
+    try {
+      const res = await API.get('/fee-structure', { params: { academicYear: yr } });
+      const docs = res.data.structures || [];
+      await Promise.all(docs.map(d => API.delete(`/fee-structure/${d._id}`)));
+    } catch { /* ignore — local delete already done */ }
+
     showToast(`🗑️ ${yr} fee structure delete ho gaya`);
   };
 
