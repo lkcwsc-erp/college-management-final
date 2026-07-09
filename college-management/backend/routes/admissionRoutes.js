@@ -459,7 +459,7 @@ router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', '
 // ========== MARK ADMISSION FEES PAID ==========
 router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
-    const { fees, paymentMode, transactionId, receiptNo, collectedBy, feeType, feeTypeLabel, semester, year, totalFees, scholarshipAmount } = req.body;
+    const { fees, paymentMode, transactionId, receiptNo, collectedBy, feeType, feeTypeLabel, semester, year, totalFees, scholarshipAmount, feeHeads } = req.body;
     const admission = await Admission.findById(req.params.id);
     if (!admission) return res.status(404).json({ success: false, message: 'Admission not found' });
 
@@ -475,6 +475,7 @@ router.put('/mark-fees-paid/:id', protect, authorizeRoles('staff_accounts', 'adm
       paidAt: new Date(),
       semester: semester || '',
       year: year || '',
+      feeHeads: Array.isArray(feeHeads) ? feeHeads : [],
     });
 
     // Update totals
