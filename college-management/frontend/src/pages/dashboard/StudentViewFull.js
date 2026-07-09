@@ -22,6 +22,30 @@ const OFFICIAL_FEES_YEARLY = {
   },
 };
 
+// ── Fixed 7 fee heads (same as Accounts / Scholarship views) ──────────────
+const DISPLAY_HEADS = ['Enrollment Fee', 'Admission Fee', 'Tuition Fee', 'Gymkhana Fee', 'Laboratory Fee', 'Library Fee', 'Other Fee'];
+const svfMatchHead = (name) => {
+  const n = String(name || '').trim();
+  if (/^enrollment\s*fee/i.test(n))  return 'Enrollment Fee';
+  if (/^admission\s*fee/i.test(n))   return 'Admission Fee';
+  if (/tuition\s*fee/i.test(n))      return 'Tuition Fee';
+  if (/gymkhana/i.test(n))           return 'Gymkhana Fee';
+  if (/^laboratory\s*fee/i.test(n))  return 'Laboratory Fee';
+  if (/^library\s*fee$/i.test(n))    return 'Library Fee';
+  return null;
+};
+const svfGroupHeads = (rawHeadwise, total) => {
+  const out = { 'Enrollment Fee': 0, 'Admission Fee': 0, 'Tuition Fee': 0, 'Gymkhana Fee': 0, 'Laboratory Fee': 0, 'Library Fee': 0, 'Other Fee': 0 };
+  let named = 0;
+  Object.entries(rawHeadwise || {}).forEach(([name, amt]) => {
+    const head = svfMatchHead(name);
+    if (head) { out[head] += Number(amt) || 0; named += Number(amt) || 0; }
+  });
+  out['Other Fee'] = Math.max(0, (Number(total) || 0) - named);
+  return out;
+};
+const svfYearLabelToFYSY = { '1st Year': 'FY', '2nd Year': 'SY', '3rd Year': 'TY' };
+
 const svfCourseKey = (ct) => {
   const c = (ct || '').toLowerCase();
   if (c.includes('b.sc') || c.includes('bsc') || c.includes('science')) return 'B.Sc.';
@@ -225,14 +249,71 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [paySaving, setPaySaving]     = useState(false);
   const [payMsg, setPayMsg]           = useState('');
 
+  // Fee-head selection: [{name, amount, paid:boolean}] for the year being paid.
+  // Heads already covered by a previous payment are locked (paid:true) —
+  // they cannot be re-selected. Unpaid heads are checkboxes.
+  const [payHeads, setPayHeads]       = useState([]);
+  const [selectedHeads, setSelectedHeads] = useState([]); // names currently checked
+  const [payHeadsLoading, setPayHeadsLoading] = useState(false);
+
   const canCollect = role === 'accounts' || role === 'principal';
 
-  const openPayModal = (yr, info) => {
+  const openPayModal = async (yr, info) => {
     setPayModal({ year: yr, ...info });
     setPayAmt(String(info.balance > 0 ? info.balance : ''));
     setPayMode('cash'); setPayTxn(''); setPayMsg('');
+    setPayHeads([]); setSelectedHeads([]);
+
+    // ── Head-wise breakdown for this year, from the live Accounts fee
+    // structure (base year 2025-26) — same 7 heads shown everywhere else.
+    setPayHeadsLoading(true);
+    try {
+      const ck = svfCourseKey(selected.courseType);
+      const fySy = svfYearLabelToFYSY[yr] || 'FY';
+      const res = await API.get('/fee-structure', { params: { courseType: ck, academicYear: '2025-26' } });
+      const doc = (res.data.structures || [])[0];
+      let heads;
+      if (doc && Array.isArray(doc.items) && doc.items.length) {
+        const idx = { FY: [0, 1], SY: [2, 3], TY: [4, 5] }[fySy];
+        const rawHeadwise = {};
+        let yearTotal = 0;
+        doc.items.forEach(it => {
+          const val = (Number(it.s?.[idx[0]]) || 0) + (Number(it.s?.[idx[1]]) || 0);
+          if (val) { rawHeadwise[it.name] = (rawHeadwise[it.name] || 0) + val; yearTotal += val; }
+        });
+        heads = DISPLAY_HEADS.map(name => ({ name, amount: svfGroupHeads(rawHeadwise, yearTotal)[name] || 0 }));
+      } else {
+        // Fallback: single "Other Fee" head covering the whole balance,
+        // when Accounts hasn't created a live structure yet.
+        heads = [{ name: 'Other Fee', amount: info.total || 0 }];
+      }
+
+      // Which heads has this student already paid for this year? — from
+      // feeLedger entries tagged with this year's feeHeads array.
+      const paidHeadsSet = new Set();
+      (selected.feeLedger || []).filter(p => p.year === yr).forEach(p => (p.feeHeads || []).forEach(h => paidHeadsSet.add(h)));
+
+      setPayHeads(heads.filter(h => h.amount > 0).map(h => ({ ...h, paid: paidHeadsSet.has(h.name) })));
+    } catch {
+      setPayHeads([{ name: 'Other Fee', amount: info.total || 0, paid: false }]);
+    } finally {
+      setPayHeadsLoading(false);
+    }
   };
-  const closePayModal = () => { setPayModal(null); setPayAmt(''); setPayTxn(''); setPayMsg(''); };
+  const closePayModal = () => { setPayModal(null); setPayAmt(''); setPayTxn(''); setPayMsg(''); setPayHeads([]); setSelectedHeads([]); };
+
+  // Toggle a head checkbox — only unpaid heads are toggleable; the sum of
+  // selected heads becomes the amount to collect (still editable if needed).
+  const toggleHead = (name) => {
+    const head = payHeads.find(h => h.name === name);
+    if (!head || head.paid) return; // locked — already paid, can't re-select
+    setSelectedHeads(prev => {
+      const next = prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name];
+      const sum = payHeads.filter(h => next.includes(h.name)).reduce((s, h) => s + h.amount, 0);
+      setPayAmt(String(sum || ''));
+      return next;
+    });
+  };
 
   const handlePayRemaining = async () => {
     const amt = Number(payAmt);
@@ -248,10 +329,11 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
         receiptNo: rNo,
         collectedBy: user?.name || 'Accounts Staff',
         feeType: 'admission',
-        feeTypeLabel: `Academic Fee — ${payModal.year}`,
+        feeTypeLabel: `Academic Fee — ${payModal.year}${selectedHeads.length ? ` (${selectedHeads.join(', ')})` : ''}`,
         year: payModal.year,
         totalFees: payModal.total || undefined,
         scholarshipAmount: payModal.schol || undefined,
+        feeHeads: selectedHeads,
       });
       svfPrintReceipt({
         receiptNo: rNo,
@@ -958,9 +1040,30 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                 </div>
               </div>
 
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:8 }}>Select Fee Heads to Pay *</label>
+              {payHeadsLoading ? (
+                <div style={{ textAlign:'center', padding:14, color:'#888', fontSize:13 }}>⏳ Loading fee heads...</div>
+              ) : (
+                <div style={{ border:'1px solid #e0e7ef', borderRadius:10, marginBottom:16, overflow:'hidden' }}>
+                  {payHeads.map(h => (
+                    <label key={h.name} htmlFor={`head_${h.name}`}
+                      style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 12px', borderBottom:'1px solid #f0f4f8', background: h.paid ? '#e8f5e9' : (selectedHeads.includes(h.name) ? '#e0f7fa' : '#fff'), cursor: h.paid ? 'default' : 'pointer' }}>
+                      <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <input type="checkbox" id={`head_${h.name}`} checked={h.paid || selectedHeads.includes(h.name)} disabled={h.paid}
+                          onChange={() => toggleHead(h.name)} style={{ width:16, height:16, cursor: h.paid ? 'not-allowed' : 'pointer' }} />
+                        <span style={{ fontSize:13, color: h.paid ? '#2E7D32' : '#333', fontWeight: h.paid ? 600 : 500 }}>{h.name}</span>
+                        {h.paid && <span style={{ fontSize:10, fontWeight:700, color:'#2E7D32', background:'#c8e6c9', padding:'1px 7px', borderRadius:8 }}>✅ Paid</span>}
+                      </span>
+                      <span style={{ fontSize:13, fontWeight:700, color: h.paid ? '#2E7D32' : '#333' }}>₹{h.amount.toLocaleString('en-IN')}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
               <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Amount Collected (₹) *</label>
               <input type="number" min="0" value={payAmt} onChange={e => setPayAmt(e.target.value)}
                 style={{ width:'100%', padding:'12px 14px', borderRadius:10, border:'2px solid #009688', fontSize:18, fontWeight:700, textAlign:'center', boxSizing:'border-box', marginBottom:14 }} />
+              <p style={{ fontSize:11, color:'#888', margin:'-10px 0 14px', textAlign:'center' }}>Selected heads ka total auto-fill hota hai — chahe to manually adjust kar sakte ho.</p>
 
               <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Payment Mode *</label>
               <div style={{ display:'flex', gap:10, marginBottom:14 }}>
