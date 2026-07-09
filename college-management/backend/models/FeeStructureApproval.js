@@ -10,14 +10,23 @@ const feeStructureApprovalSchema = new mongoose.Schema({
   isNewItem:    { type: Boolean, default: false },
   isDeletion:   { type: Boolean, default: false },  // delete this fee item (after approval)
 
+  // Which academic year's structure this item edit/delete belongs to
+  // (e.g. '2025-26' base year, or a custom year like '2026-27').
+  // Defaults to the base year for backward compatibility with older records.
+  academicYear: { type: String, default: '' },
+
   // ── New academic-year FULL structure approval ─────────────────────────
   // Accounts Section creates a new year's fee structure (copy or Excel) →
   // Principal approves → Admin approves → tabhi structure live hota hai.
   isNewYearStructure: { type: Boolean, default: false },
-  academicYear:       { type: String, default: '' },   // e.g. '2026-27'
   sourceYear:         { type: String, default: '' },   // kis year se copy hua
-  structureData:      { type: mongoose.Schema.Types.Mixed, default: null },
+  structureData:       { type: mongoose.Schema.Types.Mixed, default: null },
   // structureData shape: { 'B.Sc.': { label, items:[{id,name,section,s:[6]}] }, 'B.A.': {...} }
+
+  // ── Whole academic-year DELETE approval ────────────────────────────────
+  // Accounts Section requests deleting an entire year's structure →
+  // Principal approves → Admin approves → tabhi structure DB se hata hai.
+  isYearDeletion:     { type: Boolean, default: false },
 
   submittedBy:      { type: String },
   submittedByEmail: { type: String },
