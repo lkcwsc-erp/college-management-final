@@ -291,6 +291,7 @@ aadharNumber: {
       paidAt:        { type: Date, default: Date.now },
       semester:      { type: String, default: '' },
       year:          { type: String, default: '' },
+      feeHeads:      { type: [String], default: [] }, // which fee heads this payment covers (e.g. ['Tuition Fee','Library Fee'])
     }],
     lastFeePayment: {
       paidAt:        { type: Date },
