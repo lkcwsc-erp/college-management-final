@@ -1773,11 +1773,12 @@ const AdminFeeApprovalTab = ({ showMessage, kind }) => {
           <div>
             <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:4, flexWrap:'wrap' }}>
               <span style={{ fontSize:14, fontWeight:700, color:'#333' }}>{a.itemName}</span>
-              {!a.isNewYearStructure && <span style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'2px 10px', borderRadius:10 }}>{a.courseKey}</span>}
+              {!a.isNewYearStructure && !a.isYearDeletion && <span style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'2px 10px', borderRadius:10 }}>{a.courseKey}</span>}
               {a.isNewYearStructure && <span style={{ fontSize:11, fontWeight:700, background:'#f3e5f5', color:'#7B1FA2', padding:'2px 8px', borderRadius:8 }}>🆕 New Year Structure{a.sourceYear ? ` (${a.sourceYear} se copy)` : ''}</span>}
-              {a.itemSection && <span style={{ fontSize:11, color:'#888' }}>{a.itemSection}</span>}
+              {a.isYearDeletion && <span style={{ fontSize:11, fontWeight:700, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Entire Year — {a.academicYear}</span>}
+              {!a.isNewYearStructure && !a.isYearDeletion && a.itemSection && <span style={{ fontSize:11, color:'#888' }}>{a.itemSection}</span>}
               {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, background:'#e8f5e9', color:'#2E7D32', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
-              {a.isDeletion && <span style={{ fontSize:11, fontWeight:700, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Request</span>}
+              {a.isDeletion && !a.isYearDeletion && <span style={{ fontSize:11, fontWeight:700, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Request</span>}
             </div>
             <div style={{ fontSize:11, color:'#aaa' }}>
               Submitted by {a.submittedBy || '—'} · {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN') : '—'}
@@ -1788,7 +1789,13 @@ const AdminFeeApprovalTab = ({ showMessage, kind }) => {
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:14 }}>
-          {a.isNewYearStructure ? (
+          {a.isYearDeletion ? (
+            <div style={{ gridColumn:'1 / -1', background:'#ffebee', borderRadius:8, padding:'12px 16px' }}>
+              <p style={{ margin:0, fontSize:13, color:'#C62828', fontWeight:700 }}>
+                ⚠️ Poora fee structure (B.Sc. + B.A., dono) academic year <strong>{a.academicYear}</strong> ke liye <strong>permanently delete</strong> ho jayega — Approve karte hi database se hat jayega, wapas nahi laaya ja sakta.
+              </p>
+            </div>
+          ) : a.isNewYearStructure ? (
             ['B.Sc.', 'B.A.'].map(ck => {
               const items = a.structureData?.[ck]?.items || [];
               const t = yearTotalsOf(items);
