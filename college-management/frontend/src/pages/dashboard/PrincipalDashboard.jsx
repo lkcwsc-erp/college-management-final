@@ -1845,16 +1845,23 @@ const FeeStructApprovalTab = ({ role, kind }) => {
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
                     <div>
                       <span style={{ fontSize:15, fontWeight:700, color:'#333' }}>{a.itemName}</span>
-                      {!a.isNewYearStructure && <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{a.courseKey} — {a.itemSection}</span>}
+                      {!a.isNewYearStructure && !a.isYearDeletion && <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{a.courseKey} — {a.itemSection}</span>}
                       {a.isNewYearStructure && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#f3e5f5', color:'#7B1FA2', padding:'2px 8px', borderRadius:8 }}>🆕 New Year Structure{a.sourceYear ? ` (${a.sourceYear} se copy)` : ''}</span>}
+                      {a.isYearDeletion && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Entire Year — {a.academicYear}</span>}
                       {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#e3f2fd', color:'#1565C0', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
-                      {a.isDeletion && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Request</span>}
+                      {a.isDeletion && !a.isYearDeletion && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Request</span>}
                     </div>
                     {statusBadge(a.status)}
                   </div>
                   {/* Amount comparison */}
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:14 }}>
-                    {a.isNewYearStructure ? (
+                    {a.isYearDeletion ? (
+                      <div style={{ gridColumn:'1 / -1', background:'#ffebee', borderRadius:8, padding:'12px 16px' }}>
+                        <p style={{ margin:0, fontSize:13, color:'#C62828', fontWeight:700 }}>
+                          ⚠️ Poora fee structure (B.Sc. + B.A., dono) academic year <strong>{a.academicYear}</strong> ke liye <strong>permanently delete</strong> ho jayega — is year me collect fees, MahaDBT Receivable sab jagah se hat jayega.
+                        </p>
+                      </div>
+                    ) : a.isNewYearStructure ? (
                       ['B.Sc.', 'B.A.'].map(ck => {
                         const items = a.structureData?.[ck]?.items || [];
                         const t = yearTotalsOf(items);
