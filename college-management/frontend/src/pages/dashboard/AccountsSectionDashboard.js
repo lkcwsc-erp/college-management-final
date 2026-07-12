@@ -513,23 +513,42 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
             pushStructureToBackend(BASE_STRUCT_YEAR, ck, DETAILED_FEES[ck].items, user?.name || 'Accounts Staff')
           ));
         }
+
+        // ── Years that Admin has already approved for DELETION must NEVER
+        // come back — not from the local cache, and not re-pushed to the
+        // DB. Fetch this fresh (don't rely on feeApprovals state, which may
+        // not have loaded yet on a hard refresh) so the check is reliable.
+        let deletedYears = new Set();
+        try {
+          const apRes = await API.get('/fee-structure-approvals');
+          deletedYears = new Set(
+            (apRes.data.approvals || [])
+              .filter(a => a.isYearDeletion && a.status === 'approved')
+              .map(a => a.academicYear)
+          );
+        } catch { /* if this fails, fall through — worst case a stale year lingers one more reload */ }
+
         // Merge any DB-only custom years (e.g. created from another device)
-        // into the local cache without discarding local-only edits.
+        // into the local cache without discarding local-only edits — but
+        // drop any year that's been approved-deleted, from BOTH sides.
         const merged = { ...loadYearStructures() };
+        deletedYears.forEach(ay => { delete merged[ay]; });
         Object.entries(remote).forEach(([ay, courses]) => {
-          if (ay === BASE_STRUCT_YEAR) return;
+          if (ay === BASE_STRUCT_YEAR || deletedYears.has(ay)) return;
           merged[ay] = { ...(merged[ay] || {}), ...courses };
         });
         saveYearStructuresLS(merged);
         setYearStructs(merged);
+        if (deletedYears.has(structYear)) setStructYear(BASE_STRUCT_YEAR);
 
         // Push any LOCAL-ONLY years up to the database. Purane years jo
         // sirf is browser ke localStorage me bane the (backend sync se
         // pehle), wo yahan ek baar DB me chale jaate hain — tabhi wo
         // Scholarship Section ke MahaDBT Receivable year dropdown me
-        // select karne ke liye dikhenge.
+        // select karne ke liye dikhenge. Deleted years is push me kabhi
+        // shaamil nahi hote (upar hi merged se hata diye gaye).
         const localOnly = Object.entries(merged).filter(
-          ([ay]) => ay !== BASE_STRUCT_YEAR && !remote[ay]
+          ([ay]) => ay !== BASE_STRUCT_YEAR && !remote[ay] && !deletedYears.has(ay)
         );
         for (const [ay, courses] of localOnly) {
           await Promise.all(
