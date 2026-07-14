@@ -1063,7 +1063,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
               <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Amount Collected (₹) *</label>
               <input type="number" min="0" value={payAmt} onChange={e => setPayAmt(e.target.value)}
                 style={{ width:'100%', padding:'12px 14px', borderRadius:10, border:'2px solid #009688', fontSize:18, fontWeight:700, textAlign:'center', boxSizing:'border-box', marginBottom:14 }} />
-              <p style={{ fontSize:11, color:'#888', margin:'-10px 0 14px', textAlign:'center' }}>Selected heads ka total auto-fill hota hai — chahe to manually adjust kar sakte ho.</p>
+              <p style={{ fontSize:11, color:'#888', margin:'-10px 0 14px', textAlign:'center' }}>The total of selected heads auto-fills here — you can still adjust it manually.</p>
 
               <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#333', marginBottom:6 }}>Payment Mode *</label>
               <div style={{ display:'flex', gap:10, marginBottom:14 }}>
