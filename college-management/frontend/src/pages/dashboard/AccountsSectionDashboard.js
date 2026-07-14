@@ -542,11 +542,11 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         if (deletedYears.has(structYear)) setStructYear(BASE_STRUCT_YEAR);
 
         // Push any LOCAL-ONLY years up to the database. Purane years jo
-        // sirf is browser ke localStorage me bane the (backend sync se
-        // pehle), wo yahan ek baar DB me chale jaate hain — tabhi wo
-        // Scholarship Section ke MahaDBT Receivable year dropdown me
-        // select karne ke liye dikhenge. Deleted years is push me kabhi
-        // shaamil nahi hote (upar hi merged se hata diye gaye).
+        // only existed in this browser's localStorage (before backend sync)
+        // get pushed to the DB here, once. This makes them show up in the
+        // Scholarship Section's MahaDBT Receivable year dropdown too.
+        // Deleted years are never included in this push (already removed
+        // from merged above).
         const localOnly = Object.entries(merged).filter(
           ([ay]) => ay !== BASE_STRUCT_YEAR && !remote[ay] && !deletedYears.has(ay)
         );
@@ -594,8 +594,8 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   //  - newest APPROVED deletion per item → item removed from structure
   //  - newest APPROVED new item → added to structure
   //  - newest edit/delete/add still in the pipeline → shows as "pending"
-  // Ab ye SAAR YEARS (base 2025-26 + har custom year) ke liye kaam karta hai —
-  // koi bhi item add/edit/delete Principal → Admin approval ke baad hi lagta hai.
+  // Now works for ALL years (base 2025-26 + every custom year) —
+  // any item add/edit/delete only takes effect after Principal → Admin approval.
   const approvedOverrides = {};      // itemId -> approved amounts (live)
   const approvedDeleted   = {};      // itemId -> true (approved deletion)
   const approvedNewItems  = [];      // items added via an approved "new item" request
@@ -635,21 +635,20 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const semLabels = ['Sem I','Sem II','Sem III','Sem IV','Sem V','Sem VI'];
 
   // ── Har fee-structure change (new item / edit / delete) — base year ho ya
-  // custom year — Principal → Admin approval se hi guzarta hai. Koi bhi
-  // direct-apply nahi hota; approvedOverrides/approvedDeleted/approvedNewItems
-  // (upar compute hue) hi allItems me reflect karte hain jab Admin approve
-  // kar de.
+  // custom year — always goes through Principal → Admin approval. Nothing
+  // is applied directly; approvedOverrides/approvedDeleted/approvedNewItems
+  // (computed above) are what get reflected in allItems once Admin approves.
 
   // ── Create a new academic-year structure (copy of the selected year) ──
   // DIRECT APPLY NAHI hota — request Principal → Admin approval pipeline me
-  // jaati hai. Admin approve karega tabhi structure DB me live hoga (Accounts
-  // + Collect Fees + Scholarship MahaDBT Receivable sab jagah).
+  // Once Admin approves, the structure goes live in the DB (Accounts
+  // + Collect Fees + Scholarship MahaDBT Receivable — everywhere).
   const createNewYear = async () => {
     const name = newYearName.trim();
     if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Format: YYYY-YY (e.g. 2026-27)', 'error'); return; }
     if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
     const alreadyPending = yearApprovals.find(a => a.academicYear === name && ['pending_principal', 'pending_admin'].includes(a.status));
-    if (alreadyPending) { showToast(`❌ ${name} ke liye ek request pehle se approval me hai`, 'error'); return; }
+    if (alreadyPending) { showToast(`❌ A request for ${name} is already awaiting approval`, 'error'); return; }
 
     const src = isBaseYear ? DETAILED_FEES : (yearStructs[structYear] || DETAILED_FEES);
     const clone = JSON.parse(JSON.stringify({ 'B.Sc.': src['B.Sc.'] || DETAILED_FEES['B.Sc.'], 'B.A.': src['B.A.'] || DETAILED_FEES['B.A.'] }));
@@ -665,7 +664,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
       });
       setShowNewYear(false); setNewYearName('');
       fetchFeeApprovals();
-      showToast(`📨 ${name} ka structure (${structYear} se copy) approval ke liye bheja gaya — pehle Principal, phir Admin approve karenge, tabhi apply hoga.`);
+      showToast(`📨 ${name}'s structure (copied from ${structYear}) sent for approval — Principal then Admin must approve before it applies.`);
     } catch (err) {
       showToast('❌ ' + (err.response?.data?.message || 'Approval request bhejne me fail hua'), 'error');
     } finally {
@@ -693,7 +692,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Fee Structure');
     XLSX.writeFile(wb, `fee-structure-template-${structYear}.xlsx`);
-    showToast('⬇️ Template downloaded — amounts edit karke wapas upload karo');
+    showToast('⬇️ Template downloaded — edit the amounts and upload it back');
   };
 
   // ── Upload an edited Excel sheet → submit as new-year structure for approval ──
@@ -706,7 +705,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     if (!/^\d{4}-\d{2}$/.test(name)) { showToast('❌ Pehle upar Academic Year likho (format: YYYY-YY, e.g. 2026-27)', 'error'); return; }
     if (name === BASE_STRUCT_YEAR || yearStructs[name]) { showToast('❌ Ye academic year already exist karta hai', 'error'); return; }
     const alreadyPending = yearApprovals.find(a => a.academicYear === name && ['pending_principal','pending_admin'].includes(a.status));
-    if (alreadyPending) { showToast(`❌ ${name} ke liye ek request pehle se pending hai (approval ka wait karo)`, 'error'); return; }
+    if (alreadyPending) { showToast(`❌ A request for ${name} is already pending (waiting for approval)`, 'error'); return; }
 
     setYearUploadBusy(true);
     const reader = new FileReader();
@@ -721,7 +720,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         rows.forEach((row, idx) => {
           const ct = String(row.CourseType || '').trim();
           const courseKeyNorm = /b\.?sc/i.test(ct) ? 'B.Sc.' : /b\.?a\.?/i.test(ct) ? 'B.A.' : null;
-          if (!courseKeyNorm) throw new Error(`Row ${idx+2}: CourseType 'B.Sc.' ya 'B.A.' hona chahiye`);
+          if (!courseKeyNorm) throw new Error(`Row ${idx+2}: CourseType must be 'B.Sc.' or 'B.A.'`);
           const itemName = String(row['Item Name'] || '').trim();
           if (!itemName) throw new Error(`Row ${idx+2}: Item Name missing hai`);
           const section = /univ/i.test(String(row.Section||'')) ? 'University' : 'College';
@@ -734,7 +733,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           structureData[courseKeyNorm].items.push({ id, name: itemName, section, s });
         });
         if (!structureData['B.Sc.'] || !structureData['B.A.']) {
-          throw new Error('Excel me B.Sc. aur B.A. dono course ke rows hone chahiye');
+          throw new Error('The Excel file must have rows for both B.Sc. and B.A. courses');
         }
 
         await API.post('/fee-structure-approvals/submit-year', {
@@ -742,7 +741,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
           sourceYear: structYear,
           structureData,
         });
-        showToast(`✅ ${name} ka structure Excel se submit ho gaya — Principal → Admin approval ke baad hi structure me apply hoga!`);
+        showToast(`✅ ${name}'s structure submitted from Excel — it will apply only after Principal → Admin approval!`);
         setShowNewYear(false); setNewYearName('');
         fetchFeeApprovals();
       } catch (err) {
@@ -758,14 +757,14 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   const deleteYearStructure = async (yr) => {
     if (yr === BASE_STRUCT_YEAR) { showToast('❌ Base year (2025-26) delete nahi ho sakta', 'error'); return; }
     const alreadyPendingDelete = feeApprovals.find(a => a.isYearDeletion && a.academicYear === yr && ['pending_principal', 'pending_admin'].includes(a.status));
-    if (alreadyPendingDelete) { showToast(`❌ ${yr} ke liye delete request pehle se approval me hai`, 'error'); return; }
-    if (!window.confirm(`⚠️ "${yr}" ka poora fee structure delete karne ki request bhejein?\n\nYe request pehle Principal, phir Admin approve karenge — tabhi structure actually delete hoga. Students ke fee records / receipts hamesha safe rehte hain.\n\nPakka request bhejni hai?`)) return;
+    if (alreadyPendingDelete) { showToast(`❌ A delete request for ${yr} is already awaiting approval`, 'error'); return; }
+    if (!window.confirm(`⚠️ Send a request to delete the entire "${yr}" fee structure?\n\nPrincipal, then Admin must approve before the structure is actually deleted. Students' fee records / receipts always stay safe.\n\nAre you sure you want to send this request?`)) return;
 
     setSyncingServer(true);
     try {
       await API.post('/fee-structure-approvals/submit-year-delete', { academicYear: yr });
       fetchFeeApprovals();
-      showToast(`📨 ${yr} ko delete karne ki request bheji gayi — Principal → Admin approve karenge, tabhi structure hatega.`);
+      showToast(`📨 Request to delete ${yr} has been sent — Principal then Admin must approve before the structure is removed.`);
     } catch (err) {
       showToast('❌ ' + (err.response?.data?.message || 'Delete request bhejne me fail hua'), 'error');
     } finally {
@@ -796,8 +795,8 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
     const item = newItemMeta || allItems.find(i => i.id === itemId) || editingItem || {};
     const oldAmounts = isNewItem ? [] : (item.s || []);
     try {
-      // Har year (base + custom) ke liye Principal → Admin approval pipeline —
-      // koi bhi direct-apply nahi hota.
+      // Every year (base + custom) goes through the Principal → Admin approval
+      // pipeline — nothing is ever applied directly.
       await API.post('/fee-structure-approvals/submit', {
         courseKey,
         itemId,
@@ -814,7 +813,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
       savePending(pending);
       setEditingItem(null);
       showToast(isDeletion
-        ? '🗑️ Delete request Principal → Admin approval ke liye bheja gaya!'
+        ? '🗑️ Delete request sent for Principal → Admin approval!'
         : '✅ Edit submitted — sent to Principal for approval!');
       fetchFeeApprovals(); // pull fresh status from backend
     } catch (e) {
@@ -825,7 +824,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   // Delete a fee item → ALWAYS goes through Principal → Admin approval,
   // regardless of base year or custom year.
   const submitDelete = (item) => {
-    const q = `"${item.name}" ko ${structYear} structure se delete karne ke liye approval bhejein?\n(Principal → Admin approve karenge, tabhi structure se hatega)`;
+    const q = `Send an approval request to delete "${item.name}" from the ${structYear} structure?\n(Principal then Admin must approve before it is removed)`;
     if (!window.confirm(q)) return;
     submitEdit(item.id, (item.s && item.s.length ? item.s : [0,0,0,0,0,0]), null, true);
   };
@@ -838,7 +837,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         <div>
           <h2 style={{ color:'#1565C0', marginBottom:4 }}>💼 Fee Structure {structYear}</h2>
           <p style={{ color:'#666', fontSize:14 }}>
-            View and edit fee amounts. Har change (add / edit / delete) — is year me ho ya kisi bhi custom year me — pehle Principal, phir Admin approve karenge, tabhi structure me apply hota hai.
+            View and edit fee amounts. Every change (add / edit / delete) — in this year or any custom year — is applied only after Principal then Admin approve it.
           </p>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
@@ -872,7 +871,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
               ⏳ {Object.values(pendingForCourse).filter(p=>p.status==='pending').length} edit(s) pending approval
             </div>
           )}
-          <button onClick={fetchFeeApprovals} title="Approval status latest karein"
+          <button onClick={fetchFeeApprovals} title="Refresh the latest approval status"
             style={{ background:'#1565C0', color:'#fff', border:'none', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
             🔄 Refresh Status
           </button>
@@ -884,10 +883,10 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         <div style={{ background:'#f0fff4', border:'2px dashed #2E7D32', borderRadius:12, padding:16, marginBottom:16 }}>
           <h4 style={{ color:'#2E7D32', margin:'0 0 6px', fontSize:14 }}>➕ Naya Academic Year Fee Structure</h4>
           <p style={{ fontSize:12, color:'#666', margin:'0 0 12px' }}>
-            Currently selected year <strong>{structYear}</strong> ka poora structure copy hoke <strong>approval ke liye jayega</strong> —
-            pehle <strong>Principal</strong>, phir <strong>Admin</strong> approve karenge, <strong>tabhi</strong> ye structure live hoga
-            (direct apply nahi hota). Approve hone ke baad aap us year ke items edit / add / delete kar sakte ho,
-            aur Collect Fees / Scholarship me wahi year select karke usi structure se fees lagegi.
+            The currently selected year <strong>{structYear}</strong>'s entire structure will be copied and <strong>sent for approval</strong> —
+            <strong>Principal</strong>, then <strong>Admin</strong> must approve before this structure goes live
+            (nothing applies directly). Once approved, you can edit / add / delete items for that year,
+            and selecting that year in Collect Fees / Scholarship will use this structure's fees.
           </p>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <input type="text" placeholder="e.g. 2026-27" value={newYearName} maxLength={7}
@@ -895,7 +894,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
               style={{ padding:'9px 14px', borderRadius:8, border:'2px solid #2E7D32', fontSize:15, fontWeight:700, width:140, textAlign:'center' }} />
             <button onClick={createNewYear} disabled={syncingServer}
               style={{ background:'#2E7D32', color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:13, fontWeight:700, cursor:syncingServer?'wait':'pointer', opacity:syncingServer?0.7:1 }}>
-              {syncingServer ? '⏳ Bheja ja raha hai...' : `📨 Submit for Approval (${structYear} se copy)`}
+              {syncingServer ? '⏳ Sending...' : `📨 Submit for Approval (copy of ${structYear})`}
             </button>
             <button onClick={() => { setShowNewYear(false); setNewYearName(''); }}
               style={{ background:'#eee', color:'#333', border:'none', borderRadius:8, padding:'10px 16px', fontSize:13, cursor:'pointer' }}>Cancel</button>
@@ -903,11 +902,11 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
           <div style={{ borderTop:'1px dashed #2E7D32', margin:'16px 0 14px' }} />
 
-          <h4 style={{ color:'#1565C0', margin:'0 0 6px', fontSize:14 }}>📊 Ya phir Excel se seedha upload karo</h4>
+          <h4 style={{ color:'#1565C0', margin:'0 0 6px', fontSize:14 }}>📊 Or upload directly from Excel</h4>
           <p style={{ fontSize:12, color:'#666', margin:'0 0 12px' }}>
-            Pehle template download karo, Excel me har item ka naya amount bharo (naye items rows bhi add kar sakte ho),
-            phir upar <strong>Academic Year</strong> box me naya year (e.g. 2026-27) likhkar wahi file upload karo.
-            Upload hote hi ye <strong>seedha apply nahi hoga</strong> — pehle <strong>Principal</strong>, phir <strong>Admin</strong> approve karenge, tabhi structure me live hoga.
+            First download the template, fill in each item's new amount in Excel (you can add new item rows too),
+            then enter the new year (e.g. 2026-27) in the <strong>Academic Year</strong> box above and upload that same file.
+            It will <strong>not apply immediately</strong> on upload — <strong>Principal</strong>, then <strong>Admin</strong> must approve before it goes live in the structure.
           </p>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <button onClick={downloadYearTemplate}
@@ -945,7 +944,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
 
       {!isBaseYear && (
         <div style={{ background:'#e3f2fd', border:'1px solid #90caf9', borderRadius:10, padding:'10px 14px', marginBottom:16, fontSize:12, color:'#1565C0', fontWeight:600 }}>
-          ✏️ Ye <strong>{structYear}</strong> ka alag structure hai — edits/adds/deletes bhi Principal → Admin approval se hi lagte hain (base year jaisa hi). Approve hone ke baad Collect Fees / Walk-in modal me "{structYear}" select karne par yehi amounts lagenge.
+          ✏️ This is a separate structure for <strong>{structYear}</strong> — edits/additions/deletions also go through Principal → Admin approval (same as the base year). Once approved, selecting "{structYear}" in the Collect Fees / Walk-in modal will use these amounts.
         </div>
       )}
 
@@ -1069,7 +1068,7 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
                   ))}
                 </div>
                 <p style={{ fontSize:11, color:'#E65100', marginBottom:10 }}>
-                  ⚠️ New items ke liye Principal → Admin approval chahiye hoga — approve hone ke baad hi fee collection me dikhega.
+                  ⚠️ New items require Principal → Admin approval — they'll show up in fee collection only after being approved.
                 </p>
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={()=>{
@@ -1172,7 +1171,7 @@ const DocFeesManager = ({ docFees, showToast }) => {
           isNewItem:   !!c.isNew,
         });
       }
-      showToast('✅ Changes Principal → Admin approval ke liye bheje! Approval ke baad hi apply honge.');
+      showToast('✅ Changes sent for Principal → Admin approval! They will apply only after approval.');
       fetchDocApprovals();
     } catch (e) {
       showToast('❌ ' + (e.response?.data?.message || 'Submit failed'), 'error');
@@ -1202,7 +1201,7 @@ const DocFeesManager = ({ docFees, showToast }) => {
   };
 
   const handleDelete = (key) => {
-    if (!window.confirm(`"${docFees[key]?.label}" delete ke liye approval bhejein? (Principal → Admin approve karenge, tabhi hatega)`)) return;
+    if (!window.confirm(`Send an approval request to delete "${docFees[key]?.label}"? (Principal then Admin must approve before it is removed)`)) return;
     // Submit deletion for approval only — removed from live list after Admin approval.
     submitForApproval([{ key, label: docFees[key]?.label, oldPrice: docFees[key]?.price, deleted: true }]);
   };
@@ -1213,7 +1212,7 @@ const DocFeesManager = ({ docFees, showToast }) => {
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:10 }}>
         <div>
-          <p style={{ color:'#666', fontSize:14, margin:0 }}>Document fee amounts manage karo. Changes Principal/Admin approval ke baad apply honge.</p>
+          <p style={{ color:'#666', fontSize:14, margin:0 }}>Manage document fee amounts. Changes apply only after Principal/Admin approval.</p>
           {hasPending && (
             <p style={{ fontSize:12, color:'#E65100', fontWeight:600, margin:'4px 0 0' }}>
               ⏳ {Object.keys(pendingDoc).length} change(s) approval pending hain (Principal → Admin)
@@ -2745,7 +2744,7 @@ const AccountsSectionDashboard = () => {
               {/* ── DOCUMENT FEES TAB ── */}
               {admCollectDocMode && (
                 <div>
-                  <p style={{ fontSize:13, color:'#666', marginBottom:10 }}>Document fees select karo (multiple select ho sakte hain):</p>
+                  <p style={{ fontSize:13, color:'#666', marginBottom:10 }}>Select document fees (multiple selection allowed):</p>
                   <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14, maxHeight:260, overflowY:'auto', border:'1px solid #e0e7ef', borderRadius:10, padding:10 }}>
                     {Object.entries(docFees).map(([key, val]) => {
                       const isSelected = !!selectedFeeItems['doc_'+key];
@@ -2794,7 +2793,7 @@ const AccountsSectionDashboard = () => {
               {/* ── ANNUAL FEES TAB ── */}
               {!admCollectDocMode && (
                 <div>
-                  {/* Fee structure year selector — student ke current AY ke structure se fees lagegi */}
+                  {/* Fee structure year selector — fees are applied from the structure of the student's current AY */}
                   <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, background:'#f8faff', border:'1px solid #e0e7ef', borderRadius:10, padding:'10px 14px', flexWrap:'wrap' }}>
                     <label style={{ fontSize:13, fontWeight:700, color:'#1565C0' }}>📅 Fee Structure Year</label>
                     <select value={admAcadYear} onChange={e => changeAcadYear(e.target.value)}
@@ -2805,7 +2804,7 @@ const AccountsSectionDashboard = () => {
                       {structYearOptions.map(y => <option key={y} value={y}>{y}{y===BASE_STRUCT_YEAR?' (Base)':''}</option>)}
                     </select>
                     {!structYearOptions.includes(admAcadYear) && (
-                      <span style={{ fontSize:11, color:'#E65100', fontWeight:600 }}>⚠️ {admAcadYear} ka structure abhi bana nahi — {BASE_STRUCT_YEAR} base amounts lag rahe hain (Fee Structure tab me "➕ New Year" se banao)</span>
+                      <span style={{ fontSize:11, color:'#E65100', fontWeight:600 }}>⚠️ {admAcadYear}'s structure hasn't been created yet — {BASE_STRUCT_YEAR} base amounts are being used (create it via "➕ New Year" in the Fee Structure tab)</span>
                     )}
                   </div>
 
@@ -2814,7 +2813,7 @@ const AccountsSectionDashboard = () => {
                     <div style={{ background:'#ffebee', border:'1px solid #ef9a9a', borderRadius:10, padding:'10px 14px', marginBottom:12 }}>
                       <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, fontWeight:800, color:'#C62828' }}>
                         <input type="checkbox" checked={admPrevDuesOn} onChange={e => togglePrevDues(e.target.checked)} />
-                        ⚠️ Last Year Balance: ₹{prevBalance.toLocaleString('en-IN')} — is receipt me add karein?
+                        ⚠️ Last Year Balance: ₹{prevBalance.toLocaleString('en-IN')} — add this to the current receipt?
                       </label>
                       <p style={{ fontSize:11, color:'#b71c1c', margin:'6px 0 0' }}>
                         Previous year(s) expected (us saal ke structure se): ₹{prevExpected.toLocaleString('en-IN')} · Ab tak paid: ₹{totalPaidSoFar.toLocaleString('en-IN')}
@@ -2823,7 +2822,7 @@ const AccountsSectionDashboard = () => {
                   )}
                   {priorYears.length > 0 && prevBalance === 0 && prevExpected > 0 && (
                     <div style={{ background:'#e8f5e9', border:'1px solid #a5d6a7', borderRadius:10, padding:'8px 14px', marginBottom:12, fontSize:12, color:'#2E7D32', fontWeight:600 }}>
-                      ✅ Previous year(s) ki fees fully paid hai — koi balance nahi.
+                      ✅ Previous year(s)' fees are fully paid — no balance.
                     </div>
                   )}
 
@@ -3719,7 +3718,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                         )}
                         {listStructYears().map(y => <option key={y} value={y}>{y}{y===BASE_STRUCT_YEAR?' (Base)':''}</option>)}
                       </select>
-                      <p style={{ fontSize:10, color:'#999', margin:'4px 0 0' }}>Jis academic year ke structure se fees leni hai wo select karo (naya year "Fee Structure" tab me banao).</p>
+                      <p style={{ fontSize:10, color:'#999', margin:'4px 0 0' }}>Select the academic year whose structure should be used for fees (create a new year in the "Fee Structure" tab).</p>
                     </div>
                   </div>
 
@@ -3808,7 +3807,7 @@ const WalkInFeeModal = ({ onClose, user, API, showToast, docFees = {} }) => {
                   {/* ── DOCUMENT FEES TAB ── */}
                   {form.docMode && (
                     <div>
-                      <p style={{ fontSize:13, color:'#666', marginBottom:10 }}>Document fees select karo (multiple select ho sakte hain):</p>
+                      <p style={{ fontSize:13, color:'#666', marginBottom:10 }}>Select document fees (multiple selection allowed):</p>
                       {docFeeEntries.length === 0 ? (
                         <div style={{ background:'#fff3e0', padding:'10px', borderRadius:8, fontSize:13, color:'#E65100' }}>⚠️ No document fees configured.</div>
                       ) : (
