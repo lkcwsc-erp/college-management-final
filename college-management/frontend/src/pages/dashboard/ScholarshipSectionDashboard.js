@@ -161,7 +161,7 @@ const deriveHeadwiseByYearLocal = (items) => {
 // Fetch ALL of the Accounts Section's fee structures in one call and group
 // them by academic year. This way:
 //   • the year dropdowns show EXACTLY the years Accounts has created
-//     (jo jo year Accounts se add hoga, wo yahan select karne ke liye aayega)
+//     (whichever years Accounts adds will show up here to select)
 //   • selecting a year shows THAT year's live amounts — no stale cache.
 // Returns { years: ['2027-28','2026-27',...], byYear: { '2026-27': map, ... } }
 // or null on network/server failure.
@@ -1024,7 +1024,7 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
   const yearOptions = allStructs?.years?.length ? allStructs.years : ACADEMIC_YEARS;
 
   // Fee-structure map for a given academic year — straight from the freshly
-  // fetched data (no per-year cache, so switching year kabhi stale nahi hota).
+  // fetched data (no per-year cache, so switching year is never stale).
   const getFeeMap = useCallback(
     (ay) => (allStructs?.byYear?.[ay] && Object.keys(allStructs.byYear[ay]).length ? allStructs.byYear[ay] : null),
     [allStructs]
@@ -1154,8 +1154,8 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
                 {structStatus === 'loading'
                   ? '⏳ Loading fee structures...'
                   : getFeeMap(form.academicYear)
-                    ? `✅ ${form.academicYear} ka fee structure Accounts Section se live liya gaya hai.`
-                    : `⚠️ Accounts Section ne ${form.academicYear} ke liye fee structure abhi nahi banaya — fallback amounts use ho rahe hain.`}
+                    ? `✅ ${form.academicYear}'s fee structure has been loaded live from the Accounts Section.`
+                    : `⚠️ Accounts Section hasn't created a fee structure for ${form.academicYear} yet — fallback amounts are being used.`}
               </p>
             </FormField>
 
@@ -1249,9 +1249,9 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   };
 
   // ── Fixed display heads ──────────────────────────────────────────────
-  // Scholarship view me HAMESHA yehi 7 fee heads dikhte hain (pehle jaise).
+  // The Scholarship view ALWAYS shows these same 7 fee heads (as before).
   // Sirf amounts selected academic year ke Accounts fee structure ke items
-  // se aggregate hote hain — baaki sab items "Other Fee" me jud jaate hain,
+  // are aggregated — every other item gets folded into "Other Fee",
   // taaki total bilkul Accounts structure ke total se match kare.
   const DISPLAY_HEADS = ['Enrollment Fee', 'Admission Fee', 'Tuition Fee', 'Gymkhana Fee', 'Laboratory Fee', 'Library Fee', 'Other Fee'];
   const matchHead = (name) => {
@@ -1314,18 +1314,18 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
       )}
       {fetchStatus === 'empty' && (
         <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fff3e0', border: '1px solid #ffcc80', color: '#E65100', fontSize: 13, marginBottom: 14 }}>
-          ⚠️ Accounts Section ne <strong>{academicYear}</strong> ke liye abhi tak fee structure create nahi kiya hai.
-          Neeche fallback (2025-26 reference) amounts dikhaye ja rahe hain — Accounts Section me ye year create hote hi yahan automatically update ho jayega.
+          ⚠️ Accounts Section hasn't created a fee structure for <strong>{academicYear}</strong> yet.
+          Fallback (2025-26 reference) amounts are shown below — this will update automatically as soon as Accounts Section creates this year.
         </div>
       )}
       {fetchStatus === 'error' && (
         <div style={{ padding: '10px 14px', borderRadius: 10, background: '#ffebee', border: '1px solid #ef9a9a', color: '#C62828', fontSize: 13, marginBottom: 14 }}>
-          ❌ Server se fee structure load nahi ho paya. "🔄 Refresh" try karein.
+          ❌ Could not load the fee structure from the server. Try "🔄 Refresh".
         </div>
       )}
       {fetchStatus === 'ok' && (
         <div style={{ padding: '10px 14px', borderRadius: 10, background: '#e8f5e9', border: '1px solid #a5d6a7', color: '#2E7D32', fontSize: 13, marginBottom: 14 }}>
-          ✅ <strong>{academicYear}</strong> ka fee structure Accounts Section se live liya gaya hai.
+          ✅ <strong>{academicYear}</strong>'s fee structure has been loaded live from the Accounts Section.
         </div>
       )}
 
