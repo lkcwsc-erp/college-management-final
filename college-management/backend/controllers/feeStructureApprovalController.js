@@ -43,17 +43,17 @@ exports.submitApproval = async (req, res) => {
 // ── Accounts Section: Submit a NEW academic-year fee structure ──────────────
 // POST /api/fee-structure-approvals/submit-year
 // Body: { academicYear, sourceYear, structureData }
-// Structure is NOT applied yet — Principal approves, phir Admin approves,
-// tabhi adminApprove me CollegeFeeStructure DB me upsert hota hai (live).
+// Structure is NOT applied yet — Principal approves, then Admin approves,
+// only then does adminApprove upsert it into the CollegeFeeStructure DB (live).
 exports.submitYearStructure = async (req, res) => {
   try {
     const { academicYear, sourceYear, structureData } = req.body;
 
     if (!/^\d{4}-\d{2}$/.test(academicYear || '')) {
-      return res.status(400).json({ success: false, message: 'academicYear format YYYY-YY hona chahiye (e.g. 2026-27)' });
+      return res.status(400).json({ success: false, message: 'academicYear must be in YYYY-YY format (e.g. 2026-27)' });
     }
     if (!structureData || !structureData['B.Sc.'] || !structureData['B.A.']) {
-      return res.status(400).json({ success: false, message: 'structureData me B.Sc. aur B.A. dono chahiye' });
+      return res.status(400).json({ success: false, message: 'structureData must include both B.Sc. and B.A.' });
     }
     for (const ck of ['B.Sc.', 'B.A.']) {
       const items = structureData[ck]?.items;
@@ -73,7 +73,7 @@ exports.submitYearStructure = async (req, res) => {
       status: { $in: ['pending_principal', 'approved_by_principal', 'pending_admin'] },
     });
     if (existsPending) {
-      return res.status(409).json({ success: false, message: `${academicYear} ke liye ek request pehle se approval me hai` });
+      return res.status(409).json({ success: false, message: `A request for ${academicYear} is already awaiting approval` });
     }
 
     const approval = await FeeStructureApproval.create({
@@ -112,7 +112,7 @@ exports.submitYearDeletion = async (req, res) => {
       status: { $in: ['pending_principal', 'approved_by_principal', 'pending_admin'] },
     });
     if (existsPending) {
-      return res.status(409).json({ success: false, message: `${academicYear} ke liye delete request pehle se pending hai` });
+      return res.status(409).json({ success: false, message: `A delete request for ${academicYear} is already pending` });
     }
 
     const approval = await FeeStructureApproval.create({
