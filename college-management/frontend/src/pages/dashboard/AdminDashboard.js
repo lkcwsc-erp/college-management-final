@@ -1792,7 +1792,7 @@ const AdminFeeApprovalTab = ({ showMessage, kind }) => {
           {a.isYearDeletion ? (
             <div style={{ gridColumn:'1 / -1', background:'#ffebee', borderRadius:8, padding:'12px 16px' }}>
               <p style={{ margin:0, fontSize:13, color:'#C62828', fontWeight:700 }}>
-                ⚠️ Poora fee structure (B.Sc. + B.A., dono) academic year <strong>{a.academicYear}</strong> ke liye <strong>permanently delete</strong> ho jayega — Approve karte hi database se hat jayega, wapas nahi laaya ja sakta.
+                ⚠️ The entire fee structure (both B.Sc. + B.A.) for academic year <strong>{a.academicYear}</strong> will be <strong>permanently deleted</strong> — as soon as you approve, it is removed from the database and cannot be recovered.
               </p>
             </div>
           ) : a.isNewYearStructure ? (
