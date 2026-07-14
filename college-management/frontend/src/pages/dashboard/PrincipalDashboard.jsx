@@ -654,7 +654,7 @@ const PrincipalDashboard = () => {
 
               <h2 style={{ color: '#C62828', margin: '28px 0 4px' }}>💰 Document Fee Type Approvals</h2>
               <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-                Accounts Section ne naye document fee types add kiye hain — approve ya reject karo.
+                The Accounts Section has added new document fee types — approve or reject them.
               </p>
 
               {docFeeLoading ? (
@@ -1822,8 +1822,8 @@ const FeeStructApprovalTab = ({ role, kind }) => {
       <h2 style={{ color:'#1565C0', marginBottom:4 }}>{kind === 'document' ? '💰 Document Fee Approvals' : '🏛️ Fee Structure Approvals'}</h2>
       <p style={{ color:'#666', marginBottom:16, fontSize:14 }}>
         {kind === 'document'
-          ? 'Accounts Section ne document fee add / edit / delete kiya hai — review karke approve ya reject karo.'
-          : 'Accounts Section ne fee amounts edit kiye hain — review karo aur approve ya reject karo.'}
+          ? 'Accounts Section has added / edited / deleted a document fee — review it and approve or reject.'
+          : 'Accounts Section has edited fee amounts — review and approve or reject.'}
       </p>
       {msg && <div style={{ padding:'10px 16px', borderRadius:9, marginBottom:14, fontWeight:600, fontSize:14, background:msg.startsWith('✅')?'#e8f5e9':'#ffebee', color:msg.startsWith('✅')?'#2E7D32':'#C62828' }}>{msg}</div>}
 
@@ -1858,7 +1858,7 @@ const FeeStructApprovalTab = ({ role, kind }) => {
                     {a.isYearDeletion ? (
                       <div style={{ gridColumn:'1 / -1', background:'#ffebee', borderRadius:8, padding:'12px 16px' }}>
                         <p style={{ margin:0, fontSize:13, color:'#C62828', fontWeight:700 }}>
-                          ⚠️ Poora fee structure (B.Sc. + B.A., dono) academic year <strong>{a.academicYear}</strong> ke liye <strong>permanently delete</strong> ho jayega — is year me collect fees, MahaDBT Receivable sab jagah se hat jayega.
+                          ⚠️ The entire fee structure (both B.Sc. + B.A.) for academic year <strong>{a.academicYear}</strong> will be <strong>permanently deleted</strong> — it will be removed everywhere, including Collect Fees and MahaDBT Receivable for this year.
                         </p>
                       </div>
                     ) : a.isNewYearStructure ? (
