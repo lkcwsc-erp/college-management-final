@@ -1578,9 +1578,9 @@ const AccountsSectionDashboard = () => {
   const [admSelectedSem, setAdmSelectedSem] = useState('');
   const [admMsg, setAdmMsg]                 = useState('');
   const [admCollectDocMode, setAdmCollectDocMode] = useState(false);
-  const [admDocType, setAdmDocType]         = useState(''); // eslint-disable-line no-unused-vars
-  const [admSelPrevYear, setAdmSelPrevYear] = useState(''); // eslint-disable-line no-unused-vars
-  const [selectedPrevItems, setSelectedPrevItems] = useState({}); // eslint-disable-line no-unused-vars
+  const [admDocType, setAdmDocType]         = useState('');
+  const [admSelPrevYear, setAdmSelPrevYear] = useState('');
+  const [selectedPrevItems, setSelectedPrevItems] = useState({});
   const [selectedFeeItems, setSelectedFeeItems] = useState({});
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
   // Multi-year: which academic year's fee structure applies in the Collect modal
@@ -1809,19 +1809,26 @@ const AccountsSectionDashboard = () => {
     const courseKey = detectCourse(selectedAdm);
     const course = courseKey ? YEARLY_FEES[courseKey] : null;
     const selSemAmt = course && admSelectedSem ? course.semesters?.[admSelectedSem] : null;
-    try {
-      await API.put(`/admissions/mark-fees-paid/${selectedAdm._id}`, {
-        fees: Number(admFeeAmt),
-        paymentMode: admPayMode,
-        transactionId: admTxnId,
-        receiptNo: rNo,
-        collectedBy: user?.name || 'Accounts Staff',
-        feeType: admFeeType,
-        feeTypeLabel: feeType?.label || 'Fee',
-        semester: admSelectedSem || '',
-        totalFees: selSemAmt || undefined,
-        scholarshipAmount: admScholarshipAmt ? Number(admScholarshipAmt) : undefined,
-      });
+      // Build feeHeads for the current year selection
+      const currentYearHeads = Object.keys(selectedFeeItems).filter(k => !k.startsWith('doc_') && selectedFeeItems[k]);
+      
+      // Build previous year heads if any selected
+      const prevYearHeads = Object.keys(selectedPrevItems).filter(k => selectedPrevItems[k]).map(k => k.split('|')[1]);
+
+      try {
+        await API.put(`/admissions/mark-fees-paid/${selectedAdm._id}`, {
+          fees: Number(admFeeAmt),
+          paymentMode: admPayMode,
+          transactionId: admTxnId,
+          receiptNo: rNo,
+          collectedBy: user?.name || 'Accounts Staff',
+          feeType: admFeeType,
+          feeTypeLabel: feeType?.label || 'Fee',
+          semester: admSelectedSem || '',
+          totalFees: selSemAmt || undefined,
+          scholarshipAmount: admScholarshipAmt ? Number(admScholarshipAmt) : undefined,
+          feeHeads: [...currentYearHeads, ...prevYearHeads],
+        });
 
       const ct = (selectedAdm.courseType||'').toLowerCase();
       const ck = ct.includes('b.sc')||ct.includes('bsc') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba') ? 'B.A.' : null;
@@ -1849,7 +1856,7 @@ const AccountsSectionDashboard = () => {
         ? [{ particular: (admOtherFeeDesc||'').trim() || 'Other Fee', amount: Number(admOtherFeeAmt) }]
         : [];
       const prevDuesRows = (admPrevDuesOn && admPrevDuesAmt > 0)
-        ? [{ particular: 'Previous Year Balance / Dues', amount: admPrevDuesAmt }]
+        ? prevItemsList.filter(it => selectedPrevItems[it.uniqueId]).map(it => ({ particular: `${it.name} (${it.year})`, amount: it.amount }))
         : [];
       const feeBreakdown = [...academicRows, ...docRows, ...otherRows, ...prevDuesRows].map((r, i) => ({ sr: i+1, ...r }));
 
@@ -1891,6 +1898,7 @@ const AccountsSectionDashboard = () => {
       setSelectedFeeItems({}); setAdmCollectDocMode(false);
       setAdmOtherFeeOn(false); setAdmOtherFeeDesc(''); setAdmOtherFeeAmt('');
       setAdmAcadYear(currentAcadYear()); setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0);
+      setAdmSelPrevYear(''); setSelectedPrevItems({});
       fetchAdmissions();
     } catch (e) { showToast(e.response?.data?.message || 'Failed.', 'error'); }
     finally { setAdmLoading2(false); }
@@ -2697,14 +2705,65 @@ const AccountsSectionDashboard = () => {
           const add = on ? Number(amt || 0) : 0;
           setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + add + prevAdd())));
         };
-        const prevYearDue = 0; // eslint-disable-line no-unused-vars
-        const calcSelectedPrev = () => 0; // eslint-disable-line no-unused-vars
+
+        // --- Item-wise Pending Calculation for Previous Year(s) ---
+        const getPrevItems = () => {
+          if (!ck) return [];
+          const items = [];
+          priorYears.forEach((py, idx) => {
+            const stepsBack = priorYears.length - idx;
+            let ay = admAcadYear;
+            for (let k = 0; k < stepsBack; k++) ay = prevAcadYear(ay);
+            const st = getStructureForYear(ay);
+            const idxs = yearSemIdx[py] || [0,1];
+            const its = st[ck]?.items || [];
+            
+            // Filter out already paid items for this specific year
+            const paidHeads = new Set();
+            (selectedAdm.feeLedger || []).forEach(p => {
+              if (p.year === py && Array.isArray(p.feeHeads)) {
+                p.feeHeads.forEach(h => paidHeads.add(h));
+              }
+            });
+
+            its.forEach(it => {
+              const amt = (it.s[idxs[0]] || 0) + (it.s[idxs[1]] || 0);
+              if (amt > 0 && !paidHeads.has(it.id)) {
+                items.push({ ...it, year: py, acadYear: ay, amount: amt, uniqueId: `${py}|${it.id}` });
+              }
+            });
+          });
+          return items;
+        };
+
+        const prevItemsList = getPrevItems();
+        const calcSelectedPrev = (map) => prevItemsList.reduce((sum, it) => sum + (map[it.uniqueId] ? it.amount : 0), 0);
+
+        const togglePrevItem = (uid) => {
+          const m = { ...selectedPrevItems, [uid]: !selectedPrevItems[uid] };
+          setSelectedPrevItems(m);
+          const newPrevAmt = calcSelectedPrev(m);
+          setAdmPrevDuesAmt(newPrevAmt);
+          setAdmPrevDuesOn(newPrevAmt > 0);
+          setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + otherAdd() + newPrevAmt)));
+        };
+
         // Toggle "include previous year balance" → refresh suggested amount
         const togglePrevDues = (on) => {
           setAdmPrevDuesOn(on);
-          setAdmPrevDuesAmt(on ? prevBalance : 0);
-          const add = on ? prevBalance : 0;
-          setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + otherAdd() + add)));
+          if (on) {
+            // Select all pending items by default if turned on
+            const m = {};
+            prevItemsList.forEach(it => { m[it.uniqueId] = true; });
+            setSelectedPrevItems(m);
+            const total = calcSelectedPrev(m);
+            setAdmPrevDuesAmt(total);
+            setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + otherAdd() + total)));
+          } else {
+            setSelectedPrevItems({});
+            setAdmPrevDuesAmt(0);
+            setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + otherAdd())));
+          }
         };
         // Change the fee-structure year → clear selections (amounts differ per year)
         const changeAcadYear = (ay) => {
@@ -2722,6 +2781,7 @@ const AccountsSectionDashboard = () => {
           setSelectedFeeItems({}); setAdmMsg(''); setAdmCollectDocMode(false); setAdmDocType('');
           setAdmOtherFeeOn(false); setAdmOtherFeeDesc(''); setAdmOtherFeeAmt('');
           setAdmAcadYear(currentAcadYear()); setAdmPrevDuesOn(false); setAdmPrevDuesAmt(0);
+          setAdmSelPrevYear(''); setSelectedPrevItems({});
         };
 
         return (
@@ -2817,10 +2877,29 @@ const AccountsSectionDashboard = () => {
                     <div style={{ background:'#ffebee', border:'1px solid #ef9a9a', borderRadius:10, padding:'10px 14px', marginBottom:12 }}>
                       <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, fontWeight:800, color:'#C62828' }}>
                         <input type="checkbox" checked={admPrevDuesOn} onChange={e => togglePrevDues(e.target.checked)} />
-                        ⚠️ Last Year Balance: ₹{prevBalance.toLocaleString('en-IN')} — add this to the current receipt?
+                        ⚠️ Last Year Balance: ₹{prevBalance.toLocaleString('en-IN')}
                       </label>
+                      
+                      {admPrevDuesOn && prevItemsList.length > 0 && (
+                        <div style={{ marginTop: 10, padding: 10, background: '#fff', borderRadius: 8, border: '1px solid #ffcdd2' }}>
+                          <p style={{ fontSize: 12, fontWeight: 700, color: '#C62828', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>▼ Previous Year Pending Fees</span>
+                            <span>Selected: ₹{admPrevDuesAmt.toLocaleString('en-IN')}</span>
+                          </p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 150, overflowY: 'auto' }}>
+                            {prevItemsList.map(it => (
+                              <label key={it.uniqueId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#333', cursor: 'pointer', padding: '2px 0' }}>
+                                <input type="checkbox" checked={!!selectedPrevItems[it.uniqueId]} onChange={() => togglePrevItem(it.uniqueId)} />
+                                <span style={{ flex: 1 }}>{it.name} ({it.year})</span>
+                                <span style={{ fontWeight: 600 }}>₹{it.amount.toLocaleString('en-IN')}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <p style={{ fontSize:11, color:'#b71c1c', margin:'6px 0 0' }}>
-                        Previous year(s) expected (us saal ke structure se): ₹{prevExpected.toLocaleString('en-IN')} · Ab tak paid: ₹{totalPaidSoFar.toLocaleString('en-IN')}
+                        Previous year(s) expected: ₹{prevExpected.toLocaleString('en-IN')} · Ab tak paid: ₹{totalPaidSoFar.toLocaleString('en-IN')}
                       </p>
                     </div>
                   )}
