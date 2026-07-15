@@ -1594,6 +1594,44 @@ const AccountsSectionDashboard = () => {
   const [admOtherFeeAmt, setAdmOtherFeeAmt] = useState('');
   const [admLoading2, setAdmLoading2]       = useState(false);
 
+  // Helper to get pending items for previous years
+  const getPrevItemsList = (adm, acadYear) => {
+    const ct = (adm?.courseType || '').toLowerCase();
+    const ck = ct.includes('b.sc') || ct.includes('bsc') || ct.includes('science') ? 'B.Sc.'
+      : ct.includes('b.a') || ct.includes('ba') || ct.includes('arts') ? 'B.A.' : null;
+    if (!ck) return [];
+
+    const admYear = adm.admissionYear || '1st Year';
+    const yearSemIdx = { '1st Year': [0, 1], '2nd Year': [2, 3], '3rd Year': [4, 5] };
+    const priorYears = admYear === '2nd Year' ? ['1st Year'] : admYear === '3rd Year' ? ['1st Year', '2nd Year'] : [];
+
+    const items = [];
+    priorYears.forEach((py, idx) => {
+      const stepsBack = priorYears.length - idx;
+      let ay = acadYear;
+      for (let k = 0; k < stepsBack; k++) ay = prevAcadYear(ay);
+      const st = getStructureForYear(ay);
+      const idxs = yearSemIdx[py] || [0, 1];
+      const its = st[ck]?.items || [];
+
+      // Filter out already paid items for this specific year
+      const paidHeads = new Set();
+      (adm.feeLedger || []).forEach(p => {
+        if (p.year === py && Array.isArray(p.feeHeads)) {
+          p.feeHeads.forEach(h => paidHeads.add(h));
+        }
+      });
+
+      its.forEach(it => {
+        const amt = (it.s[idxs[0]] || 0) + (it.s[idxs[1]] || 0);
+        if (amt > 0 && !paidHeads.has(it.id)) {
+          items.push({ ...it, year: py, acadYear: ay, amount: amt, uniqueId: `${py}|${it.id}` });
+        }
+      });
+    });
+    return items;
+  };
+
   const [expenses, setExpenses]             = useState(() => { // eslint-disable-line no-unused-vars
     try { return JSON.parse(localStorage.getItem('lkcwsc_expenses') || '[]'); } catch { return []; }
   });
@@ -1855,8 +1893,9 @@ const AccountsSectionDashboard = () => {
       const otherRows = (admOtherFeeOn && Number(admOtherFeeAmt) > 0)
         ? [{ particular: (admOtherFeeDesc||'').trim() || 'Other Fee', amount: Number(admOtherFeeAmt) }]
         : [];
+      const prevItemsListForReceipt = getPrevItemsList(selectedAdm, admAcadYear);
       const prevDuesRows = (admPrevDuesOn && admPrevDuesAmt > 0)
-        ? prevItemsList.filter(it => selectedPrevItems[it.uniqueId]).map(it => ({ particular: `${it.name} (${it.year})`, amount: it.amount }))
+        ? prevItemsListForReceipt.filter(it => selectedPrevItems[it.uniqueId]).map(it => ({ particular: `${it.name} (${it.year})`, amount: it.amount }))
         : [];
       const feeBreakdown = [...academicRows, ...docRows, ...otherRows, ...prevDuesRows].map((r, i) => ({ sr: i+1, ...r }));
 
@@ -2707,36 +2746,7 @@ const AccountsSectionDashboard = () => {
         };
 
         // --- Item-wise Pending Calculation for Previous Year(s) ---
-        const getPrevItems = () => {
-          if (!ck) return [];
-          const items = [];
-          priorYears.forEach((py, idx) => {
-            const stepsBack = priorYears.length - idx;
-            let ay = admAcadYear;
-            for (let k = 0; k < stepsBack; k++) ay = prevAcadYear(ay);
-            const st = getStructureForYear(ay);
-            const idxs = yearSemIdx[py] || [0,1];
-            const its = st[ck]?.items || [];
-            
-            // Filter out already paid items for this specific year
-            const paidHeads = new Set();
-            (selectedAdm.feeLedger || []).forEach(p => {
-              if (p.year === py && Array.isArray(p.feeHeads)) {
-                p.feeHeads.forEach(h => paidHeads.add(h));
-              }
-            });
-
-            its.forEach(it => {
-              const amt = (it.s[idxs[0]] || 0) + (it.s[idxs[1]] || 0);
-              if (amt > 0 && !paidHeads.has(it.id)) {
-                items.push({ ...it, year: py, acadYear: ay, amount: amt, uniqueId: `${py}|${it.id}` });
-              }
-            });
-          });
-          return items;
-        };
-
-        const prevItemsList = getPrevItems();
+        const prevItemsList = getPrevItemsList(selectedAdm, admAcadYear);
         const calcSelectedPrev = (map) => prevItemsList.reduce((sum, it) => sum + (map[it.uniqueId] ? it.amount : 0), 0);
 
         const togglePrevItem = (uid) => {
