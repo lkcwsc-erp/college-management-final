@@ -1579,6 +1579,8 @@ const AccountsSectionDashboard = () => {
   const [admMsg, setAdmMsg]                 = useState('');
   const [admCollectDocMode, setAdmCollectDocMode] = useState(false);
   const [admDocType, setAdmDocType]         = useState(''); // eslint-disable-line no-unused-vars
+  const [admSelPrevYear, setAdmSelPrevYear] = useState(''); // eslint-disable-line no-unused-vars
+  const [selectedPrevItems, setSelectedPrevItems] = useState({}); // eslint-disable-line no-unused-vars
   const [selectedFeeItems, setSelectedFeeItems] = useState({});
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
   // Multi-year: which academic year's fee structure applies in the Collect modal
@@ -1586,10 +1588,6 @@ const AccountsSectionDashboard = () => {
   // Previous year(s) remaining balance — include in this collection?
   const [admPrevDuesOn, setAdmPrevDuesOn]         = useState(false);
   const [admPrevDuesAmt, setAdmPrevDuesAmt]       = useState(0);
-  // Which previous year ('1st Year' / '2nd Year' ...) is shown in the itemised dues list
-  const [admSelPrevYear, setAdmSelPrevYear]       = useState('');
-  // Item-wise selection of previous-year dues to include in this receipt: { [itemId]: true }
-  const [selectedPrevItems, setSelectedPrevItems] = useState({});
   // Other Fee (free-form) for the Collect Fee modal — description + amount
   const [admOtherFeeOn, setAdmOtherFeeOn]   = useState(false);
   const [admOtherFeeDesc, setAdmOtherFeeDesc] = useState('');
@@ -2651,48 +2649,20 @@ const AccountsSectionDashboard = () => {
         const yearTotal = yearItems.reduce((s,i) => s + i.yearAmt, 0);
 
         // ── Previous year(s) remaining balance (carry-forward) ──
-        // e.g. student now 2nd Year in AY 2026-27 → 1st Year's items are recomputed
-        // from the 2025-26 structure; each item's paid amount comes from feeHeadDetails
-        // tagged to that student-year, so we can show item-by-item Paid/Due, not just a lump sum.
+        // e.g. student now 2nd Year in AY 2026-27 → 1st Year expected total is
+        // computed from the 2025-26 structure; minus everything paid so far.
         const priorYears = admYear === '2nd Year' ? ['1st Year'] : admYear === '3rd Year' ? ['1st Year','2nd Year'] : [];
-
-        const prevYearItemsFor = (py) => {
-          if (!ck || !py) return [];
-          const idx = priorYears.indexOf(py);
-          if (idx === -1) return [];
-          const stepsBack = priorYears.length - idx;
+        const prevExpected = ck ? priorYears.reduce((sum, py, i) => {
+          const stepsBack = priorYears.length - i;
           let ay = admAcadYear;
           for (let k = 0; k < stepsBack; k++) ay = prevAcadYear(ay);
           const st = getStructureForYear(ay);
           const idxs = yearSemIdx[py] || [0,1];
           const its = st[ck]?.items || [];
-          return its.map(it => {
-            const amt = (it.s[idxs[0]]||0) + (it.s[idxs[1]]||0);
-            const paidAmt = (selectedAdm.feeLedger||[]).reduce((s,p) =>
-              s + (p.feeHeadDetails||[])
-                .filter(h => h.year === py && h.name === it.name)
-                .reduce((s2,h) => s2 + (h.amount||0), 0), 0);
-            return { id: it.id, name: it.name, section: it.section, yearAmt: amt, paidAmt, dueAmt: Math.max(0, amt - paidAmt) };
-          }).filter(it => it.yearAmt > 0);
-        };
-
-        const prevExpected = priorYears.reduce((sum, py) => sum + prevYearItemsFor(py).reduce((s,i)=>s+i.yearAmt,0), 0);
-        const prevItemPaidTotal = priorYears.reduce((sum, py) => sum + prevYearItemsFor(py).reduce((s,i)=>s+i.paidAmt,0), 0);
-        // Legacy fallback: payments made before item-wise tagging was introduced won't show up
-        // in feeHeadDetails — in that case fall back to the old lump-sum (total ever paid) estimate.
+          return sum + its.reduce((s2, it) => s2 + (it.s[idxs[0]]||0) + (it.s[idxs[1]]||0), 0);
+        }, 0) : 0;
         const totalPaidSoFar = (selectedAdm.feeLedger||[]).reduce((s2,p)=>s2+(p.amount||0),0);
-        const hasItemizedPrevData = (selectedAdm.feeLedger||[]).some(p => (p.feeHeadDetails||[]).length > 0);
-        const prevBalance = hasItemizedPrevData
-          ? Math.max(0, prevExpected - prevItemPaidTotal)
-          : Math.max(0, prevExpected - totalPaidSoFar);
-
-        // Which previous year is showing in the dropdown — defaults to the most recent ("last year")
-        const effSelPrevYear = priorYears.includes(admSelPrevYear) ? admSelPrevYear : (priorYears[priorYears.length - 1] || '');
-        const prevYearItems  = prevYearItemsFor(effSelPrevYear);
-        const prevYearDue    = prevYearItems.reduce((s,i) => s + i.dueAmt, 0);
-
-        const calcSelectedPrev = (map) =>
-          priorYears.reduce((tot, py) => tot + prevYearItemsFor(py).reduce((s,i) => s + (map[`${py}::${i.id}`] ? i.dueAmt : 0), 0), 0);
+        const prevBalance = Math.max(0, prevExpected - totalPaidSoFar);
 
         const calcSelected = (map) =>
           yearItems.reduce((s,i) => s + (map[i.id] ? i.yearAmt : 0), 0);
@@ -2727,6 +2697,8 @@ const AccountsSectionDashboard = () => {
           const add = on ? Number(amt || 0) : 0;
           setAdmFeeAmt(String(Math.max(0, selGross + docSelTotal - schol + add + prevAdd())));
         };
+        const prevYearDue = 0; // eslint-disable-line no-unused-vars
+        const calcSelectedPrev = () => 0; // eslint-disable-line no-unused-vars
         // Toggle "include previous year balance" → refresh suggested amount
         const togglePrevDues = (on) => {
           setAdmPrevDuesOn(on);
