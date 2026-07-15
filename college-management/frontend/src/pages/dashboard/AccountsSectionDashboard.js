@@ -1578,8 +1578,8 @@ const AccountsSectionDashboard = () => {
   const [admSelectedSem, setAdmSelectedSem] = useState('');
   const [admMsg, setAdmMsg]                 = useState('');
   const [admCollectDocMode, setAdmCollectDocMode] = useState(false);
-  const [admDocType, setAdmDocType]         = useState('');
-  const [admSelPrevYear, setAdmSelPrevYear] = useState('');
+  const [admDocType, setAdmDocType]         = useState(''); // eslint-disable-line no-unused-vars
+  const [admSelPrevYear, setAdmSelPrevYear] = useState(''); // eslint-disable-line no-unused-vars
   const [selectedPrevItems, setSelectedPrevItems] = useState({});
   const [selectedFeeItems, setSelectedFeeItems] = useState({});
   const [admScholarshipAmt, setAdmScholarshipAmt] = useState('');
