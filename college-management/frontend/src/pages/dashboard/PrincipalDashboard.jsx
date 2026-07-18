@@ -1846,6 +1846,7 @@ const FeeStructApprovalTab = ({ role, kind }) => {
                     <div>
                       <span style={{ fontSize:15, fontWeight:700, color:'#333' }}>{a.itemName}</span>
                       {!a.isNewYearStructure && !a.isYearDeletion && <span style={{ fontSize:12, color:'#888', marginLeft:10 }}>{a.courseKey} — {a.itemSection}</span>}
+                      {!a.isNewYearStructure && !a.isYearDeletion && a.academicYear && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#fff3e0', color:'#E65100', padding:'2px 8px', borderRadius:8 }}>📅 {a.academicYear}</span>}
                       {a.isNewYearStructure && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#f3e5f5', color:'#7B1FA2', padding:'2px 8px', borderRadius:8 }}>🆕 New Year Structure{a.sourceYear ? ` (${a.sourceYear} se copy)` : ''}</span>}
                       {a.isYearDeletion && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Entire Year — {a.academicYear}</span>}
                       {a.isNewItem && <span style={{ fontSize:11, fontWeight:700, marginLeft:8, background:'#e3f2fd', color:'#1565C0', padding:'2px 8px', borderRadius:8 }}>New Item</span>}
@@ -1937,6 +1938,7 @@ const FeeStructApprovalTab = ({ role, kind }) => {
                     <div>
                       <span style={{ fontSize:13, fontWeight:600, color:'#333' }}>{a.itemName}</span>
                       <span style={{ fontSize:12, color:'#888', marginLeft:8 }}>{a.courseKey}</span>
+                      {a.academicYear && <span style={{ fontSize:11, color:'#E65100', marginLeft:8 }}>📅 {a.academicYear}</span>}
                     </div>
                     {statusBadge(a.status)}
                   </div>
