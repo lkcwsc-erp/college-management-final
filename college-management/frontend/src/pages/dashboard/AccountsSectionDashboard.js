@@ -518,12 +518,31 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
         // come back — not from the local cache, and not re-pushed to the
         // DB. Fetch this fresh (don't rely on feeApprovals state, which may
         // not have loaded yet on a hard refresh) so the check is reliable.
+        // IMPORTANT: a year can be deleted and later RE-CREATED under the
+        // same academic-year label (e.g. 2026-27 deleted, then a fresh
+        // 2026-27 structure is submitted and approved again). The old
+        // deletion-approval record never goes away, so we only honor it if
+        // no LATER approved "new year structure" request exists for that
+        // same year — otherwise the recreated structure gets wiped out
+        // every time this runs.
         let deletedYears = new Set();
         try {
           const apRes = await API.get('/fee-structure-approvals');
+          const allApprovals = apRes.data.approvals || [];
+          const eventTime = (a) => new Date(a.adminApprovedAt || a.updatedAt || a.createdAt || 0).getTime();
+          const latestCreationTime = {};
+          allApprovals
+            .filter(a => a.isNewYearStructure && a.status === 'approved')
+            .forEach(a => {
+              const t = eventTime(a);
+              if (!latestCreationTime[a.academicYear] || t > latestCreationTime[a.academicYear]) {
+                latestCreationTime[a.academicYear] = t;
+              }
+            });
           deletedYears = new Set(
-            (apRes.data.approvals || [])
+            allApprovals
               .filter(a => a.isYearDeletion && a.status === 'approved')
+              .filter(a => !(latestCreationTime[a.academicYear] > eventTime(a)))
               .map(a => a.academicYear)
           );
         } catch { /* if this fails, fall through — worst case a stale year lingers one more reload */ }
@@ -775,8 +794,25 @@ const FeeStructTab = ({ docFees, setDocFees, saveDocFees, showToast }) => {
   // Once Admin approves a year-deletion request, the DB copy is already gone
   // (adminApprove deletes it) — mirror that into the local cache too, and
   // hop back to the base year if it was the one currently selected.
+  // Same supersede-by-later-recreation guard as the mount-time sync above:
+  // an old approved deletion for a year that has since been recreated
+  // (a later approved "new year structure" for the same academicYear)
+  // must NOT wipe the recreated data out again.
   useEffect(() => {
-    const approvedDeletions = feeApprovals.filter(a => a.isYearDeletion && a.status === 'approved');
+    const eventTime = (a) => new Date(a.adminApprovedAt || a.updatedAt || a.createdAt || 0).getTime();
+    const latestCreationTime = {};
+    feeApprovals
+      .filter(a => a.isNewYearStructure && a.status === 'approved')
+      .forEach(a => {
+        const t = eventTime(a);
+        if (!latestCreationTime[a.academicYear] || t > latestCreationTime[a.academicYear]) {
+          latestCreationTime[a.academicYear] = t;
+        }
+      });
+    const approvedDeletions = feeApprovals.filter(a =>
+      a.isYearDeletion && a.status === 'approved' &&
+      !(latestCreationTime[a.academicYear] > eventTime(a))
+    );
     if (approvedDeletions.length === 0) return;
     let changed = false;
     const all = { ...yearStructs };
