@@ -1774,6 +1774,7 @@ const AdminFeeApprovalTab = ({ showMessage, kind }) => {
             <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:4, flexWrap:'wrap' }}>
               <span style={{ fontSize:14, fontWeight:700, color:'#333' }}>{a.itemName}</span>
               {!a.isNewYearStructure && !a.isYearDeletion && <span style={{ fontSize:12, fontWeight:700, color:'#1565C0', background:'#e3f2fd', padding:'2px 10px', borderRadius:10 }}>{a.courseKey}</span>}
+              {!a.isNewYearStructure && !a.isYearDeletion && a.academicYear && <span style={{ fontSize:11, fontWeight:700, background:'#fff3e0', color:'#E65100', padding:'2px 8px', borderRadius:8 }}>📅 {a.academicYear}</span>}
               {a.isNewYearStructure && <span style={{ fontSize:11, fontWeight:700, background:'#f3e5f5', color:'#7B1FA2', padding:'2px 8px', borderRadius:8 }}>🆕 New Year Structure{a.sourceYear ? ` (${a.sourceYear} se copy)` : ''}</span>}
               {a.isYearDeletion && <span style={{ fontSize:11, fontWeight:700, background:'#ffebee', color:'#C62828', padding:'2px 8px', borderRadius:8 }}>🗑️ Delete Entire Year — {a.academicYear}</span>}
               {!a.isNewYearStructure && !a.isYearDeletion && a.itemSection && <span style={{ fontSize:11, color:'#888' }}>{a.itemSection}</span>}
