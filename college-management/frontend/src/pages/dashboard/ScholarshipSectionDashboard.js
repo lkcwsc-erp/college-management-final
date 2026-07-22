@@ -1641,7 +1641,7 @@ const MahaDBTTab = ({ admissions, loading, search, setSearch, showPass, setShowP
   return (
     <div>
       <h2 style={{ color: themeColor, marginBottom: 4 }}>🌐 MahaDBT Portal Credentials</h2>
-      <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>Manage MahaDBT usernames, passwords and application numbers.</p>
+      <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>Manage MahaID usernames, passwords and application numbers.</p>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:12, marginBottom:16 }}>
         <div style={{ background:'#f3e5f5', border:'1px solid #ce93d8', borderRadius:12, padding:'14px 16px' }}>
