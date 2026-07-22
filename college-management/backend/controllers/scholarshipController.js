@@ -435,10 +435,18 @@ exports.autoCalculateScholarship = async (req, res) => {
    GET /api/scholarships/dashboard
    — Extended with caste-wise breakdown and MahaDBT receivable
    ============================================================ */
+// Only students whose Student ID AND Roll No (PRN Number) have been
+// generated should ever show up in the Scholarship section — until then
+// their admission is still in progress and isn't ready for scholarship work.
+const ID_GENERATED_FILTER = {
+  studentId: { $exists: true, $ne: '' },
+  prnNumber: { $exists: true, $ne: '' },
+};
+
 exports.getScholarshipDashboard = async (req, res) => {
   try {
     const { academicYear } = req.query;
-    const filter = {};
+    const filter = { ...ID_GENERATED_FILTER };
     if (academicYear) filter.academicYear = academicYear;
 
     const [
@@ -604,7 +612,7 @@ exports.getScholarshipRegister = async (req, res) => {
       academicYear,
     } = req.query;
 
-    const filter = {};
+    const filter = { ...ID_GENERATED_FILTER };
     if (search) {
       filter.$or = [
         { applicantName: { $regex: search, $options: 'i' } },
@@ -670,7 +678,7 @@ exports.exportScholarshipRegister = async (req, res) => {
   try {
     const { courseType, category, scholarshipStatus, admissionYear, academicYear } = req.query;
 
-    const filter = {};
+    const filter = { ...ID_GENERATED_FILTER };
     if (courseType)        filter.courseType        = courseType;
     if (category)          filter.category          = { $regex: new RegExp(`^${category}$`, 'i') };
     if (scholarshipStatus) filter.scholarshipStatus = scholarshipStatus;
@@ -794,7 +802,7 @@ exports.updateScholarshipStatus = async (req, res) => {
     const admission = await Admission.findById(req.params.admissionId);
     if (!admission) return res.status(404).json({ success: false, message: 'Admission not found' });
 
-    const { scholarshipStatus, scholarshipNote, scholarshipReceivedAmount, verifiedBy } = req.body;
+    const { scholarshipStatus, scholarshipNote, scholarshipReceivedAmount, category, verifiedBy } = req.body;
 
     const validStatuses = ['not_filled', 'filled', 'approved', 'rejected', 'disbursed'];
     if (!validStatuses.includes(scholarshipStatus)) {
@@ -803,6 +811,7 @@ exports.updateScholarshipStatus = async (req, res) => {
 
     admission.scholarshipStatus = scholarshipStatus;
     if (scholarshipNote !== undefined) admission.scholarshipNote = scholarshipNote;
+    if (category !== undefined && category !== '') admission.category = category;
 
     if (scholarshipStatus === 'disbursed' && scholarshipReceivedAmount != null) {
       admission.scholarshipReceivedAmount = scholarshipReceivedAmount;
@@ -828,6 +837,7 @@ exports.updateScholarshipStatus = async (req, res) => {
         scholarshipAmount:         admission.scholarshipAmount,
         scholarshipReceivedAmount: admission.scholarshipReceivedAmount,
         scholarshipPendingAmount:  admission.scholarshipPendingAmount,
+        category:                  admission.category,
         netPayable,
         balance,
         scholarshipVerifiedBy:     admission.scholarshipVerifiedBy,
