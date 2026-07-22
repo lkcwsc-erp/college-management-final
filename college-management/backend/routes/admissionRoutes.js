@@ -608,7 +608,13 @@ router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_stud
 });
 router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarship', 'admin', 'staff_principal'), async (req, res) => {
   try {
-    const admissions = await Admission.find({ status: 'approved' })
+    // Until Student Section has generated a Student ID and Roll No (PRN
+    // Number) for an admission, it isn't ready for the Scholarship section.
+    const admissions = await Admission.find({
+      status: 'approved',
+      studentId: { $exists: true, $ne: '' },
+      prnNumber: { $exists: true, $ne: '' },
+    })
       .populate('course', 'name type')
       .sort({ createdAt: -1 });
     res.json({ success: true, admissions });
