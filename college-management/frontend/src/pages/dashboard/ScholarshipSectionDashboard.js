@@ -332,6 +332,7 @@ const ScholarshipSectionDashboard = () => {
       await API.put(`/scholarships/status/${selected._id}`, {
         scholarshipStatus:         editData.scholarshipStatus,
         scholarshipNote:           editData.scholarshipNote,
+        category:                  editData.category,
         scholarshipReceivedAmount: editData.scholarshipReceivedAmount,
         verifiedBy:                user?.name,
       });
@@ -450,7 +451,7 @@ const ScholarshipSectionDashboard = () => {
     { id: 'home',         label: '🏠 Dashboard' },
     { id: 'students',     label: '👩‍🎓 Students',   badge: db.notFilled },
     { id: 'register',     label: '📋 Register' },
-    { id: 'master',       label: '📊 MahaDBT Receivable' },
+    { id: 'master',       label: '📊 MahaDBT Fees Structure' },
     { id: 'mahadbt',      label: '🌐 MahaDBT' },
     { id: 'all_students', label: '👁️ All Students' },
   ];
@@ -940,7 +941,7 @@ const ScholarshipEditCard = ({ selected, editMode, setEditMode, editData, setEdi
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h4 style={{ color: themeColor, margin: 0, fontSize: 14 }}>🏅 Scholarship & MahaDBT</h4>
         {!editMode ? (
-          <button onClick={() => { setEditMode(true); setEditData({ scholarshipStatus: selected.scholarshipStatus, scholarshipNote: selected.scholarshipNote || '', scholarshipReceivedAmount: selected.scholarshipReceivedAmount || 0, mahaDBTUsername: selected.mahaDBTUsername || '', mahaDBTPassword: selected.mahaDBTPassword || '', mahaDBTAppNo: selected.mahaDBTAppNo || '', mahaDBTMobile: selected.mahaDBTMobile || selected.phone || '' }); }}
+          <button onClick={() => { setEditMode(true); setEditData({ scholarshipStatus: selected.scholarshipStatus, scholarshipNote: selected.scholarshipNote || '', category: selected.category || '', scholarshipReceivedAmount: selected.scholarshipReceivedAmount || 0, mahaDBTUsername: selected.mahaDBTUsername || '', mahaDBTPassword: selected.mahaDBTPassword || '', mahaDBTAppNo: selected.mahaDBTAppNo || '', mahaDBTMobile: selected.mahaDBTMobile || selected.phone || '' }); }}
             style={{ background: themeColor, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             ✏️ Edit
           </button>
@@ -967,6 +968,7 @@ const ScholarshipEditCard = ({ selected, editMode, setEditMode, editData, setEdi
             ['MahaDBT Mobile',       selected.mahaDBTMobile || selected.phone || '—'],
             ['MahaDBT Password',     selected.mahaDBTPassword ? '••••••' : '—'],
             ['Application No.',      selected.mahaDBTAppNo || '—'],
+            ['Category',             selected.category || '—'],
             ['Notes',                selected.scholarshipNote || '—'],
           ].map(([l, v]) => (
             <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #f0f4f8' }}>
@@ -987,6 +989,12 @@ const ScholarshipEditCard = ({ selected, editMode, setEditMode, editData, setEdi
           <FormField label="MahaDBT Mobile Number" color={themeColor}><input type="tel" placeholder="Registered mobile number" value={editData.mahaDBTMobile} onChange={e => setEditData(p => ({ ...p, mahaDBTMobile: e.target.value }))} style={fieldStyle} /></FormField>
           <FormField label="MahaDBT Password" color={themeColor}><input type="text" placeholder="Portal password" value={editData.mahaDBTPassword} onChange={e => setEditData(p => ({ ...p, mahaDBTPassword: e.target.value }))} style={fieldStyle} /></FormField>
           <FormField label="💰 Scholarship Received Amount (₹)" color={themeColor}><input type="number" min="0" placeholder="Amount received so far" value={editData.scholarshipReceivedAmount} onChange={e => setEditData(p => ({ ...p, scholarshipReceivedAmount: e.target.value }))} style={fieldStyle} /></FormField>
+          <FormField label="Category" color={themeColor}>
+            <select value={editData.category} onChange={e => setEditData(p => ({ ...p, category: e.target.value }))} style={fieldStyle}>
+              <option value="">— Select Category —</option>
+              {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </FormField>
           <FormField label="Notes" color={themeColor}><textarea rows="2" placeholder="Any notes..." value={editData.scholarshipNote} onChange={e => setEditData(p => ({ ...p, scholarshipNote: e.target.value }))} style={{ ...fieldStyle, resize: 'vertical' }} /></FormField>
         </div>
       )}
@@ -1068,8 +1076,8 @@ const MasterTab = ({ masters, loading, form, setForm, saving, msg, editId, onSav
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <h2 style={{ color: themeColor, margin: '0 0 4px' }}>📊 MahaDBT Receivable Management</h2>
-          <p style={{ color: '#666', margin: 0, fontSize: 14 }}>Fee-wise scholarship receivable amounts per category & course</p>
+          <h2 style={{ color: themeColor, margin: '0 0 4px' }}>📊 MahaDBT Fees Structure</h2>
+          <p style={{ color: '#666', margin: 0, fontSize: 14 }}>Fee-wise scholarship receivable amounts per category & course — plus editable fee structure</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setActiveView('feeStructure')} style={{ ...btnStyle(activeView === 'feeStructure' ? themeColor : '#f3e5f5', activeView === 'feeStructure' ? '#fff' : themeColor, '#ce93d8') }}>🏛️ Fee Structure</button>
@@ -1230,6 +1238,65 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
 
   const [activeCourse, setActiveCourse] = useState('B.Sc');
 
+  // ── Fee item editor (add / edit / delete a raw fee item) ──────────────
+  // These go through the SAME Principal → Admin approval pipeline as the
+  // Accounts Section — nothing here is ever applied directly.
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingId, setEditingId]   = useState(null);
+  const [editAmounts, setEditAmounts] = useState(['', '', '', '', '', '']);
+  const [addingNew, setAddingNew]   = useState(false);
+  const [newForm, setNewForm]       = useState({ name: '', amounts: ['', '', '', '', '', ''] });
+  const [busy, setBusy]             = useState(false);
+  const [editorMsg, setEditorMsg]   = useState('');
+  const semLabels = ['Sem I', 'Sem II', 'Sem III', 'Sem IV', 'Sem V', 'Sem VI'];
+  const courseKeyDot = `${activeCourse}.`;
+
+  const flashEditorMsg = (m) => { setEditorMsg(m); setTimeout(() => setEditorMsg(''), 5000); };
+
+  const submitItemChange = async ({ itemId, itemName, itemSection, oldAmounts, newAmounts, isNewItem, isDeletion }) => {
+    setBusy(true);
+    try {
+      await API.post('/fee-structure-approvals/submit', {
+        courseKey: courseKeyDot,
+        itemId, itemName,
+        itemSection: itemSection || 'College',
+        academicYear,
+        oldAmounts, newAmounts,
+        isNewItem: !!isNewItem,
+        isDeletion: !!isDeletion,
+      });
+      flashEditorMsg(isDeletion
+        ? '🗑️ Delete request sent for Principal → Admin approval!'
+        : '✅ Submitted — sent to Principal for approval! It will reflect here once fully approved.');
+      setEditingId(null);
+      setAddingNew(false);
+      setNewForm({ name: '', amounts: ['', '', '', '', '', ''] });
+    } catch (e) {
+      flashEditorMsg('❌ ' + (e.response?.data?.message || 'Failed to submit for approval'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEdit = (item) => { setEditingId(item.id); setEditAmounts((item.s || [0,0,0,0,0,0]).map(v => String(v ?? 0))); };
+  const saveEdit = (item) => submitItemChange({
+    itemId: item.id, itemName: item.name, itemSection: item.section,
+    oldAmounts: item.s || [], newAmounts: editAmounts.map(v => Number(v) || 0),
+    isNewItem: false, isDeletion: false,
+  });
+  const deleteItem = (item) => {
+    if (!window.confirm(`Send a request to delete "${item.name}" for ${academicYear}? This needs Principal → Admin approval.`)) return;
+    submitItemChange({ itemId: item.id, itemName: item.name, itemSection: item.section, oldAmounts: item.s || [], newAmounts: item.s || [], isNewItem: false, isDeletion: true });
+  };
+  const addNewItem = () => {
+    if (!newForm.name.trim()) { flashEditorMsg('❌ Enter a fee item name'); return; }
+    submitItemChange({
+      itemId: 'schol_' + Date.now(), itemName: newForm.name.trim(), itemSection: 'College',
+      oldAmounts: [], newAmounts: newForm.amounts.map(v => Number(v) || 0),
+      isNewItem: true, isDeletion: false,
+    });
+  };
+
   // Fall back to the static reference structure only if Accounts Section
   // hasn't created this academic year's structure yet.
   const entry = remoteMap?.[activeCourse];
@@ -1303,6 +1370,10 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
           </select>
           <button onClick={onRefresh} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>
             🔄 Refresh
+          </button>
+          <button onClick={() => setShowEditor(s => !s)} disabled={fetchStatus !== 'ok'} title={fetchStatus !== 'ok' ? 'Available once Accounts Section has created this year\'s structure' : ''}
+            style={{ ...btnStyle(showEditor ? themeColor : '#fff3e0', showEditor ? '#fff' : '#E65100', '#ffcc80'), fontWeight: 700, opacity: fetchStatus !== 'ok' ? 0.5 : 1, cursor: fetchStatus !== 'ok' ? 'not-allowed' : 'pointer' }}>
+            🛠️ {showEditor ? 'Hide Editor' : 'Manage Fee Items'}
           </button>
         </div>
       </div>
@@ -1453,8 +1524,99 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
         })}
       </div>
 
+      {showEditor && fetchStatus === 'ok' && (
+        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${themeColor}55`, padding: 20, marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h4 style={{ margin: 0, color: themeColor, fontSize: 14 }}>🛠️ Manage Fee Items — {activeCourse} ({academicYear})</h4>
+            <button onClick={() => setAddingNew(v => !v)} style={{ ...btnStyle(themeColor, '#fff', themeColor), fontWeight: 700 }}>
+              {addingNew ? '✖ Cancel' : '➕ Add New Fee Item'}
+            </button>
+          </div>
+
+          {editorMsg && (
+            <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13, fontWeight: 600,
+              background: editorMsg.startsWith('❌') ? '#ffebee' : '#e8f5e9',
+              color: editorMsg.startsWith('❌') ? '#C62828' : '#2E7D32' }}>
+              {editorMsg}
+            </div>
+          )}
+
+          <p style={{ fontSize: 12, color: '#888', margin: '0 0 14px' }}>
+            Every add / edit / delete request goes to <strong>Principal → Admin</strong> for approval before it applies anywhere (Accounts, Scholarship, or student fee collection).
+          </p>
+
+          {addingNew && (
+            <div style={{ background: '#fafbff', border: '1px solid #e0e7ef', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#666', display: 'block', marginBottom: 4 }}>Fee Item Name</label>
+                <input type="text" placeholder="e.g. Sports Fee" value={newForm.name}
+                  onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
+                  style={{ ...inputStyle, width: '100%', maxWidth: 320 }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
+                {semLabels.map((lbl, i) => (
+                  <div key={lbl}>
+                    <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>{lbl}</label>
+                    <input type="number" min="0" value={newForm.amounts[i]}
+                      onChange={e => setNewForm(f => { const a = [...f.amounts]; a[i] = e.target.value; return { ...f, amounts: a }; })}
+                      style={{ ...inputStyle, width: '100%' }} />
+                  </div>
+                ))}
+              </div>
+              <button onClick={addNewItem} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}>
+                {busy ? '⏳ Submitting...' : '✅ Submit for Approval'}
+              </button>
+            </div>
+          )}
+
+          <div style={{ border: '1px solid #e0e7ef', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(6, 0.8fr) 1fr', gap: 6, background: '#f0f4f8', padding: '10px 14px' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#666' }}>Fee Item</span>
+              {semLabels.map(lbl => <span key={lbl} style={{ fontSize: 11, fontWeight: 700, color: '#666', textAlign: 'center' }}>{lbl}</span>)}
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#666', textAlign: 'right' }}>Actions</span>
+            </div>
+            {(entry?.items || []).length === 0 && (
+              <div style={{ padding: 16, fontSize: 13, color: '#999', textAlign: 'center' }}>No fee items found for {activeCourse} ({academicYear}).</div>
+            )}
+            {(entry?.items || []).map((item, idx) => {
+              const isEditing = editingId === item.id;
+              return (
+                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(6, 0.8fr) 1fr', gap: 6, padding: '10px 14px',
+                  alignItems: 'center', borderTop: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fff' : '#fafbff' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>{item.name}</span>
+                  {[0,1,2,3,4,5].map(i => (
+                    <span key={i} style={{ textAlign: 'center' }}>
+                      {isEditing ? (
+                        <input type="number" min="0" value={editAmounts[i]}
+                          onChange={e => setEditAmounts(a => { const n = [...a]; n[i] = e.target.value; return n; })}
+                          style={{ ...inputStyle, width: '100%', padding: '4px 6px', fontSize: 12 }} />
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#444' }}>₹{fmt(item.s?.[i] || 0)}</span>
+                      )}
+                    </span>
+                  ))}
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    {isEditing ? (
+                      <>
+                        <button onClick={() => saveEdit(item)} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>Save</button>
+                        <button onClick={() => setEditingId(null)} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer' }}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => startEdit(item)} style={{ background: '#e3f2fd', color: '#1565C0', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Edit</button>
+                        <button onClick={() => deleteItem(item)} disabled={busy} style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>Delete</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <p style={{ marginTop: 14, fontSize: 11, color: '#999' }}>
-        ✏️ Fee structure is created/edited from the <strong>Accounts Section → Fee Structure</strong> tab.
+        ✏️ Fee structure is created/edited from the <strong>Accounts Section → Fee Structure</strong> tab, or right here using "Manage Fee Items" above.
         This view only reads it — select a different academic year above to see that year's amounts here
         and have them auto-applied (category-wise) in the "Custom Records" form.
       </p>
