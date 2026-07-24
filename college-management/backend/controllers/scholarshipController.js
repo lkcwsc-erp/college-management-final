@@ -435,12 +435,16 @@ exports.autoCalculateScholarship = async (req, res) => {
    GET /api/scholarships/dashboard
    — Extended with caste-wise breakdown and MahaDBT receivable
    ============================================================ */
-// Only students whose Student ID AND Roll No (PRN Number) have been
-// generated should ever show up in the Scholarship section — until then
-// their admission is still in progress and isn't ready for scholarship work.
+// Only students whose Student ID & Roll No have been generated should show
+// up in the Scholarship section — until then their admission is still in
+// progress. Both studentId (on Admission) and the Student record's roll
+// number are generated together, in the same step, at Principal approval —
+// so studentId being set is a reliable signal that both exist.
+// NOTE: prnNumber (university PRN) is a separate field filled in manually
+// by Student Section much later — it is NOT the roll number, and must not
+// be used here (using it hid every student, since it's rarely filled in).
 const ID_GENERATED_FILTER = {
   studentId: { $exists: true, $ne: '' },
-  prnNumber: { $exists: true, $ne: '' },
 };
 
 exports.getScholarshipDashboard = async (req, res) => {
