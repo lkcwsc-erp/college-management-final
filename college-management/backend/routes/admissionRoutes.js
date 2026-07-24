@@ -608,12 +608,13 @@ router.get('/receipts/all', protect, authorizeRoles('staff_accounts','staff_stud
 });
 router.get('/scholarship-section/all', protect, authorizeRoles('staff_scholarship', 'admin', 'staff_principal'), async (req, res) => {
   try {
-    // Until Student Section has generated a Student ID and Roll No (PRN
-    // Number) for an admission, it isn't ready for the Scholarship section.
+    // studentId is auto-generated at Principal approval, at the same moment
+    // the Student record (with its roll number) is created — so this alone
+    // reliably means both are ready. (prnNumber is a separate, manually
+    // entered university PRN filled in later — not the roll number.)
     const admissions = await Admission.find({
       status: 'approved',
       studentId: { $exists: true, $ne: '' },
-      prnNumber: { $exists: true, $ne: '' },
     })
       .populate('course', 'name type')
       .sort({ createdAt: -1 });
