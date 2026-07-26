@@ -964,7 +964,7 @@ const ScholarshipEditCard = ({ selected, editMode, setEditMode, editData, setEdi
             ['Pending Amount',       selected.scholarshipPendingAmount > 0 ? `₹${fmt(selected.scholarshipPendingAmount)}` : '—'],
             ['Verified By',          selected.scholarshipVerifiedBy || '—'],
             ['Verified Date',        selected.scholarshipVerifiedDate ? new Date(selected.scholarshipVerifiedDate).toLocaleDateString('en-IN') : '—'],
-            ['MahaID Username',     selected.mahaDBTUsername || '—'],
+            ['MahaDBT Username',     selected.mahaDBTUsername || '—'],
             ['MahaDBT Mobile',       selected.mahaDBTMobile || selected.phone || '—'],
             ['MahaDBT Password',     selected.mahaDBTPassword ? '••••••' : '—'],
             ['Application No.',      selected.mahaDBTAppNo || '—'],
@@ -985,7 +985,7 @@ const ScholarshipEditCard = ({ selected, editMode, setEditMode, editData, setEdi
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <FormField label="Scholarship Status" color={themeColor}><select value={editData.scholarshipStatus} onChange={e => setEditData(p => ({ ...p, scholarshipStatus: e.target.value }))} style={fieldStyle}>{Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></FormField>
           <FormField label="MahaDBT Application No." color={themeColor}><input type="text" placeholder="App number" value={editData.mahaDBTAppNo} onChange={e => setEditData(p => ({ ...p, mahaDBTAppNo: e.target.value }))} style={fieldStyle} /></FormField>
-          <FormField label="MahaID Username" color={themeColor}><input type="text" placeholder="Portal username" value={editData.mahaDBTUsername} onChange={e => setEditData(p => ({ ...p, mahaDBTUsername: e.target.value }))} style={fieldStyle} /></FormField>
+          <FormField label="MahaDBT Username" color={themeColor}><input type="text" placeholder="Portal username" value={editData.mahaDBTUsername} onChange={e => setEditData(p => ({ ...p, mahaDBTUsername: e.target.value }))} style={fieldStyle} /></FormField>
           <FormField label="MahaDBT Mobile Number" color={themeColor}><input type="tel" placeholder="Registered mobile number" value={editData.mahaDBTMobile} onChange={e => setEditData(p => ({ ...p, mahaDBTMobile: e.target.value }))} style={fieldStyle} /></FormField>
           <FormField label="MahaDBT Password" color={themeColor}><input type="text" placeholder="Portal password" value={editData.mahaDBTPassword} onChange={e => setEditData(p => ({ ...p, mahaDBTPassword: e.target.value }))} style={fieldStyle} /></FormField>
           <FormField label="💰 Scholarship Received Amount (₹)" color={themeColor}><input type="number" min="0" placeholder="Amount received so far" value={editData.scholarshipReceivedAmount} onChange={e => setEditData(p => ({ ...p, scholarshipReceivedAmount: e.target.value }))} style={fieldStyle} /></FormField>
@@ -1241,7 +1241,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   // ── Fee item editor (add / edit / delete a raw fee item) ──────────────
   // These go through the SAME Principal → Admin approval pipeline as the
   // Accounts Section — nothing here is ever applied directly.
-  const [showEditor, setShowEditor] = useState(false);
+  const [showEditor, setShowEditor] = useState(true);
   const [editingId, setEditingId]   = useState(null);
   const [editAmounts, setEditAmounts] = useState(['', '', '', '', '', '']);
   const [addingNew, setAddingNew]   = useState(false);
@@ -1641,7 +1641,7 @@ const MahaDBTTab = ({ admissions, loading, search, setSearch, showPass, setShowP
   return (
     <div>
       <h2 style={{ color: themeColor, marginBottom: 4 }}>🌐 MahaDBT Portal Credentials</h2>
-      <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>Manage MahaID usernames, passwords and application numbers.</p>
+      <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>Manage MahaDBT usernames, passwords and application numbers.</p>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:12, marginBottom:16 }}>
         <div style={{ background:'#f3e5f5', border:'1px solid #ce93d8', borderRadius:12, padding:'14px 16px' }}>
