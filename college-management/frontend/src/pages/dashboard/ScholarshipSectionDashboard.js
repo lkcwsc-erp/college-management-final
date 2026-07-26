@@ -1317,12 +1317,11 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   };
 
   // ── Fixed display heads ──────────────────────────────────────────────
-  // The 6 well-known heads always show first (as before). Anything else —
-  // including any NEW fee item added via "➕ Add More" / "Add New Fee Item"
-  // — now gets its OWN row, using its actual name, shown right above
-  // "Other Fee". "Other Fee" itself is only whatever amount (if any) still
-  // can't be attributed to a specific item.
-  const FIXED_HEADS = ['Enrollment Fee', 'Admission Fee', 'Tuition Fee', 'Gymkhana Fee', 'Laboratory Fee', 'Library Fee'];
+  // The Scholarship view ALWAYS shows these same 7 fee heads (as before).
+  // Sirf amounts selected academic year ke Accounts fee structure ke items
+  // are aggregated — every other item gets folded into "Other Fee",
+  // taaki total bilkul Accounts structure ke total se match kare.
+  const DISPLAY_HEADS = ['Enrollment Fee', 'Admission Fee', 'Tuition Fee', 'Gymkhana Fee', 'Laboratory Fee', 'Library Fee', 'Other Fee'];
   const matchHead = (name) => {
     const n = String(name || '').trim();
     if (/^enrollment\s*fee/i.test(n))          return 'Enrollment Fee';
@@ -1331,41 +1330,32 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
     if (/gymkhana/i.test(n))                   return 'Gymkhana Fee';
     if (/^laboratory\s*fee/i.test(n))          return 'Laboratory Fee';
     if (/^library\s*fee$/i.test(n))            return 'Library Fee';
-    return null; // anything else → shown as its own named row (not merged)
+    return null; // sab kuch aur → 'Other Fee'
   };
   const groupHeads = (raw, total) => {
-    const out = {};
-    FIXED_HEADS.forEach(h => { out[h] = 0; });
+    const out = { 'Enrollment Fee': 0, 'Admission Fee': 0, 'Tuition Fee': 0, 'Gymkhana Fee': 0, 'Laboratory Fee': 0, 'Library Fee': 0, 'Other Fee': 0 };
     let named = 0;
-    const customNames = [];
     Object.entries(raw || {}).forEach(([name, amt]) => {
       const head = matchHead(name);
-      const v = Number(amt) || 0;
-      if (head) { out[head] += v; named += v; }
-      else { out[name] = (out[name] || 0) + v; named += v; customNames.push(name); }
+      if (head) { out[head] += Number(amt) || 0; named += Number(amt) || 0; }
     });
     out['Other Fee'] = Math.max(0, (Number(total) || 0) - named);
-    return { out, customNames };
+    return out;
   };
-  const grpFY = groupHeads(rawHeadwise.FY, yearTotals.FY);
-  const grpSY = groupHeads(rawHeadwise.SY, yearTotals.SY);
-  const grpTY = groupHeads(rawHeadwise.TY, yearTotals.TY);
-  const headwiseByYear = { FY: grpFY.out, SY: grpSY.out, TY: grpTY.out };
-  // Every custom item name seen in any year, in first-seen order — shown
-  // between the fixed heads and "Other Fee".
-  const customHeadNames = [];
-  [...grpFY.customNames, ...grpSY.customNames, ...grpTY.customNames].forEach(n => {
-    if (!customHeadNames.includes(n)) customHeadNames.push(n);
-  });
-  const allHeads = [...FIXED_HEADS, ...customHeadNames, 'Other Fee'];
+  const headwiseByYear = {
+    FY: groupHeads(rawHeadwise.FY, yearTotals.FY),
+    SY: groupHeads(rawHeadwise.SY, yearTotals.SY),
+    TY: groupHeads(rawHeadwise.TY, yearTotals.TY),
+  };
+  const allHeads = DISPLAY_HEADS;
 
   // Map a display head back to its underlying raw fee item(s) so it can be
-  // edited/deleted right from this table.
+  // edited/deleted right from this table. "Other Fee" is a catch-all of
+  // whatever doesn't match a named head, so it can list several items.
   const findItemsForHead = (headName) => {
     const items = entry?.items || [];
-    if (FIXED_HEADS.includes(headName)) return items.filter(it => matchHead(it.name) === headName);
-    if (headName === 'Other Fee') return []; // nothing should land here now — every item has its own row
-    return items.filter(it => matchHead(it.name) === null && it.name === headName);
+    if (headName === 'Other Fee') return items.filter(it => !matchHead(it.name));
+    return items.filter(it => matchHead(it.name) === headName);
   };
 
   return (
