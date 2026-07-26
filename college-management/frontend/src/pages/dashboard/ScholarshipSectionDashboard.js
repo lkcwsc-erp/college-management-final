@@ -1545,16 +1545,6 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
           ))}
           <span />
         </div>
-
-        {/* Add More — add a brand-new fee item/category into this structure */}
-        <div style={{ padding: '12px 20px', background: '#fafbff', display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={() => { setShowEditor(true); setAddingNew(true); editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-            disabled={fetchStatus !== 'ok'}
-            title={fetchStatus !== 'ok' ? "Available once Accounts Section has created this year's structure" : ''}
-            style={{ ...btnStyle(themeColor, '#fff', themeColor), fontWeight: 700, opacity: fetchStatus !== 'ok' ? 0.5 : 1, cursor: fetchStatus !== 'ok' ? 'not-allowed' : 'pointer' }}>
-            ➕ Add More
-          </button>
-        </div>
       </div>
 
       {/* Quick summary cards per year */}
