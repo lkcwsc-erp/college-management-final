@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
@@ -1248,6 +1248,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   const [newForm, setNewForm]       = useState({ name: '', amounts: ['', '', '', '', '', ''] });
   const [busy, setBusy]             = useState(false);
   const [editorMsg, setEditorMsg]   = useState('');
+  const editorRef = useRef(null);
   const semLabels = ['Sem I', 'Sem II', 'Sem III', 'Sem IV', 'Sem V', 'Sem VI'];
   const courseKeyDot = `${activeCourse}.`;
 
@@ -1348,6 +1349,15 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   };
   const allHeads = DISPLAY_HEADS;
 
+  // Map a display head back to its underlying raw fee item(s) so it can be
+  // edited/deleted right from this table. "Other Fee" is a catch-all of
+  // whatever doesn't match a named head, so it can list several items.
+  const findItemsForHead = (headName) => {
+    const items = entry?.items || [];
+    if (headName === 'Other Fee') return items.filter(it => !matchHead(it.name));
+    return items.filter(it => matchHead(it.name) === headName);
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
@@ -1419,25 +1429,29 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
 
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e7ef', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
         {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr', background: themeColor, padding: '13px 20px', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 0.9fr', background: themeColor, padding: '13px 20px', gap: 8 }}>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>Fee Head</span>
           {YEARS.map(y => (
             <span key={y} style={{ color: '#fff', fontWeight: 700, fontSize: 13, textAlign: 'center' }}>
               {y === 'FY' ? 'First Year' : y === 'SY' ? 'Second Year' : 'Third Year'}
             </span>
           ))}
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 13, textAlign: 'right' }}>Actions</span>
         </div>
 
         {/* Fee rows */}
         {allHeads.map((head, idx) => {
           const isTuition = /tuition\s*fee/i.test(head);
           const hasAnyValue = YEARS.some(y => Number(headwiseByYear[y]?.[head] || 0) > 0);
-          if (!hasAnyValue) return null;
+          const matchedItems = findItemsForHead(head);
+          const singleItem = matchedItems.length === 1 ? matchedItems[0] : null;
+          const isEditingThis = singleItem && editingId === singleItem.id;
+          if (!hasAnyValue && !singleItem) return null;
 
           return (
             <div key={head} style={{
               display: 'grid',
-              gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+              gridTemplateColumns: '2fr 1fr 1fr 1fr 0.9fr',
               padding: '11px 20px',
               gap: 8,
               alignItems: 'center',
@@ -1451,9 +1465,22 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
                 </span>
               </div>
 
-              {/* Value per year */}
-              {YEARS.map(y => {
+              {/* Value per year — 2 semester inputs per year when editing this row's item */}
+              {YEARS.map((y, yi) => {
                 const val = headwiseByYear[y]?.[head] ?? 0;
+                if (isEditingThis) {
+                  const [s1, s2] = [yi * 2, yi * 2 + 1];
+                  return (
+                    <div key={y} style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                      <input type="number" min="0" value={editAmounts[s1]} title={semLabels[s1]}
+                        onChange={e => setEditAmounts(a => { const n = [...a]; n[s1] = e.target.value; return n; })}
+                        style={{ ...inputStyle, width: 54, padding: '4px 5px', fontSize: 11 }} />
+                      <input type="number" min="0" value={editAmounts[s2]} title={semLabels[s2]}
+                        onChange={e => setEditAmounts(a => { const n = [...a]; n[s2] = e.target.value; return n; })}
+                        style={{ ...inputStyle, width: 54, padding: '4px 5px', fontSize: 11 }} />
+                    </div>
+                  );
+                }
                 return (
                   <div key={y} style={{ textAlign: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: val ? 600 : 400,
@@ -1463,12 +1490,34 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
                   </div>
                 );
               })}
+
+              {/* Direct edit / delete for this head */}
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                {singleItem ? (
+                  isEditingThis ? (
+                    <>
+                      <button onClick={() => saveEdit(singleItem)} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>Save</button>
+                      <button onClick={() => setEditingId(null)} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, cursor: 'pointer' }}>✖</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => startEdit(singleItem)} title="Edit this fee" style={{ background: '#e3f2fd', color: '#1565C0', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✏️</button>
+                      <button onClick={() => deleteItem(singleItem)} disabled={busy} title="Delete this fee" style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>🗑️</button>
+                    </>
+                  )
+                ) : matchedItems.length > 1 ? (
+                  <button onClick={() => { setShowEditor(true); editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                    title="Made up of multiple fee items — manage them below" style={{ background: '#f3e5f5', color: '#7B1FA2', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                    🔧 Manage
+                  </button>
+                ) : null}
+              </div>
             </div>
           );
         })}
 
         {/* OPEN (Tuition Fee only) row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 0.9fr',
           padding: '13px 20px', gap: 8, background: '#fff3e0', borderTop: `2px solid #ffcc8044` }}>
           <div>
             <span style={{ fontSize: 13, fontWeight: 800, color: '#E65100' }}>Total — OPEN Category</span>
@@ -1479,10 +1528,11 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
               ₹{fmt(tuitionByYear[y])}
             </span>
           ))}
+          <span />
         </div>
 
         {/* Reserved Total row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr 1fr 1fr',
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 0.9fr',
           padding: '13px 20px', gap: 8, background: '#f3e5f5', borderTop: `2px solid ${themeColor}44` }}>
           <div>
             <span style={{ fontSize: 13, fontWeight: 800, color: themeColor }}>Total — Reserved Categories</span>
@@ -1493,6 +1543,18 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
               ₹{fmt(yearTotals[y])}
             </span>
           ))}
+          <span />
+        </div>
+
+        {/* Add More — add a brand-new fee item/category into this structure */}
+        <div style={{ padding: '12px 20px', background: '#fafbff', display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={() => { setShowEditor(true); setAddingNew(true); editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+            disabled={fetchStatus !== 'ok'}
+            title={fetchStatus !== 'ok' ? "Available once Accounts Section has created this year's structure" : ''}
+            style={{ ...btnStyle(themeColor, '#fff', themeColor), fontWeight: 700, opacity: fetchStatus !== 'ok' ? 0.5 : 1, cursor: fetchStatus !== 'ok' ? 'not-allowed' : 'pointer' }}>
+            ➕ Add More
+          </button>
+        </div>
         </div>
       </div>
 
@@ -1525,7 +1587,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
       </div>
 
       {showEditor && fetchStatus === 'ok' && (
-        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${themeColor}55`, padding: 20, marginTop: 16 }}>
+        <div ref={editorRef} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${themeColor}55`, padding: 20, marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h4 style={{ margin: 0, color: themeColor, fontSize: 14 }}>🛠️ Manage Fee Items — {activeCourse} ({academicYear})</h4>
             <button onClick={() => setAddingNew(v => !v)} style={{ ...btnStyle(themeColor, '#fff', themeColor), fontWeight: 700 }}>
