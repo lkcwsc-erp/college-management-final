@@ -1555,7 +1555,6 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
             ➕ Add More
           </button>
         </div>
-        </div>
       </div>
 
       {/* Quick summary cards per year */}
