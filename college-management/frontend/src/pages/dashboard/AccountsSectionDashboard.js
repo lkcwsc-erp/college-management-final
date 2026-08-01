@@ -1463,6 +1463,7 @@ const AccountsStudentFeeView = ({ themeColor }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [search, setSearch]     = useState('');
+  const [academicYearFilter, setAcademicYearFilter] = useState('all'); // 2025-26 / 2026-27 etc.
 
   useEffect(() => {
     setLoading(true);
@@ -1484,9 +1485,15 @@ const AccountsStudentFeeView = ({ themeColor }) => {
     return YEARLY_FEES[ck].years?.[yr]?.total || YEARLY_FEES[ck][yr] || 0;
   };
 
+  const academicYearOptions = [...new Set(students.map(s => s.academicYear).filter(Boolean))].sort().reverse();
+
   const filtered = students.filter(s => {
     const q = search.toLowerCase();
-    return !q || s.applicantName?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+    const matchSearch = !q || s.applicantName?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+    // PERFORMANCE/CORRECTNESS FIX: without this, totals mixed every academic
+    // year's students together instead of showing only the selected year.
+    const matchAcademicYear = academicYearFilter === 'all' || s.academicYear === academicYearFilter;
+    return matchSearch && matchAcademicYear;
   });
 
   const totalFees    = filtered.reduce((s,st) => s + getYearFee(st), 0);
@@ -1536,6 +1543,11 @@ const AccountsStudentFeeView = ({ themeColor }) => {
       <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
         <input type="text" placeholder="🔍 Search student..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{ flex:1, minWidth:200, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
+        <select value={academicYearFilter} onChange={e=>setAcademicYearFilter(e.target.value)}
+          style={{ padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14 }}>
+          <option value="all">📅 All Academic Years</option>
+          {academicYearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
         <button onClick={downloadExcel}
           style={{ padding:'9px 18px', background:'#1b7a3d', color:'#fff', border:'none', borderRadius:9, fontWeight:700, fontSize:13, cursor:'pointer', whiteSpace:'nowrap' }}>
           ⬇️ Excel
@@ -1606,6 +1618,7 @@ const AccountsSectionDashboard = () => {
   const [admFilter, setAdmFilter]           = useState('all');
   const [admCourseFilter, setAdmCourseFilter] = useState('all');
   const [admYearFilter, setAdmYearFilter]   = useState('all');
+  const [admAcademicYearFilter, setAdmAcademicYearFilter] = useState('all'); // filter by 2025-26 / 2026-27 etc.
   const [selectedAdm, setSelectedAdm]       = useState(null);
   const [admPayMode, setAdmPayMode]         = useState('cash');
   const [admTxnId, setAdmTxnId]             = useState('');
@@ -2110,6 +2123,7 @@ const AccountsSectionDashboard = () => {
   // Course/year options for the Collect Fees filter dropdowns (derived from the student list)
   const admCourseOptions = [...new Set(admissions.map(a => a.courseType).filter(Boolean))];
   const admYearOptions   = [...new Set(admissions.map(a => a.admissionYear).filter(Boolean))];
+  const admAcademicYearOptions = [...new Set(admissions.map(a => a.academicYear).filter(Boolean))].sort().reverse();
 
   const filteredAdm = admissions.filter(a => {
     const matchFilter = admFilter === 'all' || (admFilter === 'paid' ? a.feesPaid : !a.feesPaid);
@@ -2117,7 +2131,11 @@ const AccountsSectionDashboard = () => {
     const matchSearch = !q || a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
     const matchCourse = admCourseFilter === 'all' || a.courseType === admCourseFilter;
     const matchYear   = admYearFilter === 'all' || a.admissionYear === admYearFilter;
-    return matchFilter && matchSearch && matchCourse && matchYear;
+    // PERFORMANCE/CORRECTNESS FIX: without this, students from every academic
+    // year were mixed together — fees/scholarship totals showed "all years"
+    // combined instead of only the selected academic year.
+    const matchAcademicYear = admAcademicYearFilter === 'all' || a.academicYear === admAcademicYearFilter;
+    return matchFilter && matchSearch && matchCourse && matchYear && matchAcademicYear;
   });
 
   const tabs = [
@@ -2421,6 +2439,11 @@ const AccountsSectionDashboard = () => {
                   style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
                   <option value="all">🎓 All Years / Sem</option>
                   {admYearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <select value={admAcademicYearFilter} onChange={e => setAdmAcademicYearFilter(e.target.value)}
+                  style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
+                  <option value="all">📅 All Academic Years</option>
+                  {admAcademicYearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
                 <button onClick={fetchAdmissions}
                   style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
