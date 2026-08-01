@@ -146,7 +146,8 @@ router.get('/', protect, authorizeRoles('admin', 'staff_principal'), async (req,
   try {
     const admissions = await Admission.find()
       .populate('course', 'name type code')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, count: admissions.length, admissions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -172,7 +173,8 @@ router.get('/student-section/pending', protect, authorizeRoles('staff_student', 
   try {
     const admissions = await Admission.find({ studentSectionStatus: 'pending' })
       .populate('course', 'name type code')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, admissions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -184,7 +186,8 @@ router.get('/student-section/all', protect, authorizeRoles('staff_student', 'adm
   try {
     const admissions = await Admission.find()
       .populate('course', 'name type code')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, admissions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -199,7 +202,8 @@ router.get(
     try {
       const admissions = await Admission.find({ status: 'approved' })
         .populate('course', 'name type code')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
 
       res.json({
         success: true,
@@ -260,9 +264,12 @@ router.put('/staff-reject/:id', protect, authorizeRoles('staff_student', 'admin'
       { new: true }
     );
 
-    // Email student
+    res.json({ success: true, message: 'Application rejected.', admission });
+
+    // Email student — fire-and-forget (PERFORMANCE FIX: don't make the
+    // staff wait for Gmail SMTP before they see the result)
     if (admission?.email) {
-      await sendEmail(
+      sendEmail(
         admission.email,
         '❌ Admission Application - Action Required | LKCWSC',
         `
@@ -278,10 +285,8 @@ router.put('/staff-reject/:id', protect, authorizeRoles('staff_student', 'admin'
           <p style="color:#888;font-size:13px;margin-top:24px;">Late Kalpana Chawla Women's Senior College<br/>This is an automated email.</p>
         </div>
         `
-      );
+      ).catch(err => console.error('Email send failed:', err.message));
     }
-
-    res.json({ success: true, message: 'Application rejected.', admission });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -292,7 +297,8 @@ router.get('/principal/pending', protect, authorizeRoles('staff_principal', 'adm
   try {
     const admissions = await Admission.find({ studentSectionStatus: 'verified', status: 'pending' })
       .populate('course', 'name type code')
-      .sort({ staffApprovedDate: -1 });
+      .sort({ staffApprovedDate: -1 })
+      .lean();
     res.json({ success: true, admissions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -306,7 +312,8 @@ router.get('/principal/all', protect, authorizeRoles('staff_principal', 'admin')
       $or: [{ studentSectionStatus: 'verified' }, { status: 'approved' }]
     })
       .populate('course', 'name type code')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, admissions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -326,18 +333,17 @@ router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 
     if (admission.status === 'approved')
       return res.status(400).json({ success: false, message: 'Already approved' });
 
-    // Generate Student ID — serial number
-    const year       = new Date().getFullYear();
+    // Generate Student ID — Course (letters only) + 4-digit serial, e.g. BSC0001, BA0042
+    // Serial is counted per-course, not globally, so each course starts its own sequence.
     const courseName = admission.courseType
-      ? admission.courseType.toUpperCase()
+      ? admission.courseType.toUpperCase().replace(/[^A-Z]/g, '')
       : 'GEN';
 
-    // Count how many students already have a studentId → next serial
-    const approvedCount = await Admission.countDocuments({
-      studentId: { $exists: true, $ne: null, $ne: '' }
+    const courseCount = await Admission.countDocuments({
+      studentId: { $regex: `^${courseName}\\d{4}$` }
     });
-    const serialNum  = String(approvedCount + 1).padStart(3, '0');
-    const studentId  = `${courseName}${year}${serialNum}`;
+    const serialNum  = String(courseCount + 1).padStart(4, '0');
+    const studentId  = `${courseName}${serialNum}`;
 
     admission.status                = 'approved';
     admission.principalStatus       = 'approved';
@@ -347,9 +353,20 @@ router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 
     admission.studentId             = studentId;
     await admission.save();
 
-    // ── Send email to student ──────────────────────────────────────────────
+    res.json({
+      success: true,
+      message: `✅ Admission approved! Student ID: ${studentId}. Email sent to student.`,
+      studentId,
+      admission
+    });
+
+    // ── Send email to student — fire-and-forget ─────────────────────────────
+    // PERFORMANCE FIX: this was previously `await`-ed, which meant the
+    // Principal's browser sat spinning for however long Gmail SMTP took
+    // (often several seconds, sometimes much longer). Now the approval
+    // response goes back instantly and the email goes out in background.
     if (admission.email) {
-      await sendEmail(
+      sendEmail(
         admission.email,
         '🎉 Admission Approved — Your Student ID | LKCWSC',
         `
@@ -396,15 +413,8 @@ router.put('/principal-approve/:id', protect, authorizeRoles('staff_principal', 
           </div>
         </div>
         `
-      );
+      ).catch(err => console.error('Email send failed:', err.message));
     }
-
-    res.json({
-      success: true,
-      message: `✅ Admission approved! Student ID: ${studentId}. Email sent to student.`,
-      studentId,
-      admission
-    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -429,9 +439,11 @@ router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', '
       { new: true }
     );
 
-    // Email student
+    res.json({ success: true, message: 'Application rejected by Principal.', admission });
+
+    // Email student — fire-and-forget (PERFORMANCE FIX)
     if (admission?.email) {
-      await sendEmail(
+      sendEmail(
         admission.email,
         '❌ Admission Application Update | LKCWSC',
         `
@@ -447,10 +459,8 @@ router.put('/principal-reject/:id', protect, authorizeRoles('staff_principal', '
           <p style="color:#888;font-size:13px;margin-top:24px;">Late Kalpana Chawla Women's Senior College<br/>This is an automated email.</p>
         </div>
         `
-      );
+      ).catch(err => console.error('Email send failed:', err.message));
     }
-
-    res.json({ success: true, message: 'Application rejected by Principal.', admission });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
