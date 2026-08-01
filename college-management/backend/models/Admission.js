@@ -395,4 +395,13 @@ aadharNumber: {
   }
 );
 
+// PERFORMANCE FIX: these fields are filtered on in almost every admissions
+// list query (staff/principal/student dashboards). Without indexes, MongoDB
+// scans the entire collection every time -> gets slower as data grows.
+admissionSchema.index({ status: 1, studentSectionStatus: 1 });
+admissionSchema.index({ principalStatus: 1 });
+admissionSchema.index({ email: 1 });
+admissionSchema.index({ createdAt: -1 });
+admissionSchema.index({ studentId: 1 });
+
 module.exports = mongoose.model('Admission', admissionSchema);
