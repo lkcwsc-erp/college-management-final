@@ -1244,7 +1244,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   const [editingId, setEditingId]   = useState(null);
   const [editAmounts, setEditAmounts] = useState(['', '', '', '', '', '']);
   const [addingNew, setAddingNew]   = useState(false);
-  const [newForm, setNewForm]       = useState({ name: '', amounts: ['', '', '', '', '', ''] });
+  const [newForm, setNewForm]       = useState({ selected: {}, amounts: {}, customOn: false, customName: '', customAmounts: ['', '', '', '', '', ''] });
   const [busy, setBusy]             = useState(false);
   const [editorMsg, setEditorMsg]   = useState('');
   const semLabels = ['Sem I', 'Sem II', 'Sem III', 'Sem IV', 'Sem V', 'Sem VI'];
@@ -1269,7 +1269,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
         : '✅ Submitted — sent to Principal for approval! It will reflect here once fully approved.');
       setEditingId(null);
       setAddingNew(false);
-      setNewForm({ name: '', amounts: ['', '', '', '', '', ''] });
+      setNewForm({ selected: {}, amounts: {}, customOn: false, customName: '', customAmounts: ['', '', '', '', '', ''] });
     } catch (e) {
       flashEditorMsg('❌ ' + (e.response?.data?.message || 'Failed to submit for approval'));
     } finally {
@@ -1287,13 +1287,51 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
     if (!window.confirm(`Send a request to delete "${item.name}" for ${academicYear}? This needs Principal → Admin approval.`)) return;
     submitItemChange({ itemId: item.id, itemName: item.name, itemSection: item.section, oldAmounts: item.s || [], newAmounts: item.s || [], isNewItem: false, isDeletion: true });
   };
-  const addNewItem = () => {
-    if (!newForm.name.trim()) { flashEditorMsg('❌ Enter a fee item name'); return; }
-    submitItemChange({
-      itemId: 'schol_' + Date.now(), itemName: newForm.name.trim(), itemSection: 'College',
-      oldAmounts: [], newAmounts: newForm.amounts.map(v => Number(v) || 0),
-      isNewItem: true, isDeletion: false,
+  const toggleHeadSelect = (name) => {
+    setNewForm(f => {
+      const selected = { ...f.selected, [name]: !f.selected[name] };
+      const amounts = { ...f.amounts };
+      if (selected[name] && !amounts[name]) amounts[name] = ['', '', '', '', '', ''];
+      return { ...f, selected, amounts };
     });
+  };
+  const setHeadAmount = (name, i, val) => {
+    setNewForm(f => {
+      const arr = [...(f.amounts[name] || ['', '', '', '', '', ''])];
+      arr[i] = val;
+      return { ...f, amounts: { ...f.amounts, [name]: arr } };
+    });
+  };
+  const addSelectedHeads = async () => {
+    const picks = Object.keys(newForm.selected).filter(n => newForm.selected[n]);
+    if (newForm.customOn && newForm.customName.trim()) picks.push(newForm.customName.trim());
+    if (picks.length === 0) { flashEditorMsg('❌ Select at least one fee head (or add a custom one)'); return; }
+    setBusy(true);
+    try {
+      for (const name of picks) {
+        const amounts = name === newForm.customName.trim() && newForm.customOn && !newForm.amounts[name]
+          ? newForm.customAmounts
+          : (newForm.amounts[name] || ['', '', '', '', '', '']);
+        await API.post('/fee-structure-approvals/submit', {
+          courseKey: courseKeyDot,
+          itemId: 'schol_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          itemName: name,
+          itemSection: 'College',
+          academicYear,
+          oldAmounts: [],
+          newAmounts: amounts.map(v => Number(v) || 0),
+          isNewItem: true,
+          isDeletion: false,
+        });
+      }
+      flashEditorMsg(`✅ ${picks.length} fee head${picks.length > 1 ? 's' : ''} submitted — sent to Principal for approval!`);
+      setAddingNew(false);
+      setNewForm({ selected: {}, amounts: {}, customOn: false, customName: '', customAmounts: ['', '', '', '', '', ''] });
+    } catch (e) {
+      flashEditorMsg('❌ ' + (e.response?.data?.message || 'Failed to submit for approval'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Fall back to the static reference structure only if Accounts Section
@@ -1552,27 +1590,87 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
             </button>
           ) : (
             <div>
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#666', display: 'block', marginBottom: 4 }}>Fee Head Name</label>
-                <input type="text" placeholder="e.g. Sports Fee" value={newForm.name}
-                  onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
-                  style={{ ...inputStyle, width: '100%', maxWidth: 320 }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
-                {semLabels.map((lbl, i) => (
-                  <div key={lbl}>
-                    <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>{lbl}</label>
-                    <input type="number" min="0" value={newForm.amounts[i]}
-                      onChange={e => setNewForm(f => { const a = [...f.amounts]; a[i] = e.target.value; return { ...f, amounts: a }; })}
-                      style={{ ...inputStyle, width: '100%' }} />
-                  </div>
-                ))}
-              </div>
+              {(() => {
+                const otherCourseKey = activeCourse === 'B.Sc' ? 'B.A' : 'B.Sc';
+                const COMMON_SUGGESTED_HEADS = ['Sports Fee', 'Exam Fee', 'Uniform Fee', 'Hostel Fee', 'Identity Card Fee', 'Magazine Fee', 'Insurance Fee', 'Development Fee', 'Computer Fee', 'Internet Fee'];
+                const existingNames = new Set((entry?.items || []).map(it => it.name));
+                const otherCourseNames = (remoteMap?.[otherCourseKey]?.items || []).map(it => it.name);
+                const candidateNames = Array.from(new Set([...otherCourseNames, ...COMMON_SUGGESTED_HEADS]))
+                  .filter(n => !existingNames.has(n));
+
+                return (
+                  <>
+                    <p style={{ fontSize: 12, color: '#666', margin: '0 0 10px' }}>
+                      Select the fee head(s) to add — just like the fee-collection checklist:
+                    </p>
+                    <div style={{ border: '1px solid #e0e7ef', borderRadius: 10, overflow: 'hidden', maxHeight: 320, overflowY: 'auto', marginBottom: 14 }}>
+                      {candidateNames.length === 0 && !newForm.customOn && (
+                        <div style={{ padding: 14, fontSize: 13, color: '#999', textAlign: 'center' }}>No ready-made suggestions left — use "Custom Fee Head" below.</div>
+                      )}
+                      {candidateNames.map((name, idx) => {
+                        const isSel = !!newForm.selected[name];
+                        return (
+                          <div key={name}>
+                            <div onClick={() => toggleHeadSelect(name)}
+                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 14px',
+                                borderBottom: '1px solid #f0f4f8', cursor: 'pointer', userSelect: 'none',
+                                background: isSel ? '#e8f4ff' : idx % 2 === 0 ? '#fafbff' : '#fff' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <input type="checkbox" checked={isSel} readOnly style={{ width: 15, height: 15, cursor: 'pointer' }} />
+                                <span style={{ fontSize: 13, color: '#333' }}>{name}</span>
+                              </div>
+                            </div>
+                            {isSel && (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, padding: '8px 14px 12px', background: '#f5faff' }}
+                                onClick={e => e.stopPropagation()}>
+                                {semLabels.map((lbl, i) => (
+                                  <div key={lbl}>
+                                    <label style={{ fontSize: 10, color: '#888', display: 'block', marginBottom: 2 }}>{lbl}</label>
+                                    <input type="number" min="0" value={newForm.amounts[name]?.[i] ?? ''}
+                                      onChange={e => setHeadAmount(name, i, e.target.value)}
+                                      style={{ ...inputStyle, width: '100%', padding: '4px 5px', fontSize: 11 }} />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* Custom fee head — not in the suggested list */}
+                      <div onClick={() => setNewForm(f => ({ ...f, customOn: !f.customOn }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderTop: '2px solid #eee',
+                          cursor: 'pointer', userSelect: 'none', background: newForm.customOn ? '#fff3e0' : '#fafbff' }}>
+                        <input type="checkbox" checked={newForm.customOn} readOnly style={{ width: 15, height: 15, cursor: 'pointer' }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#E65100' }}>➕ Custom Fee Head (not listed above)</span>
+                      </div>
+                      {newForm.customOn && (
+                        <div style={{ padding: '10px 14px 14px', background: '#fff8ef' }} onClick={e => e.stopPropagation()}>
+                          <input type="text" placeholder="e.g. Lab Kit Fee" value={newForm.customName}
+                            onChange={e => setNewForm(f => ({ ...f, customName: e.target.value }))}
+                            style={{ ...inputStyle, width: '100%', maxWidth: 320, marginBottom: 8 }} />
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+                            {semLabels.map((lbl, i) => (
+                              <div key={lbl}>
+                                <label style={{ fontSize: 10, color: '#888', display: 'block', marginBottom: 2 }}>{lbl}</label>
+                                <input type="number" min="0" value={newForm.customAmounts[i]}
+                                  onChange={e => setNewForm(f => { const a = [...f.customAmounts]; a[i] = e.target.value; return { ...f, customAmounts: a }; })}
+                                  style={{ ...inputStyle, width: '100%', padding: '4px 5px', fontSize: 11 }} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={addNewItem} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}>
+                <button onClick={addSelectedHeads} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}>
                   {busy ? '⏳ Submitting...' : '✅ Submit for Approval'}
                 </button>
-                <button onClick={() => { setAddingNew(false); setNewForm({ name: '', amounts: ['', '', '', '', '', ''] }); }}
+                <button onClick={() => { setAddingNew(false); setNewForm({ selected: {}, amounts: {}, customOn: false, customName: '', customAmounts: ['', '', '', '', '', ''] }); }}
                   style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, cursor: 'pointer' }}>
                   Cancel
                 </button>
