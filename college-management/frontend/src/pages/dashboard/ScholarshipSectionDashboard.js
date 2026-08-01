@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../../api/axios';
@@ -1241,14 +1241,12 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   // ── Fee item editor (add / edit / delete a raw fee item) ──────────────
   // These go through the SAME Principal → Admin approval pipeline as the
   // Accounts Section — nothing here is ever applied directly.
-  const [showEditor, setShowEditor] = useState(true);
   const [editingId, setEditingId]   = useState(null);
   const [editAmounts, setEditAmounts] = useState(['', '', '', '', '', '']);
   const [addingNew, setAddingNew]   = useState(false);
   const [newForm, setNewForm]       = useState({ name: '', amounts: ['', '', '', '', '', ''] });
   const [busy, setBusy]             = useState(false);
   const [editorMsg, setEditorMsg]   = useState('');
-  const editorRef = useRef(null);
   const semLabels = ['Sem I', 'Sem II', 'Sem III', 'Sem IV', 'Sem V', 'Sem VI'];
   const courseKeyDot = `${activeCourse}.`;
 
@@ -1381,10 +1379,6 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
           <button onClick={onRefresh} style={{ ...btnStyle('#f3e5f5', themeColor, '#ce93d8'), fontWeight: 700 }}>
             🔄 Refresh
           </button>
-          <button onClick={() => setShowEditor(s => !s)} disabled={fetchStatus !== 'ok'} title={fetchStatus !== 'ok' ? 'Available once Accounts Section has created this year\'s structure' : ''}
-            style={{ ...btnStyle(showEditor ? themeColor : '#fff3e0', showEditor ? '#fff' : '#E65100', '#ffcc80'), fontWeight: 700, opacity: fetchStatus !== 'ok' ? 0.5 : 1, cursor: fetchStatus !== 'ok' ? 'not-allowed' : 'pointer' }}>
-            🛠️ {showEditor ? 'Hide Editor' : 'Manage Fee Items'}
-          </button>
         </div>
       </div>
 
@@ -1505,11 +1499,6 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
                       <button onClick={() => deleteItem(singleItem)} disabled={busy} title="Delete this fee" style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>🗑️</button>
                     </>
                   )
-                ) : matchedItems.length > 1 ? (
-                  <button onClick={() => { setShowEditor(true); editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                    title="Made up of multiple fee items — manage them below" style={{ background: '#f3e5f5', color: '#7B1FA2', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                    🔧 Manage
-                  </button>
                 ) : null}
               </div>
             </div>
@@ -1545,6 +1534,55 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
           ))}
           <span />
         </div>
+
+        {/* ➕ Add Fee Head — directly here, right below the fee heads */}
+        <div style={{ padding: '14px 20px', background: '#fafbff', borderTop: '1px solid #eee' }}>
+          {editorMsg && (
+            <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13, fontWeight: 600,
+              background: editorMsg.startsWith('❌') ? '#ffebee' : '#e8f5e9',
+              color: editorMsg.startsWith('❌') ? '#C62828' : '#2E7D32' }}>
+              {editorMsg}
+            </div>
+          )}
+          {!addingNew ? (
+            <button onClick={() => setAddingNew(true)} disabled={fetchStatus !== 'ok'}
+              title={fetchStatus !== 'ok' ? "Available once Accounts Section has created this year's structure" : ''}
+              style={{ ...btnStyle(themeColor, '#fff', themeColor), fontWeight: 700, opacity: fetchStatus !== 'ok' ? 0.5 : 1, cursor: fetchStatus !== 'ok' ? 'not-allowed' : 'pointer' }}>
+              ➕ Add Fee Head
+            </button>
+          ) : (
+            <div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#666', display: 'block', marginBottom: 4 }}>Fee Head Name</label>
+                <input type="text" placeholder="e.g. Sports Fee" value={newForm.name}
+                  onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
+                  style={{ ...inputStyle, width: '100%', maxWidth: 320 }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
+                {semLabels.map((lbl, i) => (
+                  <div key={lbl}>
+                    <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>{lbl}</label>
+                    <input type="number" min="0" value={newForm.amounts[i]}
+                      onChange={e => setNewForm(f => { const a = [...f.amounts]; a[i] = e.target.value; return { ...f, amounts: a }; })}
+                      style={{ ...inputStyle, width: '100%' }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={addNewItem} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}>
+                  {busy ? '⏳ Submitting...' : '✅ Submit for Approval'}
+                </button>
+                <button onClick={() => { setAddingNew(false); setNewForm({ name: '', amounts: ['', '', '', '', '', ''] }); }}
+                  style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+              </div>
+              <p style={{ fontSize: 11, color: '#888', margin: '10px 0 0' }}>
+                Goes to <strong>Principal → Admin</strong> for approval before it applies anywhere.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick summary cards per year */}
@@ -1575,99 +1613,8 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
         })}
       </div>
 
-      {showEditor && fetchStatus === 'ok' && (
-        <div ref={editorRef} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${themeColor}55`, padding: 20, marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h4 style={{ margin: 0, color: themeColor, fontSize: 14 }}>🛠️ Manage Fee Items — {activeCourse} ({academicYear})</h4>
-            <button onClick={() => setAddingNew(v => !v)} style={{ ...btnStyle(themeColor, '#fff', themeColor), fontWeight: 700 }}>
-              {addingNew ? '✖ Cancel' : '➕ Add New Fee Item'}
-            </button>
-          </div>
-
-          {editorMsg && (
-            <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13, fontWeight: 600,
-              background: editorMsg.startsWith('❌') ? '#ffebee' : '#e8f5e9',
-              color: editorMsg.startsWith('❌') ? '#C62828' : '#2E7D32' }}>
-              {editorMsg}
-            </div>
-          )}
-
-          <p style={{ fontSize: 12, color: '#888', margin: '0 0 14px' }}>
-            Every add / edit / delete request goes to <strong>Principal → Admin</strong> for approval before it applies anywhere (Accounts, Scholarship, or student fee collection).
-          </p>
-
-          {addingNew && (
-            <div style={{ background: '#fafbff', border: '1px solid #e0e7ef', borderRadius: 10, padding: 14, marginBottom: 16 }}>
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#666', display: 'block', marginBottom: 4 }}>Fee Item Name</label>
-                <input type="text" placeholder="e.g. Sports Fee" value={newForm.name}
-                  onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
-                  style={{ ...inputStyle, width: '100%', maxWidth: 320 }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
-                {semLabels.map((lbl, i) => (
-                  <div key={lbl}>
-                    <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>{lbl}</label>
-                    <input type="number" min="0" value={newForm.amounts[i]}
-                      onChange={e => setNewForm(f => { const a = [...f.amounts]; a[i] = e.target.value; return { ...f, amounts: a }; })}
-                      style={{ ...inputStyle, width: '100%' }} />
-                  </div>
-                ))}
-              </div>
-              <button onClick={addNewItem} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}>
-                {busy ? '⏳ Submitting...' : '✅ Submit for Approval'}
-              </button>
-            </div>
-          )}
-
-          <div style={{ border: '1px solid #e0e7ef', borderRadius: 10, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(6, 0.8fr) 1fr', gap: 6, background: '#f0f4f8', padding: '10px 14px' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#666' }}>Fee Item</span>
-              {semLabels.map(lbl => <span key={lbl} style={{ fontSize: 11, fontWeight: 700, color: '#666', textAlign: 'center' }}>{lbl}</span>)}
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#666', textAlign: 'right' }}>Actions</span>
-            </div>
-            {(entry?.items || []).length === 0 && (
-              <div style={{ padding: 16, fontSize: 13, color: '#999', textAlign: 'center' }}>No fee items found for {activeCourse} ({academicYear}).</div>
-            )}
-            {(entry?.items || []).map((item, idx) => {
-              const isEditing = editingId === item.id;
-              return (
-                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(6, 0.8fr) 1fr', gap: 6, padding: '10px 14px',
-                  alignItems: 'center', borderTop: '1px solid #f0f4f8', background: idx % 2 === 0 ? '#fff' : '#fafbff' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>{item.name}</span>
-                  {[0,1,2,3,4,5].map(i => (
-                    <span key={i} style={{ textAlign: 'center' }}>
-                      {isEditing ? (
-                        <input type="number" min="0" value={editAmounts[i]}
-                          onChange={e => setEditAmounts(a => { const n = [...a]; n[i] = e.target.value; return n; })}
-                          style={{ ...inputStyle, width: '100%', padding: '4px 6px', fontSize: 12 }} />
-                      ) : (
-                        <span style={{ fontSize: 12, color: '#444' }}>₹{fmt(item.s?.[i] || 0)}</span>
-                      )}
-                    </span>
-                  ))}
-                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    {isEditing ? (
-                      <>
-                        <button onClick={() => saveEdit(item)} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>Save</button>
-                        <button onClick={() => setEditingId(null)} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer' }}>Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => startEdit(item)} style={{ background: '#e3f2fd', color: '#1565C0', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Edit</button>
-                        <button onClick={() => deleteItem(item)} disabled={busy} style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>Delete</button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       <p style={{ marginTop: 14, fontSize: 11, color: '#999' }}>
-        ✏️ Fee structure is created/edited from the <strong>Accounts Section → Fee Structure</strong> tab, or right here using "Manage Fee Items" above.
+        ✏️ Fee structure is created/edited from the <strong>Accounts Section → Fee Structure</strong> tab, or right here using the "➕ Add Fee Head" option above.
         This view only reads it — select a different academic year above to see that year's amounts here
         and have them auto-applied (category-wise) in the "Custom Records" form.
       </p>
