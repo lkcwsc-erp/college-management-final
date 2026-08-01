@@ -737,13 +737,52 @@ router.put('/carry-forward/:id', protect, authorizeRoles('staff_student', 'admin
     const validYears = ['2nd Year', '3rd Year'];
     if (!validYears.includes(newYear))
       return res.status(400).json({ success: false, message: 'Invalid year. Must be 2nd Year or 3rd Year.' });
-    const admission = await Admission.findByIdAndUpdate(
-      req.params.id,
-      { admissionYear: newYear },
-      { new: true }
-    );
+
+    const admission = await Admission.findById(req.params.id);
     if (!admission) return res.status(404).json({ success: false, message: 'Student not found' });
-    res.json({ success: true, message: `Student promoted to ${newYear}`, admission });
+
+    // ── Save a snapshot of the year being closed out ────────────────────────
+    // This keeps past years' fees/scholarship visible in history even after
+    // the current-year totals below get reset for the new academic year.
+    admission.yearlyHistory.push({
+      academicYear:              admission.academicYear,
+      admissionYear:             admission.admissionYear,
+      totalFees:                 admission.totalFees,
+      feesPaid:                  admission.feesPaid,
+      scholarshipStatus:         admission.scholarshipStatus,
+      scholarshipEligibleAmount: admission.scholarshipEligibleAmount,
+      scholarshipAmount:         admission.scholarshipAmount,
+      scholarshipReceivedAmount: admission.scholarshipReceivedAmount,
+      scholarshipPendingAmount:  admission.scholarshipPendingAmount,
+    });
+
+    // ── Advance academicYear (e.g. 2025-26 -> 2026-27) ───────────────────────
+    // PERFORMANCE/CORRECTNESS FIX: previously only `admissionYear` (class
+    // year) was updated here — `academicYear` never advanced, so a promoted
+    // student's new-year fees/scholarship kept getting recorded under the
+    // OLD academic year, mixing years together in Accounts/Scholarship reports.
+    let nextAcademicYear = admission.academicYear;
+    const match = /^(\d{4})-(\d{2})$/.exec(admission.academicYear || '');
+    if (match) {
+      const startYear = parseInt(match[1], 10) + 1;
+      nextAcademicYear = `${startYear}-${String(startYear + 1).slice(-2)}`;
+    }
+
+    admission.admissionYear = newYear;
+    admission.academicYear  = nextAcademicYear;
+
+    // ── Reset this year's running totals — fresh cycle, starts at 0/not_filled.
+    // Nothing is deleted: the old values are already saved in yearlyHistory above.
+    admission.totalFees                 = 0;
+    admission.feesPaid                  = 0;
+    admission.scholarshipStatus         = 'not_filled';
+    admission.scholarshipEligibleAmount = 0;
+    admission.scholarshipAmount         = 0;
+    admission.scholarshipReceivedAmount = 0;
+    admission.scholarshipPendingAmount  = 0;
+
+    await admission.save();
+    res.json({ success: true, message: `Student promoted to ${newYear} (AY ${nextAcademicYear})`, admission });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
