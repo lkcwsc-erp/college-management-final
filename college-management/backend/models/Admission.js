@@ -389,6 +389,24 @@ aadharNumber: {
       type:    Date,
       default: Date.now,
     },
+
+    /* ================================================================
+       PER-YEAR HISTORY — snapshot saved here at Carry Forward time,
+       so past years' fees/scholarship stay visible even after the
+       current-year totals reset for the new academic year.
+    ================================================================ */
+    yearlyHistory: [{
+      academicYear:              { type: String, default: '' }, // e.g. '2025-26'
+      admissionYear:             { type: String, default: '' }, // FY/SY/TY at that time
+      totalFees:                 { type: Number, default: 0 },
+      feesPaid:                  { type: Number, default: 0 },
+      scholarshipStatus:         { type: String, default: 'not_filled' },
+      scholarshipEligibleAmount: { type: Number, default: 0 },
+      scholarshipAmount:         { type: Number, default: 0 },
+      scholarshipReceivedAmount: { type: Number, default: 0 },
+      scholarshipPendingAmount:  { type: Number, default: 0 },
+      closedAt:                  { type: Date, default: Date.now }, // when this year was closed out
+    }],
   },
   {
     timestamps: true, // adds createdAt + updatedAt automatically
