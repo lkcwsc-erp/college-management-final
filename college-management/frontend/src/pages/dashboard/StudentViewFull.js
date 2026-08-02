@@ -2,6 +2,25 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import API from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 
+// ── Class year ↔ Academic year helpers ─────────────────────────────────────
+// A student's current `academicYear` (e.g. "2027-28") is tied to their
+// CURRENT class (`admissionYear` field, e.g. "2nd Year"). From that we can
+// work out which academic year any other class year (1st/2nd/3rd) falls in
+// — e.g. if they're in 2nd Year during 2027-28, their 1st Year was 2026-27.
+const CLASS_YEAR_INDEX = { '1st Year': 0, '2nd Year': 1, '3rd Year': 2 };
+const shiftAcademicYear = (ay, delta) => {
+  const start = Number(String(ay || '').slice(0, 4));
+  if (!start) return '';
+  const s = start + delta;
+  return `${s}-${String(s + 1).slice(2)}`;
+};
+const academicYearForClassYear = (currentAcademicYear, currentClassYear, targetClassYear) => {
+  if (!currentAcademicYear) return '—';
+  const curIdx = CLASS_YEAR_INDEX[currentClassYear] ?? 0;
+  const tgtIdx = CLASS_YEAR_INDEX[targetClassYear] ?? 0;
+  return shiftAcademicYear(currentAcademicYear, tgtIdx - curIdx) || '—';
+};
+
 // ─── Year-wise official fee totals (SNDT 2025-26) ─────────────────────────────
 const OFFICIAL_FEES_YEARLY = {
   'B.Sc.': {
@@ -273,6 +292,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
       const res = await API.get('/fee-structure', { params: { courseType: ck, academicYear: '2025-26' } });
       const doc = (res.data.structures || [])[0];
       let heads;
+      let scholCoveredHead = null;
       if (doc && Array.isArray(doc.items) && doc.items.length) {
         const idx = { FY: [0, 1], SY: [2, 3], TY: [4, 5] }[fySy];
         const rawHeadwise = {};
@@ -282,6 +302,25 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
           if (val) { rawHeadwise[it.name] = (rawHeadwise[it.name] || 0) + val; yearTotal += val; }
         });
         heads = DISPLAY_HEADS.map(name => ({ name, amount: svfGroupHeads(rawHeadwise, yearTotal)[name] || 0 }));
+
+        // If the scholarship form has been filled — and this is the year it
+        // was filled for (their CURRENT year; scholarship has to be refiled
+        // every year) — net the scholarship amount off Tuition Fee, so the
+        // full fee-structure list still shows but the payable amount already
+        // excludes what scholarship covers. If it's fully covered (₹0 left),
+        // keep it in the list as "covered by scholarship" rather than hiding it.
+        const scholFilledNow = selected.scholarshipStatus && selected.scholarshipStatus !== 'not_filled';
+        if (scholFilledNow && yr === selected.admissionYear) {
+          const scholAmt = Number(selected.scholarshipAmount) || 0;
+          if (scholAmt > 0) {
+            heads = heads.map(h => {
+              if (h.name !== 'Tuition Fee') return h;
+              const remaining = Math.max(0, h.amount - scholAmt);
+              if (remaining === 0 && h.amount > 0) scholCoveredHead = h.name;
+              return { ...h, amount: remaining };
+            });
+          }
+        }
       } else {
         // Fallback: single "Other Fee" head covering the whole balance,
         // when Accounts hasn't created a live structure yet.
@@ -293,7 +332,8 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
       const paidHeadsSet = new Set();
       (selected.feeLedger || []).filter(p => p.year === yr).forEach(p => (p.feeHeads || []).forEach(h => paidHeadsSet.add(h)));
 
-      setPayHeads(heads.filter(h => h.amount > 0).map(h => ({ ...h, paid: paidHeadsSet.has(h.name) })));
+      setPayHeads(heads.filter(h => h.amount > 0 || h.name === scholCoveredHead)
+        .map(h => ({ ...h, paid: paidHeadsSet.has(h.name), scholCovered: h.name === scholCoveredHead })));
     } catch {
       setPayHeads([{ name: 'Other Fee', amount: info.total || 0, paid: false }]);
     } finally {
@@ -306,7 +346,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   // selected heads becomes the amount to collect (still editable if needed).
   const toggleHead = (name) => {
     const head = payHeads.find(h => h.name === name);
-    if (!head || head.paid) return; // locked — already paid, can't re-select
+    if (!head || head.paid || head.scholCovered) return; // locked — already paid, or fully covered by scholarship
     setSelectedHeads(prev => {
       const next = prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name];
       const sum = payHeads.filter(h => next.includes(h.name)).reduce((s, h) => s + h.amount, 0);
@@ -810,7 +850,8 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                 {/* ── Fee Structure Details (year-wise) + Pay Remaining Fees — Accounts only ── */}
                 {role === 'accounts' && (() => {
                   const ck = svfCourseKey(selected.courseType);
-                  const schol = selected.scholarshipAmount || 0;
+                  const scholFilled = selected.scholarshipStatus && selected.scholarshipStatus !== 'not_filled';
+                  const schol = scholFilled ? (selected.scholarshipAmount || 0) : 0;
                   const ledger = selected.feeLedger || [];
                   const currentYear = selected.admissionYear;
                   const legacyPaid = ledger.filter(p => !p.year).reduce((s, p) => s + (p.amount || 0), 0);
@@ -830,7 +871,7 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
                             <thead>
                               <tr style={{ background:'#f5f5f5' }}>
-                                {['Fee Structure','Year','Total','Scholarship','Net Payable','Paid','Balance Due', ...(canCollect ? ['Action'] : [])].map(h => (
+                                {['Fee Structure','Academic Year','Year','Total','Scholarship','Net Payable','Paid','Balance Due', ...(canCollect ? ['Action'] : [])].map(h => (
                                   <th key={h} style={{ padding:'9px 10px', fontWeight:700, color:'#009688', textAlign:'center', borderBottom:'2px solid #009688', fontSize:12, whiteSpace:'nowrap' }}>{h}</th>
                                 ))}
                               </tr>
@@ -838,7 +879,11 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                             <tbody>
                               {Object.entries(OFFICIAL_FEES_YEARLY[ck]?.years || {}).map(([yr, data], i) => {
                                 const isCurrent = yr === currentYear;
-                                const netPay = Math.max(0, data.total - schol);
+                                // Scholarship only applies to the CURRENT year row — it has to be
+                                // refiled every year, so other years (past or future) show ₹0
+                                // until the form is filled again for that year.
+                                const rowSchol = isCurrent ? schol : 0;
+                                const netPay = Math.max(0, data.total - rowSchol);
                                 const paid = paidForYear(yr);
                                 const balance = Math.max(0, netPay - paid);
                                 return (
@@ -846,16 +891,19 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                                     <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0' }}>
                                       {OFFICIAL_FEES_YEARLY[ck]?.label} {isCurrent && <span style={{ background:'#009688', color:'#fff', fontSize:10, padding:'1px 6px', borderRadius:8, marginLeft:4 }}>Current</span>}
                                     </td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color:'#666', fontWeight:600 }}>
+                                      {academicYearForClassYear(selected.academicYear, currentYear, yr)}
+                                    </td>
                                     <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color:'#009688', fontWeight:700 }}>{yr}</td>
                                     <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0' }}>₹{data.total.toLocaleString('en-IN')}</td>
-                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color: schol > 0 ? '#7B1FA2' : '#999' }}>{schol > 0 ? `₹${schol.toLocaleString('en-IN')}` : '₹0'}</td>
+                                    <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color: rowSchol > 0 ? '#7B1FA2' : '#999' }}>{rowSchol > 0 ? `₹${rowSchol.toLocaleString('en-IN')}` : '₹0'}</td>
                                     <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', fontWeight:700 }}>₹{netPay.toLocaleString('en-IN')}</td>
                                     <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color:'#2E7D32', fontWeight:700 }}>₹{paid.toLocaleString('en-IN')}</td>
                                     <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0', color: balance > 0 ? '#C62828' : '#2E7D32', fontWeight:700 }}>{balance > 0 ? `₹${balance.toLocaleString('en-IN')}` : '✅ Paid'}</td>
                                     {canCollect && (
                                       <td style={{ padding:'9px 10px', textAlign:'center', borderBottom:'1px solid #f0f0f0' }}>
                                         {balance > 0 ? (
-                                          <button onClick={() => openPayModal(yr, { total: data.total, schol, netPay, paid, balance })}
+                                          <button onClick={() => openPayModal(yr, { total: data.total, schol: rowSchol, netPay, paid, balance })}
                                             style={{ background:'#009688', color:'#fff', border:'none', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
                                             💰 Pay Remaining
                                           </button>
@@ -1047,14 +1095,15 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
                 <div style={{ border:'1px solid #e0e7ef', borderRadius:10, marginBottom:16, overflow:'hidden' }}>
                   {payHeads.map(h => (
                     <label key={h.name} htmlFor={`head_${h.name}`}
-                      style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 12px', borderBottom:'1px solid #f0f4f8', background: h.paid ? '#e8f5e9' : (selectedHeads.includes(h.name) ? '#e0f7fa' : '#fff'), cursor: h.paid ? 'default' : 'pointer' }}>
+                      style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 12px', borderBottom:'1px solid #f0f4f8', background: h.paid ? '#e8f5e9' : h.scholCovered ? '#f3e5f5' : (selectedHeads.includes(h.name) ? '#e0f7fa' : '#fff'), cursor: (h.paid || h.scholCovered) ? 'default' : 'pointer' }}>
                       <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <input type="checkbox" id={`head_${h.name}`} checked={h.paid || selectedHeads.includes(h.name)} disabled={h.paid}
-                          onChange={() => toggleHead(h.name)} style={{ width:16, height:16, cursor: h.paid ? 'not-allowed' : 'pointer' }} />
-                        <span style={{ fontSize:13, color: h.paid ? '#2E7D32' : '#333', fontWeight: h.paid ? 600 : 500 }}>{h.name}</span>
+                        <input type="checkbox" id={`head_${h.name}`} checked={h.paid || (h.scholCovered ? true : selectedHeads.includes(h.name))} disabled={h.paid || h.scholCovered}
+                          onChange={() => toggleHead(h.name)} style={{ width:16, height:16, cursor: (h.paid || h.scholCovered) ? 'not-allowed' : 'pointer' }} />
+                        <span style={{ fontSize:13, color: h.paid ? '#2E7D32' : h.scholCovered ? '#7B1FA2' : '#333', fontWeight: (h.paid || h.scholCovered) ? 600 : 500 }}>{h.name}</span>
                         {h.paid && <span style={{ fontSize:10, fontWeight:700, color:'#2E7D32', background:'#c8e6c9', padding:'1px 7px', borderRadius:8 }}>✅ Paid</span>}
+                        {h.scholCovered && <span style={{ fontSize:10, fontWeight:700, color:'#7B1FA2', background:'#e1bee7', padding:'1px 7px', borderRadius:8 }}>🎓 Covered by Scholarship</span>}
                       </span>
-                      <span style={{ fontSize:13, fontWeight:700, color: h.paid ? '#2E7D32' : '#333' }}>₹{h.amount.toLocaleString('en-IN')}</span>
+                      <span style={{ fontSize:13, fontWeight:700, color: h.paid ? '#2E7D32' : h.scholCovered ? '#7B1FA2' : '#333' }}>₹{h.amount.toLocaleString('en-IN')}</span>
                     </label>
                   ))}
                 </div>
