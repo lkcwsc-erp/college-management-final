@@ -41,28 +41,6 @@ const OFFICIAL_FEES_YEARLY = {
   },
 };
 
-// ── Fixed 7 fee heads (same as Accounts / Scholarship views) ──────────────
-const DISPLAY_HEADS = ['Enrollment Fee', 'Admission Fee', 'Tuition Fee', 'Gymkhana Fee', 'Laboratory Fee', 'Library Fee', 'Other Fee'];
-const svfMatchHead = (name) => {
-  const n = String(name || '').trim();
-  if (/^enrollment\s*fee/i.test(n))  return 'Enrollment Fee';
-  if (/^admission\s*fee/i.test(n))   return 'Admission Fee';
-  if (/tuition\s*fee/i.test(n))      return 'Tuition Fee';
-  if (/gymkhana/i.test(n))           return 'Gymkhana Fee';
-  if (/^laboratory\s*fee/i.test(n))  return 'Laboratory Fee';
-  if (/^library\s*fee$/i.test(n))    return 'Library Fee';
-  return null;
-};
-const svfGroupHeads = (rawHeadwise, total) => {
-  const out = { 'Enrollment Fee': 0, 'Admission Fee': 0, 'Tuition Fee': 0, 'Gymkhana Fee': 0, 'Laboratory Fee': 0, 'Library Fee': 0, 'Other Fee': 0 };
-  let named = 0;
-  Object.entries(rawHeadwise || {}).forEach(([name, amt]) => {
-    const head = svfMatchHead(name);
-    if (head) { out[head] += Number(amt) || 0; named += Number(amt) || 0; }
-  });
-  out['Other Fee'] = Math.max(0, (Number(total) || 0) - named);
-  return out;
-};
 const svfYearLabelToFYSY = { '1st Year': 'FY', '2nd Year': 'SY', '3rd Year': 'TY' };
 
 const svfCourseKey = (ct) => {
@@ -292,31 +270,32 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
       const res = await API.get('/fee-structure', { params: { courseType: ck, academicYear: '2025-26' } });
       const doc = (res.data.structures || [])[0];
       let heads;
-      let scholCoveredHead = null;
+      let scholCoveredNames = new Set();
       if (doc && Array.isArray(doc.items) && doc.items.length) {
         const idx = { FY: [0, 1], SY: [2, 3], TY: [4, 5] }[fySy];
-        const rawHeadwise = {};
-        let yearTotal = 0;
-        doc.items.forEach(it => {
-          const val = (Number(it.s?.[idx[0]]) || 0) + (Number(it.s?.[idx[1]]) || 0);
-          if (val) { rawHeadwise[it.name] = (rawHeadwise[it.name] || 0) + val; yearTotal += val; }
-        });
-        heads = DISPLAY_HEADS.map(name => ({ name, amount: svfGroupHeads(rawHeadwise, yearTotal)[name] || 0 }));
+        // Show EVERY real fee item by its actual name — not squashed into
+        // the fixed 6-head + "Other Fee" grouping, so nothing gets hidden.
+        heads = doc.items
+          .map(it => ({ name: it.name, amount: (Number(it.s?.[idx[0]]) || 0) + (Number(it.s?.[idx[1]]) || 0) }))
+          .filter(h => h.amount > 0);
 
         // If the scholarship form has been filled — and this is the year it
         // was filled for (their CURRENT year; scholarship has to be refiled
-        // every year) — net the scholarship amount off Tuition Fee, so the
-        // full fee-structure list still shows but the payable amount already
-        // excludes what scholarship covers. If it's fully covered (₹0 left),
-        // keep it in the list as "covered by scholarship" rather than hiding it.
+        // every year) — net the scholarship amount off the Tuition Fee
+        // item(s), so the full list still shows but the payable amount
+        // already excludes what scholarship covers. If fully covered
+        // (₹0 left), keep it in the list as "covered by scholarship"
+        // rather than hiding it.
         const scholFilledNow = selected.scholarshipStatus && selected.scholarshipStatus !== 'not_filled';
         if (scholFilledNow && yr === selected.admissionYear) {
-          const scholAmt = Number(selected.scholarshipAmount) || 0;
-          if (scholAmt > 0) {
+          let remainingSchol = Number(selected.scholarshipAmount) || 0;
+          if (remainingSchol > 0) {
             heads = heads.map(h => {
-              if (h.name !== 'Tuition Fee') return h;
-              const remaining = Math.max(0, h.amount - scholAmt);
-              if (remaining === 0 && h.amount > 0) scholCoveredHead = h.name;
+              if (remainingSchol <= 0 || !/tuition\s*fee/i.test(h.name)) return h;
+              const deduct = Math.min(remainingSchol, h.amount);
+              remainingSchol -= deduct;
+              const remaining = h.amount - deduct;
+              if (remaining === 0 && h.amount > 0) scholCoveredNames.add(h.name);
               return { ...h, amount: remaining };
             });
           }
@@ -332,8 +311,8 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
       const paidHeadsSet = new Set();
       (selected.feeLedger || []).filter(p => p.year === yr).forEach(p => (p.feeHeads || []).forEach(h => paidHeadsSet.add(h)));
 
-      setPayHeads(heads.filter(h => h.amount > 0 || h.name === scholCoveredHead)
-        .map(h => ({ ...h, paid: paidHeadsSet.has(h.name), scholCovered: h.name === scholCoveredHead })));
+      setPayHeads(heads.filter(h => h.amount > 0 || scholCoveredNames.has(h.name))
+        .map(h => ({ ...h, paid: paidHeadsSet.has(h.name), scholCovered: scholCoveredNames.has(h.name) })));
     } catch {
       setPayHeads([{ name: 'Other Fee', amount: info.total || 0, paid: false }]);
     } finally {
