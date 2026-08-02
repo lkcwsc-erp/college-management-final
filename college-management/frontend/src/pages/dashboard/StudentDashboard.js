@@ -2837,7 +2837,8 @@ const StudentDashboard = () => {
               ) : (() => {
                 const ct = (myAdmission.courseType || '').toLowerCase();
                 const courseKey = ct.includes('b.sc')||ct.includes('bsc')||ct.includes('science') ? 'B.Sc.' : ct.includes('b.a')||ct.includes('ba')||ct.includes('arts') ? 'B.A.' : null;
-                const schol = myAdmission.scholarshipAmount || 0;
+                const scholFilled = myAdmission.scholarshipStatus && myAdmission.scholarshipStatus !== 'not_filled';
+                const schol = scholFilled ? (myAdmission.scholarshipAmount || 0) : 0;
                 const ledger = myAdmission.feeLedger || [];
                 const paidTotal = ledger.reduce((s, p) => s + (p.amount || 0), 0) || myAdmission.fees || 0;
 
@@ -2873,7 +2874,8 @@ const StudentDashboard = () => {
                           <tbody>
                             {courseKey ? Object.entries(OFFICIAL_FEES_YEARLY[courseKey]?.years || {}).map(([yr, data], i) => {
                               const isCurrent = yr === myAdmission.admissionYear;
-                              const netPay = Math.max(0, data.total - schol);
+                              const rowSchol = isCurrent ? schol : 0;
+                              const netPay = Math.max(0, data.total - rowSchol);
                               const yrPaid = isCurrent ? paidTotal : 0;
                               const balance = Math.max(0, netPay - yrPaid);
                               return (
@@ -2883,7 +2885,7 @@ const StudentDashboard = () => {
                                    </td>
                                   <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#009688', fontWeight: 700 }}>{yr}</td>
                                   <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>₹{data.total.toLocaleString('en-IN')}.00</td>
-                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: schol>0?'#7B1FA2':'#999' }}>{schol>0?`₹${schol.toLocaleString('en-IN')}.00`:'₹0.00'}</td>
+                                  <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: rowSchol>0?'#7B1FA2':'#999' }}>{rowSchol>0?`₹${rowSchol.toLocaleString('en-IN')}.00`:'₹0.00'}</td>
                                   <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 700 }}>₹{netPay.toLocaleString('en-IN')}.00</td>
                                   <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#2E7D32', fontWeight: 700 }}>{isCurrent ? `₹${yrPaid.toLocaleString('en-IN')}.00` : '₹0.00'}</td>
                                   <td style={{ padding: '9px 12px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: balance>0?'#C62828':'#2E7D32', fontWeight: 700 }}>{isCurrent ? `₹${balance.toLocaleString('en-IN')}.00` : `₹${netPay.toLocaleString('en-IN')}.00`}</td>
@@ -2902,8 +2904,8 @@ const StudentDashboard = () => {
                               <tr style={{ background: '#e0f7fa', fontWeight: 800 }}>
                                 <td colSpan="2" style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 800 }}>Total</td>
                                 <td style={{ padding: '9px 12px', textAlign: 'center' }}>₹{Object.values(OFFICIAL_FEES_YEARLY[courseKey]?.years||{}).reduce((s,d)=>s+d.total,0).toLocaleString('en-IN')}.00</td>
-                                <td style={{ padding: '9px 12px', textAlign: 'center', color: '#7B1FA2' }}>{schol>0?`₹${(schol*3).toLocaleString('en-IN')}.00`:'₹0.00'}</td>
-                                <td style={{ padding: '9px 12px', textAlign: 'center' }}>₹{Object.values(OFFICIAL_FEES_YEARLY[courseKey]?.years||{}).reduce((s,d)=>s+Math.max(0,d.total-schol),0).toLocaleString('en-IN')}.00</td>
+                                <td style={{ padding: '9px 12px', textAlign: 'center', color: '#7B1FA2' }}>{schol>0?`₹${schol.toLocaleString('en-IN')}.00`:'₹0.00'}</td>
+                                <td style={{ padding: '9px 12px', textAlign: 'center' }}>₹{(Object.values(OFFICIAL_FEES_YEARLY[courseKey]?.years||{}).reduce((s,d)=>s+d.total,0) - schol).toLocaleString('en-IN')}.00</td>
                                 <td style={{ padding: '9px 12px', textAlign: 'center', color: '#2E7D32' }}>₹{paidTotal.toLocaleString('en-IN')}.00</td>
                                 <td colSpan="2" style={{ padding: '9px 12px', textAlign: 'center' }}></td>
                                </tr>
