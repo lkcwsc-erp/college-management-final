@@ -1239,9 +1239,10 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
   const [activeCourse, setActiveCourse] = useState('B.Sc');
 
   // ── Fee item editor (add / edit / delete a raw fee item) ──────────────
-  // These go through the SAME Principal → Admin approval pipeline as the
+  // These go through Accounts → Principal approval before applying — the
   // Accounts Section — nothing here is ever applied directly.
   const [editingId, setEditingId]   = useState(null);
+  const [expandedHead, setExpandedHead] = useState(null);
   const [editAmounts, setEditAmounts] = useState(['', '', '', '', '', '']);
   const [addingNew, setAddingNew]   = useState(false);
   const [newForm, setNewForm]       = useState({ selected: {} });
@@ -1265,8 +1266,8 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
         isDeletion: !!isDeletion,
       });
       flashEditorMsg(isDeletion
-        ? '🗑️ Delete request sent for Principal → Admin approval!'
-        : '✅ Submitted — sent to Principal for approval! It will reflect here once fully approved.');
+        ? '🗑️ Delete request sent to Accounts for approval!'
+        : '✅ Submitted — sent to Accounts for approval! It will reflect here once fully approved.');
       setEditingId(null);
       setAddingNew(false);
       setNewForm({ selected: {} });
@@ -1284,7 +1285,7 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
     isNewItem: false, isDeletion: false,
   });
   const deleteItem = (item) => {
-    if (!window.confirm(`Send a request to delete "${item.name}" for ${academicYear}? This needs Principal → Admin approval.`)) return;
+    if (!window.confirm(`Send a request to delete "${item.name}" for ${academicYear}? This needs Accounts → Principal approval.`)) return;
     submitItemChange({ itemId: item.id, itemName: item.name, itemSection: item.section, oldAmounts: item.s || [], newAmounts: item.s || [], isNewItem: false, isDeletion: true });
   };
   const toggleHeadSelect = (name) => {
@@ -1471,7 +1472,8 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
           if (!hasAnyValue && !singleItem) return null;
 
           return (
-            <div key={head} style={{
+            <React.Fragment key={head}>
+            <div style={{
               display: 'grid',
               gridTemplateColumns: '2fr 1fr 1fr 1fr 0.9fr',
               padding: '11px 20px',
@@ -1527,9 +1529,46 @@ const FeeStructureView = ({ academicYear, setAcademicYear, yearOptions, remoteMa
                       <button onClick={() => deleteItem(singleItem)} disabled={busy} title="Delete this fee" style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>🗑️</button>
                     </>
                   )
+                ) : matchedItems.length > 1 ? (
+                  <button onClick={() => setExpandedHead(h => h === head ? null : head)} title="This is made up of multiple fee items — expand to edit/delete each"
+                    style={{ background: expandedHead === head ? themeColor : '#f3e5f5', color: expandedHead === head ? '#fff' : '#7B1FA2', border: 'none', borderRadius: 6, padding: '5px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                    {expandedHead === head ? '▲ Close' : `▼ ${matchedItems.length} items`}
+                  </button>
                 ) : null}
               </div>
             </div>
+
+            {/* Expanded per-item edit/delete for a multi-item head (e.g. "Other Fee") */}
+            {matchedItems.length > 1 && expandedHead === head && (
+              <div style={{ background: '#fafbff', borderBottom: '1px solid #e0e7ef', padding: '4px 20px 10px 40px' }}>
+                {matchedItems.map(item => {
+                  const isEditingItem = editingId === item.id;
+                  return (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderBottom: '1px solid #eef2f7' }}>
+                      <span style={{ fontSize: 12, color: '#444' }}>{item.name}</span>
+                      {isEditingItem ? (
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          {semLabels.map((lbl, i) => (
+                            <input key={lbl} type="number" min="0" value={editAmounts[i]} title={lbl}
+                              onChange={e => setEditAmounts(a => { const n = [...a]; n[i] = e.target.value; return n; })}
+                              style={{ ...inputStyle, width: 46, padding: '3px 4px', fontSize: 10 }} />
+                          ))}
+                          <button onClick={() => saveEdit(item)} disabled={busy} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 8px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>Save</button>
+                          <button onClick={() => setEditingId(null)} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer' }}>✖</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#1565C0' }}>₹{fmt((item.s || []).reduce((s, v) => s + (Number(v) || 0), 0))} total</span>
+                          <button onClick={() => startEdit(item)} title="Edit" style={{ background: '#e3f2fd', color: '#1565C0', border: 'none', borderRadius: 6, padding: '4px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✏️</button>
+                          <button onClick={() => deleteItem(item)} disabled={busy} title="Delete" style={{ background: '#ffebee', color: '#C62828', border: 'none', borderRadius: 6, padding: '4px 8px', fontSize: 11, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>🗑️</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            </React.Fragment>
           );
         })}
 
