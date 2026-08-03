@@ -1,9 +1,23 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-init: creating this at module load time crashes the ENTIRE server
+// on boot if RESEND_API_KEY is missing from .env — even for requests that
+// never send an email. Instead we create the client only when actually
+// sending, and fail just that one request.
+let resendClient = null;
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not set in .env — email sending is disabled.');
+  }
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 exports.sendOTPEmail = async (toEmail, otp, userName = 'User') => {
   try {
+    const resend = getResendClient();
     const data = await resend.emails.send({
       from: 'LKCWSC College <noreply@vnssorg.com>',
       to: toEmail,
@@ -51,7 +65,7 @@ exports.generateOTP = () => {
 // Send student login credentials
 exports.sendCredentialsEmail = async (toEmail, studentName, username, password) => {
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = getResendClient();
     await resend.emails.send({
       from: 'LKCWSC College <noreply@vnssorg.com>',
       to: toEmail,
@@ -88,7 +102,7 @@ exports.sendCredentialsEmail = async (toEmail, studentName, username, password) 
 // Send admin message/notice
 exports.sendMessageEmail = async (toEmail, toName, subject, messageBody, fromName) => {
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = getResendClient();
     await resend.emails.send({
       from: 'LKCWSC College <noreply@vnssorg.com>',
       to: toEmail,
