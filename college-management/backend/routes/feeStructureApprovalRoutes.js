@@ -17,13 +17,17 @@ router.post('/submit-year-delete', protect, authorizeRoles('staff_accounts', 'st
 router.get('/', protect, authorizeRoles('staff_accounts', 'staff_scholarship', 'staff_principal', 'admin'), ctrl.getAll);
 
 // ── Pending counts for dashboard badges ─────────────────────────────────────
-router.get('/pending-counts', protect, authorizeRoles('staff_principal', 'admin'), ctrl.getPendingCounts);
+router.get('/pending-counts', protect, authorizeRoles('staff_accounts', 'staff_principal', 'admin'), ctrl.getPendingCounts);
 
-// ── Principal: approve / reject (step 1) ────────────────────────────────────
+// ── Accounts: approve / reject (step 1 for Scholarship-submitted requests) ──
+router.put('/:id/accounts-approve', protect, authorizeRoles('staff_accounts', 'admin'), ctrl.accountsApprove);
+router.put('/:id/accounts-reject',  protect, authorizeRoles('staff_accounts', 'admin'), ctrl.accountsReject);
+
+// ── Principal: approve / reject ──────────────────────────────────────────────
 router.put('/:id/principal-approve', protect, authorizeRoles('staff_principal', 'admin'), ctrl.principalApprove);
 router.put('/:id/principal-reject',  protect, authorizeRoles('staff_principal', 'admin'), ctrl.principalReject);
 
-// ── Admin: approve / reject (step 2 — final) ────────────────────────────────
+// ── Admin: approve / reject (final, for Accounts-submitted requests) ────────
 router.put('/:id/admin-approve', protect, authorizeRoles('admin'), ctrl.adminApprove);
 router.put('/:id/admin-reject',  protect, authorizeRoles('admin'), ctrl.adminReject);
 
