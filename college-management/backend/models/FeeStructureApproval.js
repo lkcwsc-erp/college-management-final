@@ -30,11 +30,20 @@ const feeStructureApprovalSchema = new mongoose.Schema({
 
   submittedBy:      { type: String },
   submittedByEmail: { type: String },
+  // Which role submitted this — determines the approval chain:
+  //   staff_accounts (or anyone else)  → Principal → Admin   (unchanged)
+  //   staff_scholarship                → Accounts  → Principal (final)
+  submitterRole:    { type: String, default: '' },
 
-  // Two-step approval workflow: Accounts → Principal → Admin → applied
+  // Two approval chains depending on submitterRole (see above):
+  //   Accounts-submitted : pending_principal → approved_by_principal → pending_admin → approved
+  //   Scholarship-submitted: pending_accounts → approved_by_accounts → pending_principal → approved
   status: {
     type: String,
     enum: [
+      'pending_accounts',
+      'approved_by_accounts',
+      'rejected_by_accounts',
       'pending_principal',
       'approved_by_principal',
       'pending_admin',
@@ -45,6 +54,8 @@ const feeStructureApprovalSchema = new mongoose.Schema({
     default: 'pending_principal',
   },
 
+  accountsNote:        { type: String, default: '' },
+  accountsApprovedAt:  { type: Date },
   principalNote:       { type: String, default: '' },
   principalApprovedAt: { type: Date },
   adminNote:           { type: String, default: '' },
