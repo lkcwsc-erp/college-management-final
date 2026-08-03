@@ -351,8 +351,23 @@ exports.principalApprove = async (req, res) => {
     if (!admission)
       return res.status(404).json({ success: false, message: 'Admission not found.' });
 
-    // Generate unique student ID
-    const uniqueId = `CSMC${Date.now()}`;
+    // Generate unique student ID in COURSE+YEAR+4digit format (e.g. BCA20260001)
+    const courseCode = (admission.courseType || 'GEN')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toUpperCase();
+    const yearCode = (admission.admissionYear || String(new Date().getFullYear())).toString().slice(-2);
+    const idPrefix = `${courseCode}${yearCode}`;
+
+    const lastWithPrefix = await Student.findOne({
+      studentId: new RegExp(`^${idPrefix}\\d{4}$`),
+    }).sort({ studentId: -1 });
+
+    let nextSeq = 1;
+    if (lastWithPrefix?.studentId) {
+      nextSeq = parseInt(lastWithPrefix.studentId.slice(-4), 10) + 1;
+    }
+
+    const uniqueId = `${idPrefix}${String(nextSeq).padStart(4, '0')}`;
 
     admission.principalStatus = 'approved';
     admission.status          = 'approved';
