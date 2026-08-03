@@ -1463,7 +1463,6 @@ const AccountsStudentFeeView = ({ themeColor }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [search, setSearch]     = useState('');
-  const [academicYearFilter, setAcademicYearFilter] = useState('all'); // 2025-26 / 2026-27 etc.
 
   useEffect(() => {
     setLoading(true);
@@ -1485,15 +1484,9 @@ const AccountsStudentFeeView = ({ themeColor }) => {
     return YEARLY_FEES[ck].years?.[yr]?.total || YEARLY_FEES[ck][yr] || 0;
   };
 
-  const academicYearOptions = [...new Set(students.map(s => s.academicYear).filter(Boolean))].sort().reverse();
-
   const filtered = students.filter(s => {
     const q = search.toLowerCase();
-    const matchSearch = !q || s.applicantName?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
-    // PERFORMANCE/CORRECTNESS FIX: without this, totals mixed every academic
-    // year's students together instead of showing only the selected year.
-    const matchAcademicYear = academicYearFilter === 'all' || s.academicYear === academicYearFilter;
-    return matchSearch && matchAcademicYear;
+    return !q || s.applicantName?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
   });
 
   const totalFees    = filtered.reduce((s,st) => s + getYearFee(st), 0);
@@ -1543,11 +1536,6 @@ const AccountsStudentFeeView = ({ themeColor }) => {
       <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
         <input type="text" placeholder="🔍 Search student..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{ flex:1, minWidth:200, padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14, boxSizing:'border-box' }} />
-        <select value={academicYearFilter} onChange={e=>setAcademicYearFilter(e.target.value)}
-          style={{ padding:'9px 14px', borderRadius:9, border:'1px solid #ddd', fontSize:14 }}>
-          <option value="all">📅 All Academic Years</option>
-          {academicYearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
         <button onClick={downloadExcel}
           style={{ padding:'9px 18px', background:'#1b7a3d', color:'#fff', border:'none', borderRadius:9, fontWeight:700, fontSize:13, cursor:'pointer', whiteSpace:'nowrap' }}>
           ⬇️ Excel
@@ -1607,6 +1595,39 @@ const AccountsSectionDashboard = () => {
   const [docAction, setDocAction]         = useState('');
   const [docNotes, setDocNotes]           = useState('');
   const [docLoading2, setDocLoading2]     = useState(false);
+
+  // ── Fee-structure change requests submitted by Scholarship, awaiting
+  // Accounts review (first step of their Accounts → Principal chain) ────────
+  const [scholFeeApprovals, setScholFeeApprovals]   = useState([]);
+  const [scholFeeLoading, setScholFeeLoading]       = useState(false);
+  const [scholFeeActionId, setScholFeeActionId]     = useState(null);
+  const [scholFeeNote, setScholFeeNote]             = useState('');
+  const fetchScholFeeApprovals = useCallback(async () => {
+    setScholFeeLoading(true);
+    try {
+      const res = await API.get('/fee-structure-approvals');
+      setScholFeeApprovals((res.data.approvals || []).filter(a => a.submitterRole === 'staff_scholarship'));
+    } catch { /* ignore */ }
+    setScholFeeLoading(false);
+  }, []);
+  useEffect(() => { fetchScholFeeApprovals(); }, [fetchScholFeeApprovals]);
+  const handleScholFeeApprove = async (id) => {
+    try {
+      await API.put(`/fee-structure-approvals/${id}/accounts-approve`, { note: scholFeeNote });
+      showToast('✅ Approved — forwarded to Principal');
+      setScholFeeActionId(null); setScholFeeNote('');
+      fetchScholFeeApprovals();
+    } catch (e) { showToast('❌ ' + (e.response?.data?.message || 'Failed'), 'error'); }
+  };
+  const handleScholFeeReject = async (id) => {
+    try {
+      await API.put(`/fee-structure-approvals/${id}/accounts-reject`, { reason: scholFeeNote || 'Rejected by Accounts' });
+      showToast('🗑️ Rejected');
+      setScholFeeActionId(null); setScholFeeNote('');
+      fetchScholFeeApprovals();
+    } catch (e) { showToast('❌ ' + (e.response?.data?.message || 'Failed'), 'error'); }
+  };
+
   const [payMode, setPayMode]             = useState('cash');
   const [txnId, setTxnId]                = useState('');
   const [docFees, setDocFees]             = useState(loadDocFees());
@@ -1618,7 +1639,6 @@ const AccountsSectionDashboard = () => {
   const [admFilter, setAdmFilter]           = useState('all');
   const [admCourseFilter, setAdmCourseFilter] = useState('all');
   const [admYearFilter, setAdmYearFilter]   = useState('all');
-  const [admAcademicYearFilter, setAdmAcademicYearFilter] = useState('all'); // filter by 2025-26 / 2026-27 etc.
   const [selectedAdm, setSelectedAdm]       = useState(null);
   const [admPayMode, setAdmPayMode]         = useState('cash');
   const [admTxnId, setAdmTxnId]             = useState('');
@@ -2109,6 +2129,7 @@ const AccountsSectionDashboard = () => {
 
 
   const pendingDocCount  = docRequests.filter(r => r.status === 'pending_accounts').length;
+  const scholFeePendingCount = scholFeeApprovals.filter(a => a.status === 'pending_accounts').length;
   const paidAdmCount     = admissions.filter(a => a.feesPaid).length;
   const unpaidAdmCount   = admissions.filter(a => !a.feesPaid).length;
   const totalCollected   = payHistory.reduce((s, p) => s + (p.amount || 0), 0);
@@ -2123,7 +2144,6 @@ const AccountsSectionDashboard = () => {
   // Course/year options for the Collect Fees filter dropdowns (derived from the student list)
   const admCourseOptions = [...new Set(admissions.map(a => a.courseType).filter(Boolean))];
   const admYearOptions   = [...new Set(admissions.map(a => a.admissionYear).filter(Boolean))];
-  const admAcademicYearOptions = [...new Set(admissions.map(a => a.academicYear).filter(Boolean))].sort().reverse();
 
   const filteredAdm = admissions.filter(a => {
     const matchFilter = admFilter === 'all' || (admFilter === 'paid' ? a.feesPaid : !a.feesPaid);
@@ -2131,11 +2151,7 @@ const AccountsSectionDashboard = () => {
     const matchSearch = !q || a.applicantName?.toLowerCase().includes(q) || a.studentId?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
     const matchCourse = admCourseFilter === 'all' || a.courseType === admCourseFilter;
     const matchYear   = admYearFilter === 'all' || a.admissionYear === admYearFilter;
-    // PERFORMANCE/CORRECTNESS FIX: without this, students from every academic
-    // year were mixed together — fees/scholarship totals showed "all years"
-    // combined instead of only the selected academic year.
-    const matchAcademicYear = admAcademicYearFilter === 'all' || a.academicYear === admAcademicYearFilter;
-    return matchFilter && matchSearch && matchCourse && matchYear && matchAcademicYear;
+    return matchFilter && matchSearch && matchCourse && matchYear;
   });
 
   const tabs = [
@@ -2145,6 +2161,7 @@ const AccountsSectionDashboard = () => {
     { id: 'doc_req',       label: '📄 Document Requests',  badge: pendingDocCount },
     { id: 'adm_fees',      label: '💰 Collect Fees',        badge: unpaidAdmCount },
     { id: 'fee_struct',    label: '💼 Fee Structure' },
+    { id: 'schol_fee_req', label: '🎓 Scholarship Fee Requests', badge: scholFeePendingCount },
     { id: 'expenses',      label: '🏗️ College Expenses' },
     { id: 'history',       label: '🧾 Payment History' },
     { id: 'finance',       label: '📊 Payment Overview' },
@@ -2440,11 +2457,6 @@ const AccountsSectionDashboard = () => {
                   <option value="all">🎓 All Years / Sem</option>
                   {admYearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
-                <select value={admAcademicYearFilter} onChange={e => setAdmAcademicYearFilter(e.target.value)}
-                  style={{ padding: '9px 14px', borderRadius: 9, border: '1px solid #ddd', fontSize: 14 }}>
-                  <option value="all">📅 All Academic Years</option>
-                  {admAcademicYearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
                 <button onClick={fetchAdmissions}
                   style={{ padding: '9px 16px', background: '#e3f2fd', color: '#1565C0', border: '1px solid #90CAF9', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                   🔄 Refresh
@@ -2509,6 +2521,68 @@ const AccountsSectionDashboard = () => {
             <FeeStructTab
               docFees={docFees} setDocFees={setDocFees} saveDocFees={saveDocFees} showToast={showToast}
             />
+          )}
+
+          {/* ════ SCHOLARSHIP FEE REQUESTS (Accounts review — step 1 of Accounts → Principal) ════ */}
+          {activeTab === 'schol_fee_req' && (
+            <div>
+              <h2 style={{ marginBottom: 4 }}>🎓 Scholarship Fee Requests</h2>
+              <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+                Fee-structure changes submitted from the Scholarship section — review here first, then they go to Principal for final approval.
+              </p>
+
+              {scholFeeLoading ? (
+                <p style={{ color: '#888' }}>Loading...</p>
+              ) : scholFeeApprovals.filter(a => a.status === 'pending_accounts').length === 0 ? (
+                <div className="empty-state"><div className="empty-icon">🎓</div><h3>No Pending Requests</h3><p>Nothing from Scholarship is waiting on Accounts right now.</p></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {scholFeeApprovals.filter(a => a.status === 'pending_accounts').map(a => (
+                    <div key={a._id} style={{ background: '#fff', border: '1px solid #e0e7ef', borderRadius: 12, padding: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                        <div>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>{a.itemName}</span>
+                          {!a.isNewYearStructure && !a.isYearDeletion && <span style={{ fontSize: 12, color: '#888', marginLeft: 10 }}>{a.courseKey} — {a.itemSection}</span>}
+                          {a.academicYear && <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 8, background: '#fff3e0', color: '#E65100', padding: '2px 8px', borderRadius: 8 }}>📅 {a.academicYear}</span>}
+                        </div>
+                        <span style={{ fontSize: 11, color: '#888' }}>Submitted by {a.submittedBy} · {new Date(a.createdAt).toLocaleDateString('en-IN')}</span>
+                      </div>
+
+                      {!a.isNewYearStructure && !a.isYearDeletion && (
+                        <div style={{ display: 'flex', gap: 20, fontSize: 13, marginBottom: 10, flexWrap: 'wrap' }}>
+                          {a.isDeletion ? (
+                            <span style={{ color: '#C62828', fontWeight: 700 }}>🗑️ Requesting deletion of this fee item</span>
+                          ) : a.isNewItem ? (
+                            <span style={{ color: '#2E7D32', fontWeight: 700 }}>➕ New fee item — Amounts: {(a.newAmounts || []).map(v => `₹${v}`).join(', ')}</span>
+                          ) : (
+                            <>
+                              <span>Old: {(a.oldAmounts || []).map(v => `₹${v}`).join(', ') || '—'}</span>
+                              <span style={{ fontWeight: 700, color: '#1565C0' }}>New: {(a.newAmounts || []).map(v => `₹${v}`).join(', ')}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {a.isYearDeletion && <p style={{ color: '#C62828', fontWeight: 700, fontSize: 13, margin: '0 0 10px' }}>🗑️ Requesting deletion of the entire {a.academicYear} structure</p>}
+                      {a.isNewYearStructure && <p style={{ color: '#7B1FA2', fontWeight: 700, fontSize: 13, margin: '0 0 10px' }}>🆕 New full year structure for {a.academicYear}{a.sourceYear ? ` (copied from ${a.sourceYear})` : ''}</p>}
+
+                      {scholFeeActionId === a._id ? (
+                        <div>
+                          <textarea rows="2" placeholder="Note (optional)" value={scholFeeNote} onChange={e => setScholFeeNote(e.target.value)}
+                            style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #ddd', fontSize: 13, marginBottom: 8, resize: 'vertical' }} />
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => handleScholFeeApprove(a._id)} style={{ background: '#2E7D32', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✅ Approve → Send to Principal</button>
+                            <button onClick={() => handleScholFeeReject(a._id)} style={{ background: '#C62828', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>❌ Reject</button>
+                            <button onClick={() => { setScholFeeActionId(null); setScholFeeNote(''); }} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setScholFeeActionId(a._id); setScholFeeNote(''); }} style={{ background: '#1565C0', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Review</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* ════ EXPENSES ════ */}
