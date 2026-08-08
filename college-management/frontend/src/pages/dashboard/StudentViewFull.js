@@ -238,6 +238,20 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
   const [saving, setSaving]           = useState(false);
   const [msg, setMsg]                 = useState('');
 
+  // ── Document requests (TC, Bonafide, ID Card, Migration, Marksheet...) for
+  // the currently selected student — visible to every staff section so a
+  // status like "TC Issued" shows up everywhere, not just in Student Section.
+  const [docRequests, setDocRequests] = useState([]);
+  const [docRequestsLoading, setDocRequestsLoading] = useState(false);
+  useEffect(() => {
+    if (!selected?.email) { setDocRequests([]); return; }
+    setDocRequestsLoading(true);
+    API.get('/document-requests/by-student', { params: { email: selected.email } })
+      .then(res => setDocRequests(res.data.requests || []))
+      .catch(() => setDocRequests([]))
+      .finally(() => setDocRequestsLoading(false));
+  }, [selected?.email]);
+
   // ── Pay Remaining Fees (Accounts) ──
   const [payModal, setPayModal]       = useState(null); // { year, total, schol, netPay, paid, balance }
   const [payAmt, setPayAmt]           = useState('');
@@ -823,7 +837,36 @@ const StudentViewFull = ({ canEdit = false, themeColor = '#1565C0', role = 'read
               </div>
             )}
 
-            {/* ── TAB: Fees ─────────────────────────────── */}
+            {/* ── Document Requests (TC / Bonafide / ID Card / Migration / Marksheet status) ── */}
+            {detailTab === 'documents' && (
+              <div style={{ marginTop: 20 }}>
+                <h4 style={{ fontSize: 14, color: '#333', margin: '0 0 10px' }}>📨 Document Requests</h4>
+                {docRequestsLoading ? (
+                  <p style={{ fontSize: 13, color: '#888' }}>Loading...</p>
+                ) : docRequests.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#aaa' }}>No document requests from this student yet.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {docRequests.map(r => {
+                      const isIssued = r.status === 'completed';
+                      const isRejected = String(r.status || '').startsWith('rejected');
+                      const statusColor = isIssued ? '#2E7D32' : isRejected ? '#C62828' : '#E65100';
+                      const statusBg    = isIssued ? '#e8f5e9' : isRejected ? '#ffebee' : '#fff3e0';
+                      const statusLabel = isIssued ? '✅ Issued' : isRejected ? '❌ Rejected' : `⏳ ${(r.status || '').replace('pending_', 'Pending: ').replace('_', ' ')}`;
+                      return (
+                        <div key={r._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 10, border: '1px solid #e0e7ef', background: '#fafbff' }}>
+                          <div>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{r.documentTypeLabel || r.documentType}</span>
+                            <span style={{ fontSize: 11, color: '#999', marginLeft: 10 }}>{new Date(r.createdAt).toLocaleDateString('en-IN')}</span>
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: statusBg, color: statusColor }}>{statusLabel}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             {detailTab === 'fees' && (
               <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
                 {/* ── Fee Structure Details (year-wise) + Pay Remaining Fees — Accounts only ── */}
