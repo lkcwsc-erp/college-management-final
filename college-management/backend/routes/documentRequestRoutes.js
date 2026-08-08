@@ -28,8 +28,9 @@ router.post('/', protect, async (req, res) => {
 
     const admission = await Admission.findOne({ email: req.user.email });
 
-    // Marksheet → Exam Section. Migration → Accounts first (then Exam Section).
-    const newDocTypes = ['PROVISIONAL_DEGREE', 'DEGREE', 'BONAFIDE', 'DEGREE_FORM'];
+    // Marksheet → Exam Section directly. Everything else → Accounts first
+    // (fee collection), then routed onward from there.
+    const newDocTypes = ['PROVISIONAL_DEGREE', 'DEGREE', 'DEGREE_FORM'];
     const initialStatus = documentType === 'MARKSHEET' ? 'pending_exam'
       : newDocTypes.includes(documentType) ? 'pending_generation'
       : 'pending_accounts';
@@ -116,10 +117,10 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
 
     const isTC = request.documentType === 'TC';
     const isMigration = request.documentType === 'MIGRATION';
-    // TC: Accounts → Principal → Exam → Student Section
-    // Migration: Accounts → Exam Section
-    // Others: Accounts → Student Section (generation)
-    request.status            = isTC ? 'pending_principal' : isMigration ? 'pending_exam' : 'pending_generation';
+    // TC: Accounts → Examination → Principal → Student Section
+    // Migration: Accounts → Exam Section (issued there)
+    // Others (ID Card, Bonafide, ...): Accounts → Student Section (generation)
+    request.status            = (isTC || isMigration) ? 'pending_exam' : 'pending_generation';
     request.accountsApprovedBy   = req.user.name || req.user.email;
     request.accountsApprovedDate = new Date();
     request.accountsNotes        = notes || '';
@@ -349,6 +350,22 @@ router.put('/student-section/complete/:id', protect, authorizeRoles('staff_stude
     }
 
     res.json({ success: true, message: '✅ Document issued to student!', request });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED: any staff section viewing a student's full record can pull their
+// document-request history (e.g. so "TC issued" shows up everywhere, not
+// just in Student Section's own tab).
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/by-student', protect, authorizeRoles('staff_accounts', 'staff_exam', 'staff_principal', 'staff_student', 'staff_scholarship', 'admin'), async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ success: false, message: 'email is required' });
+    const requests = await DocumentRequest.find({ studentEmail: email }).sort({ createdAt: -1 });
+    res.json({ success: true, requests });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
