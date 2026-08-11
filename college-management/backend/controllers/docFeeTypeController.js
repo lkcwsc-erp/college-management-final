@@ -2,11 +2,14 @@
 const DocFeeType = require('../models/DocFeeType');
 
 const DEFAULT_DOC_FEES = [
-  { key: 'BONAFIDE',  label: '📋 Bonafide Certificate',      price: 30,  isDefault: true, status: 'approved' },
-  { key: 'ID_CARD',   label: '🪪 ID Card',                   price: 100, isDefault: true, status: 'approved' },
-  { key: 'MARKSHEET', label: '📄 Marksheet',                 price: 50,  isDefault: true, status: 'approved' },
-  { key: 'MIGRATION', label: '📜 Migration Certificate',     price: 200, isDefault: true, status: 'approved' },
-  { key: 'TC',        label: '🎓 Transfer Certificate (TC)', price: 150, isDefault: true, status: 'approved' },
+  { key: 'BONAFIDE',           label: '📋 Bonafide Certificate',           price: 30,  isDefault: true, status: 'approved' },
+  { key: 'ID_CARD',            label: '🪪 ID Card',                        price: 100, isDefault: true, status: 'approved' },
+  { key: 'MARKSHEET',          label: '📄 Marksheet',                      price: 50,  isDefault: true, status: 'approved' },
+  { key: 'MIGRATION',          label: '📜 Migration Certificate',          price: 200, isDefault: true, status: 'approved' },
+  { key: 'TC',                 label: '🎓 Transfer Certificate (TC)',      price: 150, isDefault: true, status: 'approved' },
+  { key: 'PROVISIONAL_DEGREE', label: '📜 Provisional Degree Certificate', price: 200, isDefault: true, status: 'approved' },
+  { key: 'DEGREE',             label: '🎓 Degree Certificate',             price: 250, isDefault: true, status: 'approved' },
+  { key: 'DEGREE_FORM',        label: '📝 Degree Form',                    price: 50,  isDefault: true, status: 'approved' },
 ];
 
 // Seed defaults if not exist
