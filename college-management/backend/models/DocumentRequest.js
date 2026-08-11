@@ -14,15 +14,12 @@ const documentRequestSchema = new mongoose.Schema({
   // Document type
   documentType: {
     type: String,
-    enum: ['ID_CARD', 'MARKSHEET', 'MIGRATION', 'TC', 'BONAFIDE', 'PROVISIONAL_DEGREE', 'DEGREE'],
+    enum: ['ID_CARD', 'MARKSHEET', 'MIGRATION', 'TC', 'BONAFIDE', 'PROVISIONAL_DEGREE', 'DEGREE', 'DEGREE_FORM'],
     required: true
   },
   documentTypeLabel: { type: String, default: '' },
   reason:            { type: String, default: '' },
   urgency:           { type: String, enum: ['normal', 'urgent'], default: 'normal' },
-  marksheetSemester: { type: String, default: '' },
-  marksheetSession:  { type: String, default: '' },
-  marksheetYear:     { type: String, default: '' },
   // Marksheet specific
   marksheetSemester:    { type: String, default: '' }, // Sem I, Sem II, etc.
   marksheetSession:     { type: String, default: '' }, // 'mar_apr' | 'nov_dec'
@@ -30,16 +27,22 @@ const documentRequestSchema = new mongoose.Schema({
   marksheetAcadYear:    { type: String, default: '' }, // e.g. 2025-26
 
   // ─── WORKFLOW STATUS ─────────────────────────────────────────────────────
-  // TC:        pending_accounts → pending_exam → pending_principal → pending_generation → completed
-  // Bonafide:  pending_accounts → pending_generation → completed
-  // ID Card:   pending_accounts → pending_generation → completed
-  // Marksheet: pending_exam → pending_generation → completed
+  // Every request now starts at Accounts (fee collection), then routes onward
+  // by document type:
+  //   TC:                  pending_accounts → pending_exam → pending_principal → pending_generation → completed
+  //   Bonafide:             pending_accounts → pending_generation → completed
+  //   ID Card:              pending_accounts → pending_generation → completed
+  //   Degree Form:           pending_accounts → pending_generation → completed
+  //   Marksheet:             pending_accounts → pending_exam → completed
+  //   Provisional Degree:    pending_accounts → pending_exam → completed
+  //   Degree Certificate:    pending_accounts → pending_exam → completed
+  //   Migration:             pending_accounts → pending_exam → completed
   status: {
     type: String,
     enum: [
       'pending_accounts',       // waiting for Accounts to collect fee
       'rejected_by_accounts',   // Accounts rejected
-      'pending_exam',           // waiting for Exam Section to verify result (TC only)
+      'pending_exam',           // waiting for Exam Section
       'rejected_by_exam',       // Exam Section rejected
       'pending_principal',      // waiting for Principal approval (TC only)
       'rejected_by_principal',  // Principal rejected
@@ -49,12 +52,21 @@ const documentRequestSchema = new mongoose.Schema({
     default: 'pending_accounts'
   },
 
+  // ─── FEE COLLECTION (Accounts Section) ──────────────────────────────────
+  // Auto-picked from the approved DocFeeType matching this documentType at
+  // the time Accounts approves the request. If no fee is configured for the
+  // type, feeCollected stays false and feeAmount stays 0 — no fee is charged.
+  feeAmount:          { type: Number, default: 0 },
+  feeCollected:       { type: Boolean, default: false },
+  feeCollectedBy:     { type: String, default: '' },
+  feeCollectedDate:   { type: Date },
+
   // Accounts Section
   accountsApprovedBy:   { type: String, default: '' },
   accountsApprovedDate: { type: Date },
   accountsNotes:        { type: String, default: '' },
 
-  // Exam Section (TC only)
+  // Exam Section
   examVerifiedBy:       { type: String, default: '' },
   examVerifiedDate:     { type: Date },
   examNotes:            { type: String, default: '' },
