@@ -249,7 +249,8 @@ const ResultUploadTab = () => {
 };
 
 // ─── Exam Doc Tab (TC Verification + Marksheet) ──────────────────────────────
-const ExamDocTab = ({ type, title, desc, color }) => {
+const ExamDocTab = ({ type, title, desc, color, label }) => {
+  const typeLabel = label || (type === 'TC' ? 'TC' : type === 'MARKSHEET' ? 'Marksheet' : title.replace(/^\S+\s*/, '').replace(/\s*Requests$/i, ''));
   const [requests, setRequests]   = useState([]);
   const [loading, setLoading]     = useState(false);
   const [selected, setSelected]   = useState(null);
@@ -327,7 +328,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
           <div style={{ background: '#fff', borderRadius: 14, padding: 20, maxWidth: 420, width: '100%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, margin: '0 0 12px', flexShrink: 0 }}>
               <h3 style={{ color, margin: 0, fontSize: 17 }}>
-                {type === 'TC' ? '📄 Verify Result for TC' : '📋 Process Marksheet Request'}
+                {type === 'TC' ? '📄 Verify Result for TC' : `📋 Process ${typeLabel} Request`}
               </h3>
               <button onClick={() => { setSelected(null); setNotes(''); setMsg(''); }} title="Close" aria-label="Close"
                 style={{ background: '#f3f4f6', color: '#555', border: 'none', borderRadius: 8, width: 30, height: 30, lineHeight: '30px', fontSize: 18, fontWeight: 700, cursor: 'pointer', flexShrink: 0, padding: 0 }}>
@@ -350,6 +351,15 @@ const ExamDocTab = ({ type, title, desc, color }) => {
                   ['Semester', selected.marksheetSemester || '—'],
                   ['Exam Session', selected.marksheetSession === 'mar_apr' ? 'March / April' : selected.marksheetSession === 'nov_dec' ? 'Nov / December' : (selected.marksheetSession || '—')],
                   ['Exam Year', selected.marksheetYear || '—'],
+                ] : []),
+                ...(type === 'MIGRATION' ? [
+                  ['Migrating To', selected.migrateTo || '—'],
+                  ['Purpose', selected.migrateFor || '—'],
+                ] : []),
+                ...(type === 'PROVISIONAL_DEGREE' ? [
+                  ['Passing Year', selected.provYear || '—'],
+                  ['Exam Session', selected.provSession || '—'],
+                  ['Course', selected.provCourse || '—'],
                 ] : []),
                 ...(type === 'TC' ? [
                   ['Last Semester', selected.lastExamSem || '—'],
@@ -398,7 +408,7 @@ const ExamDocTab = ({ type, title, desc, color }) => {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={handleApprove} disabled={saving}
                   style={{ flex: 1, background: saving ? '#aaa' : color, color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                  {saving ? '⏳...' : type === 'TC' ? '✅ Verify & Forward to Principal' : '✅ Issue Marksheet to Student'}
+                  {saving ? '⏳...' : type === 'TC' ? '✅ Verify & Forward to Principal' : `✅ Issue ${typeLabel} to Student`}
                 </button>
                 <button onClick={handleReject} disabled={saving}
                   style={{ background: '#ffebee', color: '#C62828', border: '1px solid #ef9a9a', borderRadius: 8, padding: '12px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
@@ -419,8 +429,8 @@ const ExamDocTab = ({ type, title, desc, color }) => {
       ) : requests.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">{type === 'TC' ? '📄' : '📋'}</div>
-          <h3>No {type === 'TC' ? 'TC' : 'Marksheet'} Requests</h3>
-          <p>{type === 'TC' ? 'TC requests after Accounts fee verification will appear here.' : 'Student marksheet requests will appear here.'}</p>
+          <h3>No {typeLabel} Requests</h3>
+          <p>{type === 'TC' ? 'TC requests after Accounts fee verification will appear here.' : `Student ${typeLabel} requests will appear here.`}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1460,6 +1470,9 @@ const ExamSectionDashboard = () => {
     { id: 'upload_result', label: '📊 Upload Result' },
     { id: 'tc_verify',     label: '📄 TC Verification' },
     { id: 'marksheet',     label: '📋 Marksheet Requests' },
+    { id: 'migration',     label: '📜 Migration Certificate' },
+    { id: 'prov_degree',   label: '📜 Provisional Degree' },
+    { id: 'degree',        label: '🎓 Degree Certificate' },
     { id: 'students',      label: '👩‍🎓 View Students' },
     { id: 'exam_data',     label: '📊 Student Result' },
   ];
@@ -1654,6 +1667,9 @@ const ExamSectionDashboard = () => {
           {activeTab === 'upload_result' && <ResultUploadTab />}
           {activeTab === 'tc_verify'     && <ExamDocTab type="TC" title="📄 TC Verification" desc="Verify student result status before TC is sent to Principal." color="#1565C0" />}
           {activeTab === 'marksheet'     && <ExamDocTab type="MARKSHEET" title="📋 Marksheet Requests" desc="Process marksheet requests from students." color="#f57c00" />}
+          {activeTab === 'migration'     && <ExamDocTab type="MIGRATION" title="📜 Migration Certificate Requests" desc="Process migration certificate requests — Accounts verifies fees, issued here." color="#00897B" label="Migration Certificate" />}
+          {activeTab === 'prov_degree'   && <ExamDocTab type="PROVISIONAL_DEGREE" title="📜 Provisional Degree Certificate Requests" desc="Process provisional degree certificate requests — Accounts verifies fees, issued here." color="#5E35B1" label="Provisional Degree Certificate" />}
+          {activeTab === 'degree'        && <ExamDocTab type="DEGREE" title="🎓 Degree Certificate Requests" desc="Process degree certificate requests — Accounts verifies fees, issued here." color="#C62828" label="Degree Certificate" />}
           {activeTab === 'exam_data' && <ExamDataTab />}
           {activeTab === 'form_subs' && <PublishedFormSubmissionsTab />}
 
