@@ -2,7 +2,6 @@ const express = require('express');
 const router  = express.Router();
 const DocumentRequest = require('../models/DocumentRequest');
 const Admission       = require('../models/Admission');
-const DocFeeType      = require('../models/DocFeeType');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 const DOC_LABELS = {
@@ -17,27 +16,10 @@ const DOC_LABELS = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Approval routing table — where a request goes AFTER Accounts approves it.
-// 'exam'       → Exam Section (pending_exam)
-// 'generation' → Student Section (pending_generation)
-// TC is handled as a special case below (Exam → Principal → Student Section).
-// ─────────────────────────────────────────────────────────────────────────────
-const AFTER_ACCOUNTS = {
-  TC:                  'exam',
-  MIGRATION:           'exam',
-  MARKSHEET:           'exam',
-  PROVISIONAL_DEGREE:  'exam',
-  DEGREE:              'exam',
-  BONAFIDE:            'generation',
-  ID_CARD:             'generation',
-  DEGREE_FORM:         'generation',
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // STUDENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Submit request — every document type now starts at Accounts for fee verification.
+// Submit request
 router.post('/', protect, async (req, res) => {
   try {
     const { documentType, reason, urgency, marksheetSemester, marksheetSession, marksheetYear, marksheetAcadYear, lastExamYear, lastExamSem, lastExamSession, lastExamResult, lastExamPercent, lastExamCollege, provYear, provSession, provCourse, migrateTo, migrateFor } = req.body;
@@ -46,11 +28,15 @@ router.post('/', protect, async (req, res) => {
 
     const admission = await Admission.findOne({ email: req.user.email });
 
+    // Every document type starts at Accounts Section for fee verification —
+    // routing onward from there depends on the type (see accounts/approve).
+    const initialStatus = 'pending_accounts';
+
     const data = {
       student:           req.user._id,
       studentName:       req.user.name,
       studentEmail:      req.user.email,
-      studentPhone:       req.user.phone || '',
+      studentPhone:      req.user.phone || '',
       documentType,
       documentTypeLabel: DOC_LABELS[documentType],
       reason:            reason || '',
@@ -70,7 +56,7 @@ router.post('/', protect, async (req, res) => {
       provCourse:        provCourse        || '',
       migrateTo:         migrateTo         || '',
       migrateFor:        migrateFor        || '',
-      status:            'pending_accounts',
+      status:            initialStatus,
     };
 
     if (admission) {
@@ -83,11 +69,7 @@ router.post('/', protect, async (req, res) => {
 
     const request = await DocumentRequest.create(data);
 
-    res.status(201).json({
-      success: true,
-      message: 'Request submitted! Waiting for Accounts Section to verify and collect fees.',
-      request
-    });
+    res.status(201).json({ success: true, message: 'Request submitted! Waiting for Accounts Section to verify fees.', request });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -118,9 +100,7 @@ router.get('/accounts/all', protect, authorizeRoles('staff_accounts', 'admin', '
   }
 });
 
-// Accounts approves — auto-collects the configured fee for this document type
-// (if one exists and is approved), then routes to Exam Section or Student
-// Section depending on the document type.
+// Accounts approves — TC→pending_exam, others→pending_generation
 router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { notes } = req.body;
@@ -129,22 +109,13 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
     if (request.status !== 'pending_accounts')
       return res.status(400).json({ success: false, message: 'Not pending in Accounts' });
 
-    // Auto-collect fee from the approved fee structure, if one is configured
-    // for this document type. If none is mentioned in the fee structure, no
-    // fee is charged.
-    const feeType = await DocFeeType.findOne({ key: request.documentType, status: 'approved' });
-    if (feeType) {
-      request.feeAmount        = feeType.price;
-      request.feeCollected     = true;
-      request.feeCollectedBy   = req.user.name || req.user.email;
-      request.feeCollectedDate = new Date();
-    } else {
-      request.feeAmount    = 0;
-      request.feeCollected = false;
-    }
-
-    const nextStage = AFTER_ACCOUNTS[request.documentType] || 'generation';
-    request.status              = nextStage === 'exam' ? 'pending_exam' : 'pending_generation';
+    const EXAM_ROUTED = ['TC', 'MIGRATION', 'MARKSHEET', 'PROVISIONAL_DEGREE', 'DEGREE'];
+    const isTC = request.documentType === 'TC';
+    const goesToExam = EXAM_ROUTED.includes(request.documentType);
+    // TC: Accounts → Examination → Principal → Student Section
+    // Migration / Marksheet / Provisional Degree / Degree: Accounts → Exam Section (issued there)
+    // Others (ID Card, Bonafide, Degree Form): Accounts → Student Section (generation)
+    request.status            = goesToExam ? 'pending_exam' : 'pending_generation';
     request.accountsApprovedBy   = req.user.name || req.user.email;
     request.accountsApprovedDate = new Date();
     request.accountsNotes        = notes || '';
@@ -152,9 +123,11 @@ router.put('/accounts/approve/:id', protect, authorizeRoles('staff_accounts', 'a
 
     res.json({
       success: true,
-      message: feeType
-        ? `✅ Fee of ₹${feeType.price} collected! Forwarded to ${nextStage === 'exam' ? 'Examination Section' : 'Student Section'}.`
-        : `✅ Verified (no fee configured). Forwarded to ${nextStage === 'exam' ? 'Examination Section' : 'Student Section'}.`,
+      message: isTC
+        ? '✅ TC fees verified! Forwarded to Examination Section for result check.'
+        : goesToExam
+        ? `✅ Fees verified! ${request.documentTypeLabel} forwarded to Examination Section.`
+        : '✅ Fees verified! Forwarded to Student Section.',
       request
     });
   } catch (error) {
@@ -184,7 +157,7 @@ router.put('/accounts/reject/:id', protect, authorizeRoles('staff_accounts', 'ad
 // EXAM SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 
-// All requests for Exam Section (TC / Migration / Marksheet / Provisional Degree / Degree)
+// All requests for Exam Section (TC pending_exam + Marksheet pending_exam)
 router.get('/exam/all', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const requests = await DocumentRequest.find({
@@ -219,7 +192,7 @@ router.get('/exam/all', protect, authorizeRoles('staff_exam', 'admin', 'staff_pr
 
 // Exam Section approves
 // TC → pending_principal
-// Migration / Marksheet / Provisional Degree / Degree → completed (issued here)
+// Marksheet → pending_generation
 router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { notes, resultStatus } = req.body;
@@ -228,15 +201,18 @@ router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin', '
     if (request.status !== 'pending_exam')
       return res.status(400).json({ success: false, message: 'Not pending in Exam Section' });
 
-    const isTC = request.documentType === 'TC';
-    // TC → Principal. Everything else that reaches Exam Section (Migration,
-    // Marksheet, Provisional Degree, Degree) is issued directly here.
-    request.status           = isTC ? 'pending_principal' : 'completed';
+    const isTC       = request.documentType === 'TC';
+    const ISSUED_HERE = ['MARKSHEET', 'MIGRATION', 'PROVISIONAL_DEGREE', 'DEGREE'];
+    const issuedHere = ISSUED_HERE.includes(request.documentType);
+    // TC → Principal (continues the chain). Everything else routed here
+    // (Marksheet, Migration, Provisional Degree, Degree) → completed/issued
+    // directly by Examination Section — no further steps.
+    request.status           = isTC ? 'pending_principal' : issuedHere ? 'completed' : 'pending_generation';
     request.examVerifiedBy   = req.user.name || req.user.email;
     request.examVerifiedDate = new Date();
     request.examNotes        = notes || '';
     request.examResultStatus = resultStatus || '';
-    if (!isTC) {
+    if (issuedHere) {
       request.generatedBy   = req.user.name || req.user.email;
       request.generatedDate = new Date();
     }
@@ -246,7 +222,9 @@ router.put('/exam/approve/:id', protect, authorizeRoles('staff_exam', 'admin', '
       success: true,
       message: isTC
         ? '✅ Result verified! TC forwarded to Principal for approval.'
-        : `✅ ${request.documentTypeLabel || request.documentType} verified and issued by Examination Section.`,
+        : issuedHere
+        ? `✅ ${request.documentTypeLabel} processed and issued by Examination Section.`
+        : '✅ Approved! Forwarded to Student Section.',
       request
     });
   } catch (error) {
@@ -296,7 +274,7 @@ router.get('/principal/all', protect, authorizeRoles('staff_principal', 'admin')
   }
 });
 
-// Principal approves → pending_generation (TC only reaches here)
+// Principal approves → pending_generation
 router.put('/principal/approve/:id', protect, authorizeRoles('staff_principal', 'admin'), async (req, res) => {
   try {
     const { notes } = req.body;
@@ -350,8 +328,6 @@ router.get('/student-section/all', protect, authorizeRoles('staff_student', 'adm
   }
 });
 
-// Student Section issues the document (Bonafide, ID Card, Degree Form directly;
-// TC after it has cleared Accounts → Exam → Principal).
 router.put('/student-section/complete/:id', protect, authorizeRoles('staff_student', 'admin', 'staff_principal'), async (req, res) => {
   try {
     const { notes } = req.body;
@@ -362,10 +338,7 @@ router.put('/student-section/complete/:id', protect, authorizeRoles('staff_stude
       generationNotes: notes || '',
     }, { new: true });
 
-    // If TC issued — mark student as inactive (TC issued = left college).
-    // This flag is read by StudentViewFull.js, which is shared across every
-    // staff dashboard (Accounts, Examination, Scholarship, Student Section,
-    // Principal, Admin), so "TC Issued" becomes visible everywhere at once.
+    // If TC issued — mark student as inactive (TC issued = left college)
     if (request && request.documentType === 'TC') {
       await Admission.findOneAndUpdate(
         { email: request.studentEmail },
